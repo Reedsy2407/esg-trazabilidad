@@ -2,3 +2,9 @@ docs/architecture/GUIA-PROYECTO-ESG-TRAZABILIDAD.md
 CLAUDE.md
 .env
 .env.local
+
+target/
+*.class
+.idea/
+*.iml
+.vscode/

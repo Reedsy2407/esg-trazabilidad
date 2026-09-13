@@ -96,7 +96,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Phase 5: Certification
 
-- [ ] Task 9: Certification persistence (Liquibase `v0.1.2`, domain incl. `isExpired()`, JPA entity/repo, repository port+adapter, `CertificationErrors`)
+- [x] Task 9: Certification persistence (Liquibase `v0.1.2`, domain incl. `isExpired()`, JPA entity/repo, repository port+adapter, `CertificationErrors`)
 - [ ] Task 10: Certification API (mapper, DTOs incl. `issuedDate < expirationDate` validation, use cases, `CertificationService`, `CertificationController` nested under `/associations/{id}/certifications`, unit + IT tests incl. `isExpired()` boundary cases)
 
 ### Checkpoint 5: Full CRUD path complete

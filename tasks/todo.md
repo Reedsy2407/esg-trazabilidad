@@ -136,6 +136,7 @@
     - [ ] `POST /associations/{associationId}/recyclers` validates DNI format (8 digits), returns `REC-003` 404 if the association doesn't exist, `REC-002` 409 on duplicate DNI
     - [ ] `GET /associations/{associationId}/recyclers/{id}` returns 404 via `REC-001` when missing
     - [ ] `GET /associations/{associationId}/recyclers` returns paginated, filterable `PageResponse<RecyclerResponse>`
+    - [ ] Same findByDni()-then-save() TOCTOU race as `AssociationService.create()` (see the `AssociationExceptionHandler` fix, association module) — add a `RecyclerController`-scoped `@RestControllerAdvice` mapping `DataIntegrityViolationException` → `RecyclerErrors.DUPLICATE_DNI`, plus the same two-test pattern (a repository-level IT proving the DB constraint fires, a `@WebMvcTest` proving the controller maps it to 409)
     - [ ] Unit test for `RecyclerService`
     - [ ] IT test covering create → get → list, plus association-not-found and duplicate-DNI paths
   - **Verification:**

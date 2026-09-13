@@ -1,5 +1,7 @@
 package pe.esgtrazabilidad.recycler.association.adapter.in.web;
 
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,8 +16,11 @@ import pe.esgtrazabilidad.recycler.association.exception.AssociationErrors;
  * constraint as the real guard. Scoped to AssociationController only, since
  * "a DataIntegrityViolationException here means duplicate RUC" is association-
  * specific knowledge that doesn't belong in shared-kernel's GlobalExceptionHandler.
+ * Ordered ahead of GlobalExceptionHandler's generic DATA_CONFLICT fallback, which
+ * also matches DataIntegrityViolationException — this one is more specific.
  */
 @RestControllerAdvice(assignableTypes = AssociationController.class)
+@Order(Ordered.HIGHEST_PRECEDENCE)
 class AssociationExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)

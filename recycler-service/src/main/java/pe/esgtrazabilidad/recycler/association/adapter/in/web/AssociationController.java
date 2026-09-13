@@ -6,6 +6,8 @@ import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -56,7 +58,8 @@ class AssociationController {
 
     @GetMapping
     PageResponse<AssociationResponse> list(
-            @RequestParam(required = false) AssociationStatus status, Pageable pageable) {
+            @RequestParam(required = false) AssociationStatus status,
+            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
         Page<AssociationResponse> page = listAssociationsUseCase.list(status, pageable).map(mapper::toResponse);
         return PageResponse.from(page);
     }

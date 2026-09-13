@@ -11,6 +11,10 @@ spring:
       ddl-auto: none
   liquibase:
     enabled: true
+  data:
+    web:
+      pageable:
+        max-page-size: 100
 
 server:
   port: 8081

@@ -1,8 +1,15 @@
 package pe.esgtrazabilidad.kernel.error;
 
+import java.lang.reflect.Method;
+
 import org.junit.jupiter.api.Test;
+import org.springframework.core.MethodParameter;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -48,5 +55,34 @@ class GlobalExceptionHandlerTest {
         assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.NOT_FOUND.value());
         assertThat(problemDetail.getDetail()).isEqualTo("Sample not found");
         assertThat(problemDetail.getProperties()).containsEntry("code", "SMP-001");
+    }
+
+    @Test
+    void mapsMethodArgumentNotValidExceptionToAGenericValidationError() throws NoSuchMethodException {
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "request");
+        bindingResult.addError(new FieldError("request", "ruc", "El RUC debe tener 11 dígitos numéricos"));
+        Method dummyMethod = GlobalExceptionHandlerTest.class.getDeclaredMethod("dummyHandlerMethod", String.class);
+        MethodArgumentNotValidException exception =
+                new MethodArgumentNotValidException(new MethodParameter(dummyMethod, 0), bindingResult);
+
+        ProblemDetail problemDetail = handler.handleValidationException(exception);
+
+        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(problemDetail.getProperties()).containsEntry("code", "VALIDATION_ERROR");
+        assertThat(problemDetail.getDetail()).contains("ruc");
+    }
+
+    @Test
+    void mapsDataIntegrityViolationExceptionToAGenericConflict() {
+        DataIntegrityViolationException exception =
+                new DataIntegrityViolationException("duplicate key value violates unique constraint");
+
+        ProblemDetail problemDetail = handler.handleDataIntegrityViolation(exception);
+
+        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
+        assertThat(problemDetail.getProperties()).containsEntry("code", "DATA_CONFLICT");
+    }
+
+    private void dummyHandlerMethod(String arg) {
     }
 }

@@ -97,11 +97,11 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 ### Phase 5: Certification
 
 - [x] Task 9: Certification persistence (Liquibase `v0.1.2`, domain incl. `isExpired()`, JPA entity/repo, repository port+adapter, `CertificationErrors`)
-- [ ] Task 10: Certification API (mapper, DTOs incl. `issuedDate < expirationDate` validation, use cases, `CertificationService`, `CertificationController` nested under `/associations/{id}/certifications`, unit + IT tests incl. `isExpired()` boundary cases)
+- [x] Task 10: Certification API (mapper, DTOs incl. `issuedDate < expirationDate` validation, use cases, `CertificationService`, `CertificationController` nested under `/associations/{id}/certifications`, unit + IT tests incl. `isExpired()` boundary cases)
 
 ### Checkpoint 5: Full CRUD path complete
-- [ ] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service`)
-- [ ] Manual check: Association → Recycler → Certification chain works end-to-end through real HTTP calls
+- [x] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service`)
+- [x] Manual check: Association → Recycler → Certification chain works end-to-end through real HTTP calls
 
 ### Phase 6: Polish
 

@@ -3,6 +3,8 @@ package pe.esgtrazabilidad.recycler.certification.adapter.out.persistence;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import pe.esgtrazabilidad.recycler.certification.domain.Certification;
@@ -25,6 +27,13 @@ class CertificationRepositoryAdapter implements CertificationRepository {
     @Override
     public Optional<Certification> findById(UUID id) {
         return jpaRepository.findById(id).map(this::toDomain);
+    }
+
+    @Override
+    public Page<Certification> findAll(UUID associationId, Pageable pageable) {
+        return jpaRepository
+                .findAll(CertificationSpecifications.hasAssociationId(associationId), pageable)
+                .map(this::toDomain);
     }
 
     private CertificationEntity toEntity(Certification certification) {

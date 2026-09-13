@@ -137,15 +137,16 @@
     - [ ] `POST /associations/{associationId}/recyclers` validates DNI format (8 digits), returns `REC-003` 404 if the association doesn't exist, `REC-002` 409 on duplicate DNI
     - [ ] `GET /associations/{associationId}/recyclers/{id}` returns 404 via `REC-001` when missing
     - [ ] `GET /associations/{associationId}/recyclers` returns paginated, filterable `PageResponse<RecyclerResponse>`, with `@PageableDefault(size = 20, sort = "fullName", direction = Sort.Direction.ASC)` on the `Pageable` param (per guide 1.11 — `spring.data.web.pageable.max-page-size` is already set globally, no per-controller config needed)
-    - [ ] Same findByDni()-then-save() TOCTOU race as `AssociationService.create()` (see the `AssociationExceptionHandler` fix, association module) — add a `RecyclerController`-scoped `@RestControllerAdvice` mapping `DataIntegrityViolationException` → `RecyclerErrors.DUPLICATE_DNI`, plus the same two-test pattern (a repository-level IT proving the DB constraint fires, a `@WebMvcTest` proving the controller maps it to 409)
+    - [ ] **Architecture correction (user-directed, supersedes Task 7's placement):** `RecyclerService.create()` orchestrates the association-must-exist check itself (`AssociationRepository.findById()` before `RecyclerRepository.save()`), same shape as the duplicate-DNI check (`findByDni()`-then-`save()`). Move this check OUT of `RecyclerRepositoryAdapter.save()` and revert that adapter back to a pure domain↔entity translator with no `AssociationRepository` dependency — delete the association-exists branch and its test (`RecyclerRepositoryAdapterTest`) from Task 7.
+    - [ ] Both the duplicate-DNI and association-missing checks have the same TOCTOU race `AssociationService.create()` had — cover both via the existing `fk_recycler_association` FK constraint + unique `dni` constraint already in the schema, plus a `RecyclerController`-scoped `@RestControllerAdvice` catching `DataIntegrityViolationException` as fallback. **Nuance not present in the Association case:** Recycler has *two* constraints that can throw the same exception type, so the fallback handler must distinguish which one fired (inspect `exception.getMostSpecificCause().getMessage()` for the constraint name — `fk_recycler_association` → REC-003, the DNI unique constraint → REC-002) rather than assuming one outcome like `AssociationExceptionHandler` safely could. Two-test pattern per constraint: a repository-level IT proving each DB constraint actually fires, a `@WebMvcTest` proving the controller maps each to the right code.
     - [ ] Unit test for `RecyclerService`
     - [ ] IT test covering create → get → list, plus association-not-found and duplicate-DNI paths
   - **Verification:**
     - [ ] Unit tests pass: `mvn -pl recycler-service test`
     - [ ] Integration tests pass: `mvn -pl recycler-service verify`
   - **Dependencies:** Task 7
-  - **Files likely touched:** `recycler/adapter/in/web/{RecyclerController,RecyclerMapper}.java`, DTOs, `recycler/port/in/*UseCase.java`, `recycler/service/RecyclerService.java`, `RecyclerServiceTest.java`, `it/RecyclerApiIT.java`
-  - **Estimated scope:** Large (7 files)
+  - **Files likely touched:** `recycler/adapter/in/web/{RecyclerController,RecyclerMapper,RecyclerExceptionHandler}.java`, DTOs, `recycler/port/in/*UseCase.java`, `recycler/service/RecyclerService.java`, `RecyclerServiceTest.java`, `it/RecyclerApiIT.java` — plus edits to `RecyclerRepositoryAdapter.java` (revert) and removal of `RecyclerRepositoryAdapterTest.java`
+  - **Estimated scope:** Large (7-8 files)
 
 ### Checkpoint 4: Recycler CRUD works end-to-end
 - [ ] `mvn -pl recycler-service verify` green

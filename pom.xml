@@ -15,6 +15,7 @@
     <modules>
         <module>shared-kernel</module>
         <module>recycler-service</module>
+        <module>collection-service</module>
     </modules>
 
     <properties>

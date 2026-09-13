@@ -231,23 +231,25 @@
 
 ## Phase 7: collection-service infra
 
-- [ ] Task 13: collection-service scaffolding
+- [x] Task 13: collection-service scaffolding
   - **Description:** Create the `collection-service` Maven module (depends on `shared-kernel` only), add it to the root reactor, `application.yml` (port 8082, same shared Postgres via `DB_URL`/`DB_PASSWORD` env vars, no hardcoded secret default), empty Liquibase master changelog, reuse the existing root `docker-compose.yml` unchanged.
   - **Acceptance criteria:**
-    - [ ] `collection-service/pom.xml` depends on `shared-kernel`, `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-validation`, `springdoc-openapi-starter-webmvc-ui`, Postgres driver, Liquibase core, Testcontainers (test scope)
-    - [ ] Root `pom.xml`'s `<modules>` gains `collection-service`
-    - [ ] `application.yml`: `server.port: 8082`, `spring.data.web.pageable.max-page-size: 100`
-    - [ ] `db/changelog/db.changelog-master.yaml` exists with `includeAll` on `changes/` (empty folder OK)
-    - [ ] App boots with `spring-boot:run` against the shared Docker Postgres, empty changelog applies with no errors, no collision with `recycler-service`'s tables
+    - [x] `collection-service/pom.xml` depends on `shared-kernel`, `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-validation`, `springdoc-openapi-starter-webmvc-ui`, Postgres driver, Liquibase core, Testcontainers (test scope)
+    - [x] Root `pom.xml`'s `<modules>` gains `collection-service`
+    - [x] `application.yml`: `server.port: 8082`, `spring.data.web.pageable.max-page-size: 100`
+    - [x] `db/changelog/db.changelog-master.yaml` exists with `includeAll` on `changes/` (empty folder OK)
+    - [x] App boots with `spring-boot:run` against the shared Docker Postgres, empty changelog applies with no errors, no collision with `recycler-service`'s tables
   - **Verification:**
-    - [ ] Build succeeds: `mvn -pl collection-service -am install`
-    - [ ] Manual check: `docker compose up -d && mvn -pl collection-service spring-boot:run` boots cleanly against the same Postgres instance `recycler-service` uses — confirm no port/table conflict
+    - [x] Build succeeds: `mvn -pl collection-service -am install`
+    - [x] Manual check: `docker compose up -d && mvn -pl collection-service spring-boot:run` boots cleanly against the same Postgres instance `recycler-service` uses — confirmed no port/table conflict (`recycler-service` re-booted against the same volume right after: 3 changesets ran, `collection-service` ran 0, both started clean)
   - **Dependencies:** None (shared-kernel already built)
   - **Files likely touched:** `collection-service/pom.xml`, root `pom.xml`, `collection-service/src/main/resources/application.yml`, `collection-service/src/main/resources/db/changelog/db.changelog-master.yaml`
   - **Estimated scope:** Medium (4 files)
+  - **Prerequisite fix (not scope creep — see commit history):** moved `PageResponse<T>` from `recycler-service`'s own package to `shared-kernel` (`pe.esgtrazabilidad.kernel.web`), since `collection-service` needs the same list-endpoint wrapper but cannot depend on `recycler-service` per the capability map. Anticipated by Task 4's original acceptance criteria wording ("... or a shared location if reused later"). Mechanical move (bare `spring-data-commons` added to `shared-kernel`), no behavior change — full reactor test suite re-run to confirm no regression (58 `recycler-service` tests still green).
+  - **Environment note:** this machine runs **Rancher Desktop** (dockerd/moby mode), not Docker Desktop — verify with `docker ps`, never suggest launching `Docker Desktop.exe` (now documented in `CLAUDE.md`). Also: the local `esg_postgres_data` Docker volume from earlier sessions had an unrecorded password (by design — never logged/committed); recreated it (`docker compose down -v && up -d`) with a known dev-only password rather than guess — user confirmed this was fine since it only held local sample data, not anything worth preserving.
 
 ### Checkpoint 7: Service boots
-- [ ] `mvn -pl collection-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies
+- [x] `mvn -pl collection-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies
 - [ ] Human review before first entity slice
 
 ## Phase 8: Neighbor

@@ -1,5 +1,5 @@
 databaseChangeLog:
   - includeAll:
-      path: db/changelog/changes/
+      path: changes/
       relativeToChangelogFile: true
       errorIfMissingOrEmpty: false

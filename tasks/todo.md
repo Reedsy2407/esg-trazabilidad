@@ -194,18 +194,20 @@
 
 ## Phase 6: Polish
 
-- [ ] Task 11: springdoc-openapi wiring
+- [x] Task 11: springdoc-openapi wiring
   - **Description:** Confirm Swagger UI renders all three controllers with accurate request/response schemas, including validation constraints.
   - **Acceptance criteria:**
-    - [ ] Swagger UI reachable locally (default `/swagger-ui.html`) and lists `Association`, `Recycler`, `Certification` endpoints
-    - [ ] Request/response schemas reflect validation annotations (e.g. RUC/DNI patterns show in the schema)
+    - [x] Swagger UI reachable locally (default `/swagger-ui.html`) and lists `Association`, `Recycler`, `Certification` endpoints
+    - [x] Request/response schemas reflect validation annotations (e.g. RUC/DNI patterns show in the schema)
   - **Verification:**
-    - [ ] Manual check: open Swagger UI in a browser against `docker compose up` + running app, exercise one endpoint from the UI
+    - [x] Manual check: open Swagger UI in a browser against `docker compose up` + running app, exercise one endpoint from the UI
   - **Dependencies:** Task 6, Task 8, Task 10
   - **Files likely touched:** `application.yml` (springdoc config if any customization needed), possibly `@Tag`/`@Schema` annotations on existing controllers/DTOs
   - **Estimated scope:** Small (1-2 files)
+  - **Also fixed (real doc-accuracy gap, in scope for this task):** every `POST` create endpoint documented `200` instead of the actual runtime `201` — springdoc can't statically infer a programmatic `ResponseEntity.status(...)` call. Added `@ResponseStatus(HttpStatus.CREATED)` to all three controllers' `create()` methods (purely a documentation hint; Spring ignores `@ResponseStatus` when the method returns `ResponseEntity`, so no runtime behavior changed — verified via the full test suite plus a manual curl still returning 201).
+  - **Gap surfaced, not fixed here (see Checkpoint 6 note):** `SPEC-recycler-service.md`'s Success Criteria calls for "update where the domain calls for it, e.g. renewing a certification" — no task in this plan ever scoped an update/PUT endpoint for anything (Association `suspend()`/`activate()`, Recycler `activate()`/`deactivate()`, or a Certification renewal), even though those domain methods exist. This is a planning-phase gap, not something skipped during `/build`.
 
 ### Checkpoint 6: Final — ready for review
-- [ ] All Success Criteria in `SPEC-shared-kernel.md` and `SPEC-recycler-service.md` are met
+- [ ] All Success Criteria in `SPEC-shared-kernel.md` and `SPEC-recycler-service.md` are met — **NOT yet true**: `SPEC-recycler-service.md` line 123 requires "update where the domain calls for it, e.g. renewing a certification"; no such endpoint exists for Association, Recycler, or Certification. Every other line item in both specs' Success Criteria checklists is verified true (shared-kernel: all 5; recycler-service: all but this one of 7). Needs a decision from the user: add an update task now, or accept the gap and move on.
 - [ ] Definition of Done (Correctness + Quality sections) satisfied for every task above
 - [ ] Human review and approval before moving to `collection-service` or `cross-service-events`

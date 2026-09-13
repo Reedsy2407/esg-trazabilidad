@@ -175,7 +175,7 @@
   - **Description:** Expose Certification CRUD nested under its association.
   - **Acceptance criteria:**
     - [ ] `POST /associations/{associationId}/certifications` validates `issuedDate < expirationDate`, returns `CER-002` 404 if the association doesn't exist, `CER-003` on invalid date range
-    - [ ] `GET /associations/{associationId}/certifications/{id}` returns 404 via `CER-001` when missing, response includes computed `expired: boolean`
+    - [ ] `GET /associations/{associationId}/certifications/{id}` returns 404 via `CER-001` when missing, response includes computed `expired: boolean`. **Get the associationId path-scoping right from the start** (Task 8 shipped `RecyclerController.getById()` ignoring the `associationId` path segment entirely — any recycler id was returned regardless of which association's path it was requested through — caught and fixed post-merge): `GetCertificationUseCase` must take both `associationId` and `id`, and the service must check `certification.getAssociationId()` matches, throwing `CER-001` on mismatch, not just on a genuinely missing id.
     - [ ] `GET /associations/{associationId}/certifications` returns paginated `PageResponse<CertificationResponse>`, with `@PageableDefault(size = 20, sort = "expirationDate", direction = Sort.Direction.ASC)` on the `Pageable` param (per guide 1.11 — max-page-size already set globally)
     - [ ] Unit test for `CertificationService`
     - [ ] IT test covering create → get → list, plus association-not-found and invalid-date-range paths, and one case each for expired/not-expired in the response

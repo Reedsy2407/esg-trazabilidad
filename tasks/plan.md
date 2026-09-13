@@ -57,7 +57,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 ### Phase 1: Foundation (`shared-kernel`)
 
 - [x] Task 1: Monorepo + shared-kernel scaffolding
-- [ ] Task 2: Error handling (`ApplicationError`, `ApplicationException`, `GlobalExceptionHandler`)
+- [x] Task 2: Error handling (`ApplicationError`, `ApplicationException`, `GlobalExceptionHandler`)
 - [ ] Task 3: Event strategy + ID generation (`EventPublishingStrategy`, `IdGenerator`)
 
 ### Checkpoint 1: shared-kernel complete

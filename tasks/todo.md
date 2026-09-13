@@ -90,25 +90,27 @@
   - **Estimated scope:** Large (6 files) — persistence-only, no controller/service yet
   - **Note:** changelog lives at `db/changelog/changes/v0.1.0_create_association_table.yaml` (Task 4's `changes/` subfolder decision). Domain validation tested: RUC length invariant, and `suspend()`/`activate()` idempotency guards (not spec-required but cheap, real business rules worth protecting).
 
-- [ ] Task 6: Association API
+- [x] Task 6: Association API
   - **Description:** Expose Association CRUD over HTTP: mapper, request/response DTOs with validation, use case interfaces, service, controller.
   - **Acceptance criteria:**
-    - [ ] `POST /associations` creates an association, validates RUC format (11 digits) via `jakarta.validation`, returns 409 via `AssociationErrors.DUPLICATE_RUC` on conflict
-    - [ ] `GET /associations/{id}` returns 404 via `AssociationErrors.NOT_FOUND` when missing
-    - [ ] `GET /associations` returns a paginated `PageResponse<AssociationResponse>`, filterable by `status` via a composed `Specification<Association>` (not a monolithic lambda)
-    - [ ] Unit test for `AssociationService` (Mockito-mocked repository port)
-    - [ ] IT test (`AssociationApiIT` or similar, RestAssured + Testcontainers) covering: create → get → list, plus the duplicate-RUC and not-found error paths
+    - [x] `POST /associations` creates an association, validates RUC format (11 digits) via `jakarta.validation`, returns 409 via `AssociationErrors.DUPLICATE_RUC` on conflict
+    - [x] `GET /associations/{id}` returns 404 via `AssociationErrors.NOT_FOUND` when missing
+    - [x] `GET /associations` returns a paginated `PageResponse<AssociationResponse>`, filterable by `status` via a composed `Specification<Association>` (not a monolithic lambda)
+    - [x] Unit test for `AssociationService` (Mockito-mocked repository port)
+    - [x] IT test (`AssociationApiIT` or similar, RestAssured + Testcontainers) covering: create → get → list, plus the duplicate-RUC and not-found error paths
   - **Verification:**
-    - [ ] Unit tests pass: `mvn -pl recycler-service test`
-    - [ ] Integration tests pass: `mvn -pl recycler-service verify`
-    - [ ] Manual check: exercise all three endpoints via Swagger UI or curl against `docker compose up` Postgres
+    - [x] Unit tests pass: `mvn -pl recycler-service test`
+    - [x] Integration tests pass: `mvn -pl recycler-service verify`
+    - [x] Manual check: exercise all three endpoints via Swagger UI or curl against `docker compose up` Postgres
   - **Dependencies:** Task 5
   - **Files likely touched:** `association/adapter/in/web/{AssociationController,AssociationMapper}.java`, DTOs (`CreateAssociationRequest`, `AssociationResponse`), `association/port/in/*UseCase.java`, `association/service/AssociationService.java`, `AssociationServiceTest.java`, `it/AssociationApiIT.java`
   - **Estimated scope:** Large (7 files)
+  - **Also required (gaps surfaced by this task, not scope creep):** shared-kernel's `GlobalExceptionHandler` now auto-registers into any consuming service via a Spring Boot `AutoConfiguration.imports` file — it existed since Task 2 but nothing wired it into component scanning, so this task's 409/404 paths would have silently 500'd otherwise. Root pom now sets `maven.compiler.parameters=true` — without it, unnamed `@PathVariable`/`@RequestParam` fail at request time with "parameter name information not available". `rest-assured` pinned to 5.5.7 (6.0.1 requires Jackson 3, incompatible with Spring Boot 3.3.5's Jackson 2.x).
+  - **Verification gotcha:** a standalone `mvn -pl recycler-service spring-boot:run` (no `-am`) resolves `shared-kernel` from the already-installed `~/.m2` jar, not the reactor's fresh `target/classes` — if shared-kernel changed, run `mvn -pl shared-kernel install` first or the manual check will silently run against a stale jar.
 
 ### Checkpoint 3: Association CRUD works end-to-end
-- [ ] `mvn -pl recycler-service verify` green
-- [ ] Manual check: create → get → list an association via Swagger/curl
+- [x] `mvn -pl recycler-service verify` green
+- [x] Manual check: create → get → list an association via Swagger/curl
 - [ ] Human review before Recycler slice
 
 ## Phase 4: Recycler

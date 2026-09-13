@@ -65,6 +65,14 @@
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <!-- Pinned to the 5.x line: 6.0.1 references a Jackson 3 support
+                 class not present with Spring Boot 3.3.5's Jackson 2.x. -->
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>5.5.7</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

@@ -21,6 +21,9 @@
         <java.version>21</java.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
+        <!-- Needed for @PathVariable/@RequestParam to resolve by parameter name
+             via reflection without every one needing an explicit name= value. -->
+        <maven.compiler.parameters>true</maven.compiler.parameters>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot.version>3.3.5</spring-boot.version>
         <!-- Not part of the Spring Boot BOM; pinned here so every module that

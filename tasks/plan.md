@@ -77,11 +77,11 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 ### Phase 3: Association
 
 - [x] Task 5: Association persistence (Liquibase `v0.1.0`, domain, JPA entity/repo, repository port+adapter, `AssociationErrors`)
-- [ ] Task 6: Association API (mapper, DTOs incl. RUC validation, use cases, `AssociationService`, `AssociationController`, unit + IT tests)
+- [x] Task 6: Association API (mapper, DTOs incl. RUC validation, use cases, `AssociationService`, `AssociationController`, unit + IT tests)
 
 ### Checkpoint 3: Association CRUD works end-to-end
-- [ ] `mvn -pl recycler-service verify` green (unit + Testcontainers IT)
-- [ ] Manual check: create → get → list an association via Swagger/curl against `docker compose up` Postgres
+- [x] `mvn -pl recycler-service verify` green (unit + Testcontainers IT)
+- [x] Manual check: create → get → list an association via Swagger/curl against `docker compose up` Postgres
 - [ ] Human review before Recycler slice
 
 ### Phase 4: Recycler

@@ -67,11 +67,11 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Phase 2: recycler-service infra
 
-- [ ] Task 4: recycler-service scaffolding (pom, docker-compose.yml, Liquibase master changelog, `PageResponse<T>`)
+- [x] Task 4: recycler-service scaffolding (pom, docker-compose.yml, Liquibase master changelog, `PageResponse<T>`)
 
 ### Checkpoint 2: Service boots
-- [ ] `docker compose up -d` starts Postgres
-- [ ] `mvn -pl recycler-service spring-boot:run` boots cleanly against it, empty Liquibase changelog applies with no errors
+- [x] `docker compose up -d` starts Postgres
+- [x] `mvn -pl recycler-service spring-boot:run` boots cleanly against it, empty Liquibase changelog applies with no errors
 - [ ] Human review before first entity slice
 
 ### Phase 3: Association

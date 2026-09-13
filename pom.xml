@@ -14,6 +14,7 @@
 
     <modules>
         <module>shared-kernel</module>
+        <module>recycler-service</module>
     </modules>
 
     <properties>
@@ -22,6 +23,9 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot.version>3.3.5</spring-boot.version>
+        <!-- Not part of the Spring Boot BOM; pinned here so every module that
+             wires Swagger UI later shares one version. -->
+        <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
     </properties>
 
     <dependencyManagement>
@@ -32,6 +36,11 @@
                 <version>${spring-boot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc-openapi.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

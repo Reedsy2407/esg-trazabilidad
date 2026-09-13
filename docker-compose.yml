@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-esg_trazabilidad}
+      POSTGRES_USER: ${POSTGRES_USER:-esg}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.local)}
+    ports:
+      # Host port 5433, not the default 5432: avoids colliding with a
+      # locally-installed native Postgres service on the same machine.
+      - "5433:5432"
+    volumes:
+      - esg_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  esg_postgres_data:

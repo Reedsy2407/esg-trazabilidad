@@ -26,10 +26,27 @@
         <!-- Not part of the Spring Boot BOM; pinned here so every module that
              wires Swagger UI later shares one version. -->
         <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
+        <!-- Overrides Spring Boot 3.3.5's managed Testcontainers version (1.19.8):
+             its Windows npipe transport hardcodes an old Docker API version and
+             ignores DOCKER_API_VERSION, breaking against recent Docker Engines.
+             The bug persists through the 1.x line (confirmed against 1.20.4) —
+             needs the 2.x series, per Rancher Desktop's Testcontainers troubleshooting docs. -->
+        <testcontainers.version>2.0.5</testcontainers.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- Declared before spring-boot-dependencies so it wins for org.testcontainers:*:
+                 spring-boot-dependencies imports testcontainers-bom as a NESTED import,
+                 which resolves ${testcontainers.version} against its own internal value at
+                 import time — overriding that property in this pom has no effect on it. -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>

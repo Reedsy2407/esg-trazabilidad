@@ -5,11 +5,15 @@ import java.util.UUID;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.PostLoad;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+
+import org.springframework.data.domain.Persistable;
 
 @Entity
 @Table(name = "association")
-class AssociationEntity {
+class AssociationEntity implements Persistable<UUID> {
 
     @Id
     private UUID id;
@@ -34,6 +38,9 @@ class AssociationEntity {
     @Column(nullable = false)
     private String status;
 
+    @Transient
+    private boolean isNew = false;
+
     protected AssociationEntity() {
     }
 
@@ -54,10 +61,22 @@ class AssociationEntity {
         this.contactEmail = contactEmail;
         this.contactPhone = contactPhone;
         this.status = status;
+        this.isNew = true;
     }
 
-    UUID getId() {
+    @PostLoad
+    void markNotNew() {
+        isNew = false;
+    }
+
+    @Override
+    public UUID getId() {
         return id;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
     }
 
     String getName() {

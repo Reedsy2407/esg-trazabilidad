@@ -79,6 +79,29 @@
                         <goals>
                             <goal>repackage</goal>
                         </goals>
+                        <configuration>
+                            <!-- Keeps target/recycler-service.jar as a plain jar so
+                                 failsafe's forked JVM classpath still resolves project
+                                 classes during `mvn verify` — otherwise repackage
+                                 replaces it in place with the nested BOOT-INF/classes
+                                 layout before the integration-test phase runs. The
+                                 executable jar is still produced, as
+                                 recycler-service-exec.jar. -->
+                            <classifier>exec</classifier>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.2.5</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>

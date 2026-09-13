@@ -3,6 +3,8 @@ package pe.esgtrazabilidad.recycler.association.adapter.out.persistence;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import pe.esgtrazabilidad.recycler.association.domain.Association;
@@ -31,6 +33,13 @@ class AssociationRepositoryAdapter implements AssociationRepository {
     @Override
     public Optional<Association> findByRuc(String ruc) {
         return jpaRepository.findByRuc(ruc).map(this::toDomain);
+    }
+
+    @Override
+    public Page<Association> findAll(AssociationStatus status, Pageable pageable) {
+        String statusValue = status == null ? null : status.name();
+        return jpaRepository.findAll(AssociationSpecifications.hasStatus(statusValue), pageable)
+                .map(this::toDomain);
     }
 
     private AssociationEntity toEntity(Association association) {

@@ -50,24 +50,26 @@
 
 ## Phase 2: recycler-service infra
 
-- [ ] Task 4: recycler-service scaffolding
+- [x] Task 4: recycler-service scaffolding
   - **Description:** Create the `recycler-service` Maven module (depending on `shared-kernel`), the root `docker-compose.yml` with Postgres, an empty Liquibase master changelog, `application.yml`, and the shared `PageResponse<T>` DTO used by every future list endpoint.
   - **Acceptance criteria:**
-    - [ ] `recycler-service/pom.xml` depends on `shared-kernel`, `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-validation`, `springdoc-openapi-starter-webmvc-ui`, Postgres driver, Liquibase core, Testcontainers (test scope)
-    - [ ] `esg-trazabilidad/docker-compose.yml` at repo root starts a Postgres container with a named volume
-    - [ ] `db/changelog/db.changelog-master.yaml` exists with `includeAll` on its folder (empty folder is fine for now)
-    - [ ] `PageResponse<T>` generic wrapper exists in `pe.esgtrazabilidad.recycler` (or a shared location if reused later)
-    - [ ] App boots with `spring-boot:run` against the Docker Postgres with no schema errors
+    - [x] `recycler-service/pom.xml` depends on `shared-kernel`, `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-validation`, `springdoc-openapi-starter-webmvc-ui`, Postgres driver, Liquibase core, Testcontainers (test scope)
+    - [x] `esg-trazabilidad/docker-compose.yml` at repo root starts a Postgres container with a named volume
+    - [x] `db/changelog/db.changelog-master.yaml` exists with `includeAll` on its folder (empty folder is fine for now)
+    - [x] `PageResponse<T>` generic wrapper exists in `pe.esgtrazabilidad.recycler` (or a shared location if reused later)
+    - [x] App boots with `spring-boot:run` against the Docker Postgres with no schema errors
   - **Verification:**
-    - [ ] Build succeeds: `mvn -pl recycler-service -am install`
-    - [ ] Manual check: `docker compose up -d && mvn -pl recycler-service spring-boot:run` boots cleanly, `/actuator/health` (if enabled) or root context responds
+    - [x] Build succeeds: `mvn -pl recycler-service -am install`
+    - [x] Manual check: `docker compose up -d && mvn -pl recycler-service spring-boot:run` boots cleanly, `/actuator/health` (if enabled) or root context responds
   - **Dependencies:** Task 1, Task 2, Task 3 (needs `shared-kernel` installed)
   - **Files likely touched:** `recycler-service/pom.xml`, `docker-compose.yml`, `recycler-service/src/main/resources/application.yml`, `recycler-service/src/main/resources/db/changelog/db.changelog-master.yaml`, `PageResponse.java`
   - **Estimated scope:** Medium (5 files)
+  - **Deviations from plan:** (1) `includeAll.filter` in this Liquibase version (4.27.0) expects a Java class name, not an inline expression — changesets live in a `db/changelog/changes/` subfolder instead of alongside the master file, so no filter is needed at all. (2) Docker Postgres is published on host port **5433**, not 5432 — a pre-existing native PostgreSQL 18 Windows service on this machine already owns 5432 and silently shadowed the container for any Windows-native process (incl. `spring-boot:run`), causing password-auth failures that had nothing to do with the app's config.
+  - **Verification note:** `POSTGRES_PASSWORD` (docker-compose) and `DB_PASSWORD` (app) must be exported before `docker compose up` / `spring-boot:run` — both fail fast with no default, per CLAUDE.md's no-hardcoded-secret-default rule.
 
 ### Checkpoint 2: Service boots
-- [ ] `docker compose up -d` starts Postgres
-- [ ] `mvn -pl recycler-service spring-boot:run` boots cleanly, empty changelog applies
+- [x] `docker compose up -d` starts Postgres
+- [x] `mvn -pl recycler-service spring-boot:run` boots cleanly, empty changelog applies
 - [ ] Human review before first entity slice
 
 ## Phase 3: Association

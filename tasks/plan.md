@@ -158,10 +158,10 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Phase 7: collection-service infra
 
-- [ ] Task 13: collection-service scaffolding (pom, root reactor module entry, `application.yml` port 8082, Liquibase master, reuse shared `docker-compose.yml`)
+- [x] Task 13: collection-service scaffolding (pom, root reactor module entry, `application.yml` port 8082, Liquibase master, reuse shared `docker-compose.yml`)
 
 ### Checkpoint 7: Service boots
-- [ ] `mvn -pl collection-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies
+- [x] `mvn -pl collection-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies
 - [ ] Human review before first entity slice
 
 ### Phase 8: Neighbor

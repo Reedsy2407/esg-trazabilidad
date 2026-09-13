@@ -13,6 +13,8 @@ public interface AssociationRepository {
 
     Association save(Association association);
 
+    Association update(Association association);
+
     Optional<Association> findById(UUID id);
 
     Optional<Association> findByRuc(String ruc);

@@ -150,6 +150,62 @@ class AssociationApiIT {
     }
 
     @Test
+    void suspendingAndReactivatingAnAssociationChangesItsStatus() {
+        String id = given()
+                .contentType(ContentType.JSON)
+                .body(createAssociationRequest("20444444444"))
+                .when()
+                .post("/associations")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        given()
+                .when()
+                .patch("/associations/{id}/suspend", id)
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("SUSPENDED"));
+
+        given()
+                .when()
+                .get("/associations/{id}", id)
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("SUSPENDED"));
+
+        given()
+                .when()
+                .patch("/associations/{id}/activate", id)
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("ACTIVE"));
+    }
+
+    @Test
+    void suspendingAnAlreadySuspendedAssociationReturnsConflict() {
+        String id = given()
+                .contentType(ContentType.JSON)
+                .body(createAssociationRequest("20555555555"))
+                .when()
+                .post("/associations")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        given().when().patch("/associations/{id}/suspend", id).then().statusCode(200);
+
+        given()
+                .when()
+                .patch("/associations/{id}/suspend", id)
+                .then()
+                .statusCode(409)
+                .body("code", equalTo("ASO-003"));
+    }
+
+    @Test
     void listingWithAnOversizedPageSizeIsCappedAtTheConfiguredMaximum() {
         given()
                 .queryParam("size", 99999)

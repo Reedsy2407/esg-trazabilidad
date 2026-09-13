@@ -48,6 +48,23 @@ class RecyclerEntity implements Persistable<UUID> {
         this.isNew = true;
     }
 
+    /**
+     * For updating a row that's already persisted. Unlike the public
+     * constructor (always isNew=true, correct for create()), this produces
+     * an entity Spring Data routes through merge() instead of persist().
+     */
+    static RecyclerEntity existing(UUID id, String fullName, String dni, String phone, UUID associationId, String status) {
+        RecyclerEntity entity = new RecyclerEntity();
+        entity.id = id;
+        entity.fullName = fullName;
+        entity.dni = dni;
+        entity.phone = phone;
+        entity.associationId = associationId;
+        entity.status = status;
+        entity.isNew = false;
+        return entity;
+    }
+
     @PostLoad
     void markNotNew() {
         isNew = false;

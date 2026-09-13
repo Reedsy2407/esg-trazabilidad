@@ -8,9 +8,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import pe.esgtrazabilidad.recycler.association.port.in.ActivateAssociationUseCase;
 import pe.esgtrazabilidad.recycler.association.port.in.CreateAssociationUseCase;
 import pe.esgtrazabilidad.recycler.association.port.in.GetAssociationUseCase;
 import pe.esgtrazabilidad.recycler.association.port.in.ListAssociationsUseCase;
+import pe.esgtrazabilidad.recycler.association.port.in.SuspendAssociationUseCase;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -39,6 +41,12 @@ class AssociationExceptionHandlerTest {
 
     @MockBean
     private ListAssociationsUseCase listAssociationsUseCase;
+
+    @MockBean
+    private SuspendAssociationUseCase suspendAssociationUseCase;
+
+    @MockBean
+    private ActivateAssociationUseCase activateAssociationUseCase;
 
     @MockBean
     private AssociationMapper mapper;

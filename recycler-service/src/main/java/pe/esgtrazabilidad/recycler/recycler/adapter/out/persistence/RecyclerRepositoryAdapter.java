@@ -26,6 +26,18 @@ class RecyclerRepositoryAdapter implements RecyclerRepository {
     }
 
     @Override
+    public Recycler update(Recycler recycler) {
+        RecyclerEntity existing = RecyclerEntity.existing(
+                recycler.getId(),
+                recycler.getFullName(),
+                recycler.getDni(),
+                recycler.getPhone(),
+                recycler.getAssociationId(),
+                recycler.getStatus().name());
+        return toDomain(jpaRepository.save(existing));
+    }
+
+    @Override
     public Optional<Recycler> findById(UUID id) {
         return jpaRepository.findById(id).map(this::toDomain);
     }

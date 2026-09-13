@@ -11,7 +11,7 @@ public class Certification {
     private final UUID associationId;
     private final String certificationType;
     private final LocalDate issuedDate;
-    private final LocalDate expirationDate;
+    private LocalDate expirationDate;
 
     private Certification(
             UUID id, UUID associationId, String certificationType, LocalDate issuedDate, LocalDate expirationDate) {
@@ -38,6 +38,13 @@ public class Certification {
 
     public boolean isExpired() {
         return expirationDate.isBefore(LocalDate.now());
+    }
+
+    public void renew(LocalDate newExpirationDate) {
+        if (newExpirationDate == null || !issuedDate.isBefore(newExpirationDate)) {
+            throw new IllegalArgumentException("La nueva fecha de vencimiento debe ser posterior a la fecha de emisión");
+        }
+        this.expirationDate = newExpirationDate;
     }
 
     public UUID getId() {

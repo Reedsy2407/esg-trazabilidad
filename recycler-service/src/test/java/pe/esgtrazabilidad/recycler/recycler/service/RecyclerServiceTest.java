@@ -126,6 +126,69 @@ class RecyclerServiceTest {
     }
 
     @Test
+    void deactivateMovesAnActiveRecyclerToInactive() {
+        Recycler recycler = Recycler.create("Juan Pérez", "12345678", "999999999", associationId);
+        when(recyclerRepository.findById(recycler.getId())).thenReturn(Optional.of(recycler));
+        when(recyclerRepository.update(any(Recycler.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Recycler result = service.deactivate(associationId, recycler.getId());
+
+        assertThat(result.getStatus()).isEqualTo(RecyclerStatus.INACTIVE);
+        verify(recyclerRepository).update(recycler);
+    }
+
+    @Test
+    void deactivatingAnAlreadyInactiveRecyclerThrowsAConflict() {
+        Recycler recycler = Recycler.create("Juan Pérez", "12345678", "999999999", associationId);
+        recycler.deactivate();
+        when(recyclerRepository.findById(recycler.getId())).thenReturn(Optional.of(recycler));
+
+        assertThatThrownBy(() -> service.deactivate(associationId, recycler.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(RecyclerErrors.INVALID_STATUS_TRANSITION));
+        verify(recyclerRepository, never()).update(any());
+    }
+
+    @Test
+    void deactivatingARecyclerFromADifferentAssociationThrowsNotFound() {
+        UUID otherAssociationId = UUID.randomUUID();
+        Recycler recycler = Recycler.create("Juan Pérez", "12345678", "999999999", otherAssociationId);
+        when(recyclerRepository.findById(recycler.getId())).thenReturn(Optional.of(recycler));
+
+        assertThatThrownBy(() -> service.deactivate(associationId, recycler.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(RecyclerErrors.NOT_FOUND));
+        verify(recyclerRepository, never()).update(any());
+    }
+
+    @Test
+    void activateMovesAnInactiveRecyclerToActive() {
+        Recycler recycler = Recycler.create("Juan Pérez", "12345678", "999999999", associationId);
+        recycler.deactivate();
+        when(recyclerRepository.findById(recycler.getId())).thenReturn(Optional.of(recycler));
+        when(recyclerRepository.update(any(Recycler.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Recycler result = service.activate(associationId, recycler.getId());
+
+        assertThat(result.getStatus()).isEqualTo(RecyclerStatus.ACTIVE);
+        verify(recyclerRepository).update(recycler);
+    }
+
+    @Test
+    void activatingAnAlreadyActiveRecyclerThrowsAConflict() {
+        Recycler recycler = Recycler.create("Juan Pérez", "12345678", "999999999", associationId);
+        when(recyclerRepository.findById(recycler.getId())).thenReturn(Optional.of(recycler));
+
+        assertThatThrownBy(() -> service.activate(associationId, recycler.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(RecyclerErrors.INVALID_STATUS_TRANSITION));
+        verify(recyclerRepository, never()).update(any());
+    }
+
+    @Test
     void listDelegatesToTheRepository() {
         Pageable pageable = Pageable.ofSize(10);
         Page<Recycler> expectedPage = new PageImpl<>(java.util.List.of());

@@ -10,14 +10,21 @@ import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.recycler.association.domain.Association;
 import pe.esgtrazabilidad.recycler.association.domain.AssociationStatus;
 import pe.esgtrazabilidad.recycler.association.exception.AssociationErrors;
+import pe.esgtrazabilidad.recycler.association.port.in.ActivateAssociationUseCase;
 import pe.esgtrazabilidad.recycler.association.port.in.CreateAssociationCommand;
 import pe.esgtrazabilidad.recycler.association.port.in.CreateAssociationUseCase;
 import pe.esgtrazabilidad.recycler.association.port.in.GetAssociationUseCase;
 import pe.esgtrazabilidad.recycler.association.port.in.ListAssociationsUseCase;
+import pe.esgtrazabilidad.recycler.association.port.in.SuspendAssociationUseCase;
 import pe.esgtrazabilidad.recycler.association.port.out.AssociationRepository;
 
 @Service
-class AssociationService implements CreateAssociationUseCase, GetAssociationUseCase, ListAssociationsUseCase {
+class AssociationService
+        implements CreateAssociationUseCase,
+                GetAssociationUseCase,
+                ListAssociationsUseCase,
+                SuspendAssociationUseCase,
+                ActivateAssociationUseCase {
 
     private final AssociationRepository repository;
 
@@ -48,5 +55,27 @@ class AssociationService implements CreateAssociationUseCase, GetAssociationUseC
     @Override
     public Page<Association> list(AssociationStatus status, Pageable pageable) {
         return repository.findAll(status, pageable);
+    }
+
+    @Override
+    public Association suspend(UUID id) {
+        Association association = getById(id);
+        try {
+            association.suspend();
+        } catch (IllegalStateException e) {
+            throw new ApplicationException(AssociationErrors.INVALID_STATUS_TRANSITION);
+        }
+        return repository.update(association);
+    }
+
+    @Override
+    public Association activate(UUID id) {
+        Association association = getById(id);
+        try {
+            association.activate();
+        } catch (IllegalStateException e) {
+            throw new ApplicationException(AssociationErrors.INVALID_STATUS_TRANSITION);
+        }
+        return repository.update(association);
     }
 }

@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.recycler.recycler.adapter.out.persistence;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.hibernate.exception.ConstraintViolationException;
@@ -16,6 +17,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import pe.esgtrazabilidad.recycler.association.domain.Association;
 import pe.esgtrazabilidad.recycler.association.port.out.AssociationRepository;
 import pe.esgtrazabilidad.recycler.recycler.domain.Recycler;
+import pe.esgtrazabilidad.recycler.recycler.domain.RecyclerStatus;
 import pe.esgtrazabilidad.recycler.recycler.port.out.RecyclerRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,15 +43,15 @@ class RecyclerRepositoryAdapterIT {
     @Autowired
     private AssociationRepository associationRepository;
 
-    private UUID persistAssociation() {
-        Association association = Association.create(
-                "Asociación IT", "20155555555", "REG-IT", "Dirección", "it@test.pe", "999999999");
+    private UUID persistAssociation(String ruc) {
+        Association association =
+                Association.create("Asociación IT", ruc, "REG-IT", "Dirección", "it@test.pe", "999999999");
         return associationRepository.save(association).getId();
     }
 
     @Test
     void savingASecondRecyclerWithTheSameDniViolatesTheUniqueConstraint() {
-        UUID associationId = persistAssociation();
+        UUID associationId = persistAssociation("20155555555");
         String sharedDni = "12399999";
         recyclerRepository.save(Recycler.create("Primer reciclador", sharedDni, "999999999", associationId));
 
@@ -78,5 +80,21 @@ class RecyclerRepositoryAdapterIT {
                     assertThat(((ConstraintViolationException) cause).getConstraintName())
                             .isEqualTo("fk_recycler_association");
                 });
+    }
+
+    @Test
+    void updatingAnExistingRecyclerPersistsTheChangeWithoutDuplicatingTheRow() {
+        UUID associationId = persistAssociation("20166666666");
+        Recycler recycler = recyclerRepository.save(
+                Recycler.create("Reciclador a actualizar", "11122233", "999999999", associationId));
+        UUID id = recycler.getId();
+        recycler.deactivate();
+
+        Recycler updated = recyclerRepository.update(recycler);
+
+        assertThat(updated.getId()).isEqualTo(id);
+        Optional<Recycler> reloaded = recyclerRepository.findById(id);
+        assertThat(reloaded).isPresent();
+        assertThat(reloaded.get().getStatus()).isEqualTo(RecyclerStatus.INACTIVE);
     }
 }

@@ -63,4 +63,24 @@ class CertificationTest {
 
         assertThat(certification.isExpired()).isFalse();
     }
+
+    @Test
+    void renewExtendsTheExpirationDate() {
+        Certification certification = Certification.create(
+                associationId, "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().plusDays(1));
+        LocalDate newExpirationDate = LocalDate.now().plusYears(1);
+
+        certification.renew(newExpirationDate);
+
+        assertThat(certification.getExpirationDate()).isEqualTo(newExpirationDate);
+    }
+
+    @Test
+    void renewingWithADateNotAfterTheIssuedDateThrows() {
+        Certification certification = Certification.create(
+                associationId, "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().plusDays(1));
+
+        assertThatThrownBy(() -> certification.renew(certification.getIssuedDate()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

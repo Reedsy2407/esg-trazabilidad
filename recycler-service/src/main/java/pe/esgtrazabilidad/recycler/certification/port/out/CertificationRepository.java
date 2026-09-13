@@ -12,6 +12,8 @@ public interface CertificationRepository {
 
     Certification save(Certification certification);
 
+    Certification update(Certification certification);
+
     Optional<Certification> findById(UUID id);
 
     Page<Certification> findAll(UUID associationId, Pageable pageable);

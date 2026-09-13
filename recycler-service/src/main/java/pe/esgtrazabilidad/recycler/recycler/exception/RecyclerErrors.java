@@ -8,7 +8,8 @@ public enum RecyclerErrors implements ApplicationError {
 
     NOT_FOUND("REC-001", "Reciclador no encontrado", HttpStatus.NOT_FOUND),
     DUPLICATE_DNI("REC-002", "Ya existe un reciclador con ese DNI", HttpStatus.CONFLICT),
-    ASSOCIATION_NOT_FOUND("REC-003", "La asociación indicada no existe", HttpStatus.NOT_FOUND);
+    ASSOCIATION_NOT_FOUND("REC-003", "La asociación indicada no existe", HttpStatus.NOT_FOUND),
+    INVALID_STATUS_TRANSITION("REC-004", "El reciclador ya se encuentra en el estado solicitado", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

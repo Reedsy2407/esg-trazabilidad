@@ -13,6 +13,8 @@ public interface RecyclerRepository {
 
     Recycler save(Recycler recycler);
 
+    Recycler update(Recycler recycler);
+
     Optional<Recycler> findById(UUID id);
 
     Optional<Recycler> findByDni(String dni);

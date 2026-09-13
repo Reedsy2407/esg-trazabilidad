@@ -64,6 +64,33 @@ class AssociationEntity implements Persistable<UUID> {
         this.isNew = true;
     }
 
+    /**
+     * For updating a row that's already persisted. Unlike the public
+     * constructor (always isNew=true, correct for create()), this produces
+     * an entity Spring Data routes through merge() instead of persist().
+     */
+    static AssociationEntity existing(
+            UUID id,
+            String name,
+            String ruc,
+            String registrationNumber,
+            String address,
+            String contactEmail,
+            String contactPhone,
+            String status) {
+        AssociationEntity entity = new AssociationEntity();
+        entity.id = id;
+        entity.name = name;
+        entity.ruc = ruc;
+        entity.registrationNumber = registrationNumber;
+        entity.address = address;
+        entity.contactEmail = contactEmail;
+        entity.contactPhone = contactPhone;
+        entity.status = status;
+        entity.isNew = false;
+        return entity;
+    }
+
     @PostLoad
     void markNotNew() {
         isNew = false;

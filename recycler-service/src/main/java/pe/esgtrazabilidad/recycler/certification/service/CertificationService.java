@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.recycler.certification.service;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -14,10 +15,15 @@ import pe.esgtrazabilidad.recycler.certification.port.in.CreateCertificationComm
 import pe.esgtrazabilidad.recycler.certification.port.in.CreateCertificationUseCase;
 import pe.esgtrazabilidad.recycler.certification.port.in.GetCertificationUseCase;
 import pe.esgtrazabilidad.recycler.certification.port.in.ListCertificationsUseCase;
+import pe.esgtrazabilidad.recycler.certification.port.in.RenewCertificationUseCase;
 import pe.esgtrazabilidad.recycler.certification.port.out.CertificationRepository;
 
 @Service
-class CertificationService implements CreateCertificationUseCase, GetCertificationUseCase, ListCertificationsUseCase {
+class CertificationService
+        implements CreateCertificationUseCase,
+                GetCertificationUseCase,
+                ListCertificationsUseCase,
+                RenewCertificationUseCase {
 
     private final CertificationRepository certificationRepository;
     private final AssociationRepository associationRepository;
@@ -44,6 +50,26 @@ class CertificationService implements CreateCertificationUseCase, GetCertificati
 
     @Override
     public Certification getById(UUID associationId, UUID id) {
+        return findScoped(associationId, id);
+    }
+
+    @Override
+    public Page<Certification> list(UUID associationId, Pageable pageable) {
+        return certificationRepository.findAll(associationId, pageable);
+    }
+
+    @Override
+    public Certification renew(UUID associationId, UUID id, LocalDate newExpirationDate) {
+        Certification certification = findScoped(associationId, id);
+        try {
+            certification.renew(newExpirationDate);
+        } catch (IllegalArgumentException e) {
+            throw new ApplicationException(CertificationErrors.INVALID_DATE_RANGE);
+        }
+        return certificationRepository.update(certification);
+    }
+
+    private Certification findScoped(UUID associationId, UUID id) {
         Certification certification = certificationRepository
                 .findById(id)
                 .orElseThrow(() -> new ApplicationException(CertificationErrors.NOT_FOUND));
@@ -51,10 +77,5 @@ class CertificationService implements CreateCertificationUseCase, GetCertificati
             throw new ApplicationException(CertificationErrors.NOT_FOUND);
         }
         return certification;
-    }
-
-    @Override
-    public Page<Certification> list(UUID associationId, Pageable pageable) {
-        return certificationRepository.findAll(associationId, pageable);
     }
 }

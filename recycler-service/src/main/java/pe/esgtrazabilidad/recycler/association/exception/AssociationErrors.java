@@ -7,7 +7,9 @@ import pe.esgtrazabilidad.kernel.error.ApplicationError;
 public enum AssociationErrors implements ApplicationError {
 
     NOT_FOUND("ASO-001", "Asociación no encontrada", HttpStatus.NOT_FOUND),
-    DUPLICATE_RUC("ASO-002", "Ya existe una asociación con ese RUC", HttpStatus.CONFLICT);
+    DUPLICATE_RUC("ASO-002", "Ya existe una asociación con ese RUC", HttpStatus.CONFLICT),
+    INVALID_STATUS_TRANSITION(
+            "ASO-003", "La asociación ya se encuentra en el estado solicitado", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

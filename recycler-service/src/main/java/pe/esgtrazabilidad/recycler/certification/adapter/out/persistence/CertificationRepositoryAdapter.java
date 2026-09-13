@@ -25,6 +25,17 @@ class CertificationRepositoryAdapter implements CertificationRepository {
     }
 
     @Override
+    public Certification update(Certification certification) {
+        CertificationEntity existing = CertificationEntity.existing(
+                certification.getId(),
+                certification.getAssociationId(),
+                certification.getCertificationType(),
+                certification.getIssuedDate(),
+                certification.getExpirationDate());
+        return toDomain(jpaRepository.save(existing));
+    }
+
+    @Override
     public Optional<Certification> findById(UUID id) {
         return jpaRepository.findById(id).map(this::toDomain);
     }

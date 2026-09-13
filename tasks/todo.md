@@ -1,6 +1,6 @@
-# Task List: shared-kernel + recycler-service (core)
+# Task List: shared-kernel + recycler-service + collection-service (core)
 
-> See `tasks/plan.md` for architecture decisions, dependency graph, and risks. Source specs: `SPEC-shared-kernel.md`, `SPEC-recycler-service.md`.
+> See `tasks/plan.md` for architecture decisions, dependency graph, and risks. Source specs: `SPEC-shared-kernel.md`, `SPEC-recycler-service.md`, `SPEC-collection-service.md`.
 
 ## Phase 1: Foundation (`shared-kernel`)
 
@@ -228,3 +228,208 @@
 - [x] All Success Criteria in `SPEC-shared-kernel.md` and `SPEC-recycler-service.md` are met — re-verified line by line: shared-kernel 5/5, recycler-service 7/7 (the "update where the domain calls for it" line, previously the one gap, is now closed by Task 12).
 - [x] Definition of Done (Correctness + Quality sections) satisfied for every task above — no separate DoD document exists in this repo; applying the de facto standard held throughout every task: passing unit + integration tests, a clean `mvn verify`/`mvn install` on the whole reactor, a manual end-to-end check against real Docker Postgres, and any deviation from the original plan documented in the task's own notes and commit message.
 - [x] Human review and approval before moving to `collection-service` or `cross-service-events` — approved 2026-09-13; reviewed in a prior session, code confirmed solid.
+
+## Phase 7: collection-service infra
+
+- [ ] Task 13: collection-service scaffolding
+  - **Description:** Create the `collection-service` Maven module (depends on `shared-kernel` only), add it to the root reactor, `application.yml` (port 8082, same shared Postgres via `DB_URL`/`DB_PASSWORD` env vars, no hardcoded secret default), empty Liquibase master changelog, reuse the existing root `docker-compose.yml` unchanged.
+  - **Acceptance criteria:**
+    - [ ] `collection-service/pom.xml` depends on `shared-kernel`, `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-validation`, `springdoc-openapi-starter-webmvc-ui`, Postgres driver, Liquibase core, Testcontainers (test scope)
+    - [ ] Root `pom.xml`'s `<modules>` gains `collection-service`
+    - [ ] `application.yml`: `server.port: 8082`, `spring.data.web.pageable.max-page-size: 100`
+    - [ ] `db/changelog/db.changelog-master.yaml` exists with `includeAll` on `changes/` (empty folder OK)
+    - [ ] App boots with `spring-boot:run` against the shared Docker Postgres, empty changelog applies with no errors, no collision with `recycler-service`'s tables
+  - **Verification:**
+    - [ ] Build succeeds: `mvn -pl collection-service -am install`
+    - [ ] Manual check: `docker compose up -d && mvn -pl collection-service spring-boot:run` boots cleanly against the same Postgres instance `recycler-service` uses — confirm no port/table conflict
+  - **Dependencies:** None (shared-kernel already built)
+  - **Files likely touched:** `collection-service/pom.xml`, root `pom.xml`, `collection-service/src/main/resources/application.yml`, `collection-service/src/main/resources/db/changelog/db.changelog-master.yaml`
+  - **Estimated scope:** Medium (4 files)
+
+### Checkpoint 7: Service boots
+- [ ] `mvn -pl collection-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies
+- [ ] Human review before first entity slice
+
+## Phase 8: Neighbor
+
+- [ ] Task 14: Neighbor persistence
+  - **Description:** Schema, domain model, and persistence adapter for `Neighbor` — no HTTP surface yet.
+  - **Acceptance criteria:**
+    - [ ] Liquibase changelog `v0.1.0_create_neighbor_table.yaml` creates the `neighbor` table: `full_name`, `phone`, `address`, `district`, `status`
+    - [ ] `Neighbor` domain class with a `status` of `ACTIVE`/`INACTIVE`
+    - [ ] JPA entity implementing `Persistable<UUID>` (same `isNew`/`@PostLoad` pattern as every `recycler-service` entity — app-assigned UUID v7 IDs) + Spring Data repository + `NeighborRepository` port + adapter (domain never leaks the JPA entity)
+    - [ ] `CollectionErrors` enum gains `NEIGHBOR_NOT_FOUND` (`COL-001`)
+    - [ ] Unit test for any domain-level validation logic on `Neighbor`
+  - **Verification:**
+    - [ ] Tests pass: `mvn -pl collection-service test`
+    - [ ] Manual check: Liquibase changelog applies cleanly against the Docker Postgres
+  - **Dependencies:** Task 13
+  - **Files likely touched:** `db/changelog/changes/v0.1.0_create_neighbor_table.yaml`, `neighbor/domain/Neighbor.java`, `neighbor/adapter/out/persistence/{NeighborEntity,NeighborJpaRepository,NeighborRepositoryAdapter}.java`, `neighbor/port/out/NeighborRepository.java`, `neighbor/exception/CollectionErrors.java`
+  - **Estimated scope:** Large (6 files) — persistence-only, no controller/service yet
+
+- [ ] Task 15: Neighbor API
+  - **Description:** Expose Neighbor CRUD over HTTP: mapper, request/response DTOs with validation, use case interfaces, service, controller.
+  - **Acceptance criteria:**
+    - [ ] `POST /neighbors` creates a neighbor via `jakarta.validation` on request fields
+    - [ ] `GET /neighbors/{id}` returns 404 via `COL-001` when missing
+    - [ ] `GET /neighbors` returns a paginated `PageResponse<NeighborResponse>`, filterable by `status`/`district` via a composed `Specification<Neighbor>`, `@PageableDefault(size = 20, sort = "fullName", direction = Sort.Direction.ASC)`
+    - [ ] Unit test for `NeighborService` (Mockito-mocked repository port)
+    - [ ] IT test (`NeighborApiIT`, RestAssured + Testcontainers) covering create → get → list plus the not-found path
+  - **Verification:**
+    - [ ] Unit tests pass: `mvn -pl collection-service test`
+    - [ ] Integration tests pass: `mvn -pl collection-service verify`
+    - [ ] Manual check: exercise all three endpoints via Swagger UI or curl
+  - **Dependencies:** Task 14
+  - **Files likely touched:** `neighbor/adapter/in/web/{NeighborController,NeighborMapper}.java`, DTOs (`CreateNeighborRequest`, `NeighborResponse`), `neighbor/port/in/*UseCase.java`, `neighbor/service/NeighborService.java`, `NeighborServiceTest.java`, `it/NeighborApiIT.java`
+  - **Estimated scope:** Large (7 files)
+
+### Checkpoint 8: Neighbor CRUD works end-to-end
+- [ ] `mvn -pl collection-service verify` green
+- [ ] Manual check: create → get → list a neighbor via Swagger/curl
+- [ ] Human review before Company slice
+
+## Phase 9: Company
+
+- [ ] Task 16: Company persistence
+  - **Description:** Schema, domain model, and persistence adapter for `Company` — standalone, no relationship to the collection domain.
+  - **Acceptance criteria:**
+    - [ ] Liquibase changelog `v0.1.1_create_company_table.yaml` creates the `company` table: `name`, `ruc` (unique, 11 chars), `contact_email`, `contact_phone`, `address`, `status`
+    - [ ] `Company` domain class, RUC regex validation (`\d{11}`, same pattern as `Association`), `status` of `ACTIVE`/`INACTIVE`
+    - [ ] JPA entity + repository + port + adapter, same `Persistable<UUID>` shape as `Neighbor`
+    - [ ] `CollectionErrors` gains `COMPANY_NOT_FOUND` (`COL-004`), `DUPLICATE_RUC` (`COL-005`)
+    - [ ] Unit test for RUC validation
+  - **Verification:**
+    - [ ] Tests pass: `mvn -pl collection-service test`
+  - **Dependencies:** Task 13 (not Task 14/15 — no relationship to Neighbor)
+  - **Files likely touched:** `db/changelog/changes/v0.1.1_create_company_table.yaml`, `company/domain/Company.java`, `company/adapter/out/persistence/*.java`, `company/port/out/CompanyRepository.java`
+  - **Estimated scope:** Large (6 files)
+
+- [ ] Task 17: Company API
+  - **Description:** Expose Company CRUD over HTTP.
+  - **Acceptance criteria:**
+    - [ ] `POST /companies` validates RUC format, returns 409 via `COL-005` on duplicate RUC
+    - [ ] `GET /companies/{id}` returns 404 via `COL-004` when missing
+    - [ ] `GET /companies` returns paginated, filterable `PageResponse<CompanyResponse>`
+    - [ ] `CompanyExceptionHandler` disambiguates the duplicate-RUC `DataIntegrityViolationException` via `ConstraintViolationException.getConstraintName()`, same pattern as `recycler-service`
+    - [ ] Unit test for `CompanyService` + IT test (`CompanyApiIT`) covering create → get → list, duplicate-RUC and not-found paths
+  - **Verification:**
+    - [ ] Unit tests pass: `mvn -pl collection-service test`
+    - [ ] Integration tests pass: `mvn -pl collection-service verify`
+  - **Dependencies:** Task 16
+  - **Files likely touched:** `company/adapter/in/web/{CompanyController,CompanyMapper,CompanyExceptionHandler}.java`, DTOs, `company/port/in/*UseCase.java`, `company/service/CompanyService.java`, `CompanyServiceTest.java`, `it/CompanyApiIT.java`
+  - **Estimated scope:** Large (7-8 files)
+
+### Checkpoint 9: Company CRUD works end-to-end
+- [ ] `mvn -pl collection-service verify` green
+- [ ] Manual check: create → get → list a company, duplicate-RUC returns 409
+- [ ] Human review before CollectionSchedule slice
+
+## Phase 10: CollectionSchedule
+
+- [ ] Task 18: CollectionSchedule persistence
+  - **Description:** Schema, domain model with the `pause()`/`cancel()`/`reactivate()` state machine, and persistence adapter for `CollectionSchedule`, with a required FK to `Neighbor`.
+  - **Acceptance criteria:**
+    - [ ] Liquibase changelog `v0.1.2_create_collection_schedule_table.yaml` creates the `collection_schedule` table: `neighbor_id` (FK, not null), `day_of_week`, `time`, `status` — plus a **partial unique index** `(neighbor_id, day_of_week) WHERE status = 'ACTIVE'` via a raw `<sql>` changeset (Liquibase's `<createIndex>` doesn't support a `WHERE` clause portably)
+    - [ ] `CollectionSchedule` domain class: `pause()` (ACTIVE→PAUSED), `cancel()` (ACTIVE or PAUSED→CANCELLED, terminal), `reactivate()` (PAUSED→ACTIVE) — every illegal transition throws `IllegalStateException`
+    - [ ] JPA entity + repository + port + adapter, **including the `existing()`/`update()` path from the start** (per `persistable_update_path` memory — this entity needs lifecycle updates from day one, don't discover it after the fact like Task 12 did)
+    - [ ] `CollectionErrors` gains `SCHEDULE_NOT_FOUND` (`COL-006`)
+    - [ ] Unit tests: every legal transition, every illegal transition → `IllegalStateException`
+  - **Verification:**
+    - [ ] Tests pass: `mvn -pl collection-service test`
+  - **Dependencies:** Task 14 (neighbor FK)
+  - **Files likely touched:** `db/changelog/changes/v0.1.2_create_collection_schedule_table.yaml`, `schedule/domain/CollectionSchedule.java`, `schedule/adapter/out/persistence/*.java`, `schedule/port/out/CollectionScheduleRepository.java`
+  - **Estimated scope:** Large (6 files)
+
+- [ ] Task 19: CollectionSchedule API (CRUD)
+  - **Description:** Expose CollectionSchedule create/get/list nested under its neighbor, with the COL-002 same-day conflict rule.
+  - **Acceptance criteria:**
+    - [ ] `POST /neighbors/{neighborId}/schedules` returns 409 via `COL-002` on same-day active conflict, 404 via `COL-001` if neighbor missing
+    - [ ] `GET /neighbors/{neighborId}/schedules/{id}` returns 404 via `COL-006` when missing, scoped to `neighborId` (cross-neighbor lookup must 404, not leak — same path-scoping discipline as `recycler-service` Task 8/10)
+    - [ ] `GET /neighbors/{neighborId}/schedules` returns paginated `PageResponse<CollectionScheduleResponse>`
+    - [ ] `CollectionScheduleService` exposes a reusable `assertNoActiveConflict(neighborId, dayOfWeek, excludingScheduleId)` method — used by `create()` here and by `reactivate()` in Task 20, so the rule isn't duplicated
+    - [ ] `ScheduleExceptionHandler` disambiguates the partial-unique-index violation via `ConstraintViolationException.getConstraintName()` → `COL-002`
+    - [ ] Unit + IT tests: create → get → list, conflict path (COL-002), neighbor-not-found path, cross-neighbor path-scoping (404)
+  - **Verification:**
+    - [ ] Unit tests pass: `mvn -pl collection-service test`
+    - [ ] Integration tests pass: `mvn -pl collection-service verify`
+  - **Dependencies:** Task 18
+  - **Files likely touched:** `schedule/adapter/in/web/{CollectionScheduleController,CollectionScheduleMapper,ScheduleExceptionHandler}.java`, DTOs, `schedule/port/in/{Create,Get,List}*UseCase.java`, `schedule/service/CollectionScheduleService.java`, `CollectionScheduleServiceTest.java`, `it/CollectionScheduleApiIT.java`
+  - **Estimated scope:** Large (7-8 files)
+
+- [ ] Task 20: CollectionSchedule lifecycle
+  - **Description:** Expose `pause`/`cancel`/`reactivate` over HTTP.
+  - **Acceptance criteria:**
+    - [ ] `PATCH /neighbors/{neighborId}/schedules/{id}/pause`, `.../cancel`, `.../reactivate` call the domain guard methods; illegal transition → 409 via new `CollectionErrors.INVALID_SCHEDULE_TRANSITION` (`COL-008`), not a raw `IllegalStateException`
+    - [ ] `reactivate()` re-runs `assertNoActiveConflict(...)` (from Task 19) before flipping back to `ACTIVE`
+    - [ ] Unit tests: every legal transition, every illegal transition → `COL-008`, reactivate-into-a-new-conflict case
+    - [ ] IT tests: happy path for all three endpoints + the reactivate-conflict 409 case end-to-end
+  - **Verification:**
+    - [ ] Unit tests pass: `mvn -pl collection-service test`
+    - [ ] Integration tests pass: `mvn -pl collection-service verify`
+    - [ ] Manual check: pause → reactivate → cancel a schedule via curl, confirm cancel is terminal
+  - **Dependencies:** Task 19
+  - **Files likely touched:** `schedule/port/in/{Pause,Cancel,Reactivate}ScheduleUseCase.java`, `schedule/service/CollectionScheduleService.java` (new methods), `schedule/adapter/in/web/CollectionScheduleController.java` (new endpoints), corresponding tests
+  - **Estimated scope:** Medium (5 files)
+
+### Checkpoint 10: CollectionSchedule complete (CRUD + full lifecycle)
+- [ ] `mvn -pl collection-service verify` green
+- [ ] Manual check: two schedules same neighbor different days (both succeed), same-day duplicate (409 COL-002), pause → reactivate, cancel → confirm terminal (409 COL-008 on further pause/reactivate)
+- [ ] Human review before CollectionRecord slice
+
+## Phase 11: CollectionRecord
+
+- [ ] Task 21: CollectionRecord persistence
+  - **Description:** Schema, domain model, and persistence adapter for `CollectionRecord` — an immutable historical record, no lifecycle.
+  - **Acceptance criteria:**
+    - [ ] Liquibase changelog `v0.1.3_create_collection_record_table.yaml` creates the `collection_record` table: `neighbor_id` (FK, not null), `schedule_id` (FK, **nullable**), `association_id` (plain `UUID` column, **no FK constraint**), `collection_date`, `weight_kg`
+    - [ ] `CollectionRecord` domain class — no status field, no lifecycle methods
+    - [ ] JPA entity + repository + port + adapter — `save()`/`findById()`/list only, **no `update()`** (nothing to update on an immutable record)
+    - [ ] `CollectionErrors` gains `RECORD_NOT_FOUND` (`COL-007`)
+    - [ ] Unit test: `weightKg` must be positive, `collectionDate` required
+  - **Verification:**
+    - [ ] Tests pass: `mvn -pl collection-service test`
+  - **Dependencies:** Task 14 (neighbor FK), Task 18 (schedule table must exist for the nullable FK column)
+  - **Files likely touched:** `db/changelog/changes/v0.1.3_create_collection_record_table.yaml`, `collectionrecord/domain/CollectionRecord.java`, `collectionrecord/adapter/out/persistence/*.java`, `collectionrecord/port/out/CollectionRecordRepository.java`
+  - **Estimated scope:** Large (6 files)
+
+- [ ] Task 22: CollectionRecord API
+  - **Description:** Expose CollectionRecord create/get/list nested under its neighbor.
+  - **Acceptance criteria:**
+    - [ ] `POST /neighbors/{neighborId}/collection-records` returns 404 via `COL-001` if neighbor missing; `associationId` accepted and persisted with **no existence check**
+    - [ ] `GET /neighbors/{neighborId}/collection-records/{id}` returns 404 via `COL-007`, scoped to `neighborId`
+    - [ ] `GET /neighbors/{neighborId}/collection-records` returns paginated, filterable by date range
+    - [ ] Unit + IT tests: create with a real `scheduleId`, create with `scheduleId` omitted (ad-hoc), create with a random unvalidated `associationId` (**must succeed** — proves the eventual-consistency decision holds, not just allowed by omission), neighbor-not-found path
+  - **Verification:**
+    - [ ] Unit tests pass: `mvn -pl collection-service test`
+    - [ ] Integration tests pass: `mvn -pl collection-service verify`
+    - [ ] Manual check: log a record tied to a schedule, log an ad-hoc one, confirm `associationId` isn't validated
+  - **Dependencies:** Task 21
+  - **Files likely touched:** `collectionrecord/adapter/in/web/{CollectionRecordController,CollectionRecordMapper}.java`, DTOs, `collectionrecord/port/in/*UseCase.java`, `collectionrecord/service/CollectionRecordService.java`, `CollectionRecordServiceTest.java`, `it/CollectionRecordApiIT.java`
+  - **Estimated scope:** Large (7 files)
+
+### Checkpoint 11: CollectionRecord complete
+- [ ] `mvn -pl collection-service verify` green
+- [ ] Manual check: log a collection record tied to a schedule, log an ad-hoc one (no schedule), confirm both list correctly and `associationId` isn't validated
+- [ ] Human review before Polish phase
+
+## Phase 12: Polish
+
+- [ ] Task 23: springdoc-openapi wiring
+  - **Description:** Confirm Swagger UI renders all `collection-service` controllers with accurate request/response schemas.
+  - **Acceptance criteria:**
+    - [ ] Swagger UI reachable and lists `Neighbor`, `Company`, `CollectionSchedule` (incl. lifecycle endpoints), `CollectionRecord`
+    - [ ] All `create()` endpoints have `@ResponseStatus(HttpStatus.CREATED)` (documentation hint — springdoc can't infer `ResponseEntity.status(...)` statically, same fix as `recycler-service` Task 11)
+  - **Verification:**
+    - [ ] Manual check: open Swagger UI, exercise one endpoint per controller
+  - **Dependencies:** Task 15, Task 17, Task 19, Task 20, Task 22
+  - **Files likely touched:** `application.yml` (if any springdoc customization needed), `@ResponseStatus` annotations on existing controllers
+  - **Estimated scope:** Small (1-2 files)
+
+### Checkpoint 12: Full CRUD path complete
+- [ ] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`)
+- [ ] Manual check: Neighbor → CollectionSchedule → CollectionRecord chain works end-to-end through real HTTP calls; Company independently CRUD-able; `recycler-service` unaffected
+
+### Checkpoint 13: Final — ready for review
+- [ ] All Success Criteria in `SPEC-collection-service.md` are met
+- [ ] Definition of Done satisfied for every task above (Tasks 13-23)
+- [ ] Human review and approval before moving to `cross-service-events` or `reporting-service`

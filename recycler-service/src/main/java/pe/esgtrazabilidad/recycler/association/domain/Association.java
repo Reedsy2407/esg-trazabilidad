@@ -41,8 +41,8 @@ public class Association {
             String address,
             String contactEmail,
             String contactPhone) {
-        if (ruc == null || ruc.length() != 11) {
-            throw new IllegalArgumentException("El RUC debe tener 11 dígitos");
+        if (ruc == null || !ruc.matches("\\d{11}")) {
+            throw new IllegalArgumentException("El RUC debe tener 11 dígitos numéricos");
         }
         return new Association(
                 IdGenerator.generate(),

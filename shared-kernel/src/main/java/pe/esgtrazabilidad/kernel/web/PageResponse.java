@@ -1,4 +1,4 @@
-package pe.esgtrazabilidad.recycler;
+package pe.esgtrazabilidad.kernel.web;
 
 import java.util.List;
 

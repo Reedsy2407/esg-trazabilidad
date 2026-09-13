@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import pe.esgtrazabilidad.recycler.PageResponse;
+import pe.esgtrazabilidad.kernel.web.PageResponse;
 import pe.esgtrazabilidad.recycler.association.domain.Association;
 import pe.esgtrazabilidad.recycler.association.domain.AssociationStatus;
 import pe.esgtrazabilidad.recycler.association.port.in.ActivateAssociationUseCase;

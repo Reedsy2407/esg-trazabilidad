@@ -113,4 +113,50 @@ class AssociationApiIT {
                 .statusCode(404)
                 .body("code", equalTo("ASO-001"));
     }
+
+    @Test
+    void creatingWithANonNumericRucReturnsAValidationError() {
+        given()
+                .contentType(ContentType.JSON)
+                .body(createAssociationRequest("1234567890a"))
+                .when()
+                .post("/associations")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void creatingWithAnInvalidEmailReturnsAValidationError() {
+        String requestWithInvalidEmail = """
+                {
+                  "name": "Asociación de prueba IT",
+                  "ruc": "20333333333",
+                  "registrationNumber": "REG-IT-001",
+                  "address": "Dirección de prueba",
+                  "contactEmail": "not-an-email",
+                  "contactPhone": "999999999"
+                }
+                """;
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(requestWithInvalidEmail)
+                .when()
+                .post("/associations")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void listingWithAnOversizedPageSizeIsCappedAtTheConfiguredMaximum() {
+        given()
+                .queryParam("size", 99999)
+                .when()
+                .get("/associations")
+                .then()
+                .statusCode(200)
+                .body("size", equalTo(100));
+    }
 }

@@ -135,7 +135,7 @@
   - **Acceptance criteria:**
     - [ ] `POST /associations/{associationId}/recyclers` validates DNI format (8 digits), returns `REC-003` 404 if the association doesn't exist, `REC-002` 409 on duplicate DNI
     - [ ] `GET /associations/{associationId}/recyclers/{id}` returns 404 via `REC-001` when missing
-    - [ ] `GET /associations/{associationId}/recyclers` returns paginated, filterable `PageResponse<RecyclerResponse>`
+    - [ ] `GET /associations/{associationId}/recyclers` returns paginated, filterable `PageResponse<RecyclerResponse>`, with `@PageableDefault(size = 20, sort = "fullName", direction = Sort.Direction.ASC)` on the `Pageable` param (per guide 1.11 — `spring.data.web.pageable.max-page-size` is already set globally, no per-controller config needed)
     - [ ] Same findByDni()-then-save() TOCTOU race as `AssociationService.create()` (see the `AssociationExceptionHandler` fix, association module) — add a `RecyclerController`-scoped `@RestControllerAdvice` mapping `DataIntegrityViolationException` → `RecyclerErrors.DUPLICATE_DNI`, plus the same two-test pattern (a repository-level IT proving the DB constraint fires, a `@WebMvcTest` proving the controller maps it to 409)
     - [ ] Unit test for `RecyclerService`
     - [ ] IT test covering create → get → list, plus association-not-found and duplicate-DNI paths
@@ -173,7 +173,7 @@
   - **Acceptance criteria:**
     - [ ] `POST /associations/{associationId}/certifications` validates `issuedDate < expirationDate`, returns `CER-002` 404 if the association doesn't exist, `CER-003` on invalid date range
     - [ ] `GET /associations/{associationId}/certifications/{id}` returns 404 via `CER-001` when missing, response includes computed `expired: boolean`
-    - [ ] `GET /associations/{associationId}/certifications` returns paginated `PageResponse<CertificationResponse>`
+    - [ ] `GET /associations/{associationId}/certifications` returns paginated `PageResponse<CertificationResponse>`, with `@PageableDefault(size = 20, sort = "expirationDate", direction = Sort.Direction.ASC)` on the `Pageable` param (per guide 1.11 — max-page-size already set globally)
     - [ ] Unit test for `CertificationService`
     - [ ] IT test covering create → get → list, plus association-not-found and invalid-date-range paths, and one case each for expired/not-expired in the response
   - **Verification:**

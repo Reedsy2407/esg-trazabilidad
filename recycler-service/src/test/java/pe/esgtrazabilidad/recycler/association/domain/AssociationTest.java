@@ -33,6 +33,13 @@ class AssociationTest {
     }
 
     @Test
+    void rejectsARucThatContainsNonDigitCharacters() {
+        assertThatThrownBy(() -> Association.create(
+                "Asociación", "1234567890a", "REG-001", "Address", "a@b.pe", "999999999"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void suspendMovesAnActiveAssociationToSuspended() {
         Association association = newAssociation();
 

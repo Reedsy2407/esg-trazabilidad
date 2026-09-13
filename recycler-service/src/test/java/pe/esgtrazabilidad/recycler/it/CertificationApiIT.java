@@ -185,6 +185,73 @@ class CertificationApiIT {
     }
 
     @Test
+    void renewingACertificationExtendsItsExpirationDateAndClearsExpiredStatus() {
+        String associationId = createAssociation("20707070707");
+        String issuedDate = LocalDate.now().minusYears(2).toString();
+        String expiredDate = LocalDate.now().minusDays(1).toString();
+
+        String certificationId = given()
+                .contentType(ContentType.JSON)
+                .body(createCertificationRequest(issuedDate, expiredDate))
+                .when()
+                .post("/associations/{associationId}/certifications", associationId)
+                .then()
+                .statusCode(201)
+                .body("expired", equalTo(true))
+                .extract()
+                .path("id");
+
+        String newExpirationDate = LocalDate.now().plusYears(1).toString();
+        String renewRequest = """
+                {
+                  "newExpirationDate": "%s"
+                }
+                """.formatted(newExpirationDate);
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(renewRequest)
+                .when()
+                .patch("/associations/{associationId}/certifications/{id}/renew", associationId, certificationId)
+                .then()
+                .statusCode(200)
+                .body("expirationDate", equalTo(newExpirationDate))
+                .body("expired", equalTo(false));
+    }
+
+    @Test
+    void renewingWithADateNotAfterTheIssuedDateReturnsBadRequest() {
+        String associationId = createAssociation("20808080808");
+        String issuedDate = LocalDate.now().minusDays(30).toString();
+        String expirationDate = LocalDate.now().plusYears(1).toString();
+
+        String certificationId = given()
+                .contentType(ContentType.JSON)
+                .body(createCertificationRequest(issuedDate, expirationDate))
+                .when()
+                .post("/associations/{associationId}/certifications", associationId)
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        String renewRequest = """
+                {
+                  "newExpirationDate": "%s"
+                }
+                """.formatted(issuedDate);
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(renewRequest)
+                .when()
+                .patch("/associations/{associationId}/certifications/{id}/renew", associationId, certificationId)
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("CER-003"));
+    }
+
+    @Test
     void anExpiredCertificationIsReportedAsExpired() {
         String associationId = createAssociation("20606060606");
         String issuedDate = LocalDate.now().minusYears(2).toString();

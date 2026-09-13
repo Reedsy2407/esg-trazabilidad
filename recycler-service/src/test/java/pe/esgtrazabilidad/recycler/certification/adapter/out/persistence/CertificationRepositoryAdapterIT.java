@@ -1,6 +1,7 @@
 package pe.esgtrazabilidad.recycler.certification.adapter.out.persistence;
 
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.hibernate.exception.ConstraintViolationException;
@@ -14,6 +15,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import pe.esgtrazabilidad.recycler.association.domain.Association;
+import pe.esgtrazabilidad.recycler.association.port.out.AssociationRepository;
 import pe.esgtrazabilidad.recycler.certification.domain.Certification;
 import pe.esgtrazabilidad.recycler.certification.port.out.CertificationRepository;
 
@@ -37,6 +40,9 @@ class CertificationRepositoryAdapterIT {
     @Autowired
     private CertificationRepository certificationRepository;
 
+    @Autowired
+    private AssociationRepository associationRepository;
+
     @Test
     void savingACertificationWithANonexistentAssociationViolatesTheForeignKeyConstraint() {
         UUID missingAssociationId = UUID.randomUUID();
@@ -51,5 +57,25 @@ class CertificationRepositoryAdapterIT {
                     assertThat(((ConstraintViolationException) cause).getConstraintName())
                             .isEqualTo("fk_certification_association");
                 });
+    }
+
+    @Test
+    void updatingAnExistingCertificationPersistsTheChangeWithoutDuplicatingTheRow() {
+        UUID associationId = associationRepository
+                .save(Association.create(
+                        "Asociación IT", "20144444444", "REG-IT", "Dirección", "it@test.pe", "999999999"))
+                .getId();
+        Certification certification = certificationRepository.save(Certification.create(
+                associationId, "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().plusDays(1)));
+        UUID id = certification.getId();
+        LocalDate newExpirationDate = LocalDate.now().plusYears(1);
+        certification.renew(newExpirationDate);
+
+        Certification updated = certificationRepository.update(certification);
+
+        assertThat(updated.getId()).isEqualTo(id);
+        Optional<Certification> reloaded = certificationRepository.findById(id);
+        assertThat(reloaded).isPresent();
+        assertThat(reloaded.get().getExpirationDate()).isEqualTo(newExpirationDate);
     }
 }

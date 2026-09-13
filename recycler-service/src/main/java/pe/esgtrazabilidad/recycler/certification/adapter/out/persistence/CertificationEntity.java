@@ -47,6 +47,23 @@ class CertificationEntity implements Persistable<UUID> {
         this.isNew = true;
     }
 
+    /**
+     * For updating a row that's already persisted. Unlike the public
+     * constructor (always isNew=true, correct for create()), this produces
+     * an entity Spring Data routes through merge() instead of persist().
+     */
+    static CertificationEntity existing(
+            UUID id, UUID associationId, String certificationType, LocalDate issuedDate, LocalDate expirationDate) {
+        CertificationEntity entity = new CertificationEntity();
+        entity.id = id;
+        entity.associationId = associationId;
+        entity.certificationType = certificationType;
+        entity.issuedDate = issuedDate;
+        entity.expirationDate = expirationDate;
+        entity.isNew = false;
+        return entity;
+    }
+
     @PostLoad
     void markNotNew() {
         isNew = false;

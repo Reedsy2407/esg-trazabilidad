@@ -1,6 +1,8 @@
 package pe.esgtrazabilidad.recycler.association.adapter.out.persistence;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +23,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 
 import pe.esgtrazabilidad.recycler.association.domain.Association;
+import pe.esgtrazabilidad.recycler.association.domain.AssociationStatus;
 import pe.esgtrazabilidad.recycler.association.port.out.AssociationRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -91,5 +94,24 @@ class AssociationRepositoryAdapterIT {
 
         assertThatThrownBy(() -> associationRepository.save(secondWithSameRuc))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void updatingAnExistingAssociationPersistsTheChangeWithoutDuplicatingTheRow() {
+        Association association = associationRepository.save(Association.create(
+                "Asociación a actualizar", "20177777777", "REG-UPD-1", "Dirección", "a@b.pe", "999999999"));
+        UUID id = association.getId();
+        association.suspend();
+
+        Association updated = associationRepository.update(association);
+
+        assertThat(updated.getId()).isEqualTo(id);
+        Optional<Association> reloaded = associationRepository.findById(id);
+        assertThat(reloaded).isPresent();
+        assertThat(reloaded.get().getStatus()).isEqualTo(AssociationStatus.SUSPENDED);
+        // A wrongly-routed persist() of an id that already exists would throw
+        // a duplicate-key violation rather than silently duplicating a row,
+        // so reaching this assertion at all already proves update() went
+        // through merge(), not persist() -- this just also checks the value stuck.
     }
 }

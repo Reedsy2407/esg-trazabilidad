@@ -129,6 +129,50 @@ class CertificationServiceTest {
     }
 
     @Test
+    void renewExtendsTheExpirationDate() {
+        Certification certification = Certification.create(
+                associationId, "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().plusDays(1));
+        LocalDate newExpirationDate = LocalDate.now().plusYears(1);
+        when(certificationRepository.findById(certification.getId())).thenReturn(Optional.of(certification));
+        when(certificationRepository.update(any(Certification.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Certification result = service.renew(associationId, certification.getId(), newExpirationDate);
+
+        assertThat(result.getExpirationDate()).isEqualTo(newExpirationDate);
+        verify(certificationRepository).update(certification);
+    }
+
+    @Test
+    void renewingWithAnInvalidDateThrowsInvalidDateRange() {
+        Certification certification = Certification.create(
+                associationId, "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().plusDays(1));
+        when(certificationRepository.findById(certification.getId())).thenReturn(Optional.of(certification));
+
+        assertThatThrownBy(() ->
+                        service.renew(associationId, certification.getId(), certification.getIssuedDate()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(CertificationErrors.INVALID_DATE_RANGE));
+        verify(certificationRepository, never()).update(any());
+    }
+
+    @Test
+    void renewingACertificationFromADifferentAssociationThrowsNotFound() {
+        UUID otherAssociationId = UUID.randomUUID();
+        Certification certification = Certification.create(
+                otherAssociationId, "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().plusYears(1));
+        when(certificationRepository.findById(certification.getId())).thenReturn(Optional.of(certification));
+
+        assertThatThrownBy(() ->
+                        service.renew(associationId, certification.getId(), LocalDate.now().plusYears(2)))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(CertificationErrors.NOT_FOUND));
+        verify(certificationRepository, never()).update(any());
+    }
+
+    @Test
     void listDelegatesToTheRepository() {
         Pageable pageable = Pageable.ofSize(10);
         Page<Certification> expectedPage = new PageImpl<>(java.util.List.of());

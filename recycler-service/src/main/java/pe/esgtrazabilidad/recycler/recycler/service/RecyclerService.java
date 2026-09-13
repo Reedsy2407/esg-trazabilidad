@@ -11,14 +11,21 @@ import pe.esgtrazabilidad.recycler.association.port.out.AssociationRepository;
 import pe.esgtrazabilidad.recycler.recycler.domain.Recycler;
 import pe.esgtrazabilidad.recycler.recycler.domain.RecyclerStatus;
 import pe.esgtrazabilidad.recycler.recycler.exception.RecyclerErrors;
+import pe.esgtrazabilidad.recycler.recycler.port.in.ActivateRecyclerUseCase;
 import pe.esgtrazabilidad.recycler.recycler.port.in.CreateRecyclerCommand;
 import pe.esgtrazabilidad.recycler.recycler.port.in.CreateRecyclerUseCase;
+import pe.esgtrazabilidad.recycler.recycler.port.in.DeactivateRecyclerUseCase;
 import pe.esgtrazabilidad.recycler.recycler.port.in.GetRecyclerUseCase;
 import pe.esgtrazabilidad.recycler.recycler.port.in.ListRecyclersUseCase;
 import pe.esgtrazabilidad.recycler.recycler.port.out.RecyclerRepository;
 
 @Service
-class RecyclerService implements CreateRecyclerUseCase, GetRecyclerUseCase, ListRecyclersUseCase {
+class RecyclerService
+        implements CreateRecyclerUseCase,
+                GetRecyclerUseCase,
+                ListRecyclersUseCase,
+                ActivateRecyclerUseCase,
+                DeactivateRecyclerUseCase {
 
     private final RecyclerRepository recyclerRepository;
     private final AssociationRepository associationRepository;
@@ -43,6 +50,37 @@ class RecyclerService implements CreateRecyclerUseCase, GetRecyclerUseCase, List
 
     @Override
     public Recycler getById(UUID associationId, UUID id) {
+        return findScoped(associationId, id);
+    }
+
+    @Override
+    public Page<Recycler> list(UUID associationId, RecyclerStatus status, Pageable pageable) {
+        return recyclerRepository.findAll(associationId, status, pageable);
+    }
+
+    @Override
+    public Recycler activate(UUID associationId, UUID id) {
+        Recycler recycler = findScoped(associationId, id);
+        try {
+            recycler.activate();
+        } catch (IllegalStateException e) {
+            throw new ApplicationException(RecyclerErrors.INVALID_STATUS_TRANSITION);
+        }
+        return recyclerRepository.update(recycler);
+    }
+
+    @Override
+    public Recycler deactivate(UUID associationId, UUID id) {
+        Recycler recycler = findScoped(associationId, id);
+        try {
+            recycler.deactivate();
+        } catch (IllegalStateException e) {
+            throw new ApplicationException(RecyclerErrors.INVALID_STATUS_TRANSITION);
+        }
+        return recyclerRepository.update(recycler);
+    }
+
+    private Recycler findScoped(UUID associationId, UUID id) {
         Recycler recycler = recyclerRepository
                 .findById(id)
                 .orElseThrow(() -> new ApplicationException(RecyclerErrors.NOT_FOUND));
@@ -50,10 +88,5 @@ class RecyclerService implements CreateRecyclerUseCase, GetRecyclerUseCase, List
             throw new ApplicationException(RecyclerErrors.NOT_FOUND);
         }
         return recycler;
-    }
-
-    @Override
-    public Page<Recycler> list(UUID associationId, RecyclerStatus status, Pageable pageable) {
-        return recyclerRepository.findAll(associationId, status, pageable);
     }
 }

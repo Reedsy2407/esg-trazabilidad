@@ -26,6 +26,20 @@ class AssociationRepositoryAdapter implements AssociationRepository {
     }
 
     @Override
+    public Association update(Association association) {
+        AssociationEntity existing = AssociationEntity.existing(
+                association.getId(),
+                association.getName(),
+                association.getRuc(),
+                association.getRegistrationNumber(),
+                association.getAddress(),
+                association.getContactEmail(),
+                association.getContactPhone(),
+                association.getStatus().name());
+        return toDomain(jpaRepository.save(existing));
+    }
+
+    @Override
     public Optional<Association> findById(UUID id) {
         return jpaRepository.findById(id).map(this::toDomain);
     }

@@ -189,4 +189,75 @@ class RecyclerApiIT {
                 .statusCode(404)
                 .body("code", equalTo("REC-001"));
     }
+
+    @Test
+    void deactivatingAndReactivatingARecyclerChangesItsStatus() {
+        String associationId = createAssociation("20999999999");
+        String recyclerId = given()
+                .contentType(ContentType.JSON)
+                .body(createRecyclerRequest("66666666"))
+                .when()
+                .post("/associations/{associationId}/recyclers", associationId)
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        given()
+                .when()
+                .patch("/associations/{associationId}/recyclers/{id}/deactivate", associationId, recyclerId)
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("INACTIVE"));
+
+        given()
+                .when()
+                .patch("/associations/{associationId}/recyclers/{id}/activate", associationId, recyclerId)
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("ACTIVE"));
+    }
+
+    @Test
+    void activatingAnAlreadyActiveRecyclerReturnsConflict() {
+        String associationId = createAssociation("20101010102");
+        String recyclerId = given()
+                .contentType(ContentType.JSON)
+                .body(createRecyclerRequest("77777788"))
+                .when()
+                .post("/associations/{associationId}/recyclers", associationId)
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        given()
+                .when()
+                .patch("/associations/{associationId}/recyclers/{id}/activate", associationId, recyclerId)
+                .then()
+                .statusCode(409)
+                .body("code", equalTo("REC-004"));
+    }
+
+    @Test
+    void deactivatingARecyclerThroughAnotherAssociationsPathReturnsNotFound() {
+        String associationAId = createAssociation("20101010103");
+        String associationBId = createAssociation("20101010104");
+        String recyclerBId = given()
+                .contentType(ContentType.JSON)
+                .body(createRecyclerRequest("88888899"))
+                .when()
+                .post("/associations/{associationId}/recyclers", associationBId)
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        given()
+                .when()
+                .patch("/associations/{associationId}/recyclers/{id}/deactivate", associationAId, recyclerBId)
+                .then()
+                .statusCode(404)
+                .body("code", equalTo("REC-001"));
+    }
 }

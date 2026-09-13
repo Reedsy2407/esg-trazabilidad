@@ -11,6 +11,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 import pe.esgtrazabilidad.recycler.PageResponse;
 import pe.esgtrazabilidad.recycler.association.domain.Association;
 import pe.esgtrazabilidad.recycler.association.domain.AssociationStatus;
+import pe.esgtrazabilidad.recycler.association.port.in.ActivateAssociationUseCase;
 import pe.esgtrazabilidad.recycler.association.port.in.CreateAssociationUseCase;
 import pe.esgtrazabilidad.recycler.association.port.in.GetAssociationUseCase;
 import pe.esgtrazabilidad.recycler.association.port.in.ListAssociationsUseCase;
+import pe.esgtrazabilidad.recycler.association.port.in.SuspendAssociationUseCase;
 
 @RestController
 @RequestMapping("/associations")
@@ -33,16 +36,22 @@ class AssociationController {
     private final CreateAssociationUseCase createAssociationUseCase;
     private final GetAssociationUseCase getAssociationUseCase;
     private final ListAssociationsUseCase listAssociationsUseCase;
+    private final SuspendAssociationUseCase suspendAssociationUseCase;
+    private final ActivateAssociationUseCase activateAssociationUseCase;
     private final AssociationMapper mapper;
 
     AssociationController(
             CreateAssociationUseCase createAssociationUseCase,
             GetAssociationUseCase getAssociationUseCase,
             ListAssociationsUseCase listAssociationsUseCase,
+            SuspendAssociationUseCase suspendAssociationUseCase,
+            ActivateAssociationUseCase activateAssociationUseCase,
             AssociationMapper mapper) {
         this.createAssociationUseCase = createAssociationUseCase;
         this.getAssociationUseCase = getAssociationUseCase;
         this.listAssociationsUseCase = listAssociationsUseCase;
+        this.suspendAssociationUseCase = suspendAssociationUseCase;
+        this.activateAssociationUseCase = activateAssociationUseCase;
         this.mapper = mapper;
     }
 
@@ -56,6 +65,16 @@ class AssociationController {
     @GetMapping("/{id}")
     AssociationResponse getById(@PathVariable UUID id) {
         return mapper.toResponse(getAssociationUseCase.getById(id));
+    }
+
+    @PatchMapping("/{id}/suspend")
+    AssociationResponse suspend(@PathVariable UUID id) {
+        return mapper.toResponse(suspendAssociationUseCase.suspend(id));
+    }
+
+    @PatchMapping("/{id}/activate")
+    AssociationResponse activate(@PathVariable UUID id) {
+        return mapper.toResponse(activateAssociationUseCase.activate(id));
     }
 
     @GetMapping

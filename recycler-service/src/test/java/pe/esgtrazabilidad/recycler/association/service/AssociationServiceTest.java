@@ -92,6 +92,71 @@ class AssociationServiceTest {
     }
 
     @Test
+    void suspendMovesAnActiveAssociationToSuspended() {
+        Association association = Association.create(
+                "Asociación", "20123456789", "REG-001", "Dirección", "a@b.pe", "999999999");
+        when(repository.findById(association.getId())).thenReturn(Optional.of(association));
+        when(repository.update(any(Association.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Association result = service.suspend(association.getId());
+
+        assertThat(result.getStatus()).isEqualTo(AssociationStatus.SUSPENDED);
+        verify(repository).update(association);
+    }
+
+    @Test
+    void suspendingAnAlreadySuspendedAssociationThrowsAConflict() {
+        Association association = Association.create(
+                "Asociación", "20123456789", "REG-001", "Dirección", "a@b.pe", "999999999");
+        association.suspend();
+        when(repository.findById(association.getId())).thenReturn(Optional.of(association));
+
+        assertThatThrownBy(() -> service.suspend(association.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(AssociationErrors.INVALID_STATUS_TRANSITION));
+        verify(repository, never()).update(any());
+    }
+
+    @Test
+    void suspendingAMissingAssociationThrowsNotFound() {
+        UUID missingId = UUID.randomUUID();
+        when(repository.findById(missingId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.suspend(missingId))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(AssociationErrors.NOT_FOUND));
+    }
+
+    @Test
+    void activateMovesASuspendedAssociationToActive() {
+        Association association = Association.create(
+                "Asociación", "20123456789", "REG-001", "Dirección", "a@b.pe", "999999999");
+        association.suspend();
+        when(repository.findById(association.getId())).thenReturn(Optional.of(association));
+        when(repository.update(any(Association.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Association result = service.activate(association.getId());
+
+        assertThat(result.getStatus()).isEqualTo(AssociationStatus.ACTIVE);
+        verify(repository).update(association);
+    }
+
+    @Test
+    void activatingAnAlreadyActiveAssociationThrowsAConflict() {
+        Association association = Association.create(
+                "Asociación", "20123456789", "REG-001", "Dirección", "a@b.pe", "999999999");
+        when(repository.findById(association.getId())).thenReturn(Optional.of(association));
+
+        assertThatThrownBy(() -> service.activate(association.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(AssociationErrors.INVALID_STATUS_TRANSITION));
+        verify(repository, never()).update(any());
+    }
+
+    @Test
     void listDelegatesToTheRepository() {
         Pageable pageable = Pageable.ofSize(10);
         Page<Association> expectedPage = new PageImpl<>(java.util.List.of());

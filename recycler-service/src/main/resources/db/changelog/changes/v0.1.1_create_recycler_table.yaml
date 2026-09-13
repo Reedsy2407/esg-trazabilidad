@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.1-create-recycler-table
+      author: esg-trazabilidad
+      changes:
+        - createTable:
+            tableName: recycler
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: dni
+                  type: varchar(8)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: phone
+                  type: varchar(20)
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_recycler_association
+                    references: association(id)
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false

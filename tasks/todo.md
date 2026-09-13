@@ -115,20 +115,21 @@
 
 ## Phase 4: Recycler
 
-- [ ] Task 7: Recycler persistence
+- [x] Task 7: Recycler persistence
   - **Description:** Schema, domain model, and persistence adapter for `Recycler`, with a required FK to `Association`.
   - **Acceptance criteria:**
-    - [ ] Liquibase changelog `v0.1.1_create_recycler_table.yaml` creates the `recycler` table: `full_name`, `dni` (unique, 8 chars), `phone`, `association_id` (FK, not null), `status`
-    - [ ] `Recycler` domain class, `status` of `ACTIVE`/`INACTIVE`
-    - [ ] JPA entity + repository + port + adapter, same shape as Association
-    - [ ] `RecyclerEntity` implements `Persistable<UUID>` (transient `isNew` flag, `true` on the creation constructor, cleared via `@PostLoad`) — same pattern as `AssociationEntity`, needed because IDs are app-assigned so Spring Data would otherwise route `save()` through `merge()` and issue a spurious SELECT before every INSERT
-    - [ ] `RecyclerErrors` enum: `REC-001` not-found, `REC-002` duplicate DNI, `REC-003` association-not-found (used when creating a recycler under a nonexistent association)
-    - [ ] Unit test covering the FK-must-exist business rule at the service/domain layer (not left to the DB's FK constraint alone, so the error is typed)
+    - [x] Liquibase changelog `v0.1.1_create_recycler_table.yaml` creates the `recycler` table: `full_name`, `dni` (unique, 8 chars), `phone`, `association_id` (FK, not null), `status`
+    - [x] `Recycler` domain class, `status` of `ACTIVE`/`INACTIVE`
+    - [x] JPA entity + repository + port + adapter, same shape as Association
+    - [x] `RecyclerEntity` implements `Persistable<UUID>` (transient `isNew` flag, `true` on the creation constructor, cleared via `@PostLoad`) — same pattern as `AssociationEntity`, needed because IDs are app-assigned so Spring Data would otherwise route `save()` through `merge()` and issue a spurious SELECT before every INSERT
+    - [x] `RecyclerErrors` enum: `REC-001` not-found, `REC-002` duplicate DNI, `REC-003` association-not-found (used when creating a recycler under a nonexistent association)
+    - [x] Unit test covering the FK-must-exist business rule at the service/domain layer (not left to the DB's FK constraint alone, so the error is typed)
   - **Verification:**
-    - [ ] Tests pass: `mvn -pl recycler-service test`
+    - [x] Tests pass: `mvn -pl recycler-service test`
   - **Dependencies:** Task 5 (Association schema and repository must exist to validate the FK)
   - **Files likely touched:** `db/changelog/v0.1.1_create_recycler_table.yaml`, `recycler/domain/Recycler.java`, `recycler/adapter/out/persistence/*.java`, `recycler/port/out/RecyclerRepository.java`, `recycler/exception/RecyclerErrors.java`
   - **Estimated scope:** Large (6 files)
+  - **Note:** the FK-must-exist check landed in `RecyclerRepositoryAdapter.save()` (injecting `AssociationRepository` directly), not a service — Task 7 has no `RecyclerService` yet (that's Task 8), and the adapter is the only place in this task's scope that can reach the association's persistence. Unit-tested with Mockito (`RecyclerRepositoryAdapterTest`), matching the criterion's "not left to the DB's FK constraint alone." Manually verified the `recycler` table + FK apply cleanly against Docker Postgres.
 
 - [ ] Task 8: Recycler API
   - **Description:** Expose Recycler CRUD nested under its association.

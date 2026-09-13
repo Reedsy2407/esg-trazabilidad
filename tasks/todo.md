@@ -17,16 +17,16 @@
   - **Files likely touched:** `pom.xml`, `shared-kernel/pom.xml`
   - **Estimated scope:** Small (2 files)
 
-- [ ] Task 2: Error handling (`ApplicationError`, `ApplicationException`, `GlobalExceptionHandler`)
+- [x] Task 2: Error handling (`ApplicationError`, `ApplicationException`, `GlobalExceptionHandler`)
   - **Description:** Implement the shared error-handling contract every service will use: a typed error interface, an exception wrapping it, and a `@RestControllerAdvice` translating it to RFC 7807 `ProblemDetail`.
   - **Acceptance criteria:**
-    - [ ] `ApplicationError` interface with `getCode()`, `getMessage()`, `getStatus()` exists in `pe.esgtrazabilidad.kernel.error`
-    - [ ] `ApplicationException` wraps an `ApplicationError`, exposes it via a getter
-    - [ ] `GlobalExceptionHandler` catches `ApplicationException` and returns a `ProblemDetail` with the error's code/message/status
-    - [ ] Unit test proves the mapping from a sample `ApplicationError` to the resulting `ProblemDetail` fields
+    - [x] `ApplicationError` interface with `getCode()`, `getMessage()`, `getStatus()` exists in `pe.esgtrazabilidad.kernel.error`
+    - [x] `ApplicationException` wraps an `ApplicationError`, exposes it via a getter
+    - [x] `GlobalExceptionHandler` catches `ApplicationException` and returns a `ProblemDetail` with the error's code/message/status
+    - [x] Unit test proves the mapping from a sample `ApplicationError` to the resulting `ProblemDetail` fields
   - **Verification:**
-    - [ ] Tests pass: `mvn -pl shared-kernel test`
-    - [ ] Manual check: read the test to confirm it asserts status code, error code, and message — not just "no exception thrown"
+    - [x] Tests pass: `mvn -pl shared-kernel test`
+    - [x] Manual check: read the test to confirm it asserts status code, error code, and message — not just "no exception thrown"
   - **Dependencies:** Task 1
   - **Files likely touched:** `shared-kernel/src/main/java/.../error/ApplicationError.java`, `.../error/ApplicationException.java`, `.../error/GlobalExceptionHandler.java`, `shared-kernel/src/test/java/.../error/GlobalExceptionHandlerTest.java`
   - **Estimated scope:** Medium (4 files)

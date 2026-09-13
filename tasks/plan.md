@@ -58,11 +58,11 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 - [x] Task 1: Monorepo + shared-kernel scaffolding
 - [x] Task 2: Error handling (`ApplicationError`, `ApplicationException`, `GlobalExceptionHandler`)
-- [ ] Task 3: Event strategy + ID generation (`EventPublishingStrategy`, `IdGenerator`)
+- [x] Task 3: Event strategy + ID generation (`EventPublishingStrategy`, `IdGenerator`)
 
 ### Checkpoint 1: shared-kernel complete
-- [ ] `mvn -pl shared-kernel install` succeeds standalone
-- [ ] `mvn -pl shared-kernel test` green — all three classes from Tasks 2-3 unit-tested
+- [x] `mvn -pl shared-kernel install` succeeds standalone
+- [x] `mvn -pl shared-kernel test` green — all three classes from Tasks 2-3 unit-tested
 - [ ] Human review before starting `recycler-service`
 
 ### Phase 2: recycler-service infra

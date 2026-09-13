@@ -87,11 +87,11 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 ### Phase 4: Recycler
 
 - [x] Task 7: Recycler persistence (Liquibase `v0.1.1`, domain, JPA entity/repo, repository port+adapter, `RecyclerErrors`)
-- [ ] Task 8: Recycler API (mapper, DTOs incl. DNI validation, use cases, `RecyclerService`, `RecyclerController` nested under `/associations/{id}/recyclers`, unit + IT tests incl. "association not found" path)
+- [x] Task 8: Recycler API (mapper, DTOs incl. DNI validation, use cases, `RecyclerService`, `RecyclerController` nested under `/associations/{id}/recyclers`, unit + IT tests incl. "association not found" path)
 
 ### Checkpoint 4: Recycler CRUD works end-to-end
-- [ ] `mvn -pl recycler-service verify` green
-- [ ] Manual check: creating a recycler under a nonexistent association returns `REC-*` typed 404, not a raw 500
+- [x] `mvn -pl recycler-service verify` green
+- [x] Manual check: creating a recycler under a nonexistent association returns `REC-*` typed 404, not a raw 500
 - [ ] Human review before Certification slice
 
 ### Phase 5: Certification

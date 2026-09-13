@@ -3,31 +3,25 @@ package pe.esgtrazabilidad.recycler.recycler.adapter.out.persistence;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
-import pe.esgtrazabilidad.kernel.error.ApplicationException;
-import pe.esgtrazabilidad.recycler.association.port.out.AssociationRepository;
 import pe.esgtrazabilidad.recycler.recycler.domain.Recycler;
 import pe.esgtrazabilidad.recycler.recycler.domain.RecyclerStatus;
-import pe.esgtrazabilidad.recycler.recycler.exception.RecyclerErrors;
 import pe.esgtrazabilidad.recycler.recycler.port.out.RecyclerRepository;
 
 @Component
 class RecyclerRepositoryAdapter implements RecyclerRepository {
 
     private final RecyclerJpaRepository jpaRepository;
-    private final AssociationRepository associationRepository;
 
-    RecyclerRepositoryAdapter(RecyclerJpaRepository jpaRepository, AssociationRepository associationRepository) {
+    RecyclerRepositoryAdapter(RecyclerJpaRepository jpaRepository) {
         this.jpaRepository = jpaRepository;
-        this.associationRepository = associationRepository;
     }
 
     @Override
     public Recycler save(Recycler recycler) {
-        if (associationRepository.findById(recycler.getAssociationId()).isEmpty()) {
-            throw new ApplicationException(RecyclerErrors.ASSOCIATION_NOT_FOUND);
-        }
         return toDomain(jpaRepository.save(toEntity(recycler)));
     }
 
@@ -39,6 +33,14 @@ class RecyclerRepositoryAdapter implements RecyclerRepository {
     @Override
     public Optional<Recycler> findByDni(String dni) {
         return jpaRepository.findByDni(dni).map(this::toDomain);
+    }
+
+    @Override
+    public Page<Recycler> findAll(UUID associationId, RecyclerStatus status, Pageable pageable) {
+        String statusValue = status == null ? null : status.name();
+        return jpaRepository
+                .findAll(RecyclerSpecifications.hasAssociationId(associationId).and(RecyclerSpecifications.hasStatus(statusValue)), pageable)
+                .map(this::toDomain);
     }
 
     private RecyclerEntity toEntity(Recycler recycler) {

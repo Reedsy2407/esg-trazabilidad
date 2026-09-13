@@ -131,26 +131,27 @@
   - **Estimated scope:** Large (6 files)
   - **Note:** the FK-must-exist check landed in `RecyclerRepositoryAdapter.save()` (injecting `AssociationRepository` directly), not a service — Task 7 has no `RecyclerService` yet (that's Task 8), and the adapter is the only place in this task's scope that can reach the association's persistence. Unit-tested with Mockito (`RecyclerRepositoryAdapterTest`), matching the criterion's "not left to the DB's FK constraint alone." Manually verified the `recycler` table + FK apply cleanly against Docker Postgres.
 
-- [ ] Task 8: Recycler API
+- [x] Task 8: Recycler API
   - **Description:** Expose Recycler CRUD nested under its association.
   - **Acceptance criteria:**
-    - [ ] `POST /associations/{associationId}/recyclers` validates DNI format (8 digits), returns `REC-003` 404 if the association doesn't exist, `REC-002` 409 on duplicate DNI
-    - [ ] `GET /associations/{associationId}/recyclers/{id}` returns 404 via `REC-001` when missing
-    - [ ] `GET /associations/{associationId}/recyclers` returns paginated, filterable `PageResponse<RecyclerResponse>`, with `@PageableDefault(size = 20, sort = "fullName", direction = Sort.Direction.ASC)` on the `Pageable` param (per guide 1.11 — `spring.data.web.pageable.max-page-size` is already set globally, no per-controller config needed)
-    - [ ] **Architecture correction (user-directed, supersedes Task 7's placement):** `RecyclerService.create()` orchestrates the association-must-exist check itself (`AssociationRepository.findById()` before `RecyclerRepository.save()`), same shape as the duplicate-DNI check (`findByDni()`-then-`save()`). Move this check OUT of `RecyclerRepositoryAdapter.save()` and revert that adapter back to a pure domain↔entity translator with no `AssociationRepository` dependency — delete the association-exists branch and its test (`RecyclerRepositoryAdapterTest`) from Task 7.
-    - [ ] Both the duplicate-DNI and association-missing checks have the same TOCTOU race `AssociationService.create()` had — cover both via the existing `fk_recycler_association` FK constraint + unique `dni` constraint already in the schema, plus a `RecyclerController`-scoped `@RestControllerAdvice` catching `DataIntegrityViolationException` as fallback. **Nuance not present in the Association case:** Recycler has *two* constraints that can throw the same exception type, so the fallback handler must distinguish which one fired (inspect `exception.getMostSpecificCause().getMessage()` for the constraint name — `fk_recycler_association` → REC-003, the DNI unique constraint → REC-002) rather than assuming one outcome like `AssociationExceptionHandler` safely could. Two-test pattern per constraint: a repository-level IT proving each DB constraint actually fires, a `@WebMvcTest` proving the controller maps each to the right code.
-    - [ ] Unit test for `RecyclerService`
-    - [ ] IT test covering create → get → list, plus association-not-found and duplicate-DNI paths
+    - [x] `POST /associations/{associationId}/recyclers` validates DNI format (8 digits), returns `REC-003` 404 if the association doesn't exist, `REC-002` 409 on duplicate DNI
+    - [x] `GET /associations/{associationId}/recyclers/{id}` returns 404 via `REC-001` when missing
+    - [x] `GET /associations/{associationId}/recyclers` returns paginated, filterable `PageResponse<RecyclerResponse>`, with `@PageableDefault(size = 20, sort = "fullName", direction = Sort.Direction.ASC)` on the `Pageable` param
+    - [x] **Architecture correction applied:** `RecyclerService.create()` orchestrates the association-must-exist check (`AssociationRepository.findById()`) and the duplicate-DNI check (`findByDni()`), both before `save()`. `RecyclerRepositoryAdapter` reverted to a pure domain↔entity translator (no `AssociationRepository` dependency); `RecyclerRepositoryAdapterTest` from Task 7 deleted and replaced with a persistence-level `RecyclerRepositoryAdapterIT`.
+    - [x] `RecyclerExceptionHandler` (`RecyclerController`-scoped, `@Order(HIGHEST_PRECEDENCE)`) disambiguates the two constraints Recycler can violate by inspecting `exception.getCause() instanceof ConstraintViolationException` → `getConstraintName()` (per user correction — more reliable than message text, which varies by driver/locale) rather than `getMostSpecificCause().getMessage()` as originally sketched. `fk_recycler_association` → REC-003, `recycler_dni_key` → REC-002, anything else → generic `DATA_CONFLICT` fallback.
+    - [x] Unit test for `RecyclerService` (+ a fast direct unit test on `RecyclerExceptionHandler` using a hand-constructed `ConstraintViolationException`, no DB needed)
+    - [x] IT test covering create → get → list, plus association-not-found and duplicate-DNI paths (`RecyclerApiIT`), plus a repository-level IT (`RecyclerRepositoryAdapterIT`) proving both real DB constraints fire with the expected names
   - **Verification:**
-    - [ ] Unit tests pass: `mvn -pl recycler-service test`
-    - [ ] Integration tests pass: `mvn -pl recycler-service verify`
+    - [x] Unit tests pass: `mvn -pl recycler-service test`
+    - [x] Integration tests pass: `mvn -pl recycler-service verify`
+    - [x] Manual check: full create → get → list → 404 → 409 flow against `docker compose up` Postgres
   - **Dependencies:** Task 7
   - **Files likely touched:** `recycler/adapter/in/web/{RecyclerController,RecyclerMapper,RecyclerExceptionHandler}.java`, DTOs, `recycler/port/in/*UseCase.java`, `recycler/service/RecyclerService.java`, `RecyclerServiceTest.java`, `it/RecyclerApiIT.java` — plus edits to `RecyclerRepositoryAdapter.java` (revert) and removal of `RecyclerRepositoryAdapterTest.java`
   - **Estimated scope:** Large (7-8 files)
 
 ### Checkpoint 4: Recycler CRUD works end-to-end
-- [ ] `mvn -pl recycler-service verify` green
-- [ ] Manual check: creating a recycler under a nonexistent association returns a typed 404 (`REC-003`), not a raw 500
+- [x] `mvn -pl recycler-service verify` green
+- [x] Manual check: creating a recycler under a nonexistent association returns a typed 404 (`REC-003`), not a raw 500
 - [ ] Human review before Certification slice
 
 ## Phase 5: Certification

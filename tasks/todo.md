@@ -31,21 +31,21 @@
   - **Files likely touched:** `shared-kernel/src/main/java/.../error/ApplicationError.java`, `.../error/ApplicationException.java`, `.../error/GlobalExceptionHandler.java`, `shared-kernel/src/test/java/.../error/GlobalExceptionHandlerTest.java`
   - **Estimated scope:** Medium (4 files)
 
-- [ ] Task 3: Event strategy + ID generation (`EventPublishingStrategy`, `IdGenerator`)
+- [x] Task 3: Event strategy + ID generation (`EventPublishingStrategy`, `IdGenerator`)
   - **Description:** Add the pluggable event-strategy enum (no publishing logic yet — just the type every service will branch on later) and a UUID v7 generator utility.
   - **Acceptance criteria:**
-    - [ ] `EventPublishingStrategy` enum with exactly `GCP_PUB_SUB`, `MOCK`, `SPRING_EVENTS`
-    - [ ] `IdGenerator` produces UUID v7 values (RFC 9562 time-ordered), verified by generating N ids and asserting monotonic time-ordering
-    - [ ] Unit tests for both
+    - [x] `EventPublishingStrategy` enum with exactly `GCP_PUB_SUB`, `MOCK`, `SPRING_EVENTS`
+    - [x] `IdGenerator` produces UUID v7 values (RFC 9562 time-ordered), verified by generating N ids and asserting monotonic time-ordering
+    - [x] Unit tests for both
   - **Verification:**
-    - [ ] Tests pass: `mvn -pl shared-kernel test`
+    - [x] Tests pass: `mvn -pl shared-kernel test`
   - **Dependencies:** Task 1
   - **Files likely touched:** `shared-kernel/src/main/java/.../events/EventPublishingStrategy.java`, `.../id/IdGenerator.java`, corresponding test files
   - **Estimated scope:** Small (4 files)
 
 ### Checkpoint 1: shared-kernel complete
-- [ ] `mvn -pl shared-kernel install` succeeds standalone
-- [ ] `mvn -pl shared-kernel test` green
+- [x] `mvn -pl shared-kernel install` succeeds standalone
+- [x] `mvn -pl shared-kernel test` green
 - [ ] Human review before starting `recycler-service`
 
 ## Phase 2: recycler-service infra

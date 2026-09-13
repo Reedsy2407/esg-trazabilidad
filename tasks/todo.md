@@ -156,20 +156,21 @@
 
 ## Phase 5: Certification
 
-- [ ] Task 9: Certification persistence
+- [x] Task 9: Certification persistence
   - **Description:** Schema, domain model with the `isExpired()` business rule, and persistence adapter for `Certification`.
   - **Acceptance criteria:**
-    - [ ] Liquibase changelog `v0.1.2_create_certification_table.yaml` creates the `certification` table: `association_id` (FK, not null), `certification_type`, `issued_date`, `expiration_date`
-    - [ ] `Certification` domain class exposes `isExpired()` computed from `expirationDate` vs. current date — no stored, independently-updatable status column
-    - [ ] JPA entity + repository + port + adapter
-    - [ ] `CertificationEntity` implements `Persistable<UUID>` (same transient `isNew` + `@PostLoad` pattern as `AssociationEntity`/`RecyclerEntity`, for the same app-assigned-ID reason)
-    - [ ] `CertificationErrors` enum: `CER-001` not-found, `CER-002` association-not-found, `CER-003` invalid date range (`issuedDate` not before `expirationDate`)
-    - [ ] Unit tests for `isExpired()` boundary cases: expires today, already expired (yesterday), far future
+    - [x] Liquibase changelog `v0.1.2_create_certification_table.yaml` creates the `certification` table: `association_id` (FK, not null), `certification_type`, `issued_date`, `expiration_date`
+    - [x] `Certification` domain class exposes `isExpired()` computed from `expirationDate` vs. current date — no stored, independently-updatable status column
+    - [x] JPA entity + repository + port + adapter
+    - [x] `CertificationEntity` implements `Persistable<UUID>` (same transient `isNew` + `@PostLoad` pattern as `AssociationEntity`/`RecyclerEntity`, for the same app-assigned-ID reason)
+    - [x] `CertificationErrors` enum: `CER-001` not-found, `CER-002` association-not-found, `CER-003` invalid date range (`issuedDate` not before `expirationDate`)
+    - [x] Unit tests for `isExpired()` boundary cases: expires today, already expired (yesterday), far future
   - **Verification:**
-    - [ ] Tests pass: `mvn -pl recycler-service test`
+    - [x] Tests pass: `mvn -pl recycler-service test`
   - **Dependencies:** Task 5 (Association must exist to validate the FK)
   - **Files likely touched:** `db/changelog/v0.1.2_create_certification_table.yaml`, `certification/domain/Certification.java`, `certification/adapter/out/persistence/*.java`, `certification/port/out/CertificationRepository.java`, `certification/exception/CertificationErrors.java`
   - **Estimated scope:** Large (6 files)
+  - **Note:** unlike Recycler (Task 7), no association-must-exist check went into the adapter this time — learned from the Task 7/8 correction. `CertificationRepositoryAdapter` is a pure translator from the start (save/findById only, no `AssociationRepository` dependency); `CER-002` isn't wired to any logic yet, that's Task 10's `CertificationService`. Domain-level `issuedDate < expirationDate` invariant also enforced in `Certification.create()` (defense in depth alongside Task 10's `CER-003` DTO validation), same pattern as Association's RUC regex and Recycler's DNI regex. `isExpired()` uses plain `LocalDate.now()` comparison (no `Clock` injection) — kept simple since boundary tests compute their own expected dates relative to `now()` at test time, no flakiness. Manually verified the `certification` table + FK apply cleanly via Liquibase against Docker Postgres.
 
 - [ ] Task 10: Certification API
   - **Description:** Expose Certification CRUD nested under its association.

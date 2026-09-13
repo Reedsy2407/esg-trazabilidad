@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.2-create-certification-table
+      author: esg-trazabilidad
+      changes:
+        - createTable:
+            tableName: certification
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_certification_association
+                    references: association(id)
+              - column:
+                  name: certification_type
+                  type: varchar(255)
+              - column:
+                  name: issued_date
+                  type: date
+              - column:
+                  name: expiration_date
+                  type: date

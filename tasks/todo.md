@@ -172,24 +172,25 @@
   - **Estimated scope:** Large (6 files)
   - **Note:** unlike Recycler (Task 7), no association-must-exist check went into the adapter this time — learned from the Task 7/8 correction. `CertificationRepositoryAdapter` is a pure translator from the start (save/findById only, no `AssociationRepository` dependency); `CER-002` isn't wired to any logic yet, that's Task 10's `CertificationService`. Domain-level `issuedDate < expirationDate` invariant also enforced in `Certification.create()` (defense in depth alongside Task 10's `CER-003` DTO validation), same pattern as Association's RUC regex and Recycler's DNI regex. `isExpired()` uses plain `LocalDate.now()` comparison (no `Clock` injection) — kept simple since boundary tests compute their own expected dates relative to `now()` at test time, no flakiness. Manually verified the `certification` table + FK apply cleanly via Liquibase against Docker Postgres.
 
-- [ ] Task 10: Certification API
+- [x] Task 10: Certification API
   - **Description:** Expose Certification CRUD nested under its association.
   - **Acceptance criteria:**
-    - [ ] `POST /associations/{associationId}/certifications` validates `issuedDate < expirationDate`, returns `CER-002` 404 if the association doesn't exist, `CER-003` on invalid date range
-    - [ ] `GET /associations/{associationId}/certifications/{id}` returns 404 via `CER-001` when missing, response includes computed `expired: boolean`. **Get the associationId path-scoping right from the start** (Task 8 shipped `RecyclerController.getById()` ignoring the `associationId` path segment entirely — any recycler id was returned regardless of which association's path it was requested through — caught and fixed post-merge): `GetCertificationUseCase` must take both `associationId` and `id`, and the service must check `certification.getAssociationId()` matches, throwing `CER-001` on mismatch, not just on a genuinely missing id.
-    - [ ] `GET /associations/{associationId}/certifications` returns paginated `PageResponse<CertificationResponse>`, with `@PageableDefault(size = 20, sort = "expirationDate", direction = Sort.Direction.ASC)` on the `Pageable` param (per guide 1.11 — max-page-size already set globally)
-    - [ ] Unit test for `CertificationService`
-    - [ ] IT test covering create → get → list, plus association-not-found and invalid-date-range paths, and one case each for expired/not-expired in the response
+    - [x] `POST /associations/{associationId}/certifications` validates `issuedDate < expirationDate`, returns `CER-002` 404 if the association doesn't exist, `CER-003` on invalid date range
+    - [x] `GET /associations/{associationId}/certifications/{id}` returns 404 via `CER-001` when missing, response includes computed `expired: boolean`. Got the associationId path-scoping right from the start this time: `GetCertificationUseCase.getById(associationId, id)` checks `certification.getAssociationId()` matches, throwing `CER-001` on mismatch — covered by an IT test (two associations, cross-path lookup → 404).
+    - [x] `GET /associations/{associationId}/certifications` returns paginated `PageResponse<CertificationResponse>`, with `@PageableDefault(size = 20, sort = "expirationDate", direction = Sort.Direction.ASC)` on the `Pageable` param
+    - [x] Unit test for `CertificationService` (association-exists check, date-range check, both order and precedence over each other; get scoped to association; list delegates)
+    - [x] IT test covering create → get → list, plus association-not-found (404/CER-002) and invalid-date-range (400/CER-003) paths, and one case each for expired/not-expired in the response
   - **Verification:**
-    - [ ] Unit tests pass: `mvn -pl recycler-service test`
-    - [ ] Integration tests pass: `mvn -pl recycler-service verify`
+    - [x] Unit tests pass: `mvn -pl recycler-service test`
+    - [x] Integration tests pass: `mvn -pl recycler-service verify`
   - **Dependencies:** Task 9
   - **Files likely touched:** `certification/adapter/in/web/{CertificationController,CertificationMapper}.java`, DTOs, `certification/port/in/*UseCase.java`, `certification/service/CertificationService.java`, `CertificationServiceTest.java`, `it/CertificationApiIT.java`
   - **Estimated scope:** Large (7 files)
+  - **Note:** also added `CertificationExceptionHandler` (same TOCTOU-race fallback pattern as `RecyclerExceptionHandler`, using `ConstraintViolationException.getConstraintName()` for `fk_certification_association` → CER-002), with both a direct unit test and a repository-level IT confirming the real constraint name. `issuedDate < expirationDate` is also enforced in `Certification.create()` at the domain layer (defense in depth), consistent with Association's RUC and Recycler's DNI pattern.
 
 ### Checkpoint 5: Full CRUD path complete
-- [ ] `mvn verify` green across the whole reactor
-- [ ] Manual check: Association → Recycler → Certification chain works end-to-end through real HTTP calls
+- [x] `mvn verify` green across the whole reactor
+- [x] Manual check: Association → Recycler → Certification chain works end-to-end through real HTTP calls
 
 ## Phase 6: Polish
 

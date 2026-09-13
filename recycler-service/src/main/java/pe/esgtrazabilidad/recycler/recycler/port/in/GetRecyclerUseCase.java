@@ -6,5 +6,5 @@ import pe.esgtrazabilidad.recycler.recycler.domain.Recycler;
 
 public interface GetRecyclerUseCase {
 
-    Recycler getById(UUID id);
+    Recycler getById(UUID associationId, UUID id);
 }

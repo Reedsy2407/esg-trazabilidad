@@ -54,7 +54,7 @@ class RecyclerController {
 
     @GetMapping("/{id}")
     RecyclerResponse getById(@PathVariable UUID associationId, @PathVariable UUID id) {
-        return mapper.toResponse(getRecyclerUseCase.getById(id));
+        return mapper.toResponse(getRecyclerUseCase.getById(associationId, id));
     }
 
     @GetMapping

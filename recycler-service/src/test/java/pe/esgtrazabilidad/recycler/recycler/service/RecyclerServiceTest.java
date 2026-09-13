@@ -93,11 +93,11 @@ class RecyclerServiceTest {
     }
 
     @Test
-    void returnsTheRecyclerWhenFoundById() {
+    void returnsTheRecyclerWhenFoundByIdUnderItsOwnAssociation() {
         Recycler recycler = Recycler.create("Juan Pérez", "12345678", "999999999", associationId);
         when(recyclerRepository.findById(recycler.getId())).thenReturn(Optional.of(recycler));
 
-        Recycler result = service.getById(recycler.getId());
+        Recycler result = service.getById(associationId, recycler.getId());
 
         assertThat(result).isEqualTo(recycler);
     }
@@ -107,7 +107,19 @@ class RecyclerServiceTest {
         UUID missingId = UUID.randomUUID();
         when(recyclerRepository.findById(missingId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getById(missingId))
+        assertThatThrownBy(() -> service.getById(associationId, missingId))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(RecyclerErrors.NOT_FOUND));
+    }
+
+    @Test
+    void throwsNotFoundWhenRecyclerBelongsToADifferentAssociation() {
+        UUID otherAssociationId = UUID.randomUUID();
+        Recycler recycler = Recycler.create("Juan Pérez", "12345678", "999999999", otherAssociationId);
+        when(recyclerRepository.findById(recycler.getId())).thenReturn(Optional.of(recycler));
+
+        assertThatThrownBy(() -> service.getById(associationId, recycler.getId()))
                 .isInstanceOf(ApplicationException.class)
                 .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
                         .isEqualTo(RecyclerErrors.NOT_FOUND));

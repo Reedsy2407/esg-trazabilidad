@@ -158,4 +158,35 @@ class RecyclerApiIT {
                 .statusCode(404)
                 .body("code", equalTo("REC-001"));
     }
+
+    @Test
+    void gettingARecyclerThroughAnotherAssociationsPathReturnsNotFound() {
+        String associationAId = createAssociation("20777777777");
+        String associationBId = createAssociation("20888888888");
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(createRecyclerRequest("44444444"))
+                .when()
+                .post("/associations/{associationId}/recyclers", associationAId)
+                .then()
+                .statusCode(201);
+
+        String recyclerBId = given()
+                .contentType(ContentType.JSON)
+                .body(createRecyclerRequest("55555555"))
+                .when()
+                .post("/associations/{associationId}/recyclers", associationBId)
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        given()
+                .when()
+                .get("/associations/{associationId}/recyclers/{id}", associationAId, recyclerBId)
+                .then()
+                .statusCode(404)
+                .body("code", equalTo("REC-001"));
+    }
 }

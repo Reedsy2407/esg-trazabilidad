@@ -42,8 +42,14 @@ class RecyclerService implements CreateRecyclerUseCase, GetRecyclerUseCase, List
     }
 
     @Override
-    public Recycler getById(UUID id) {
-        return recyclerRepository.findById(id).orElseThrow(() -> new ApplicationException(RecyclerErrors.NOT_FOUND));
+    public Recycler getById(UUID associationId, UUID id) {
+        Recycler recycler = recyclerRepository
+                .findById(id)
+                .orElseThrow(() -> new ApplicationException(RecyclerErrors.NOT_FOUND));
+        if (!recycler.getAssociationId().equals(associationId)) {
+            throw new ApplicationException(RecyclerErrors.NOT_FOUND);
+        }
+        return recycler;
     }
 
     @Override

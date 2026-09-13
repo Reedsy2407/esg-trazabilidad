@@ -74,20 +74,21 @@
 
 ## Phase 3: Association
 
-- [ ] Task 5: Association persistence
+- [x] Task 5: Association persistence
   - **Description:** Schema, domain model, and persistence adapter for `Association` — no HTTP surface yet.
   - **Acceptance criteria:**
-    - [ ] Liquibase changelog `v0.1.0_create_association_table.yaml` creates the `association` table: `name`, `ruc` (unique, 11 chars), `registration_number`, `address`, `contact_email`, `contact_phone`, `status`
-    - [ ] `Association` domain class with a `status` of `ACTIVE`/`SUSPENDED`
-    - [ ] JPA entity + Spring Data repository + a `AssociationRepository` port + adapter implementing it (domain never leaks the JPA entity)
-    - [ ] `AssociationErrors` enum implementing `ApplicationError` (`ASO-001` not-found, `ASO-002` duplicate RUC, at minimum)
-    - [ ] Unit test for any domain-level validation logic on `Association`
+    - [x] Liquibase changelog `v0.1.0_create_association_table.yaml` creates the `association` table: `name`, `ruc` (unique, 11 chars), `registration_number`, `address`, `contact_email`, `contact_phone`, `status`
+    - [x] `Association` domain class with a `status` of `ACTIVE`/`SUSPENDED`
+    - [x] JPA entity + Spring Data repository + a `AssociationRepository` port + adapter implementing it (domain never leaks the JPA entity)
+    - [x] `AssociationErrors` enum implementing `ApplicationError` (`ASO-001` not-found, `ASO-002` duplicate RUC, at minimum)
+    - [x] Unit test for any domain-level validation logic on `Association`
   - **Verification:**
-    - [ ] Tests pass: `mvn -pl recycler-service test`
-    - [ ] Manual check: Liquibase changelog applies cleanly against the Docker Postgres (`docker compose up -d && mvn -pl recycler-service spring-boot:run`, confirm table exists via `psql` or a client)
+    - [x] Tests pass: `mvn -pl recycler-service test`
+    - [x] Manual check: Liquibase changelog applies cleanly against the Docker Postgres (`docker compose up -d && mvn -pl recycler-service spring-boot:run`, confirm table exists via `psql` or a client)
   - **Dependencies:** Task 4
   - **Files likely touched:** `db/changelog/v0.1.0_create_association_table.yaml`, `association/domain/Association.java`, `association/adapter/out/persistence/{AssociationEntity,AssociationJpaRepository,AssociationRepositoryAdapter}.java`, `association/port/out/AssociationRepository.java`, `association/exception/AssociationErrors.java`
   - **Estimated scope:** Large (6 files) — persistence-only, no controller/service yet
+  - **Note:** changelog lives at `db/changelog/changes/v0.1.0_create_association_table.yaml` (Task 4's `changes/` subfolder decision). Domain validation tested: RUC length invariant, and `suspend()`/`activate()` idempotency guards (not spec-required but cheap, real business rules worth protecting).
 
 - [ ] Task 6: Association API
   - **Description:** Expose Association CRUD over HTTP: mapper, request/response DTOs with validation, use case interfaces, service, controller.

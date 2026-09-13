@@ -76,7 +76,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Phase 3: Association
 
-- [ ] Task 5: Association persistence (Liquibase `v0.1.0`, domain, JPA entity/repo, repository port+adapter, `AssociationErrors`)
+- [x] Task 5: Association persistence (Liquibase `v0.1.0`, domain, JPA entity/repo, repository port+adapter, `AssociationErrors`)
 - [ ] Task 6: Association API (mapper, DTOs incl. RUC validation, use cases, `AssociationService`, `AssociationController`, unit + IT tests)
 
 ### Checkpoint 3: Association CRUD works end-to-end

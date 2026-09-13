@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.0-create-association-table
+      author: esg-trazabilidad
+      changes:
+        - createTable:
+            tableName: association
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ruc
+                  type: varchar(11)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: registration_number
+                  type: varchar(100)
+              - column:
+                  name: address
+                  type: varchar(255)
+              - column:
+                  name: contact_email
+                  type: varchar(255)
+              - column:
+                  name: contact_phone
+                  type: varchar(20)
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false

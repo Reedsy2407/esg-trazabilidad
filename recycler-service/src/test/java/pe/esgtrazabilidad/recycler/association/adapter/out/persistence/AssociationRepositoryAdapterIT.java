@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -23,6 +24,7 @@ import pe.esgtrazabilidad.recycler.association.domain.Association;
 import pe.esgtrazabilidad.recycler.association.port.out.AssociationRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -76,5 +78,18 @@ class AssociationRepositoryAdapterIT {
 
         assertThat(statements).hasSize(1);
         assertThat(statements.get(0)).startsWithIgnoringCase("insert");
+    }
+
+    @Test
+    void savingASecondAssociationWithTheSameRucViolatesTheUniqueConstraint() {
+        String sharedRuc = "20199999999";
+        associationRepository.save(Association.create(
+                "Primera asociación", sharedRuc, "REG-001", "Dirección", "a@b.pe", "999999999"));
+
+        Association secondWithSameRuc = Association.create(
+                "Segunda asociación", sharedRuc, "REG-002", "Otra dirección", "c@d.pe", "888888888");
+
+        assertThatThrownBy(() -> associationRepository.save(secondWithSameRuc))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

@@ -11,6 +11,7 @@ public enum CollectionErrors implements ApplicationError {
     COMPANY_NOT_FOUND("COL-004", "Empresa no encontrada", HttpStatus.NOT_FOUND),
     DUPLICATE_RUC("COL-005", "Ya existe una empresa con ese RUC", HttpStatus.CONFLICT),
     SCHEDULE_NOT_FOUND("COL-006", "Programación de recojo no encontrada", HttpStatus.NOT_FOUND),
+    RECORD_NOT_FOUND("COL-007", "Registro de recojo no encontrado", HttpStatus.NOT_FOUND),
     INVALID_SCHEDULE_TRANSITION(
             "COL-008", "Transición de estado no permitida para esta programación", HttpStatus.CONFLICT);
 

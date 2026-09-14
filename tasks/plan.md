@@ -193,11 +193,11 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 ### Checkpoint 10: CollectionSchedule complete (CRUD + full lifecycle)
 - [x] `mvn -pl collection-service verify` green
 - [x] Manual check: two schedules same neighbor different days (both succeed), same-day duplicate (409 COL-002), pause → reactivate, cancel → confirm terminal (409 COL-008 on further pause/reactivate)
-- [ ] Human review before CollectionRecord slice
+- [x] Human review before CollectionRecord slice — implicit approval
 
 ### Phase 11: CollectionRecord
 
-- [ ] Task 21: CollectionRecord persistence (Liquibase `v0.1.3`, domain, JPA entity/repo incl. nullable `scheduleId` FK and bare unvalidated `associationId`, errors)
+- [x] Task 21: CollectionRecord persistence (Liquibase `v0.1.3`, domain, JPA entity/repo incl. nullable `scheduleId` FK and bare unvalidated `associationId`, errors)
 - [ ] Task 22: CollectionRecord API (mapper, DTOs, use cases, `CollectionRecordService`, controller nested under `/neighbors/{neighborId}/collection-records`, unit + IT tests incl. unvalidated-`associationId` proof)
 
 ### Checkpoint 11: CollectionRecord complete

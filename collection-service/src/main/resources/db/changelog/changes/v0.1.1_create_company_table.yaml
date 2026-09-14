@@ -1,0 +1,39 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.1-create-company-table
+      author: esg-trazabilidad
+      changes:
+        - createTable:
+            tableName: company
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ruc
+                  type: varchar(11)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: contact_email
+                  type: varchar(255)
+              - column:
+                  name: contact_phone
+                  type: varchar(20)
+              - column:
+                  name: address
+                  type: varchar(255)
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false

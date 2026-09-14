@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.0-create-neighbor-table
+      author: esg-trazabilidad
+      changes:
+        - createTable:
+            tableName: neighbor
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: phone
+                  type: varchar(20)
+              - column:
+                  name: address
+                  type: varchar(255)
+              - column:
+                  name: district
+                  type: varchar(100)
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false

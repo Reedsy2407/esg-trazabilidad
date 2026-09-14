@@ -1,6 +1,8 @@
 spring:
   application:
     name: recycler-service
+  config:
+    import: "optional:file:../.env.local[.properties]"
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5433/esg_trazabilidad}
     username: ${DB_USERNAME:esg}

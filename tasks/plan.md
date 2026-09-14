@@ -162,11 +162,11 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Checkpoint 7: Service boots
 - [x] `mvn -pl collection-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies
-- [ ] Human review before first entity slice
+- [x] Human review before first entity slice — approved 2026-09-13
 
 ### Phase 8: Neighbor
 
-- [ ] Task 14: Neighbor persistence (Liquibase `v0.1.0`, domain, JPA entity/repo, repository port+adapter, errors)
+- [x] Task 14: Neighbor persistence (Liquibase `v0.1.0`, domain, JPA entity/repo, repository port+adapter, errors)
 - [ ] Task 15: Neighbor API (mapper, DTOs, use cases, `NeighborService`, `NeighborController`, unit + IT tests)
 
 ### Checkpoint 8: Neighbor CRUD works end-to-end

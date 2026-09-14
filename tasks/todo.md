@@ -253,24 +253,25 @@
 
 ### Checkpoint 7: Service boots
 - [x] `mvn -pl collection-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies
-- [ ] Human review before first entity slice
+- [x] Human review before first entity slice — approved 2026-09-13; verified PageResponse relocation, `.env.local` + `docker compose --env-file` documentation, `pom.xml`/`application.yml`.
 
 ## Phase 8: Neighbor
 
-- [ ] Task 14: Neighbor persistence
+- [x] Task 14: Neighbor persistence
   - **Description:** Schema, domain model, and persistence adapter for `Neighbor` — no HTTP surface yet.
   - **Acceptance criteria:**
-    - [ ] Liquibase changelog `v0.1.0_create_neighbor_table.yaml` creates the `neighbor` table: `full_name`, `phone`, `address`, `district`, `status`
-    - [ ] `Neighbor` domain class with a `status` of `ACTIVE`/`INACTIVE`
-    - [ ] JPA entity implementing `Persistable<UUID>` (same `isNew`/`@PostLoad` pattern as every `recycler-service` entity — app-assigned UUID v7 IDs) + Spring Data repository + `NeighborRepository` port + adapter (domain never leaks the JPA entity)
-    - [ ] `CollectionErrors` enum gains `NEIGHBOR_NOT_FOUND` (`COL-001`)
-    - [ ] Unit test for any domain-level validation logic on `Neighbor`
+    - [x] Liquibase changelog `v0.1.0_create_neighbor_table.yaml` creates the `neighbor` table: `full_name`, `phone`, `address`, `district`, `status`
+    - [x] `Neighbor` domain class with a `status` of `ACTIVE`/`INACTIVE`
+    - [x] JPA entity implementing `Persistable<UUID>` (same `isNew`/`@PostLoad` pattern as every `recycler-service` entity — app-assigned UUID v7 IDs) + Spring Data repository + `NeighborRepository` port + adapter (domain never leaks the JPA entity)
+    - [x] `CollectionErrors` enum gains `NEIGHBOR_NOT_FOUND` (`COL-001`)
+    - [x] Unit test for any domain-level validation logic on `Neighbor`
   - **Verification:**
-    - [ ] Tests pass: `mvn -pl collection-service test`
-    - [ ] Manual check: Liquibase changelog applies cleanly against the Docker Postgres
+    - [x] Tests pass: `mvn -pl collection-service test`
+    - [x] Manual check: Liquibase changelog applies cleanly against the Docker Postgres (`Table neighbor created`, app started in 2.83s)
   - **Dependencies:** Task 13
   - **Files likely touched:** `db/changelog/changes/v0.1.0_create_neighbor_table.yaml`, `neighbor/domain/Neighbor.java`, `neighbor/adapter/out/persistence/{NeighborEntity,NeighborJpaRepository,NeighborRepositoryAdapter}.java`, `neighbor/port/out/NeighborRepository.java`, `neighbor/exception/CollectionErrors.java`
   - **Estimated scope:** Large (6 files) — persistence-only, no controller/service yet
+  - **Note:** `Neighbor` has no domain-specific format invariant (unlike `Association`'s RUC or `Recycler`'s DNI regex) — all fields are free text, so there's no equivalent business rule to unit-test at the domain layer beyond `create()` producing an `ACTIVE` neighbor with a generated id (TDD RED confirmed: test failed to compile before `Neighbor` existed, GREEN after). Blank-field validation is deferred to Task 15's `jakarta.validation` DTO layer, matching `Association`'s own precedent (no non-blank domain checks there either). Also caught and fixed a real inconsistency in `SPEC-collection-service.md` itself: the Project Structure section said per-entity `NeighborErrors.java`, contradicting the Code Style block and Success Criteria's single shared `CollectionErrors` enum — fixed the spec to match the enum design actually used (placed at `pe.esgtrazabilidad.collection.exception.CollectionErrors`, not nested under `neighbor/`). No `existing()`/`update()` factory added to `NeighborEntity` — `Neighbor` has no lifecycle/update endpoint planned in this spec (unlike `CollectionSchedule`), so that machinery would be unused (YAGNI, same discipline as `Certification`'s Task 9 before Task 12 added renewal).
 
 - [ ] Task 15: Neighbor API
   - **Description:** Expose Neighbor CRUD over HTTP: mapper, request/response DTOs with validation, use case interfaces, service, controller.

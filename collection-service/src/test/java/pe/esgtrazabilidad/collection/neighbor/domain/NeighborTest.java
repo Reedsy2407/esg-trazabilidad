@@ -3,6 +3,7 @@ package pe.esgtrazabilidad.collection.neighbor.domain;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class NeighborTest {
 
@@ -16,6 +17,18 @@ class NeighborTest {
         assertThat(neighbor.getPhone()).isEqualTo("999999999");
         assertThat(neighbor.getAddress()).isEqualTo("Av. Siempre Viva 123");
         assertThat(neighbor.getDistrict()).isEqualTo("Surco");
+    }
+
+    @Test
+    void rejectsANullAddress() {
+        assertThatThrownBy(() -> Neighbor.create("Ana Torres", "999999999", null, "Surco"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void rejectsABlankAddress() {
+        assertThatThrownBy(() -> Neighbor.create("Ana Torres", "999999999", "   ", "Surco"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

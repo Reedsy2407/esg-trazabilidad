@@ -64,7 +64,7 @@ Task 13: collection-service scaffolding (pom, application.yml port 8082, Liquiba
     │       ├──────────────────────────────┐
     │       ▼                              ▼
     │   Task 18: CollectionSchedule    Task 21: CollectionRecord persistence
-    │   persistence (v0.1.2, FK to     (v0.1.3, FK to neighbor + nullable FK
+    │   persistence (v0.1.3, FK to     (v0.1.4, FK to neighbor + nullable FK
     │   neighbor, partial unique       to schedule, associationId bare UUID)
     │   index for COL-002)                 │  ▲
     │       │                              │  │ (needs collection_schedule table
@@ -80,7 +80,7 @@ Task 13: collection-service scaffolding (pom, application.yml port 8082, Liquiba
     │                                     Task 22: CollectionRecord API
     │                                     (create/get/list, no update — immutable)
     │
-    └── Task 16: Company persistence (v0.1.1, standalone, no FK)
+    └── Task 16: Company persistence (v0.1.2, standalone, no FK)
             │
             ▼
         Task 17: Company API (create/get/list)
@@ -176,7 +176,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Phase 9: Company
 
-- [ ] Task 16: Company persistence (Liquibase `v0.1.1`, domain incl. RUC validation, JPA entity/repo, repository port+adapter, errors)
+- [ ] Task 16: Company persistence (Liquibase `v0.1.2`, domain incl. RUC validation, JPA entity/repo, repository port+adapter, errors)
 - [ ] Task 17: Company API (mapper, DTOs, use cases, `CompanyService`, `CompanyController`, unit + IT tests)
 
 ### Checkpoint 9: Company CRUD works end-to-end
@@ -186,7 +186,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Phase 10: CollectionSchedule
 
-- [ ] Task 18: CollectionSchedule persistence (Liquibase `v0.1.2` incl. partial unique index, domain with `pause()`/`cancel()`/`reactivate()` guards, JPA entity/repo incl. `existing()`/`update()` from the start, errors)
+- [ ] Task 18: CollectionSchedule persistence (Liquibase `v0.1.3` incl. partial unique index, domain with `pause()`/`cancel()`/`reactivate()` guards, JPA entity/repo incl. `existing()`/`update()` from the start, errors)
 - [ ] Task 19: CollectionSchedule API — CRUD (mapper, DTOs, use cases, `CollectionScheduleService` incl. shared conflict-check method, controller nested under `/neighbors/{neighborId}/schedules`, unit + IT tests)
 - [ ] Task 20: CollectionSchedule lifecycle (`pause`/`cancel`/`reactivate` endpoints, `COL-008` invalid-transition handling, reactivate re-runs the conflict check, unit + IT tests)
 
@@ -197,7 +197,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Phase 11: CollectionRecord
 
-- [ ] Task 21: CollectionRecord persistence (Liquibase `v0.1.3`, domain, JPA entity/repo incl. nullable `scheduleId` FK and bare unvalidated `associationId`, errors)
+- [ ] Task 21: CollectionRecord persistence (Liquibase `v0.1.4`, domain, JPA entity/repo incl. nullable `scheduleId` FK and bare unvalidated `associationId`, errors)
 - [ ] Task 22: CollectionRecord API (mapper, DTOs, use cases, `CollectionRecordService`, controller nested under `/neighbors/{neighborId}/collection-records`, unit + IT tests incl. unvalidated-`associationId` proof)
 
 ### Checkpoint 11: CollectionRecord complete

@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.1-alter-neighbor-address-not-null
+      author: esg-trazabilidad
+      changes:
+        - addNotNullConstraint:
+            tableName: neighbor
+            columnName: address
+            columnDataType: varchar(255)

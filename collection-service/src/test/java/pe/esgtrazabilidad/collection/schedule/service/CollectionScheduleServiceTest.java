@@ -19,6 +19,7 @@ import pe.esgtrazabilidad.collection.exception.CollectionErrors;
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
 import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
+import pe.esgtrazabilidad.collection.schedule.domain.CollectionScheduleStatus;
 import pe.esgtrazabilidad.collection.schedule.port.in.CreateCollectionScheduleCommand;
 import pe.esgtrazabilidad.collection.schedule.port.out.CollectionScheduleRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
@@ -138,5 +139,110 @@ class CollectionScheduleServiceTest {
         Page<CollectionSchedule> result = service.list(neighborId, pageable);
 
         assertThat(result).isSameAs(expectedPage);
+    }
+
+    @Test
+    void pauseMovesAnActiveScheduleToPaused() {
+        CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
+        when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
+        when(repository.update(schedule)).thenReturn(schedule);
+
+        CollectionSchedule result = service.pause(neighborId, schedule.getId());
+
+        assertThat(result.getStatus()).isEqualTo(CollectionScheduleStatus.PAUSED);
+        verify(repository).update(schedule);
+    }
+
+    @Test
+    void pausingAnAlreadyPausedScheduleThrowsInvalidTransition() {
+        CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
+        schedule.pause();
+        when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
+
+        assertThatThrownBy(() -> service.pause(neighborId, schedule.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(CollectionErrors.INVALID_SCHEDULE_TRANSITION));
+        verify(repository, never()).update(any());
+    }
+
+    @Test
+    void pausingAMissingScheduleThrowsNotFound() {
+        UUID missingId = UUID.randomUUID();
+        when(repository.findById(missingId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.pause(neighborId, missingId))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(CollectionErrors.SCHEDULE_NOT_FOUND));
+    }
+
+    @Test
+    void cancelMovesAnActiveScheduleToCancelled() {
+        CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
+        when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
+        when(repository.update(schedule)).thenReturn(schedule);
+
+        CollectionSchedule result = service.cancel(neighborId, schedule.getId());
+
+        assertThat(result.getStatus()).isEqualTo(CollectionScheduleStatus.CANCELLED);
+        verify(repository).update(schedule);
+    }
+
+    @Test
+    void cancellingAnAlreadyCancelledScheduleThrowsInvalidTransition() {
+        CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
+        schedule.cancel();
+        when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
+
+        assertThatThrownBy(() -> service.cancel(neighborId, schedule.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(CollectionErrors.INVALID_SCHEDULE_TRANSITION));
+        verify(repository, never()).update(any());
+    }
+
+    @Test
+    void reactivateMovesAPausedScheduleToActiveWhenNoConflict() {
+        CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
+        schedule.pause();
+        when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
+        when(repository.findActiveByNeighborIdAndDayOfWeek(neighborId, DayOfWeek.MONDAY))
+                .thenReturn(Optional.empty());
+        when(repository.update(schedule)).thenReturn(schedule);
+
+        CollectionSchedule result = service.reactivate(neighborId, schedule.getId());
+
+        assertThat(result.getStatus()).isEqualTo(CollectionScheduleStatus.ACTIVE);
+        verify(repository).update(schedule);
+    }
+
+    @Test
+    void reactivatingAnActiveScheduleThrowsInvalidTransition() {
+        CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
+        when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
+
+        assertThatThrownBy(() -> service.reactivate(neighborId, schedule.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(CollectionErrors.INVALID_SCHEDULE_TRANSITION));
+        verify(repository, never()).update(any());
+    }
+
+    @Test
+    void reactivatingIntoANewConflictThrowsScheduleConflictAndDoesNotPersist() {
+        CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
+        schedule.pause();
+        CollectionSchedule conflicting =
+                CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(10, 0));
+        when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
+        when(repository.findActiveByNeighborIdAndDayOfWeek(neighborId, DayOfWeek.MONDAY))
+                .thenReturn(Optional.of(conflicting));
+
+        assertThatThrownBy(() -> service.reactivate(neighborId, schedule.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(CollectionErrors.SCHEDULE_CONFLICT));
+        verify(repository, never()).update(any());
     }
 }

@@ -9,9 +9,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import pe.esgtrazabilidad.collection.schedule.port.in.CancelCollectionScheduleUseCase;
 import pe.esgtrazabilidad.collection.schedule.port.in.CreateCollectionScheduleUseCase;
 import pe.esgtrazabilidad.collection.schedule.port.in.GetCollectionScheduleUseCase;
 import pe.esgtrazabilidad.collection.schedule.port.in.ListCollectionSchedulesUseCase;
+import pe.esgtrazabilidad.collection.schedule.port.in.PauseCollectionScheduleUseCase;
+import pe.esgtrazabilidad.collection.schedule.port.in.ReactivateCollectionScheduleUseCase;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -41,6 +44,15 @@ class ScheduleExceptionHandlerTest {
 
     @MockBean
     private ListCollectionSchedulesUseCase listCollectionSchedulesUseCase;
+
+    @MockBean
+    private PauseCollectionScheduleUseCase pauseCollectionScheduleUseCase;
+
+    @MockBean
+    private CancelCollectionScheduleUseCase cancelCollectionScheduleUseCase;
+
+    @MockBean
+    private ReactivateCollectionScheduleUseCase reactivateCollectionScheduleUseCase;
 
     @MockBean
     private CollectionScheduleMapper mapper;

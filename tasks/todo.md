@@ -377,24 +377,25 @@
   - **Estimated scope:** Large (7-8 files)
   - **Note:** TDD RED→GREEN for `CollectionScheduleService` (7 unit tests: create happy path, neighbor-not-found, conflict, get scoped, get-not-found, cross-neighbor-scoping, list-delegates). Neighbor-existence check lives in the service (`NeighborRepository.findById()`), not the persistence adapter — same architecture lesson from `recycler-service` Task 7/8's correction, applied correctly from the start this time.
 
-- [ ] Task 20: CollectionSchedule lifecycle
+- [x] Task 20: CollectionSchedule lifecycle
   - **Description:** Expose `pause`/`cancel`/`reactivate` over HTTP.
   - **Acceptance criteria:**
-    - [ ] `PATCH /neighbors/{neighborId}/schedules/{id}/pause`, `.../cancel`, `.../reactivate` call the domain guard methods; illegal transition → 409 via new `CollectionErrors.INVALID_SCHEDULE_TRANSITION` (`COL-008`), not a raw `IllegalStateException`
-    - [ ] `reactivate()` re-runs `assertNoActiveConflict(...)` (from Task 19) before flipping back to `ACTIVE`
-    - [ ] Unit tests: every legal transition, every illegal transition → `COL-008`, reactivate-into-a-new-conflict case
-    - [ ] IT tests: happy path for all three endpoints + the reactivate-conflict 409 case end-to-end
+    - [x] `PATCH /neighbors/{neighborId}/schedules/{id}/pause`, `.../cancel`, `.../reactivate` call the domain guard methods; illegal transition → 409 via new `CollectionErrors.INVALID_SCHEDULE_TRANSITION` (`COL-008`), not a raw `IllegalStateException`
+    - [x] `reactivate()` re-runs `assertNoActiveConflict(...)` (from Task 19) before flipping back to `ACTIVE`
+    - [x] Unit tests: every legal transition, every illegal transition → `COL-008`, reactivate-into-a-new-conflict case
+    - [x] IT tests: happy path for all three endpoints + the reactivate-conflict 409 case end-to-end
   - **Verification:**
-    - [ ] Unit tests pass: `mvn -pl collection-service test`
-    - [ ] Integration tests pass: `mvn -pl collection-service verify`
-    - [ ] Manual check: pause → reactivate → cancel a schedule via curl, confirm cancel is terminal
+    - [x] Unit tests pass: `mvn -pl collection-service test` (46 total)
+    - [x] Integration tests pass: `mvn -pl collection-service verify` (22 total)
+    - [x] Manual check: pause → reactivate → cancel a schedule via curl against `docker compose up` Postgres, confirmed cancel is terminal (pause-after-cancel → 409 COL-008)
   - **Dependencies:** Task 19
   - **Files likely touched:** `schedule/port/in/{Pause,Cancel,Reactivate}ScheduleUseCase.java`, `schedule/service/CollectionScheduleService.java` (new methods), `schedule/adapter/in/web/CollectionScheduleController.java` (new endpoints), corresponding tests
   - **Estimated scope:** Medium (5 files)
+  - **Note:** TDD RED→GREEN for the 8 new service tests (pause/cancel/reactivate happy paths, illegal-transition → COL-008 for each, reactivate-into-a-new-conflict → COL-002 not COL-008). `reactivate()` calls `schedule.reactivate()` (validates PAUSED→ACTIVE, mutates in-memory) before `assertNoActiveConflict()` — safe since nothing persists until `repository.update()`, which only runs if both checks pass. Adding the three new controller constructor params required updating `ScheduleExceptionHandlerTest`'s `@MockBean`s too (caught immediately by a compile error, not silently).
 
 ### Checkpoint 10: CollectionSchedule complete (CRUD + full lifecycle)
-- [ ] `mvn -pl collection-service verify` green
-- [ ] Manual check: two schedules same neighbor different days (both succeed), same-day duplicate (409 COL-002), pause → reactivate, cancel → confirm terminal (409 COL-008 on further pause/reactivate)
+- [x] `mvn -pl collection-service verify` green
+- [x] Manual check: two schedules same neighbor different days (both succeed), same-day duplicate (409 COL-002), pause → reactivate, cancel → confirm terminal (409 COL-008 on further pause/reactivate)
 - [ ] Human review before CollectionRecord slice
 
 ## Phase 11: CollectionRecord

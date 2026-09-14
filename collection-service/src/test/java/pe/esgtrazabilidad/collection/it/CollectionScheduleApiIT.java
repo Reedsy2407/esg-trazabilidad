@@ -73,6 +73,18 @@ class CollectionScheduleApiIT {
                 """.formatted(dayOfWeek, time);
     }
 
+    private String createSchedule(String neighborId, String dayOfWeek, String time) {
+        return given()
+                .contentType(ContentType.JSON)
+                .body(createScheduleRequest(dayOfWeek, time))
+                .when()
+                .post("/neighbors/{neighborId}/schedules", neighborId)
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+    }
+
     @Test
     void createGetAndListASchedule() {
         String neighborId = createNeighbor("Ana Torres IT");
@@ -194,5 +206,95 @@ class CollectionScheduleApiIT {
                 .then()
                 .statusCode(404)
                 .body("code", equalTo("COL-006"));
+    }
+
+    @Test
+    void pausingAndReactivatingAScheduleChangesItsStatus() {
+        String neighborId = createNeighbor("Ana Torres IT 7");
+        String id = createSchedule(neighborId, "SATURDAY", "09:00:00");
+
+        given()
+                .when()
+                .patch("/neighbors/{neighborId}/schedules/{id}/pause", neighborId, id)
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("PAUSED"));
+
+        given()
+                .when()
+                .get("/neighbors/{neighborId}/schedules/{id}", neighborId, id)
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("PAUSED"));
+
+        given()
+                .when()
+                .patch("/neighbors/{neighborId}/schedules/{id}/reactivate", neighborId, id)
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("ACTIVE"));
+    }
+
+    @Test
+    void pausingAnAlreadyPausedScheduleReturnsConflict() {
+        String neighborId = createNeighbor("Ana Torres IT 8");
+        String id = createSchedule(neighborId, "SUNDAY", "09:00:00");
+
+        given().when().patch("/neighbors/{neighborId}/schedules/{id}/pause", neighborId, id).then().statusCode(200);
+
+        given()
+                .when()
+                .patch("/neighbors/{neighborId}/schedules/{id}/pause", neighborId, id)
+                .then()
+                .statusCode(409)
+                .body("code", equalTo("COL-008"));
+    }
+
+    @Test
+    void cancellingAScheduleIsTerminal() {
+        String neighborId = createNeighbor("Ana Torres IT 9");
+        String id = createSchedule(neighborId, "MONDAY", "09:00:00");
+
+        given()
+                .when()
+                .patch("/neighbors/{neighborId}/schedules/{id}/cancel", neighborId, id)
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("CANCELLED"));
+
+        given()
+                .when()
+                .patch("/neighbors/{neighborId}/schedules/{id}/pause", neighborId, id)
+                .then()
+                .statusCode(409)
+                .body("code", equalTo("COL-008"));
+
+        given()
+                .when()
+                .patch("/neighbors/{neighborId}/schedules/{id}/reactivate", neighborId, id)
+                .then()
+                .statusCode(409)
+                .body("code", equalTo("COL-008"));
+    }
+
+    @Test
+    void reactivatingIntoANewConflictReturnsConflict() {
+        String neighborId = createNeighbor("Ana Torres IT 10");
+        String pausedId = createSchedule(neighborId, "TUESDAY", "09:00:00");
+
+        given().when()
+                .patch("/neighbors/{neighborId}/schedules/{id}/pause", neighborId, pausedId)
+                .then()
+                .statusCode(200);
+
+        // Same neighbor, same day -- allowed now, since the first one is PAUSED, not ACTIVE.
+        createSchedule(neighborId, "TUESDAY", "10:00:00");
+
+        given()
+                .when()
+                .patch("/neighbors/{neighborId}/schedules/{id}/reactivate", neighborId, pausedId)
+                .then()
+                .statusCode(409)
+                .body("code", equalTo("COL-002"));
     }
 }

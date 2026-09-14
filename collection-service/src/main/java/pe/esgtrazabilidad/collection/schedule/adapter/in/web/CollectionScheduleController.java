@@ -11,6 +11,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,9 +20,12 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
+import pe.esgtrazabilidad.collection.schedule.port.in.CancelCollectionScheduleUseCase;
 import pe.esgtrazabilidad.collection.schedule.port.in.CreateCollectionScheduleUseCase;
 import pe.esgtrazabilidad.collection.schedule.port.in.GetCollectionScheduleUseCase;
 import pe.esgtrazabilidad.collection.schedule.port.in.ListCollectionSchedulesUseCase;
+import pe.esgtrazabilidad.collection.schedule.port.in.PauseCollectionScheduleUseCase;
+import pe.esgtrazabilidad.collection.schedule.port.in.ReactivateCollectionScheduleUseCase;
 import pe.esgtrazabilidad.kernel.web.PageResponse;
 
 @RestController
@@ -31,16 +35,25 @@ class CollectionScheduleController {
     private final CreateCollectionScheduleUseCase createCollectionScheduleUseCase;
     private final GetCollectionScheduleUseCase getCollectionScheduleUseCase;
     private final ListCollectionSchedulesUseCase listCollectionSchedulesUseCase;
+    private final PauseCollectionScheduleUseCase pauseCollectionScheduleUseCase;
+    private final CancelCollectionScheduleUseCase cancelCollectionScheduleUseCase;
+    private final ReactivateCollectionScheduleUseCase reactivateCollectionScheduleUseCase;
     private final CollectionScheduleMapper mapper;
 
     CollectionScheduleController(
             CreateCollectionScheduleUseCase createCollectionScheduleUseCase,
             GetCollectionScheduleUseCase getCollectionScheduleUseCase,
             ListCollectionSchedulesUseCase listCollectionSchedulesUseCase,
+            PauseCollectionScheduleUseCase pauseCollectionScheduleUseCase,
+            CancelCollectionScheduleUseCase cancelCollectionScheduleUseCase,
+            ReactivateCollectionScheduleUseCase reactivateCollectionScheduleUseCase,
             CollectionScheduleMapper mapper) {
         this.createCollectionScheduleUseCase = createCollectionScheduleUseCase;
         this.getCollectionScheduleUseCase = getCollectionScheduleUseCase;
         this.listCollectionSchedulesUseCase = listCollectionSchedulesUseCase;
+        this.pauseCollectionScheduleUseCase = pauseCollectionScheduleUseCase;
+        this.cancelCollectionScheduleUseCase = cancelCollectionScheduleUseCase;
+        this.reactivateCollectionScheduleUseCase = reactivateCollectionScheduleUseCase;
         this.mapper = mapper;
     }
 
@@ -55,6 +68,21 @@ class CollectionScheduleController {
     @GetMapping("/{id}")
     CollectionScheduleResponse getById(@PathVariable UUID neighborId, @PathVariable UUID id) {
         return mapper.toResponse(getCollectionScheduleUseCase.getById(neighborId, id));
+    }
+
+    @PatchMapping("/{id}/pause")
+    CollectionScheduleResponse pause(@PathVariable UUID neighborId, @PathVariable UUID id) {
+        return mapper.toResponse(pauseCollectionScheduleUseCase.pause(neighborId, id));
+    }
+
+    @PatchMapping("/{id}/cancel")
+    CollectionScheduleResponse cancel(@PathVariable UUID neighborId, @PathVariable UUID id) {
+        return mapper.toResponse(cancelCollectionScheduleUseCase.cancel(neighborId, id));
+    }
+
+    @PatchMapping("/{id}/reactivate")
+    CollectionScheduleResponse reactivate(@PathVariable UUID neighborId, @PathVariable UUID id) {
+        return mapper.toResponse(reactivateCollectionScheduleUseCase.reactivate(neighborId, id));
     }
 
     @GetMapping

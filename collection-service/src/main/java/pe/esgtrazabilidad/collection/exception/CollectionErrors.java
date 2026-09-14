@@ -10,7 +10,9 @@ public enum CollectionErrors implements ApplicationError {
     SCHEDULE_CONFLICT("COL-002", "Conflicto de horario de recojo", HttpStatus.CONFLICT),
     COMPANY_NOT_FOUND("COL-004", "Empresa no encontrada", HttpStatus.NOT_FOUND),
     DUPLICATE_RUC("COL-005", "Ya existe una empresa con ese RUC", HttpStatus.CONFLICT),
-    SCHEDULE_NOT_FOUND("COL-006", "Programación de recojo no encontrada", HttpStatus.NOT_FOUND);
+    SCHEDULE_NOT_FOUND("COL-006", "Programación de recojo no encontrada", HttpStatus.NOT_FOUND),
+    INVALID_SCHEDULE_TRANSITION(
+            "COL-008", "Transición de estado no permitida para esta programación", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

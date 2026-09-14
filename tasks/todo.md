@@ -396,23 +396,25 @@
 ### Checkpoint 10: CollectionSchedule complete (CRUD + full lifecycle)
 - [x] `mvn -pl collection-service verify` green
 - [x] Manual check: two schedules same neighbor different days (both succeed), same-day duplicate (409 COL-002), pause → reactivate, cancel → confirm terminal (409 COL-008 on further pause/reactivate)
-- [ ] Human review before CollectionRecord slice
+- [x] Human review before CollectionRecord slice — implicit approval: user directed `/build` for Task 21 directly
 
 ## Phase 11: CollectionRecord
 
-- [ ] Task 21: CollectionRecord persistence
+- [x] Task 21: CollectionRecord persistence
   - **Description:** Schema, domain model, and persistence adapter for `CollectionRecord` — an immutable historical record, no lifecycle.
   - **Acceptance criteria:**
-    - [ ] Liquibase changelog `v0.1.3_create_collection_record_table.yaml` creates the `collection_record` table: `neighbor_id` (FK, not null), `schedule_id` (FK, **nullable**), `association_id` (plain `UUID` column, **no FK constraint**), `collection_date`, `weight_kg`
-    - [ ] `CollectionRecord` domain class — no status field, no lifecycle methods
-    - [ ] JPA entity + repository + port + adapter — `save()`/`findById()`/list only, **no `update()`** (nothing to update on an immutable record)
-    - [ ] `CollectionErrors` gains `RECORD_NOT_FOUND` (`COL-007`)
-    - [ ] Unit test: `weightKg` must be positive, `collectionDate` required
+    - [x] Liquibase changelog `v0.1.3_create_collection_record_table.yaml` creates the `collection_record` table: `neighbor_id` (FK, not null), `schedule_id` (FK, **nullable**), `association_id` (plain `UUID` column, **no FK constraint**), `collection_date`, `weight_kg`
+    - [x] `CollectionRecord` domain class — no status field, no lifecycle methods
+    - [x] JPA entity + repository + port + adapter — `save()`/`findById()`/list only, **no `update()`** (nothing to update on an immutable record)
+    - [x] `CollectionErrors` gains `RECORD_NOT_FOUND` (`COL-007`)
+    - [x] Unit test: `weightKg` must be positive, `collectionDate` required
   - **Verification:**
-    - [ ] Tests pass: `mvn -pl collection-service test`
+    - [x] Tests pass: `mvn -pl collection-service test` (52 total)
+    - [x] Manual check: Liquibase changelog applies cleanly against the Docker Postgres (`Table collection_record created`, app boots); inspected the live table via `psql \d` and confirmed `neighbor_id`/`schedule_id` have real FKs while `association_id` is a bare `UUID NOT NULL` with **no FK** — exactly the spec's eventual-consistency decision, not an oversight
   - **Dependencies:** Task 14 (neighbor FK), Task 18 (schedule table must exist for the nullable FK column)
   - **Files likely touched:** `db/changelog/changes/v0.1.3_create_collection_record_table.yaml`, `collectionrecord/domain/CollectionRecord.java`, `collectionrecord/adapter/out/persistence/*.java`, `collectionrecord/port/out/CollectionRecordRepository.java`
   - **Estimated scope:** Large (6 files)
+  - **Note:** TDD RED→GREEN (6 tests: create happy path, schedule-linked variant, zero/negative weight rejected, null date rejected, reconstruct). `weightKg` uses `BigDecimal` (not `double`), matching money/quantity-precision convention; DB column `numeric(10,2)`.
 
 - [ ] Task 22: CollectionRecord API
   - **Description:** Expose CollectionRecord create/get/list nested under its neighbor.

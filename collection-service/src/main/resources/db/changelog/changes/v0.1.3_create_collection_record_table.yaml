@@ -1,0 +1,43 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.3-create-collection-record-table
+      author: esg-trazabilidad
+      changes:
+        - createTable:
+            tableName: collection_record
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: neighbor_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_collection_record_neighbor
+                    references: neighbor(id)
+              - column:
+                  name: schedule_id
+                  type: uuid
+                  constraints:
+                    nullable: true
+                    foreignKeyName: fk_collection_record_schedule
+                    references: collection_schedule(id)
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: collection_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: weight_kg
+                  type: numeric(10,2)
+                  constraints:
+                    nullable: false

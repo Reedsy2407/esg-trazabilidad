@@ -24,6 +24,10 @@ public class Neighbor {
     }
 
     public static Neighbor create(String fullName, String phone, String address, String district) {
+        if (address == null || address.isBlank()) {
+            throw new IllegalArgumentException(
+                    "La dirección es obligatoria: sin ella no hay lugar físico donde programar el recojo");
+        }
         return new Neighbor(IdGenerator.generate(), fullName, phone, address, district, NeighborStatus.ACTIVE);
     }
 

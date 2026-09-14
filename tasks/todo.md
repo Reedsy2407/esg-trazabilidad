@@ -272,6 +272,7 @@
   - **Files likely touched:** `db/changelog/changes/v0.1.0_create_neighbor_table.yaml`, `neighbor/domain/Neighbor.java`, `neighbor/adapter/out/persistence/{NeighborEntity,NeighborJpaRepository,NeighborRepositoryAdapter}.java`, `neighbor/port/out/NeighborRepository.java`, `neighbor/exception/CollectionErrors.java`
   - **Estimated scope:** Large (6 files) — persistence-only, no controller/service yet
   - **Note:** `Neighbor` has no domain-specific format invariant (unlike `Association`'s RUC or `Recycler`'s DNI regex) — all fields are free text, so there's no equivalent business rule to unit-test at the domain layer beyond `create()` producing an `ACTIVE` neighbor with a generated id (TDD RED confirmed: test failed to compile before `Neighbor` existed, GREEN after). Blank-field validation is deferred to Task 15's `jakarta.validation` DTO layer, matching `Association`'s own precedent (no non-blank domain checks there either). Also caught and fixed a real inconsistency in `SPEC-collection-service.md` itself: the Project Structure section said per-entity `NeighborErrors.java`, contradicting the Code Style block and Success Criteria's single shared `CollectionErrors` enum — fixed the spec to match the enum design actually used (placed at `pe.esgtrazabilidad.collection.exception.CollectionErrors`, not nested under `neighbor/`). No `existing()`/`update()` factory added to `NeighborEntity` — `Neighbor` has no lifecycle/update endpoint planned in this spec (unlike `CollectionSchedule`), so that machinery would be unused (YAGNI, same discipline as `Certification`'s Task 9 before Task 12 added renewal).
+  - **Correction (user-caught, post-commit):** `address`, `phone`, and `district` were all nullable with zero validation. Since `CollectionSchedule` has no address field of its own and depends entirely on `Neighbor`'s, this allowed an `ACTIVE` schedule with no physical pickup location. Fixed: `address` is now required (`IllegalArgumentException` in `Neighbor.create()` if null/blank — TDD RED→GREEN, same domain-level defense-in-depth pattern as `Association`'s RUC/`Recycler`'s DNI) and `v0.1.1_alter_neighbor_address_not_null.yaml` (`addNotNullConstraint`, table was still empty — no data migration risk) added as a **new** changeset rather than editing the already-shipped/already-run `v0.1.0`, per the same boundary `recycler-service` followed ("never edit a shipped changelog") plus a hard technical reason: Liquibase tracks changesets by checksum, so rewriting one already recorded in a dev database's `databasechangelog` table breaks validation. `district` evaluated and left nullable — under the same "does it block the pickup itself, or is it just supplementary" test the user applied to `phone`, no feature in this spec actually consumes `district` yet (no zone-based routing), so requiring it now would enforce a rule with no consumer; can tighten later via another additive migration if a real zoning feature needs it. `phone` unchanged (nullable, operational contact only). This shifted `v0.1.1`→`v0.1.2` (Company), `v0.1.2`→`v0.1.3` (CollectionSchedule), `v0.1.3`→`v0.1.4` (CollectionRecord) in the plan below and in `SPEC-collection-service.md` — none of those files existed yet, so pure renumbering, no risk.
 
 - [ ] Task 15: Neighbor API
   - **Description:** Expose Neighbor CRUD over HTTP: mapper, request/response DTOs with validation, use case interfaces, service, controller.
@@ -299,7 +300,7 @@
 - [ ] Task 16: Company persistence
   - **Description:** Schema, domain model, and persistence adapter for `Company` — standalone, no relationship to the collection domain.
   - **Acceptance criteria:**
-    - [ ] Liquibase changelog `v0.1.1_create_company_table.yaml` creates the `company` table: `name`, `ruc` (unique, 11 chars), `contact_email`, `contact_phone`, `address`, `status`
+    - [ ] Liquibase changelog `v0.1.2_create_company_table.yaml` creates the `company` table: `name`, `ruc` (unique, 11 chars), `contact_email`, `contact_phone`, `address`, `status`
     - [ ] `Company` domain class, RUC regex validation (`\d{11}`, same pattern as `Association`), `status` of `ACTIVE`/`INACTIVE`
     - [ ] JPA entity + repository + port + adapter, same `Persistable<UUID>` shape as `Neighbor`
     - [ ] `CollectionErrors` gains `COMPANY_NOT_FOUND` (`COL-004`), `DUPLICATE_RUC` (`COL-005`)
@@ -307,7 +308,7 @@
   - **Verification:**
     - [ ] Tests pass: `mvn -pl collection-service test`
   - **Dependencies:** Task 13 (not Task 14/15 — no relationship to Neighbor)
-  - **Files likely touched:** `db/changelog/changes/v0.1.1_create_company_table.yaml`, `company/domain/Company.java`, `company/adapter/out/persistence/*.java`, `company/port/out/CompanyRepository.java`
+  - **Files likely touched:** `db/changelog/changes/v0.1.2_create_company_table.yaml`, `company/domain/Company.java`, `company/adapter/out/persistence/*.java`, `company/port/out/CompanyRepository.java`
   - **Estimated scope:** Large (6 files)
 
 - [ ] Task 17: Company API
@@ -335,7 +336,7 @@
 - [ ] Task 18: CollectionSchedule persistence
   - **Description:** Schema, domain model with the `pause()`/`cancel()`/`reactivate()` state machine, and persistence adapter for `CollectionSchedule`, with a required FK to `Neighbor`.
   - **Acceptance criteria:**
-    - [ ] Liquibase changelog `v0.1.2_create_collection_schedule_table.yaml` creates the `collection_schedule` table: `neighbor_id` (FK, not null), `day_of_week`, `time`, `status` — plus a **partial unique index** `(neighbor_id, day_of_week) WHERE status = 'ACTIVE'` via a raw `<sql>` changeset (Liquibase's `<createIndex>` doesn't support a `WHERE` clause portably)
+    - [ ] Liquibase changelog `v0.1.3_create_collection_schedule_table.yaml` creates the `collection_schedule` table: `neighbor_id` (FK, not null), `day_of_week`, `time`, `status` — plus a **partial unique index** `(neighbor_id, day_of_week) WHERE status = 'ACTIVE'` via a raw `<sql>` changeset (Liquibase's `<createIndex>` doesn't support a `WHERE` clause portably)
     - [ ] `CollectionSchedule` domain class: `pause()` (ACTIVE→PAUSED), `cancel()` (ACTIVE or PAUSED→CANCELLED, terminal), `reactivate()` (PAUSED→ACTIVE) — every illegal transition throws `IllegalStateException`
     - [ ] JPA entity + repository + port + adapter, **including the `existing()`/`update()` path from the start** (per `persistable_update_path` memory — this entity needs lifecycle updates from day one, don't discover it after the fact like Task 12 did)
     - [ ] `CollectionErrors` gains `SCHEDULE_NOT_FOUND` (`COL-006`)
@@ -343,7 +344,7 @@
   - **Verification:**
     - [ ] Tests pass: `mvn -pl collection-service test`
   - **Dependencies:** Task 14 (neighbor FK)
-  - **Files likely touched:** `db/changelog/changes/v0.1.2_create_collection_schedule_table.yaml`, `schedule/domain/CollectionSchedule.java`, `schedule/adapter/out/persistence/*.java`, `schedule/port/out/CollectionScheduleRepository.java`
+  - **Files likely touched:** `db/changelog/changes/v0.1.3_create_collection_schedule_table.yaml`, `schedule/domain/CollectionSchedule.java`, `schedule/adapter/out/persistence/*.java`, `schedule/port/out/CollectionScheduleRepository.java`
   - **Estimated scope:** Large (6 files)
 
 - [ ] Task 19: CollectionSchedule API (CRUD)
@@ -387,7 +388,7 @@
 - [ ] Task 21: CollectionRecord persistence
   - **Description:** Schema, domain model, and persistence adapter for `CollectionRecord` — an immutable historical record, no lifecycle.
   - **Acceptance criteria:**
-    - [ ] Liquibase changelog `v0.1.3_create_collection_record_table.yaml` creates the `collection_record` table: `neighbor_id` (FK, not null), `schedule_id` (FK, **nullable**), `association_id` (plain `UUID` column, **no FK constraint**), `collection_date`, `weight_kg`
+    - [ ] Liquibase changelog `v0.1.4_create_collection_record_table.yaml` creates the `collection_record` table: `neighbor_id` (FK, not null), `schedule_id` (FK, **nullable**), `association_id` (plain `UUID` column, **no FK constraint**), `collection_date`, `weight_kg`
     - [ ] `CollectionRecord` domain class — no status field, no lifecycle methods
     - [ ] JPA entity + repository + port + adapter — `save()`/`findById()`/list only, **no `update()`** (nothing to update on an immutable record)
     - [ ] `CollectionErrors` gains `RECORD_NOT_FOUND` (`COL-007`)
@@ -395,7 +396,7 @@
   - **Verification:**
     - [ ] Tests pass: `mvn -pl collection-service test`
   - **Dependencies:** Task 14 (neighbor FK), Task 18 (schedule table must exist for the nullable FK column)
-  - **Files likely touched:** `db/changelog/changes/v0.1.3_create_collection_record_table.yaml`, `collectionrecord/domain/CollectionRecord.java`, `collectionrecord/adapter/out/persistence/*.java`, `collectionrecord/port/out/CollectionRecordRepository.java`
+  - **Files likely touched:** `db/changelog/changes/v0.1.4_create_collection_record_table.yaml`, `collectionrecord/domain/CollectionRecord.java`, `collectionrecord/adapter/out/persistence/*.java`, `collectionrecord/port/out/CollectionRecordRepository.java`
   - **Estimated scope:** Large (6 files)
 
 - [ ] Task 22: CollectionRecord API

@@ -298,23 +298,25 @@
 ### Checkpoint 8: Neighbor CRUD works end-to-end
 - [x] `mvn -pl collection-service verify` green
 - [x] Manual check: create → get → list a neighbor via curl
-- [ ] Human review before Company slice
+- [x] Human review before Company slice — implicit approval: user directed `/build` for Task 16 directly
 
 ## Phase 9: Company
 
-- [ ] Task 16: Company persistence
+- [x] Task 16: Company persistence
   - **Description:** Schema, domain model, and persistence adapter for `Company` — standalone, no relationship to the collection domain.
   - **Acceptance criteria:**
-    - [ ] Liquibase changelog `v0.1.1_create_company_table.yaml` creates the `company` table: `name`, `ruc` (unique, 11 chars), `contact_email`, `contact_phone`, `address`, `status`
-    - [ ] `Company` domain class, RUC regex validation (`\d{11}`, same pattern as `Association`), `status` of `ACTIVE`/`INACTIVE`
-    - [ ] JPA entity + repository + port + adapter, same `Persistable<UUID>` shape as `Neighbor`
-    - [ ] `CollectionErrors` gains `COMPANY_NOT_FOUND` (`COL-004`), `DUPLICATE_RUC` (`COL-005`)
-    - [ ] Unit test for RUC validation
+    - [x] Liquibase changelog `v0.1.1_create_company_table.yaml` creates the `company` table: `name`, `ruc` (unique, 11 chars), `contact_email`, `contact_phone`, `address`, `status`
+    - [x] `Company` domain class, RUC regex validation (`\d{11}`, same pattern as `Association`), `status` of `ACTIVE`/`INACTIVE`
+    - [x] JPA entity + repository + port + adapter, same `Persistable<UUID>` shape as `Neighbor`
+    - [x] `CollectionErrors` gains `COMPANY_NOT_FOUND` (`COL-004`), `DUPLICATE_RUC` (`COL-005`)
+    - [x] Unit test for RUC validation
   - **Verification:**
-    - [ ] Tests pass: `mvn -pl collection-service test`
+    - [x] Tests pass: `mvn -pl collection-service test` (12 total)
+    - [x] Manual check: Liquibase changelog applies cleanly against the Docker Postgres (`Table company created`, app started in 2.66s)
   - **Dependencies:** Task 13 (not Task 14/15 — no relationship to Neighbor)
   - **Files likely touched:** `db/changelog/changes/v0.1.1_create_company_table.yaml`, `company/domain/Company.java`, `company/adapter/out/persistence/*.java`, `company/port/out/CompanyRepository.java`
   - **Estimated scope:** Large (6 files)
+  - **Note:** TDD RED→GREEN for `CompanyTest`/`Company` (RUC regex validation, same pattern as `Association`). No `existing()`/`update()` factory — `Company` has no lifecycle/update endpoint planned in this spec (flat client registry, per the spec's "Neighbor/Company relationship model" decision), same YAGNI reasoning as `Neighbor`.
 
 - [ ] Task 17: Company API
   - **Description:** Expose Company CRUD over HTTP.

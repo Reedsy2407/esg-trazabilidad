@@ -172,11 +172,11 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 ### Checkpoint 8: Neighbor CRUD works end-to-end
 - [x] `mvn -pl collection-service verify` green
 - [x] Manual check: create → get → list a neighbor via curl
-- [ ] Human review before Company slice
+- [x] Human review before Company slice — implicit approval
 
 ### Phase 9: Company
 
-- [ ] Task 16: Company persistence (Liquibase `v0.1.1`, domain incl. RUC validation, JPA entity/repo, repository port+adapter, errors)
+- [x] Task 16: Company persistence (Liquibase `v0.1.1`, domain incl. RUC validation, JPA entity/repo, repository port+adapter, errors)
 - [ ] Task 17: Company API (mapper, DTOs, use cases, `CompanyService`, `CompanyController`, unit + IT tests)
 
 ### Checkpoint 9: Company CRUD works end-to-end

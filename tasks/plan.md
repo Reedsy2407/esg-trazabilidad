@@ -167,11 +167,11 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 ### Phase 8: Neighbor
 
 - [x] Task 14: Neighbor persistence (Liquibase `v0.1.0`, domain, JPA entity/repo, repository port+adapter, errors)
-- [ ] Task 15: Neighbor API (mapper, DTOs, use cases, `NeighborService`, `NeighborController`, unit + IT tests)
+- [x] Task 15: Neighbor API (mapper, DTOs, use cases, `NeighborService`, `NeighborController`, unit + IT tests)
 
 ### Checkpoint 8: Neighbor CRUD works end-to-end
-- [ ] `mvn -pl collection-service verify` green
-- [ ] Manual check: create → get → list a neighbor via Swagger/curl
+- [x] `mvn -pl collection-service verify` green
+- [x] Manual check: create → get → list a neighbor via curl
 - [ ] Human review before Company slice
 
 ### Phase 9: Company

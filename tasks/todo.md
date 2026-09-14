@@ -338,23 +338,25 @@
 ### Checkpoint 9: Company CRUD works end-to-end
 - [x] `mvn -pl collection-service verify` green
 - [x] Manual check: create → get → list a company, duplicate-RUC returns 409
-- [ ] Human review before CollectionSchedule slice
+- [x] Human review before CollectionSchedule slice — implicit approval: user directed `/build` for Task 18 directly
 
 ## Phase 10: CollectionSchedule
 
-- [ ] Task 18: CollectionSchedule persistence
+- [x] Task 18: CollectionSchedule persistence
   - **Description:** Schema, domain model with the `pause()`/`cancel()`/`reactivate()` state machine, and persistence adapter for `CollectionSchedule`, with a required FK to `Neighbor`.
   - **Acceptance criteria:**
-    - [ ] Liquibase changelog `v0.1.2_create_collection_schedule_table.yaml` creates the `collection_schedule` table: `neighbor_id` (FK, not null), `day_of_week`, `time`, `status` — plus a **partial unique index** `(neighbor_id, day_of_week) WHERE status = 'ACTIVE'` via a raw `<sql>` changeset (Liquibase's `<createIndex>` doesn't support a `WHERE` clause portably)
-    - [ ] `CollectionSchedule` domain class: `pause()` (ACTIVE→PAUSED), `cancel()` (ACTIVE or PAUSED→CANCELLED, terminal), `reactivate()` (PAUSED→ACTIVE) — every illegal transition throws `IllegalStateException`
-    - [ ] JPA entity + repository + port + adapter, **including the `existing()`/`update()` path from the start** (per `persistable_update_path` memory — this entity needs lifecycle updates from day one, don't discover it after the fact like Task 12 did)
-    - [ ] `CollectionErrors` gains `SCHEDULE_NOT_FOUND` (`COL-006`)
-    - [ ] Unit tests: every legal transition, every illegal transition → `IllegalStateException`
+    - [x] Liquibase changelog `v0.1.2_create_collection_schedule_table.yaml` creates the `collection_schedule` table: `neighbor_id` (FK, not null), `day_of_week`, `pickup_time` (column named to avoid the `time` reserved-type ambiguity), `status` — plus a **partial unique index** `(neighbor_id, day_of_week) WHERE status = 'ACTIVE'` via a raw `<sql>` changeset (Liquibase's `<createIndex>` doesn't support a `WHERE` clause portably)
+    - [x] `CollectionSchedule` domain class: `pause()` (ACTIVE→PAUSED), `cancel()` (ACTIVE or PAUSED→CANCELLED, terminal), `reactivate()` (PAUSED→ACTIVE) — every illegal transition throws `IllegalStateException`
+    - [x] JPA entity + repository + port + adapter, **including the `existing()`/`update()` path from the start** (per `persistable_update_path` memory)
+    - [x] `CollectionErrors` gains `SCHEDULE_NOT_FOUND` (`COL-006`)
+    - [x] Unit tests: every legal transition, every illegal transition → `IllegalStateException` (11 tests total)
   - **Verification:**
-    - [ ] Tests pass: `mvn -pl collection-service test`
+    - [x] Tests pass: `mvn -pl collection-service test` (28 total)
+    - [x] Manual check: Liquibase changelog applies cleanly against the Docker Postgres (`Table collection_schedule created`, both changesets ran, app boots); inspected the live table via `psql \d collection_schedule` and confirmed the partial index exists exactly as designed (`UNIQUE, btree (neighbor_id, day_of_week) WHERE status::text = 'ACTIVE'::text`) plus the FK to `neighbor`; proved it live by inserting two `ACTIVE` rows for the same neighbor+day and confirming Postgres rejects the second with `duplicate key value violates unique constraint "ux_collection_schedule_neighbor_day_active"` (multi-statement `psql -c` batch rolled back cleanly on the error, no stray data left)
   - **Dependencies:** Task 14 (neighbor FK)
   - **Files likely touched:** `db/changelog/changes/v0.1.2_create_collection_schedule_table.yaml`, `schedule/domain/CollectionSchedule.java`, `schedule/adapter/out/persistence/*.java`, `schedule/port/out/CollectionScheduleRepository.java`
   - **Estimated scope:** Large (6 files)
+  - **Note:** used `java.time.DayOfWeek` directly for the domain field instead of a redundant custom enum — JPA maps it via `@Enumerated(EnumType.STRING)` like any other enum. TDD RED→GREEN for the full state machine (test file written and confirmed failing to compile before `CollectionSchedule` existed).
 
 - [ ] Task 19: CollectionSchedule API (CRUD)
   - **Description:** Expose CollectionSchedule create/get/list nested under its neighbor, with the COL-002 same-day conflict rule.

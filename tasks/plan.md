@@ -182,11 +182,11 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 ### Checkpoint 9: Company CRUD works end-to-end
 - [x] `mvn -pl collection-service verify` green
 - [x] Manual check: create → get → list a company, duplicate-RUC returns 409
-- [ ] Human review before CollectionSchedule slice
+- [x] Human review before CollectionSchedule slice — implicit approval
 
 ### Phase 10: CollectionSchedule
 
-- [ ] Task 18: CollectionSchedule persistence (Liquibase `v0.1.2` incl. partial unique index, domain with `pause()`/`cancel()`/`reactivate()` guards, JPA entity/repo incl. `existing()`/`update()` from the start, errors)
+- [x] Task 18: CollectionSchedule persistence (Liquibase `v0.1.2` incl. partial unique index, domain with `pause()`/`cancel()`/`reactivate()` guards, JPA entity/repo incl. `existing()`/`update()` from the start, errors)
 - [ ] Task 19: CollectionSchedule API — CRUD (mapper, DTOs, use cases, `CollectionScheduleService` incl. shared conflict-check method, controller nested under `/neighbors/{neighborId}/schedules`, unit + IT tests)
 - [ ] Task 20: CollectionSchedule lifecycle (`pause`/`cancel`/`reactivate` endpoints, `COL-008` invalid-transition handling, reactivate re-runs the conflict check, unit + IT tests)
 

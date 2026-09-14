@@ -8,7 +8,8 @@ public enum CollectionErrors implements ApplicationError {
 
     NEIGHBOR_NOT_FOUND("COL-001", "Vecino no encontrado", HttpStatus.NOT_FOUND),
     COMPANY_NOT_FOUND("COL-004", "Empresa no encontrada", HttpStatus.NOT_FOUND),
-    DUPLICATE_RUC("COL-005", "Ya existe una empresa con ese RUC", HttpStatus.CONFLICT);
+    DUPLICATE_RUC("COL-005", "Ya existe una empresa con ese RUC", HttpStatus.CONFLICT),
+    SCHEDULE_NOT_FOUND("COL-006", "Programación de recojo no encontrada", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String message;

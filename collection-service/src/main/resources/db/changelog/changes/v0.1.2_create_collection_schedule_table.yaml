@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.2-create-collection-schedule-table
+      author: esg-trazabilidad
+      changes:
+        - createTable:
+            tableName: collection_schedule
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: neighbor_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_collection_schedule_neighbor
+                    references: neighbor(id)
+              - column:
+                  name: day_of_week
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: pickup_time
+                  type: time
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+  - changeSet:
+      id: v0.1.2-collection-schedule-active-conflict-index
+      author: esg-trazabilidad
+      comment: >
+        Partial unique index for COL-002 (one ACTIVE schedule per neighbor per
+        day) -- Liquibase's createIndex doesn't support a WHERE clause
+        portably, so this uses a raw SQL changeset instead.
+      changes:
+        - sql:
+            sql: >
+              CREATE UNIQUE INDEX ux_collection_schedule_neighbor_day_active
+              ON collection_schedule (neighbor_id, day_of_week)
+              WHERE status = 'ACTIVE';
+      rollback:
+        - sql:
+            sql: DROP INDEX ux_collection_schedule_neighbor_day_active;

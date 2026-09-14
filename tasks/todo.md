@@ -358,21 +358,23 @@
   - **Estimated scope:** Large (6 files)
   - **Note:** used `java.time.DayOfWeek` directly for the domain field instead of a redundant custom enum — JPA maps it via `@Enumerated(EnumType.STRING)` like any other enum. TDD RED→GREEN for the full state machine (test file written and confirmed failing to compile before `CollectionSchedule` existed).
 
-- [ ] Task 19: CollectionSchedule API (CRUD)
+- [x] Task 19: CollectionSchedule API (CRUD)
   - **Description:** Expose CollectionSchedule create/get/list nested under its neighbor, with the COL-002 same-day conflict rule.
   - **Acceptance criteria:**
-    - [ ] `POST /neighbors/{neighborId}/schedules` returns 409 via `COL-002` on same-day active conflict, 404 via `COL-001` if neighbor missing
-    - [ ] `GET /neighbors/{neighborId}/schedules/{id}` returns 404 via `COL-006` when missing, scoped to `neighborId` (cross-neighbor lookup must 404, not leak — same path-scoping discipline as `recycler-service` Task 8/10)
-    - [ ] `GET /neighbors/{neighborId}/schedules` returns paginated `PageResponse<CollectionScheduleResponse>`
-    - [ ] `CollectionScheduleService` exposes a reusable `assertNoActiveConflict(neighborId, dayOfWeek, excludingScheduleId)` method — used by `create()` here and by `reactivate()` in Task 20, so the rule isn't duplicated
-    - [ ] `ScheduleExceptionHandler` disambiguates the partial-unique-index violation via `ConstraintViolationException.getConstraintName()` → `COL-002`
-    - [ ] Unit + IT tests: create → get → list, conflict path (COL-002), neighbor-not-found path, cross-neighbor path-scoping (404)
+    - [x] `POST /neighbors/{neighborId}/schedules` returns 409 via `COL-002` on same-day active conflict, 404 via `COL-001` if neighbor missing
+    - [x] `GET /neighbors/{neighborId}/schedules/{id}` returns 404 via `COL-006` when missing, scoped to `neighborId` (cross-neighbor lookup must 404, not leak — same path-scoping discipline as `recycler-service` Task 8/10)
+    - [x] `GET /neighbors/{neighborId}/schedules` returns paginated `PageResponse<CollectionScheduleResponse>`
+    - [x] `CollectionScheduleService` exposes a reusable `assertNoActiveConflict(neighborId, dayOfWeek, excludingScheduleId)` package-private method — used by `create()` here, will be reused by `reactivate()` in Task 20
+    - [x] `ScheduleExceptionHandler` disambiguates via `ConstraintViolationException.getConstraintName()` — `ux_collection_schedule_neighbor_day_active` → `COL-002`, `fk_collection_schedule_neighbor` → `COL-001` (two real constraints on this table, unlike `Neighbor`/`Company`'s one each, so this mirrors `RecyclerExceptionHandler`'s multi-constraint pattern, not `AssociationExceptionHandler`'s)
+    - [x] Unit + IT tests: create → get → list, conflict path (COL-002), neighbor-not-found path, cross-neighbor path-scoping (404), plus a same-neighbor-different-days-both-succeed case proving COL-002 doesn't over-reach
   - **Verification:**
-    - [ ] Unit tests pass: `mvn -pl collection-service test`
-    - [ ] Integration tests pass: `mvn -pl collection-service verify`
+    - [x] Unit tests pass: `mvn -pl collection-service test` (35 total)
+    - [x] Integration tests pass: `mvn -pl collection-service verify` (18 total)
+    - [x] Manual check: create → conflict (409 COL-002) via curl against `docker compose up` Postgres; confirmed `/neighbors/{neighborId}/schedules` and `.../{id}` in `/v3/api-docs`
   - **Dependencies:** Task 18
   - **Files likely touched:** `schedule/adapter/in/web/{CollectionScheduleController,CollectionScheduleMapper,ScheduleExceptionHandler}.java`, DTOs, `schedule/port/in/{Create,Get,List}*UseCase.java`, `schedule/service/CollectionScheduleService.java`, `CollectionScheduleServiceTest.java`, `it/CollectionScheduleApiIT.java`
   - **Estimated scope:** Large (7-8 files)
+  - **Note:** TDD RED→GREEN for `CollectionScheduleService` (7 unit tests: create happy path, neighbor-not-found, conflict, get scoped, get-not-found, cross-neighbor-scoping, list-delegates). Neighbor-existence check lives in the service (`NeighborRepository.findById()`), not the persistence adapter — same architecture lesson from `recycler-service` Task 7/8's correction, applied correctly from the start this time.
 
 - [ ] Task 20: CollectionSchedule lifecycle
   - **Description:** Expose `pause`/`cancel`/`reactivate` over HTTP.

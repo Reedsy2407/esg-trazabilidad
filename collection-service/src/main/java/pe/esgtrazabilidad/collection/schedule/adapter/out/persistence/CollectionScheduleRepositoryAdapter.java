@@ -1,8 +1,11 @@
 package pe.esgtrazabilidad.collection.schedule.adapter.out.persistence;
 
+import java.time.DayOfWeek;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
@@ -37,6 +40,18 @@ class CollectionScheduleRepositoryAdapter implements CollectionScheduleRepositor
     @Override
     public Optional<CollectionSchedule> findById(UUID id) {
         return jpaRepository.findById(id).map(this::toDomain);
+    }
+
+    @Override
+    public Optional<CollectionSchedule> findActiveByNeighborIdAndDayOfWeek(UUID neighborId, DayOfWeek dayOfWeek) {
+        return jpaRepository
+                .findByNeighborIdAndDayOfWeekAndStatus(neighborId, dayOfWeek, CollectionScheduleStatus.ACTIVE.name())
+                .map(this::toDomain);
+    }
+
+    @Override
+    public Page<CollectionSchedule> findAll(UUID neighborId, Pageable pageable) {
+        return jpaRepository.findByNeighborId(neighborId, pageable).map(this::toDomain);
     }
 
     private CollectionScheduleEntity toEntity(CollectionSchedule schedule) {

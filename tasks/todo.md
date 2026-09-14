@@ -318,24 +318,26 @@
   - **Estimated scope:** Large (6 files)
   - **Note:** TDD RED→GREEN for `CompanyTest`/`Company` (RUC regex validation, same pattern as `Association`). No `existing()`/`update()` factory — `Company` has no lifecycle/update endpoint planned in this spec (flat client registry, per the spec's "Neighbor/Company relationship model" decision), same YAGNI reasoning as `Neighbor`.
 
-- [ ] Task 17: Company API
+- [x] Task 17: Company API
   - **Description:** Expose Company CRUD over HTTP.
   - **Acceptance criteria:**
-    - [ ] `POST /companies` validates RUC format, returns 409 via `COL-005` on duplicate RUC
-    - [ ] `GET /companies/{id}` returns 404 via `COL-004` when missing
-    - [ ] `GET /companies` returns paginated, filterable `PageResponse<CompanyResponse>`
-    - [ ] `CompanyExceptionHandler` disambiguates the duplicate-RUC `DataIntegrityViolationException` via `ConstraintViolationException.getConstraintName()`, same pattern as `recycler-service`
-    - [ ] Unit test for `CompanyService` + IT test (`CompanyApiIT`) covering create → get → list, duplicate-RUC and not-found paths
+    - [x] `POST /companies` validates RUC format, returns 409 via `COL-005` on duplicate RUC
+    - [x] `GET /companies/{id}` returns 404 via `COL-004` when missing
+    - [x] `GET /companies` returns paginated, filterable `PageResponse<CompanyResponse>`
+    - [x] `CompanyExceptionHandler` catches the duplicate-RUC `DataIntegrityViolationException` fallback — **simplified from the plan's original wording**: `Company` has exactly one unique constraint (`ruc`), same as `Association`, so no `ConstraintViolationException.getConstraintName()` disambiguation is needed (that's only for multi-constraint controllers like `RecyclerController`). Mirrors `AssociationExceptionHandler` exactly, not `RecyclerExceptionHandler`.
+    - [x] Unit test for `CompanyService` + IT test (`CompanyApiIT`) covering create → get → list, duplicate-RUC and not-found paths
   - **Verification:**
-    - [ ] Unit tests pass: `mvn -pl collection-service test`
-    - [ ] Integration tests pass: `mvn -pl collection-service verify`
+    - [x] Unit tests pass: `mvn -pl collection-service test` (17 total)
+    - [x] Integration tests pass: `mvn -pl collection-service verify` (12 total)
+    - [x] Manual check: create → list a company via curl against `docker compose up` Postgres, confirmed `/companies` and `/companies/{id}` appear in `/v3/api-docs`
   - **Dependencies:** Task 16
   - **Files likely touched:** `company/adapter/in/web/{CompanyController,CompanyMapper,CompanyExceptionHandler}.java`, DTOs, `company/port/in/*UseCase.java`, `company/service/CompanyService.java`, `CompanyServiceTest.java`, `it/CompanyApiIT.java`
   - **Estimated scope:** Large (7-8 files)
+  - **Note:** TDD RED→GREEN for `CompanyServiceTest`/`CompanyService` (test written and confirmed failing to compile before the service existed).
 
 ### Checkpoint 9: Company CRUD works end-to-end
-- [ ] `mvn -pl collection-service verify` green
-- [ ] Manual check: create → get → list a company, duplicate-RUC returns 409
+- [x] `mvn -pl collection-service verify` green
+- [x] Manual check: create → get → list a company, duplicate-RUC returns 409
 - [ ] Human review before CollectionSchedule slice
 
 ## Phase 10: CollectionSchedule

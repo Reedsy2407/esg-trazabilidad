@@ -177,11 +177,11 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 ### Phase 9: Company
 
 - [x] Task 16: Company persistence (Liquibase `v0.1.1`, domain incl. RUC validation, JPA entity/repo, repository port+adapter, errors)
-- [ ] Task 17: Company API (mapper, DTOs, use cases, `CompanyService`, `CompanyController`, unit + IT tests)
+- [x] Task 17: Company API (mapper, DTOs, use cases, `CompanyService`, `CompanyController`, unit + IT tests)
 
 ### Checkpoint 9: Company CRUD works end-to-end
-- [ ] `mvn -pl collection-service verify` green
-- [ ] Manual check: create → get → list a company, duplicate-RUC returns 409
+- [x] `mvn -pl collection-service verify` green
+- [x] Manual check: create → get → list a company, duplicate-RUC returns 409
 - [ ] Human review before CollectionSchedule slice
 
 ### Phase 10: CollectionSchedule

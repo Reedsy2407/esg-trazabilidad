@@ -278,25 +278,26 @@
     - **Verified the DB constraint itself, not just the domain guard:** added `NeighborRepositoryAdapterIT.savingANeighborWithoutAnAddressViolatesTheDatabaseConstraint()`, which calls `Neighbor.reconstruct()` (bypasses the `create()` guard on purpose) and asserts `neighborRepository.save(...)` throws `DataIntegrityViolationException` — confirmed against real Postgres (`SQLState: 23502`, "violates not-null constraint"). Also recreated the shared `docker-compose` Postgres volume from scratch and re-booted both `collection-service` (confirms the rewritten `v0.1.0` applies cleanly as a single changeset, table created with the constraint baked in) and `recycler-service` (confirms no regression) against it.
     - `district` evaluated and left nullable — under the same "does it block the pickup itself, or is it just supplementary" test the user applied to `phone`, no feature in this spec actually consumes `district` yet (no zone-based routing), so requiring it now would enforce a rule with no consumer; can tighten later via a real migration once such a feature exists (by then, the "never edit a shipped changelog" rule will actually apply). `phone` unchanged (nullable, operational contact only).
 
-- [ ] Task 15: Neighbor API
+- [x] Task 15: Neighbor API
   - **Description:** Expose Neighbor CRUD over HTTP: mapper, request/response DTOs with validation, use case interfaces, service, controller.
   - **Acceptance criteria:**
-    - [ ] `POST /neighbors` creates a neighbor via `jakarta.validation` on request fields
-    - [ ] `GET /neighbors/{id}` returns 404 via `COL-001` when missing
-    - [ ] `GET /neighbors` returns a paginated `PageResponse<NeighborResponse>`, filterable by `status`/`district` via a composed `Specification<Neighbor>`, `@PageableDefault(size = 20, sort = "fullName", direction = Sort.Direction.ASC)`
-    - [ ] Unit test for `NeighborService` (Mockito-mocked repository port)
-    - [ ] IT test (`NeighborApiIT`, RestAssured + Testcontainers) covering create → get → list plus the not-found path
+    - [x] `POST /neighbors` creates a neighbor via `jakarta.validation` on request fields (`@NotBlank` on `fullName` and `address` — the latter matching the domain-level requirement fixed after Task 14)
+    - [x] `GET /neighbors/{id}` returns 404 via `COL-001` when missing
+    - [x] `GET /neighbors` returns a paginated `PageResponse<NeighborResponse>`, filterable by `status`/`district` via a composed `Specification<Neighbor>`, `@PageableDefault(size = 20, sort = "fullName", direction = Sort.Direction.ASC)`
+    - [x] Unit test for `NeighborService` (Mockito-mocked repository port)
+    - [x] IT test (`NeighborApiIT`, RestAssured + Testcontainers) covering create → get → list plus the not-found path
   - **Verification:**
-    - [ ] Unit tests pass: `mvn -pl collection-service test`
-    - [ ] Integration tests pass: `mvn -pl collection-service verify`
-    - [ ] Manual check: exercise all three endpoints via Swagger UI or curl
+    - [x] Unit tests pass: `mvn -pl collection-service test` (8 total: 4 `NeighborTest` + 4 `NeighborServiceTest`)
+    - [x] Integration tests pass: `mvn -pl collection-service verify` (6 total: 5 `NeighborApiIT` + 1 `NeighborRepositoryAdapterIT`)
+    - [x] Manual check: create → list → get-by-id exercised via curl against `docker compose up` Postgres, plus `/v3/api-docs` confirmed reachable and listing `/neighbors`
   - **Dependencies:** Task 14
   - **Files likely touched:** `neighbor/adapter/in/web/{NeighborController,NeighborMapper}.java`, DTOs (`CreateNeighborRequest`, `NeighborResponse`), `neighbor/port/in/*UseCase.java`, `neighbor/service/NeighborService.java`, `NeighborServiceTest.java`, `it/NeighborApiIT.java`
   - **Estimated scope:** Large (7 files)
+  - **Note:** TDD RED→GREEN for `NeighborServiceTest`/`NeighborService` (test written and confirmed failing to compile before the service existed). No lifecycle endpoints (no `suspend`/`activate` equivalent) — matches the spec's Success Criteria, which only calls for create/get-by-id/list for `Neighbor`.
 
 ### Checkpoint 8: Neighbor CRUD works end-to-end
-- [ ] `mvn -pl collection-service verify` green
-- [ ] Manual check: create → get → list a neighbor via Swagger/curl
+- [x] `mvn -pl collection-service verify` green
+- [x] Manual check: create → get → list a neighbor via curl
 - [ ] Human review before Company slice
 
 ## Phase 9: Company

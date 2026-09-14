@@ -366,6 +366,7 @@
     - [x] `GET /neighbors/{neighborId}/schedules` returns paginated `PageResponse<CollectionScheduleResponse>`
     - [x] `CollectionScheduleService` exposes a reusable `assertNoActiveConflict(neighborId, dayOfWeek, excludingScheduleId)` package-private method — used by `create()` here, will be reused by `reactivate()` in Task 20
     - [x] `ScheduleExceptionHandler` disambiguates via `ConstraintViolationException.getConstraintName()` — `ux_collection_schedule_neighbor_day_active` → `COL-002`, `fk_collection_schedule_neighbor` → `COL-001` (two real constraints on this table, unlike `Neighbor`/`Company`'s one each, so this mirrors `RecyclerExceptionHandler`'s multi-constraint pattern, not `AssociationExceptionHandler`'s)
+    - [x] `ScheduleExceptionHandlerTest` (`@WebMvcTest(CollectionScheduleController.class)`, user-caught gap — added after initial Task 19 completion): covers all three branches (`ux_..._active` → 409 COL-002, `fk_..._neighbor` → 404 COL-001, unrecognized constraint → generic `DATA_CONFLICT`). Verified it actually detects a swapped mapping, not just a present one: temporarily swapped the two constraint-name constants, confirmed 2 of 3 tests failed with the exact wrong status codes, then reverted and re-confirmed green.
     - [x] Unit + IT tests: create → get → list, conflict path (COL-002), neighbor-not-found path, cross-neighbor path-scoping (404), plus a same-neighbor-different-days-both-succeed case proving COL-002 doesn't over-reach
   - **Verification:**
     - [x] Unit tests pass: `mvn -pl collection-service test` (35 total)

@@ -443,22 +443,33 @@
 
 ## Phase 12: Polish
 
-- [ ] Task 23: springdoc-openapi wiring
+- [x] Task 23: springdoc-openapi wiring
   - **Description:** Confirm Swagger UI renders all `collection-service` controllers with accurate request/response schemas.
   - **Acceptance criteria:**
-    - [ ] Swagger UI reachable and lists `Neighbor`, `Company`, `CollectionSchedule` (incl. lifecycle endpoints), `CollectionRecord`
-    - [ ] All `create()` endpoints have `@ResponseStatus(HttpStatus.CREATED)` (documentation hint — springdoc can't infer `ResponseEntity.status(...)` statically, same fix as `recycler-service` Task 11)
+    - [x] Swagger UI reachable and lists `Neighbor`, `Company`, `CollectionSchedule` (incl. lifecycle endpoints), `CollectionRecord`
+    - [x] All `create()` endpoints have `@ResponseStatus(HttpStatus.CREATED)` (documentation hint — springdoc can't infer `ResponseEntity.status(...)` statically, same fix as `recycler-service` Task 11)
   - **Verification:**
-    - [ ] Manual check: open Swagger UI, exercise one endpoint per controller
+    - [x] Manual check: booted against `docker compose up` Postgres, confirmed `swagger-ui.html` reachable (302 redirect) and `/v3/api-docs` lists all 9 expected paths — `/neighbors`, `/neighbors/{id}`, `/companies`, `/companies/{id}`, `/neighbors/{neighborId}/schedules`, `.../{id}`, `.../{id}/pause`, `.../{id}/cancel`, `.../{id}/reactivate`, `/neighbors/{neighborId}/collection-records`, `.../{id}`; confirmed 4× `"201"` (one per `create()`) and validation constraints rendering correctly (`required` fields per DTO, RUC `\d{11}` pattern, `weightKg` minimum)
   - **Dependencies:** Task 15, Task 17, Task 19, Task 20, Task 22
   - **Files likely touched:** `application.yml` (if any springdoc customization needed), `@ResponseStatus` annotations on existing controllers
   - **Estimated scope:** Small (1-2 files)
+  - **Note:** no code changes needed — unlike `recycler-service`'s Task 11 (which had to retrofit `@ResponseStatus(CREATED)` after the fact), every `collection-service` controller had it applied proactively from the start, copied directly from the post-Task-11 pattern each time. This task was pure verification.
 
 ### Checkpoint 12: Full CRUD path complete
-- [ ] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`)
-- [ ] Manual check: Neighbor → CollectionSchedule → CollectionRecord chain works end-to-end through real HTTP calls; Company independently CRUD-able; `recycler-service` unaffected
+- [x] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`) — `shared-kernel` (10 unit), `recycler-service` (32 IT), `collection-service` (65 unit + 32 IT), no cross-module regression
+- [x] Manual check: Neighbor → CollectionSchedule → CollectionRecord chain works end-to-end through real HTTP calls; Company independently CRUD-able; `recycler-service` unaffected — all exercised across Tasks 14-22's manual checks this session
 
 ### Checkpoint 13: Final — ready for review
-- [ ] All Success Criteria in `SPEC-collection-service.md` are met
-- [ ] Definition of Done satisfied for every task above (Tasks 13-23)
+- [x] All Success Criteria in `SPEC-collection-service.md` are met — re-verified line by line, 10/10:
+  1. `docker compose up -d` + shared Postgres — ✅ (booted repeatedly against it across Tasks 13-23)
+  2. Liquibase creates `neighbor`/`company`/`collection_schedule`/`collection_record` without touching `recycler-service` tables — ✅ (verified via `psql \d`; `recycler-service` re-booted clean against the same volume multiple times)
+  3. `Neighbor`/`Company` CRUD — ✅ (Tasks 14-17)
+  4. `CollectionSchedule` CRUD scoped by `neighborId` — ✅ (Tasks 18-19)
+  5. `CollectionSchedule` lifecycle, COL-008 on illegal transition — ✅ (Task 20)
+  6. `CollectionRecord` CRUD, `associationId` unvalidated — ✅ (Tasks 21-22, reaffirmed by the `scheduleId`-ownership fix without touching this decision)
+  7. `CollectionErrors` enum (COL-001, 002, 004-008; COL-003 reserved) wired to shared `GlobalExceptionHandler` — ✅ (this bullet's own text says "COL-004 through COL-007", not mentioning COL-008 — a stale spec wording gap, not an implementation gap: COL-008 is required by bullet 5 above and is correctly implemented)
+  8. COL-002 boundary cases (same neighbor+day = conflict, same neighbor+different day = no conflict, **different neighbor+same day/time = no conflict**) — ✅, but the third case had **no explicit test**, only incidental coverage from unrelated tests using different neighbor IDs. Added `differentNeighborsCanHaveActiveSchedulesOnTheSameDayAndTimeWithoutConflict` to `CollectionScheduleApiIT` to close this properly before declaring the checkpoint done.
+  9. `mvn -pl collection-service verify` green — ✅ 65 unit + 33 integration (was 32, +1 for the boundary-case test)
+  10. Swagger UI reachable, lists all endpoints with schemas — ✅ (Task 23)
+- [x] Definition of Done satisfied for every task above (Tasks 13-23) — same de facto standard as `recycler-service`: passing tests, clean `mvn verify`/`install` on the whole reactor, manual end-to-end checks against real Docker Postgres, deviations documented in each task's own notes
 - [ ] Human review and approval before moving to `cross-service-events` or `reporting-service`

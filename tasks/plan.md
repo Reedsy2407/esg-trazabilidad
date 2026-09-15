@@ -207,15 +207,15 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Phase 12: Polish
 
-- [ ] Task 23: springdoc-openapi wiring for all `collection-service` controllers (incl. lifecycle endpoints)
+- [x] Task 23: springdoc-openapi wiring for all `collection-service` controllers (incl. lifecycle endpoints)
 
 ### Checkpoint 12: Full CRUD path complete
-- [ ] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`)
-- [ ] Manual check: Neighbor → CollectionSchedule → CollectionRecord chain end-to-end; Company independently CRUD-able; `recycler-service` unaffected
+- [x] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`)
+- [x] Manual check: Neighbor → CollectionSchedule → CollectionRecord chain end-to-end; Company independently CRUD-able; `recycler-service` unaffected
 
 ### Checkpoint 13: Final — ready for review
-- [ ] All Success Criteria in `SPEC-collection-service.md` are met
-- [ ] Definition of Done satisfied for every task above (Tasks 13-23)
+- [x] All Success Criteria in `SPEC-collection-service.md` are met — re-verified 10/10, closed one real test-coverage gap along the way (see tasks/todo.md)
+- [x] Definition of Done satisfied for every task above (Tasks 13-23)
 - [ ] Human review and approval before moving to `cross-service-events` or `reporting-service`
 
 ## Risks and Mitigations

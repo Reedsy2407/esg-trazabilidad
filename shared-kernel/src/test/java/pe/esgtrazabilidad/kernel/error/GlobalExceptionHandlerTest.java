@@ -7,9 +7,11 @@ import org.springframework.core.MethodParameter;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -81,6 +83,30 @@ class GlobalExceptionHandlerTest {
 
         assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
         assertThat(problemDetail.getProperties()).containsEntry("code", "DATA_CONFLICT");
+    }
+
+    @Test
+    void mapsMethodArgumentTypeMismatchExceptionToAValidationError() throws NoSuchMethodException {
+        Method dummyMethod = GlobalExceptionHandlerTest.class.getDeclaredMethod("dummyHandlerMethod", String.class);
+        MethodArgumentTypeMismatchException exception = new MethodArgumentTypeMismatchException(
+                "not-a-uuid", java.util.UUID.class, "associationId", new MethodParameter(dummyMethod, 0), null);
+
+        ProblemDetail problemDetail = handler.handleTypeMismatch(exception);
+
+        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(problemDetail.getProperties()).containsEntry("code", "VALIDATION_ERROR");
+        assertThat(problemDetail.getDetail()).contains("associationId");
+    }
+
+    @Test
+    void mapsHttpMessageNotReadableExceptionToAValidationError() {
+        HttpMessageNotReadableException exception =
+                new HttpMessageNotReadableException("JSON parse error: malformed body", (org.springframework.http.HttpInputMessage) null);
+
+        ProblemDetail problemDetail = handler.handleMessageNotReadable(exception);
+
+        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(problemDetail.getProperties()).containsEntry("code", "VALIDATION_ERROR");
     }
 
     private void dummyHandlerMethod(String arg) {

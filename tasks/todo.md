@@ -472,4 +472,4 @@
   9. `mvn -pl collection-service verify` green — ✅ 65 unit + 33 integration (was 32, +1 for the boundary-case test)
   10. Swagger UI reachable, lists all endpoints with schemas — ✅ (Task 23)
 - [x] Definition of Done satisfied for every task above (Tasks 13-23) — same de facto standard as `recycler-service`: passing tests, clean `mvn verify`/`install` on the whole reactor, manual end-to-end checks against real Docker Postgres, deviations documented in each task's own notes
-- [ ] Human review and approval before moving to `cross-service-events` or `reporting-service`
+- [x] Human review and approval before moving to `cross-service-events` or `reporting-service` — approved 2026-09-14; user independently verified the `differentNeighborsCanHaveActiveSchedulesOnTheSameDayAndTimeWithoutConflict` boundary-case test with real evidence, confirmed it matches what was reported. `collection-service` is complete.

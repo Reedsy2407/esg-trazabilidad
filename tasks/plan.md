@@ -216,7 +216,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 ### Checkpoint 13: Final — ready for review
 - [x] All Success Criteria in `SPEC-collection-service.md` are met — re-verified 10/10, closed one real test-coverage gap along the way (see tasks/todo.md)
 - [x] Definition of Done satisfied for every task above (Tasks 13-23)
-- [ ] Human review and approval before moving to `cross-service-events` or `reporting-service`
+- [x] Human review and approval before moving to `cross-service-events` or `reporting-service` — approved 2026-09-14. `collection-service` is complete.
 
 ## Risks and Mitigations
 

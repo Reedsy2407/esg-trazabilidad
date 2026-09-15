@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.collection.collectionrecord.port.out;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,5 +15,5 @@ public interface CollectionRecordRepository {
 
     Optional<CollectionRecord> findById(UUID id);
 
-    Page<CollectionRecord> findAll(UUID neighborId, Pageable pageable);
+    Page<CollectionRecord> findAll(UUID neighborId, LocalDate from, LocalDate to, Pageable pageable);
 }

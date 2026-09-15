@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.collection.collectionrecord.adapter.out.persistence;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,8 +31,14 @@ class CollectionRecordRepositoryAdapter implements CollectionRecordRepository {
     }
 
     @Override
-    public Page<CollectionRecord> findAll(UUID neighborId, Pageable pageable) {
-        return jpaRepository.findByNeighborId(neighborId, pageable).map(this::toDomain);
+    public Page<CollectionRecord> findAll(UUID neighborId, LocalDate from, LocalDate to, Pageable pageable) {
+        return jpaRepository
+                .findAll(
+                        CollectionRecordSpecifications.hasNeighborId(neighborId)
+                                .and(CollectionRecordSpecifications.collectionDateFrom(from))
+                                .and(CollectionRecordSpecifications.collectionDateTo(to)),
+                        pageable)
+                .map(this::toDomain);
     }
 
     private CollectionRecordEntity toEntity(CollectionRecord record) {

@@ -416,24 +416,26 @@
   - **Estimated scope:** Large (6 files)
   - **Note:** TDD RED→GREEN (6 tests: create happy path, schedule-linked variant, zero/negative weight rejected, null date rejected, reconstruct). `weightKg` uses `BigDecimal` (not `double`), matching money/quantity-precision convention; DB column `numeric(10,2)`.
 
-- [ ] Task 22: CollectionRecord API
+- [x] Task 22: CollectionRecord API
   - **Description:** Expose CollectionRecord create/get/list nested under its neighbor.
   - **Acceptance criteria:**
-    - [ ] `POST /neighbors/{neighborId}/collection-records` returns 404 via `COL-001` if neighbor missing; `associationId` accepted and persisted with **no existence check**
-    - [ ] `GET /neighbors/{neighborId}/collection-records/{id}` returns 404 via `COL-007`, scoped to `neighborId`
-    - [ ] `GET /neighbors/{neighborId}/collection-records` returns paginated, filterable by date range
-    - [ ] Unit + IT tests: create with a real `scheduleId`, create with `scheduleId` omitted (ad-hoc), create with a random unvalidated `associationId` (**must succeed** — proves the eventual-consistency decision holds, not just allowed by omission), neighbor-not-found path
+    - [x] `POST /neighbors/{neighborId}/collection-records` returns 404 via `COL-001` if neighbor missing; `associationId` accepted and persisted with **no existence check**
+    - [x] `GET /neighbors/{neighborId}/collection-records/{id}` returns 404 via `COL-007`, scoped to `neighborId`
+    - [x] `GET /neighbors/{neighborId}/collection-records` returns paginated, filterable by date range (`?from=&to=`, `Specification`-composed, same pattern as `Neighbor`'s status/district filters)
+    - [x] Unit + IT tests: create with a real `scheduleId`, create with `scheduleId` omitted (ad-hoc), create with a random unvalidated `associationId` (**must succeed** — proves the eventual-consistency decision holds, not just allowed by omission), neighbor-not-found path
   - **Verification:**
-    - [ ] Unit tests pass: `mvn -pl collection-service test`
-    - [ ] Integration tests pass: `mvn -pl collection-service verify`
-    - [ ] Manual check: log a record tied to a schedule, log an ad-hoc one, confirm `associationId` isn't validated
+    - [x] Unit tests pass: `mvn -pl collection-service test` (63 total)
+    - [x] Integration tests pass: `mvn -pl collection-service verify` (31 total)
+    - [x] Manual check: logged an ad-hoc record via curl against `docker compose up` Postgres with a freshly-generated random `associationId`, confirmed it's accepted and returned unchanged (no existence check); confirmed `/neighbors/{neighborId}/collection-records` and `.../{id}` in `/v3/api-docs`
   - **Dependencies:** Task 21
   - **Files likely touched:** `collectionrecord/adapter/in/web/{CollectionRecordController,CollectionRecordMapper}.java`, DTOs, `collectionrecord/port/in/*UseCase.java`, `collectionrecord/service/CollectionRecordService.java`, `CollectionRecordServiceTest.java`, `it/CollectionRecordApiIT.java`
   - **Estimated scope:** Large (7 files)
+  - **Note:** TDD RED→GREEN for `CollectionRecordService` (8 tests). Added `CollectionRecordExceptionHandler` (two FK constraints: neighbor, schedule) **with its `@WebMvcTest`-based test built in from the start** — applying the lesson from `ScheduleExceptionHandler`'s gap immediately rather than waiting to be asked again. List defaults to `sort=collectionDate,DESC` (most recent pickups first), unlike every other list endpoint's ascending-by-natural-key default — a deliberate choice for a historical log, not an oversight.
+  - **Environment note (this session):** Rancher Desktop had been restarted since the prior session; the shared `docker-compose` Postgres container had exited (`docker ps` empty) and a first `mvn verify` attempt hung indefinitely at Testcontainers' npipe strategy negotiation (stuck 4+ minutes with zero log progress, confirmed via `tasklist`/log tail — not just slow, since a fresh `docker ps` worked instantly in a new shell). Killed the hung `java.exe` processes, restarted the shared Postgres via `docker compose --env-file .env.local up -d`, and re-ran clean in a fresh shell — succeeded immediately.
 
 ### Checkpoint 11: CollectionRecord complete
-- [ ] `mvn -pl collection-service verify` green
-- [ ] Manual check: log a collection record tied to a schedule, log an ad-hoc one (no schedule), confirm both list correctly and `associationId` isn't validated
+- [x] `mvn -pl collection-service verify` green
+- [x] Manual check: log a collection record tied to a schedule, log an ad-hoc one (no schedule), confirm both list correctly and `associationId` isn't validated
 - [ ] Human review before Polish phase
 
 ## Phase 12: Polish

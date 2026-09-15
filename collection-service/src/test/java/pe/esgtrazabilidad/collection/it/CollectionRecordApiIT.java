@@ -171,6 +171,22 @@ class CollectionRecordApiIT {
     }
 
     @Test
+    void creatingWithAnotherNeighborsScheduleIdReturnsNotFound() {
+        String neighborAId = createNeighbor("Ana Torres IT 10");
+        String neighborBId = createNeighbor("Ana Torres IT 11");
+        String scheduleBId = createSchedule(neighborBId, "MONDAY", "09:00:00");
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(createRecordRequest(scheduleBId, UUID.randomUUID().toString(), "2026-01-05", "3"))
+                .when()
+                .post("/neighbors/{neighborId}/collection-records", neighborAId)
+                .then()
+                .statusCode(404)
+                .body("code", equalTo("COL-006"));
+    }
+
+    @Test
     void listingReturnsRecordsForTheNeighbor() {
         String neighborId = createNeighbor("Ana Torres IT 4");
         given()

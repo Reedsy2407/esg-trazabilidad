@@ -15,6 +15,8 @@ import pe.esgtrazabilidad.collection.collectionrecord.port.in.ListCollectionReco
 import pe.esgtrazabilidad.collection.collectionrecord.port.out.CollectionRecordRepository;
 import pe.esgtrazabilidad.collection.exception.CollectionErrors;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
+import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
+import pe.esgtrazabilidad.collection.schedule.port.out.CollectionScheduleRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 
 @Service
@@ -23,10 +25,15 @@ class CollectionRecordService
 
     private final CollectionRecordRepository repository;
     private final NeighborRepository neighborRepository;
+    private final CollectionScheduleRepository scheduleRepository;
 
-    CollectionRecordService(CollectionRecordRepository repository, NeighborRepository neighborRepository) {
+    CollectionRecordService(
+            CollectionRecordRepository repository,
+            NeighborRepository neighborRepository,
+            CollectionScheduleRepository scheduleRepository) {
         this.repository = repository;
         this.neighborRepository = neighborRepository;
+        this.scheduleRepository = scheduleRepository;
     }
 
     @Override
@@ -34,6 +41,18 @@ class CollectionRecordService
         neighborRepository
                 .findById(command.neighborId())
                 .orElseThrow(() -> new ApplicationException(CollectionErrors.NEIGHBOR_NOT_FOUND));
+        if (command.scheduleId() != null) {
+            // The FK only guarantees the schedule exists somewhere, not that
+            // it belongs to this neighbor -- checked explicitly here. Same
+            // error code as "doesn't exist" (COL-006), so a mismatched
+            // scheduleId doesn't leak that the schedule exists elsewhere.
+            CollectionSchedule schedule = scheduleRepository
+                    .findById(command.scheduleId())
+                    .orElseThrow(() -> new ApplicationException(CollectionErrors.SCHEDULE_NOT_FOUND));
+            if (!schedule.getNeighborId().equals(command.neighborId())) {
+                throw new ApplicationException(CollectionErrors.SCHEDULE_NOT_FOUND);
+            }
+        }
         // associationId is deliberately NOT validated here -- collection-service
         // depends only on shared-kernel, never recycler-service. Real validation
         // is deferred to cross-service-events (see SPEC-collection-service.md).

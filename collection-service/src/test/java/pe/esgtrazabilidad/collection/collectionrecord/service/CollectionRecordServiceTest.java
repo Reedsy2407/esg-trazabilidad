@@ -1,7 +1,9 @@
 package pe.esgtrazabilidad.collection.collectionrecord.service;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +23,8 @@ import pe.esgtrazabilidad.collection.collectionrecord.port.out.CollectionRecordR
 import pe.esgtrazabilidad.collection.exception.CollectionErrors;
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
+import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
+import pe.esgtrazabilidad.collection.schedule.port.out.CollectionScheduleRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,6 +43,9 @@ class CollectionRecordServiceTest {
     @Mock
     private NeighborRepository neighborRepository;
 
+    @Mock
+    private CollectionScheduleRepository scheduleRepository;
+
     private CollectionRecordService service;
 
     private final UUID neighborId = UUID.randomUUID();
@@ -46,11 +53,15 @@ class CollectionRecordServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new CollectionRecordService(repository, neighborRepository);
+        service = new CollectionRecordService(repository, neighborRepository, scheduleRepository);
     }
 
     private Neighbor sampleNeighbor() {
         return Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", "Surco");
+    }
+
+    private CollectionSchedule scheduleFor(UUID ownerNeighborId) {
+        return CollectionSchedule.create(ownerNeighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
     }
 
     private CreateCollectionRecordCommand sampleCommand(UUID scheduleId) {
@@ -60,15 +71,45 @@ class CollectionRecordServiceTest {
 
     @Test
     void createsAndSavesARecordLinkedToAScheduleWhenNeighborExists() {
-        UUID scheduleId = UUID.randomUUID();
+        CollectionSchedule schedule = scheduleFor(neighborId);
         when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(scheduleRepository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
         when(repository.save(any(CollectionRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        CollectionRecord result = service.create(sampleCommand(scheduleId));
+        CollectionRecord result = service.create(sampleCommand(schedule.getId()));
 
-        assertThat(result.getScheduleId()).isEqualTo(scheduleId);
+        assertThat(result.getScheduleId()).isEqualTo(schedule.getId());
         assertThat(result.getNeighborId()).isEqualTo(neighborId);
         verify(repository).save(any(CollectionRecord.class));
+    }
+
+    @Test
+    void rejectsCreationWhenScheduleBelongsToADifferentNeighbor() {
+        UUID otherNeighborId = UUID.randomUUID();
+        CollectionSchedule othersSchedule = scheduleFor(otherNeighborId);
+        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(scheduleRepository.findById(othersSchedule.getId())).thenReturn(Optional.of(othersSchedule));
+
+        assertThatThrownBy(() -> service.create(sampleCommand(othersSchedule.getId())))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        // Same code as "doesn't exist" -- must not leak that the schedule
+                        // exists but belongs to someone else.
+                        .isEqualTo(CollectionErrors.SCHEDULE_NOT_FOUND));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void rejectsCreationWhenScheduleDoesNotExistAtAll() {
+        UUID missingScheduleId = UUID.randomUUID();
+        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(scheduleRepository.findById(missingScheduleId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.create(sampleCommand(missingScheduleId)))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(CollectionErrors.SCHEDULE_NOT_FOUND));
+        verify(repository, never()).save(any());
     }
 
     @Test

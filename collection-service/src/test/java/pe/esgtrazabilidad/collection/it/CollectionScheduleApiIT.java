@@ -174,6 +174,33 @@ class CollectionScheduleApiIT {
     }
 
     @Test
+    void differentNeighborsCanHaveActiveSchedulesOnTheSameDayAndTimeWithoutConflict() {
+        // COL-002's partial unique index is scoped by (neighbor_id, day_of_week) --
+        // two different neighbors must never conflict with each other, even with
+        // an identical day and time. Explicit boundary case from the spec's
+        // Success Criteria, not just incidentally covered by unrelated tests
+        // that happen to use different neighbors.
+        String neighborAId = createNeighbor("Ana Torres IT 12");
+        String neighborBId = createNeighbor("Ana Torres IT 13");
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(createScheduleRequest("SATURDAY", "09:00:00"))
+                .when()
+                .post("/neighbors/{neighborId}/schedules", neighborAId)
+                .then()
+                .statusCode(201);
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(createScheduleRequest("SATURDAY", "09:00:00"))
+                .when()
+                .post("/neighbors/{neighborId}/schedules", neighborBId)
+                .then()
+                .statusCode(201);
+    }
+
+    @Test
     void gettingAMissingScheduleReturnsNotFound() {
         String neighborId = createNeighbor("Ana Torres IT 4");
 

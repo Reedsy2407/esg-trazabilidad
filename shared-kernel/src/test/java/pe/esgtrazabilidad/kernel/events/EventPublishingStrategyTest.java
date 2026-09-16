@@ -7,10 +7,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EventPublishingStrategyTest {
 
     @Test
-    void hasExactlyTheThreeExpectedValues() {
+    void hasExactlyTheTwoExpectedValues() {
         assertThat(EventPublishingStrategy.values()).containsExactlyInAnyOrder(
-                EventPublishingStrategy.GCP_PUB_SUB,
-                EventPublishingStrategy.MOCK,
-                EventPublishingStrategy.SPRING_EVENTS);
+                EventPublishingStrategy.RABBITMQ,
+                EventPublishingStrategy.MOCK);
     }
 }

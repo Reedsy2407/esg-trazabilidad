@@ -289,7 +289,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 ### Phase 13: Shared event infrastructure
 
 - [x] Task 24: RabbitMQ + ShedLock infra wiring (docker-compose `rabbitmq` service, root pom `dependencyManagement` for ShedLock 7.10.1, `spring.rabbitmq.*` in both `application.yml`s — no RED/GREEN ceremony, infra-only)
-- [ ] Task 25: shared-kernel event core (`EventPublishingStrategy` rewritten to `{RABBITMQ, MOCK}`, `DomainEvent`, `OutboxEntry`, `OutboxRepository` port)
+- [x] Task 25: shared-kernel event core (`EventPublishingStrategy` rewritten to `{RABBITMQ, MOCK}`, `DomainEvent`, `OutboxEntry`/`OutboxStatus`, `OutboxRepository` port)
 - [ ] Task 26: shared-kernel `OutboxDispatcher` (generic, `@ConditionalOnProperty`-gated, ShedLock-guarded, `RabbitTemplate`-publishing) + shared topic-exchange bean
 
 ### Checkpoint 14: Shared event infra ready

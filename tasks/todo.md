@@ -491,17 +491,19 @@
   - **Files likely touched:** `docker-compose.yml`, `pom.xml`, `recycler-service/src/main/resources/application.yml`, `collection-service/src/main/resources/application.yml`, `.env.local` (gitignored — added `RABBITMQ_PASSWORD`)
   - **Estimated scope:** Small (4 tracked files)
 
-- [ ] Task 25: shared-kernel event core
+- [x] Task 25: shared-kernel event core
   - **Description:** Rewrite `EventPublishingStrategy` to `{RABBITMQ, MOCK}` with Javadoc explaining the removal of `GCP_PUB_SUB`/`SPRING_EVENTS`; add `DomainEvent` marker interface, `OutboxEntry` plain-record shape, and the small `OutboxRepository` port interface each service's own outbox adapter will implement.
   - **Acceptance criteria:**
-    - [ ] `EventPublishingStrategy` has exactly `RABBITMQ`, `MOCK`, with Javadoc documenting why `GCP_PUB_SUB`/`SPRING_EVENTS` were removed
-    - [ ] `DomainEvent` interface: `UUID eventId()`, `Instant occurredAt()`, `String routingKey()`
-    - [ ] `OutboxEntry` record: `{id, eventType, routingKey, payloadJson, status, createdAt}` — not a JPA `@Entity`
-    - [ ] `OutboxRepository` port: `save`, `findPendingBatch`, `markProcessed`, `markFailed`
+    - [x] `EventPublishingStrategy` has exactly `RABBITMQ`, `MOCK`, with Javadoc documenting why `GCP_PUB_SUB`/`SPRING_EVENTS` were removed
+    - [x] `DomainEvent` interface: `UUID eventId()`, `Instant occurredAt()`, `String routingKey()`
+    - [x] `OutboxEntry` record: `{id, eventType, routingKey, payloadJson, status, createdAt}` — not a JPA `@Entity`; also added `OutboxStatus` enum (`NEW`/`PROCESSED`/`FAILED`) and a `create(...)` factory generating the id (UUID v7, via `IdGenerator`) and `createdAt`, matching every other domain object's `create()` pattern in this codebase
+    - [x] `OutboxRepository` port: `save`, `findPendingBatch`, `markProcessed`, `markFailed`
   - **Verification:**
-    - [ ] Unit tests pass: `mvn -pl shared-kernel test` — `EventPublishingStrategy` has exactly the two expected values; `OutboxEntry` construction/shape
+    - [x] RED→GREEN: `EventPublishingStrategyTest` updated first and confirmed failing (`RABBITMQ cannot be resolved`) against the old enum, then the enum rewritten to pass; `OutboxStatusTest`/`OutboxEntryTest` written first and confirmed failing to compile before `OutboxStatus`/`OutboxEntry` were created
+    - [x] Unit tests pass: `mvn -pl shared-kernel test` — 13 tests, 0 failures
+    - [x] `mvn install` — whole reactor still builds clean, confirming `EventPublishingStrategy`'s rewrite is still inert outside shared-kernel (no other module referenced the old values)
   - **Dependencies:** Task 24
-  - **Files likely touched:** `shared-kernel/src/main/java/.../events/EventPublishingStrategy.java`, `.../events/DomainEvent.java`, `.../events/OutboxEntry.java`, `.../events/OutboxRepository.java` (port), plus tests
+  - **Files likely touched:** `shared-kernel/src/main/java/.../events/EventPublishingStrategy.java`, `.../events/DomainEvent.java`, `.../events/OutboxEntry.java`, `.../events/OutboxStatus.java`, `.../events/OutboxRepository.java` (port), plus tests
   - **Estimated scope:** Small-Medium (4-5 files)
 
 - [ ] Task 26: shared-kernel `OutboxDispatcher`

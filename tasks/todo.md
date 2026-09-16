@@ -476,19 +476,20 @@
 
 ## Phase 13: Shared event infrastructure
 
-- [ ] Task 24: RabbitMQ + ShedLock infra wiring
+- [x] Task 24: RabbitMQ + ShedLock infra wiring
   - **Description:** Add `rabbitmq:3.13-management-alpine` to the root `docker-compose.yml`, pin `shedlock-spring`/`shedlock-provider-jdbc-template` versions in the root pom's `dependencyManagement` (not in the Spring Boot BOM, same treatment as `springdoc-openapi`), and wire `spring.rabbitmq.*` into both services' `application.yml` — env-var-driven, no hardcoded secret default.
   - **Acceptance criteria:**
-    - [ ] `docker-compose.yml` gains a `rabbitmq` service (ports 5672 + 15672, credentials via env vars with `:?must be set`, matching the existing Postgres pattern)
-    - [ ] Root `pom.xml` `dependencyManagement` pins `shedlock-spring` and `shedlock-provider-jdbc-template`
-    - [ ] Both `application.yml`s gain `spring.rabbitmq.host/port/username/password`, no hardcoded default
-    - [ ] `docker compose --env-file .env.local up -d` starts Postgres *and* RabbitMQ; management UI reachable at `localhost:15672`
+    - [x] `docker-compose.yml` gains a `rabbitmq` service (ports 5672 + 15672, credentials via env vars with `:?must be set`, matching the existing Postgres pattern)
+    - [x] Root `pom.xml` `dependencyManagement` pins `shedlock-spring` and `shedlock-provider-jdbc-template` — pinned to 7.10.1, verified as the current release via Maven Central's own `maven-metadata.xml` (`<release>`/`<latest>` both `7.10.1`) rather than trusting a web-search summary that returned conflicting numbers
+    - [x] Both `application.yml`s gain `spring.rabbitmq.host/port/username/password`, no hardcoded default
+    - [x] `docker compose --env-file .env.local up -d` starts Postgres *and* RabbitMQ; management UI reachable at `localhost:15672`
   - **Verification:**
-    - [ ] Infra-only — no RED/GREEN ceremony per `[[tdd_scope_for_config_fixes]]`
-    - [ ] Manual check: both services boot with no AMQP connection errors in logs
+    - [x] Infra-only — no RED/GREEN ceremony per `[[tdd_scope_for_config_fixes]]`
+    - [x] Manual check: both services boot with no AMQP connection errors in logs — `recycler-service` (PID confirmed via `tasklist`) and `collection-service` each reached `Started ...Application` cleanly; `spring.rabbitmq.*` properties sit unused since `spring-boot-starter-amqp` isn't on either classpath yet (that's Task 26), so no autoconfiguration was even attempted — expected at this stage
+    - [x] `mvn install` — whole reactor builds clean with the new `pom.xml` `dependencyManagement` entries
   - **Dependencies:** None
-  - **Files likely touched:** `docker-compose.yml`, `pom.xml`, `recycler-service/src/main/resources/application.yml`, `collection-service/src/main/resources/application.yml`
-  - **Estimated scope:** Small (4 files)
+  - **Files likely touched:** `docker-compose.yml`, `pom.xml`, `recycler-service/src/main/resources/application.yml`, `collection-service/src/main/resources/application.yml`, `.env.local` (gitignored — added `RABBITMQ_PASSWORD`)
+  - **Estimated scope:** Small (4 tracked files)
 
 - [ ] Task 25: shared-kernel event core
   - **Description:** Rewrite `EventPublishingStrategy` to `{RABBITMQ, MOCK}` with Javadoc explaining the removal of `GCP_PUB_SUB`/`SPRING_EVENTS`; add `DomainEvent` marker interface, `OutboxEntry` plain-record shape, and the small `OutboxRepository` port interface each service's own outbox adapter will implement.

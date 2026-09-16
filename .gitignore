@@ -6,6 +6,7 @@ CAPABILITY-MAP.md
 SPEC-shared-kernel.md
 SPEC-recycler-service.md
 SPEC-collection-service.md
+SPEC-cross-service-events.md
 
 target/
 *.class

@@ -1,11 +1,11 @@
-# Implementation Plan: shared-kernel + recycler-service + collection-service (core)
+# Implementation Plan: shared-kernel + recycler-service + collection-service + cross-service-events
 
-> Source specs: [[SPEC-shared-kernel.md]], [[SPEC-recycler-service.md]], [[SPEC-collection-service.md]]. Module ids per [[CAPABILITY-MAP.md]]: `shared-kernel`, `recycler-service`, `collection-service`.
-> `shared-kernel` + `recycler-service` (Tasks 1-12, Checkpoints 1-6) are complete and approved (2026-09-13). `collection-service` (Tasks 13-23, Checkpoints 7-13) is planned below, not yet built — repo is greenfield for that module only.
+> Source specs: [[SPEC-shared-kernel.md]], [[SPEC-recycler-service.md]], [[SPEC-collection-service.md]], [[SPEC-cross-service-events.md]]. Module ids per [[CAPABILITY-MAP.md]]: `shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`.
+> `shared-kernel` + `recycler-service` (Tasks 1-12, Checkpoints 1-6) and `collection-service` (Tasks 13-23, Checkpoints 7-13) are complete and approved. `cross-service-events` (Tasks 24-39, Checkpoints 14-20) is planned below, not yet built — it's cross-cutting infrastructure added to all three existing modules, not a new Maven module.
 
 ## Overview
 
-Build the first three modules of the ESG traceability monorepo: `shared-kernel` (error handling, event-strategy enum, ID generation — a dependency-light library), `recycler-service` (the first real Spring Boot service, covering `Association`, `Recycler`, and `Certification` CRUD, Liquibase-managed Postgres schema, and Docker Compose local infra), and `collection-service` (a second Spring Boot service in the same reactor, covering `Neighbor`, `Company`, `CollectionSchedule`, `CollectionRecord` CRUD against the same shared Postgres). No event publishing/consumption in this scope for either service — that's the `cross-service-events` module, specced separately.
+Build the first three modules of the ESG traceability monorepo: `shared-kernel` (error handling, event-strategy enum, ID generation — a dependency-light library), `recycler-service` (the first real Spring Boot service, covering `Association`, `Recycler`, and `Certification` CRUD, Liquibase-managed Postgres schema, and Docker Compose local infra), and `collection-service` (a second Spring Boot service in the same reactor, covering `Neighbor`, `Company`, `CollectionSchedule`, `CollectionRecord` CRUD against the same shared Postgres). Then `cross-service-events`: RabbitMQ-based transactional Outbox (publish) + Inbox/idempotency (consume) infrastructure wiring the two services together — `collection-service` publishes `CollectionRegisteredEvent` (consumed by `recycler-service` to increment `Association.totalKilosCollected`), and `recycler-service` publishes `CertificationExpiredEvent`/`CertificationRenewedEvent` (consumed by `collection-service` to block/unblock new `CollectionRecord` creation for an association with a lapsed certification).
 
 ## Architecture Decisions
 
@@ -17,6 +17,11 @@ Build the first three modules of the ESG traceability monorepo: `shared-kernel` 
 - **`collection-service` depends only on `shared-kernel`, never `recycler-service`** (confirmed in `SPEC-collection-service.md`'s "Association reference" decision) — `CollectionRecord.associationId` is a bare unvalidated `UUID`, not a cross-service FK or synchronous HTTP call. This keeps the capability map's dependency direction intact; real validation is deferred to `cross-service-events`.
 - **`Neighbor`/`Company` have no relationship to each other** in `collection-service` — `CollectionSchedule`/`CollectionRecord` reference `Neighbor` only; `Company` is a flat client registry (see spec's "Neighbor/Company relationship model" decision).
 - **`CollectionSchedule` gets a third task** (lifecycle: pause/cancel/reactivate) beyond the persistence/API split, because its 3-state machine (`ACTIVE`⇄`PAUSED`, both → `CANCELLED` terminal) is a distinct vertical slice — same reasoning that made status-change endpoints their own Task 12 in `recycler-service` rather than folded into Tasks 6/8/10.
+- **`cross-service-events` is cross-cutting infrastructure, not a new Maven module** — additions to `shared-kernel` (generic `OutboxDispatcher`, `DomainEvent`/`OutboxEntry`/`OutboxRepository`, `EventPublishingStrategy` rewritten to `{RABBITMQ, MOCK}`), `recycler-service` (its own outbox + a `collection_registered_ledger` consumer table + the new `CertificationExpiryScanJob`), and `collection-service` (its own outbox + a `certification_status_ledger` consumer table + a new minimal `BlockedAssociation` projection).
+- **Two corrections made to `SPEC-cross-service-events.md`'s literal text before task-breakdown** (see `SPEC-cross-service-events.md`'s own numbering vs. actual repo state): `recycler-service`'s new Liquibase changelogs start at `v0.1.3` (not `v0.1.4` as the spec's Project Structure section says — that number was copied from `collection-service`'s block without adjusting for `recycler-service`'s shorter existing sequence, which only reaches `v0.1.2`); and a `shedlock` table changelog is added to both services (`v0.1.6` recycler, `v0.1.7` collection) even though no changelog for it was listed anywhere in the spec, because Success Criteria explicitly requires one.
+- **Event payload records are independently defined per service, never shared as a Java type** — the producing service's event `record` (implementing `shared-kernel`'s `DomainEvent`) and the consuming service's structurally-matching local record are two separate classes deserialized by JSON field-name match (`Jackson2JsonMessageConverter`), preserving the existing boundary that `collection-service` never depends on `recycler-service` and vice versa.
+- **New error code `CollectionErrors.COL-009 ASSOCIATION_BLOCKED`** (409) — not pinned to a number in the spec; assigned as the next free code after `COL-008`.
+- **Direction A (kilos) and Direction B (blocking) are independent of each other** and share only the Phase 13 shared-kernel infrastructure — built as two separate vertical slices (Phase 15, Phase 16) rather than interleaved task-by-task, so each direction is fully provable end-to-end before starting the other.
 
 ## Dependency Graph (shared-kernel + recycler-service)
 
@@ -92,9 +97,71 @@ Task 21 depends on both Task 14 (neighbor FK) and Task 18 (schedule table must e
 
 Task 16 (Company) only needs Task 13's scaffolding — no dependency on Neighbor. Sequenced after Neighbor purely for build-session convenience (same convention the original plan used for Recycler-before-Certification), not a hard requirement.
 
+## Dependency Graph (cross-service-events)
+
+```
+Task 24: RabbitMQ + ShedLock infra (docker-compose, application.yml, root pom dependencyManagement)
+    │
+    ▼
+Task 25: shared-kernel — EventPublishingStrategy rewrite, DomainEvent, OutboxEntry, OutboxRepository port
+    │
+    ▼
+Task 26: shared-kernel — OutboxDispatcher (generic, ShedLock-guarded, RabbitTemplate) + shared topic-exchange bean
+    │
+    ├─────────────────────────────────────────┐
+    ▼                                          ▼
+Direction A (Phase 15)                    Direction B (Phase 16)
+collection→recycler, kilos                recycler→collection, blocking
+
+Task 27: collection-service outbox+       Task 29: recycler-service outbox+ledger+
+shedlock tables/adapter                   shedlock tables/adapter + association+
+    │                                     certification schema alter (shared
+    ▼                                     prerequisite for both A's listener and
+Task 28: CollectionRegisteredEvent +      B's scan job/publishers)
+publisher, hooked into                        │
+CollectionRecordService.create()              ├──────────────┐
+    │                                          ▼              ▼
+    │                                     Task 30:       Task 32: Certification.
+    │                                     CollectionReg-  notifiedExpiredAt +
+    │                                     isteredEvent-   renew() reset
+    │                                     Listener +           │
+    │                                     incrementTotalKilos  ▼
+    │                                          │          Task 33: CertificationExpiry
+    │                                          │          ScanJob + CertificationExpired
+    │                                          │          EventPublisher
+    │                                          │               │
+    ▼                                          ▼               ▼
+Task 31: Direction A end-to-end IT ◄──────────┘          Task 34: CertificationRenewed
+(RabbitMQ Testcontainer, redelivery,                      EventPublisher (hook into renew())
+concurrent-increment test)                                     │
+                                                                ▼
+                                                           Task 35: collection-service
+                                                           certification_status_ledger +
+                                                           blocked_association schema/domain
+                                                                │
+                                                                ▼
+                                                           Task 36: CertificationStatusEvent
+                                                           Listener (both event types)
+                                                                │
+                                                                ▼
+                                                           Task 37: enforce block in
+                                                           CollectionRecordService.create()
+                                                           (COL-009)
+                                                                │
+                                                                ▼
+                                                           Task 38: Direction B end-to-end IT
+
+Task 39: Ordering test (outbox insertion-order, best-effort) — depends on Tasks 31, 38
+    │
+    ▼
+Checkpoint 20: Full reactor verify, all Success Criteria re-checked
+```
+
 ## Task Sizing Note
 
 Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→UseCase→Service vertical slice without fragmenting a single cohesive layer. Each entity is instead split into two M/L-sized tasks (persistence, then API) rather than one XL task — each still fits one focused session and has its own acceptance criteria and tests, which is the sizing guide's actual intent.
+
+`cross-service-events` follows the same split, extended one step further: schema/adapter tasks (24, 27, 29, 35) are separated from behavior tasks (listeners, scan job, blocking enforcement) — infra-only tasks are verified by boot + `mvn verify` + a direct-repository IT proving the DB shape, without a contrived RED step for a `CREATE TABLE`, per `[[tdd_scope_for_config_fixes]]`. Business-logic tasks get full RED→GREEN TDD. Direction A and Direction B are each proven end-to-end (Tasks 31, 38) before the other starts, rather than interleaved — mirrors how `CollectionSchedule`'s persistence/API/lifecycle tasks were sequenced rather than parallelized.
 
 ## Task List
 
@@ -218,6 +285,67 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 - [x] Definition of Done satisfied for every task above (Tasks 13-23)
 - [x] Human review and approval before moving to `cross-service-events` or `reporting-service` — approved 2026-09-14. `collection-service` is complete.
 
+### Phase 13: Shared event infrastructure
+
+- [ ] Task 24: RabbitMQ + ShedLock infra wiring (docker-compose `rabbitmq` service, root pom `dependencyManagement` for ShedLock, `spring.rabbitmq.*` in both `application.yml`s — no RED/GREEN ceremony, infra-only)
+- [ ] Task 25: shared-kernel event core (`EventPublishingStrategy` rewritten to `{RABBITMQ, MOCK}`, `DomainEvent`, `OutboxEntry`, `OutboxRepository` port)
+- [ ] Task 26: shared-kernel `OutboxDispatcher` (generic, `@ConditionalOnProperty`-gated, ShedLock-guarded, `RabbitTemplate`-publishing) + shared topic-exchange bean
+
+### Checkpoint 14: Shared event infra ready
+- [ ] `mvn -pl shared-kernel test` green; `mvn install` — whole reactor still builds, `recycler-service`/`collection-service` unaffected
+- [ ] Human review before wiring either direction's business logic
+
+### Phase 15: Direction A (collection-service → recycler-service, kilos total)
+
+- [ ] Task 27: collection-service outbox + shedlock schema (Liquibase `v0.1.4`, `v0.1.7`; `OutboxEventEntity`/adapter implementing shared-kernel's `OutboxRepository`; `LockProvider` bean)
+- [ ] Task 28: `CollectionRegisteredEvent` + publisher, hooked into `CollectionRecordService.create()`'s existing transaction (unit + IT)
+- [ ] Task 29: recycler-service event-infrastructure schema (Liquibase `v0.1.3` outbox, `v0.1.4` ledger, `v0.1.5` alter association+certification, `v0.1.6` shedlock; outbox adapter; ledger entity/repo; `AssociationJpaRepository.incrementTotalKilos` atomic `UPDATE`; `LockProvider` bean)
+- [ ] Task 30: `CollectionRegisteredEventListener` (recycler-service) — idempotent ledger insert then atomic increment (unit tests: happy path, duplicate short-circuit)
+
+### Checkpoint 15: Direction A wired (unit-level)
+- [ ] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
+- [ ] Human review before the end-to-end IT proves it over real RabbitMQ
+
+- [ ] Task 31: Direction A end-to-end IT (RabbitMQ Testcontainer in both services; full-flow, redelivery/idempotency, and concurrent-increment tests)
+
+### Checkpoint 16: Direction A complete and proven end-to-end
+- [ ] All of Direction A's Success Criteria bullets verified with real evidence
+- [ ] Human review before starting Direction B
+
+### Phase 16: Direction B (recycler-service → collection-service, blocking)
+
+- [ ] Task 32: `Certification.notifiedExpiredAt` field + `renew()` resets it to `null` (unit tests)
+- [ ] Task 33: `CertificationExpiryScanJob` (ShedLock-guarded `@Scheduled`) + `CertificationExpiredEventPublisher` (unit tests: finds only expired+not-yet-notified certifications)
+- [ ] Task 34: `CertificationRenewedEventPublisher`, hooked into `CertificationService.renew()`'s existing transaction (unit test)
+
+### Checkpoint 17: recycler-service publishing side complete
+- [ ] `mvn -pl recycler-service verify` green
+- [ ] Human review before wiring collection-service's consumption side
+
+- [ ] Task 35: collection-service `certification_status_ledger` + `blocked_association` schema/domain (Liquibase `v0.1.5`, `v0.1.6`; `BlockedAssociation` minimal projection domain + adapter)
+- [ ] Task 36: `CertificationStatusEventListener` — one listener, both event types, idempotent ledger insert then block/unblock (unit tests: expired blocks, renewed unblocks, duplicate short-circuit)
+- [ ] Task 37: Enforce the block in `CollectionRecordService.create()` — new `CollectionErrors.COL-009 ASSOCIATION_BLOCKED` (409) (unit + IT)
+
+### Checkpoint 18: Direction B wired (unit-level)
+- [ ] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
+- [ ] Human review before the end-to-end IT
+
+- [ ] Task 38: Direction B end-to-end IT (full expire→block→renew→unblock flow, redelivery/idempotency, and the full expire→renew→re-expire→re-notify cycle test)
+
+### Checkpoint 19: Direction B complete and proven end-to-end
+- [ ] All of Direction B's Success Criteria bullets verified with real evidence
+- [ ] Human review before the final ordering test + reactor-wide checkpoint
+
+### Phase 17: Ordering test + final verification
+
+- [ ] Task 39: Ordering test (publish Expired then Renewed through the outbox in quick succession, assert final state unblocked; documents the residual out-of-order-after-redelivery risk rather than hiding it)
+
+### Checkpoint 20: Final — ready for review
+- [ ] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`), RabbitMQ Testcontainer included
+- [ ] All 11 Success Criteria bullets in `SPEC-cross-service-events.md` re-verified line by line with evidence
+- [ ] `recycler-service`/`collection-service`'s pre-existing test suites and manual-check behavior unaffected
+- [ ] Human review and approval before moving to `reporting-service`
+
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
@@ -231,7 +359,12 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 | `Persistable<UUID>` + `existing()`/`update()` factory forgotten again for `CollectionSchedule` (the exact bug Task 12 found and fixed after the fact for the other three entities) | Medium if missed — silent `persist()` instead of `merge()` on pause/cancel/reactivate | Task 18 explicitly builds the `existing()`/`update()` path from the start — see `persistable_update_path` memory |
 | `CollectionRecord`'s unvalidated `associationId` looks like a bug to a future reviewer who didn't see this session's reasoning | Low | `SPEC-collection-service.md`'s "Resolved Decisions" documents the trade-off explicitly; Task 22 requires a test that *proves* an unvalidated UUID succeeds |
 | Running `recycler-service` (port 8081) and `collection-service` (port 8082) against the same shared Postgres simultaneously during manual checks | Low | Distinct ports, disjoint table sets (separate Liquibase changelog masters) — verify once in Checkpoint 7 |
+| RabbitMQ Testcontainer adds real startup latency to every IT run in both services | Low-medium — slower feedback loop | Accepted cost, same as Postgres Testcontainers already; no mitigation needed beyond what's already standard in this codebase |
+| `OutboxDispatcher` being generic (shared-kernel) but each service having exactly one `OutboxRepository` bean could break if a service ever needs two outboxes | Low | Not a real risk at this scope — each service publishes events for exactly one aggregate direction; documented as a known single-outbox-per-service assumption if it ever needs revisiting |
+| Consumer and producer event records drifting out of structural sync (field renamed on one side, not the other) since they're independently-defined per service | Medium — a silent deserialization failure or null field, not caught by either service's own unit tests | Task 31/38's end-to-end IT tests are the actual contract test — they exercise real JSON over a real queue, not mocks, so a drift fails loudly there |
+| `CertificationExpiryScanJob` and the `OutboxDispatcher` running on the same `@Scheduled` cadence in `recycler-service` could contend for the same ShedLock table without issue (different lock names) but should be verified | Low | Each `@SchedulerLock` uses a distinct `name` parameter; confirmed as an explicit acceptance-criteria check in Task 33 |
+| Off-by-one changelog numbering (see Architecture Decisions) if not caught before `/build` | Medium — would collide with `collection-service`'s already-used `v0.1.4` naming or just be cosmetically wrong | Corrected in this plan before any task starts; verify against `ls recycler-service/.../changes/` at Task 29 time as a sanity check |
 
 ## Open Questions
 
-None outstanding — all three source specs (`shared-kernel`, `recycler-service`, `collection-service`) are fully resolved. Any new question that surfaces during implementation should be raised before the task it blocks, not worked around silently.
+None outstanding — all four source specs (`shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`) are fully resolved. Any new question that surfaces during implementation should be raised before the task it blocks, not worked around silently.

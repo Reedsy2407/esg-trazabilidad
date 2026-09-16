@@ -1,6 +1,6 @@
-# Task List: shared-kernel + recycler-service + collection-service (core)
+# Task List: shared-kernel + recycler-service + collection-service + cross-service-events
 
-> See `tasks/plan.md` for architecture decisions, dependency graph, and risks. Source specs: `SPEC-shared-kernel.md`, `SPEC-recycler-service.md`, `SPEC-collection-service.md`.
+> See `tasks/plan.md` for architecture decisions, dependency graph, and risks. Source specs: `SPEC-shared-kernel.md`, `SPEC-recycler-service.md`, `SPEC-collection-service.md`, `SPEC-cross-service-events.md`.
 
 ## Phase 1: Foundation (`shared-kernel`)
 
@@ -473,3 +473,252 @@
   10. Swagger UI reachable, lists all endpoints with schemas — ✅ (Task 23)
 - [x] Definition of Done satisfied for every task above (Tasks 13-23) — same de facto standard as `recycler-service`: passing tests, clean `mvn verify`/`install` on the whole reactor, manual end-to-end checks against real Docker Postgres, deviations documented in each task's own notes
 - [x] Human review and approval before moving to `cross-service-events` or `reporting-service` — approved 2026-09-14; user independently verified the `differentNeighborsCanHaveActiveSchedulesOnTheSameDayAndTimeWithoutConflict` boundary-case test with real evidence, confirmed it matches what was reported. `collection-service` is complete.
+
+## Phase 13: Shared event infrastructure
+
+- [ ] Task 24: RabbitMQ + ShedLock infra wiring
+  - **Description:** Add `rabbitmq:3.13-management-alpine` to the root `docker-compose.yml`, pin `shedlock-spring`/`shedlock-provider-jdbc-template` versions in the root pom's `dependencyManagement` (not in the Spring Boot BOM, same treatment as `springdoc-openapi`), and wire `spring.rabbitmq.*` into both services' `application.yml` — env-var-driven, no hardcoded secret default.
+  - **Acceptance criteria:**
+    - [ ] `docker-compose.yml` gains a `rabbitmq` service (ports 5672 + 15672, credentials via env vars with `:?must be set`, matching the existing Postgres pattern)
+    - [ ] Root `pom.xml` `dependencyManagement` pins `shedlock-spring` and `shedlock-provider-jdbc-template`
+    - [ ] Both `application.yml`s gain `spring.rabbitmq.host/port/username/password`, no hardcoded default
+    - [ ] `docker compose --env-file .env.local up -d` starts Postgres *and* RabbitMQ; management UI reachable at `localhost:15672`
+  - **Verification:**
+    - [ ] Infra-only — no RED/GREEN ceremony per `[[tdd_scope_for_config_fixes]]`
+    - [ ] Manual check: both services boot with no AMQP connection errors in logs
+  - **Dependencies:** None
+  - **Files likely touched:** `docker-compose.yml`, `pom.xml`, `recycler-service/src/main/resources/application.yml`, `collection-service/src/main/resources/application.yml`
+  - **Estimated scope:** Small (4 files)
+
+- [ ] Task 25: shared-kernel event core
+  - **Description:** Rewrite `EventPublishingStrategy` to `{RABBITMQ, MOCK}` with Javadoc explaining the removal of `GCP_PUB_SUB`/`SPRING_EVENTS`; add `DomainEvent` marker interface, `OutboxEntry` plain-record shape, and the small `OutboxRepository` port interface each service's own outbox adapter will implement.
+  - **Acceptance criteria:**
+    - [ ] `EventPublishingStrategy` has exactly `RABBITMQ`, `MOCK`, with Javadoc documenting why `GCP_PUB_SUB`/`SPRING_EVENTS` were removed
+    - [ ] `DomainEvent` interface: `UUID eventId()`, `Instant occurredAt()`, `String routingKey()`
+    - [ ] `OutboxEntry` record: `{id, eventType, routingKey, payloadJson, status, createdAt}` — not a JPA `@Entity`
+    - [ ] `OutboxRepository` port: `save`, `findPendingBatch`, `markProcessed`, `markFailed`
+  - **Verification:**
+    - [ ] Unit tests pass: `mvn -pl shared-kernel test` — `EventPublishingStrategy` has exactly the two expected values; `OutboxEntry` construction/shape
+  - **Dependencies:** Task 24
+  - **Files likely touched:** `shared-kernel/src/main/java/.../events/EventPublishingStrategy.java`, `.../events/DomainEvent.java`, `.../events/OutboxEntry.java`, `.../events/OutboxRepository.java` (port), plus tests
+  - **Estimated scope:** Small-Medium (4-5 files)
+
+- [ ] Task 26: shared-kernel `OutboxDispatcher`
+  - **Description:** Generic, `@ConditionalOnProperty`-gated scheduled component that reads pending rows via the single `OutboxRepository` bean present in whichever service's context it runs in, publishes each to RabbitMQ via `RabbitTemplate` on a shared topic exchange (`esg-trazabilidad.events`), and marks PROCESSED/FAILED — `@SchedulerLock`-guarded so it never double-runs.
+  - **Acceptance criteria:**
+    - [ ] `spring-boot-starter-amqp` and `shedlock-spring` added to `shared-kernel/pom.xml`
+    - [ ] `OutboxDispatcher`: `@Component`, `@ConditionalOnProperty`-gated, `@Scheduled` + `@SchedulerLock`
+    - [ ] Publishes via `RabbitTemplate`, marks PROCESSED on success, marks FAILED (not rethrown) on publish exception
+    - [ ] Shared topic exchange declared as a `@Bean` in shared-kernel (both services get it automatically)
+  - **Verification:**
+    - [ ] Unit tests (Mockito): dispatches all pending rows in order; marks PROCESSED after a successful send; marks FAILED (not rethrown) on a simulated publish exception; no-op when there are no pending rows
+    - [ ] `mvn -pl shared-kernel test` green
+  - **Dependencies:** Task 25
+  - **Files likely touched:** `shared-kernel/pom.xml`, `.../kernel/amqp/OutboxDispatcher.java`, `.../kernel/amqp/RabbitTopologyConfig.java` (exchange bean), plus tests
+  - **Estimated scope:** Medium (4-5 files)
+
+### Checkpoint 14: Shared event infra ready
+- [ ] `mvn -pl shared-kernel test` green
+- [ ] `mvn install` — whole reactor still builds, `recycler-service`/`collection-service` unaffected (nothing references the new code yet)
+- [ ] Human review before wiring either direction's business logic
+
+## Phase 15: Direction A (collection-service → recycler-service, kilos total)
+
+- [ ] Task 27: collection-service outbox + shedlock schema
+  - **Description:** `collection-service`'s own outbox table (Liquibase `v0.1.4`) and `shedlock` table (`v0.1.7`), plus the JPA entity/repo/adapter implementing shared-kernel's `OutboxRepository`, plus a `LockProvider` bean wired to `collection-service`'s own `DataSource`.
+  - **Acceptance criteria:**
+    - [ ] `v0.1.4_create_outbox_event_table.yaml`, `v0.1.7_create_shedlock_table.yaml` (ShedLock's standard DDL: `name` PK, `lock_until`, `locked_at`, `locked_by`)
+    - [ ] `OutboxEventEntity`/`OutboxEventJpaRepository`/`OutboxEventRepositoryAdapter` implementing `OutboxRepository`
+    - [ ] `shedlock-provider-jdbc-template` added to `collection-service/pom.xml`; `LockProvider` bean
+  - **Verification:**
+    - [ ] IT test proving a saved `OutboxEventEntity` round-trips
+    - [ ] `mvn -pl collection-service verify` green
+  - **Dependencies:** Task 26
+  - **Files likely touched:** `collection-service/src/main/resources/db/changelog/changes/v0.1.4_*.yaml`, `v0.1.7_*.yaml`, `collection-service/pom.xml`, `.../events/outbox/{OutboxEventEntity,OutboxEventJpaRepository,OutboxEventRepositoryAdapter}.java`, plus IT test
+  - **Estimated scope:** Medium (6 files)
+
+- [ ] Task 28: `CollectionRegisteredEvent` + publisher
+  - **Description:** `collection-service` defines `CollectionRegisteredEvent` (record implementing `DomainEvent`) and `CollectionRegisteredEventPublisher`; `CollectionRecordService.create()` writes the outbox row in the *same* transaction as `repository.save(record)`.
+  - **Acceptance criteria:**
+    - [ ] `CollectionRegisteredEvent` record: `recordId, neighborId, associationId, collectionDate, weightKg` (+ `eventId`, `occurredAt`, `routingKey() = "collection.record.registered"`)
+    - [ ] `CollectionRecordService.create()` writes the outbox row in the same `@Transactional` method — no `@TransactionalEventListener(AFTER_COMMIT)`
+  - **Verification:**
+    - [ ] Unit test (Mockito): `create()` calls the outbox save with the right payload
+    - [ ] IT test (Postgres-only, no Rabbit yet): after `POST .../collection-records`, an outbox row exists with `status = NEW`
+    - [ ] `mvn -pl collection-service verify` green
+  - **Dependencies:** Task 27
+  - **Files likely touched:** `.../collectionrecord/events/CollectionRegisteredEvent.java`, `.../events/publish/CollectionRegisteredEventPublisher.java`, `CollectionRecordService.java`, plus tests
+  - **Estimated scope:** Medium (4 files)
+
+- [ ] Task 29: recycler-service event-infrastructure schema
+  - **Description:** `recycler-service`'s own outbox table, the `collection_registered_ledger` idempotency table, the `shedlock` table, and the `association`/`certification` alter (total_kilos_collected, notified_expired_at) — plus the adapters and the atomic `incrementTotalKilos` query.
+  - **Acceptance criteria:**
+    - [ ] `v0.1.3_create_outbox_event_table.yaml`, `v0.1.4_create_collection_registered_ledger_table.yaml` (PK `event_id`), `v0.1.5_alter_association_add_total_kilos_and_certification_notified_at.yaml` (two `changeSet`s: `association.total_kilos_collected DECIMAL NOT NULL DEFAULT 0`, `certification.notified_expired_at` nullable timestamp), `v0.1.6_create_shedlock_table.yaml`
+    - [ ] `OutboxEventEntity`/adapter (mirrors Task 27's shape); `CollectionRegisteredLedgerEntity`/repo
+    - [ ] `shedlock-provider-jdbc-template` added to `recycler-service/pom.xml`; `LockProvider` bean
+    - [ ] `AssociationJpaRepository.incrementTotalKilos(UUID, BigDecimal)` — `@Modifying @Query("UPDATE ... SET total_kilos_collected = total_kilos_collected + :amount ...")`, never a load-mutate-save
+  - **Verification:**
+    - [ ] IT tests: ledger table round-trip, outbox adapter round-trip
+    - [ ] `mvn -pl recycler-service verify` green
+    - [ ] Sanity check: `ls recycler-service/src/main/resources/db/changelog/changes/` shows `v0.1.3`-`v0.1.6` with no gap or collision against the existing `v0.1.0`-`v0.1.2`
+  - **Dependencies:** Task 26
+  - **Files likely touched:** 4 new changelog files, `.../events/outbox/{...}.java`, `.../events/ledger/{CollectionRegisteredLedgerEntity,...}.java`, `AssociationJpaRepository.java`, `recycler-service/pom.xml`, plus IT tests
+  - **Estimated scope:** Large (8-9 files)
+
+- [ ] Task 30: `CollectionRegisteredEventListener` (recycler-service)
+  - **Description:** `@RabbitListener` consuming `CollectionRegisteredEvent` (a local, structurally-matching record — not imported from `collection-service`), idempotent via a PK-on-`event_id` ledger insert, then an atomic `incrementTotalKilos` call.
+  - **Acceptance criteria:**
+    - [ ] Local `CollectionRegisteredEvent` record matching the producer's JSON shape
+    - [ ] `@RabbitListener(queues = "collection.registered.recycler-service")`, durable queue bound to routing key `collection.record.registered`
+    - [ ] Handler: ledger insert inside `try/catch DataIntegrityViolationException` → duplicate short-circuits (return, no error) → on success, call `incrementTotalKilos`
+  - **Verification:**
+    - [ ] Unit tests (Mockito): happy path (ledger insert then increment, in that order); duplicate delivery short-circuits before the increment call
+    - [ ] `mvn -pl recycler-service test` green
+  - **Dependencies:** Task 29
+  - **Files likely touched:** `.../events/consume/CollectionRegisteredEventListener.java`, plus test
+  - **Estimated scope:** Small-Medium (2 files)
+
+### Checkpoint 15: Direction A wired (unit-level)
+- [ ] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
+- [ ] Human review before the end-to-end IT proves it over real RabbitMQ
+
+- [ ] Task 31: Direction A end-to-end IT
+  - **Description:** Add a RabbitMQ Testcontainer to both services' IT setups; prove the full flow, redelivery/idempotency, and concurrent-increment atomicity over a real broker and real Postgres.
+  - **Acceptance criteria:**
+    - [ ] `rabbitmq:3.13-management-alpine` Testcontainer added alongside the existing Postgres one, both services
+    - [ ] Full-flow IT: `POST` a `CollectionRecord` → message lands on the real queue → `Association.totalKilosCollected` increments by `weightKg`
+    - [ ] Redelivery/idempotency IT: publish the same event twice → `totalKilosCollected` changes only once
+    - [ ] Concurrent-increment IT (real `ExecutorService` threads, real Postgres): two concurrent events for the same association → final total is the exact sum of both
+  - **Verification:**
+    - [ ] `mvn -pl recycler-service verify` and `mvn -pl collection-service verify` green
+    - [ ] Concurrent-increment test is confirmed to actually exercise concurrency (not two sequential calls that happen not to race)
+  - **Dependencies:** Task 30
+  - **Files likely touched:** `.../it/CollectionRegisteredEventFlowIT.java` (or similar, both services), Testcontainers config updates
+  - **Estimated scope:** Large (3-4 files, high test complexity)
+
+### Checkpoint 16: Direction A complete and proven end-to-end
+- [ ] All of Direction A's Success Criteria bullets in `SPEC-cross-service-events.md` verified with real evidence
+- [ ] Human review before starting Direction B
+
+## Phase 16: Direction B (recycler-service → collection-service, blocking)
+
+- [ ] Task 32: `Certification.notifiedExpiredAt` + `renew()` reset
+  - **Description:** Add the nullable `notifiedExpiredAt` field to `Certification`, and modify `renew()` to reset it to `null` in the same call as its existing expiration-date validation — closes the user-caught gap where a certification renewed and later re-expired would never be re-notified.
+  - **Acceptance criteria:**
+    - [ ] `Certification` gains `notifiedExpiredAt` (nullable `Instant`), settable only via a package-visible method used by the scan job
+    - [ ] `renew()` resets it to `null` in the same call as its existing date-range validation
+    - [ ] `CertificationEntity` gains the column; extends the existing `existing()`/`update()` path from Task 12, doesn't rebuild it
+  - **Verification:**
+    - [ ] Unit tests: `renew()` resets `notifiedExpiredAt` to `null`; a fresh `Certification.create()` starts with it `null`
+    - [ ] `mvn -pl recycler-service test` green
+  - **Dependencies:** Task 29 (schema)
+  - **Files likely touched:** `Certification.java`, `CertificationEntity.java`, `CertificationRepositoryAdapter.java`, plus tests
+  - **Estimated scope:** Small-Medium (4 files)
+
+- [ ] Task 33: `CertificationExpiryScanJob` + `CertificationExpiredEventPublisher`
+  - **Description:** New `@Scheduled` + `@SchedulerLock` job that finds certifications where `isExpired()` is true and `notifiedExpiredAt IS NULL`, publishes `CertificationExpiredEvent` per one found (outbox write), and sets `notifiedExpiredAt` — all in one transaction per certification.
+  - **Acceptance criteria:**
+    - [ ] `CertificationExpiredEvent` record: `associationId, certificationId, expiredAt`
+    - [ ] `CertificationExpiryScanJob`: distinct `@SchedulerLock` name from `OutboxDispatcher`'s
+    - [ ] Finds only expired + not-yet-notified certifications; publishes + sets the flag atomically per certification
+  - **Verification:**
+    - [ ] Unit tests (Mockito): finds only the right certifications; sets the flag; doesn't touch an already-notified expired certification; doesn't touch a non-expired one
+    - [ ] `mvn -pl recycler-service test` green
+  - **Dependencies:** Task 32
+  - **Files likely touched:** `.../certification/job/CertificationExpiryScanJob.java`, `.../certification/events/CertificationExpiredEvent.java`, `.../events/publish/CertificationExpiredEventPublisher.java`, plus tests
+  - **Estimated scope:** Medium (4 files)
+
+- [ ] Task 34: `CertificationRenewedEventPublisher`
+  - **Description:** `recycler-service` defines `CertificationRenewedEvent`; hook its outbox write into `CertificationService.renew()`'s existing transaction (same call as `certificationRepository.update(certification)`).
+  - **Acceptance criteria:**
+    - [ ] `CertificationRenewedEvent` record: `associationId, certificationId, newExpirationDate`
+    - [ ] `CertificationService.renew()` writes the outbox row in the same transaction as its existing `update()` call
+  - **Verification:**
+    - [ ] Unit test (Mockito): `renew()` also writes the outbox row with the right payload
+    - [ ] `mvn -pl recycler-service test` green
+  - **Dependencies:** Task 32
+  - **Files likely touched:** `.../certification/events/CertificationRenewedEvent.java`, `.../events/publish/CertificationRenewedEventPublisher.java`, `CertificationService.java`, plus test
+  - **Estimated scope:** Small-Medium (3 files)
+
+### Checkpoint 17: recycler-service publishing side complete
+- [ ] `mvn -pl recycler-service verify` green
+- [ ] Human review before wiring collection-service's consumption side
+
+- [ ] Task 35: collection-service `certification_status_ledger` + `blocked_association` schema/domain
+  - **Description:** The idempotency ledger for both incoming certification-status event types, and the minimal `BlockedAssociation` projection (association id + block state only — never a copy of `recycler-service`'s full `Association`).
+  - **Acceptance criteria:**
+    - [ ] `v0.1.5_create_certification_status_ledger_table.yaml` (PK `event_id`), `v0.1.6_create_blocked_association_table.yaml` (PK `association_id`, `blocked_at` timestamp only — no name/RUC/contact fields)
+    - [ ] `BlockedAssociation` domain class + `BlockedAssociationEntity`/repo/adapter, `BlockedAssociationRepository` port
+  - **Verification:**
+    - [ ] IT test round-tripping both tables
+    - [ ] `mvn -pl collection-service verify` green
+  - **Dependencies:** Task 27
+  - **Files likely touched:** `collection-service/src/main/resources/db/changelog/changes/v0.1.5_*.yaml`, `v0.1.6_*.yaml`, `.../association/domain/BlockedAssociation.java`, `.../association/adapter/out/persistence/{...}.java`, `.../association/port/out/BlockedAssociationRepository.java`, plus IT test
+  - **Estimated scope:** Medium (6 files)
+
+- [ ] Task 36: `CertificationStatusEventListener`
+  - **Description:** One `@RabbitListener` handling both `CertificationExpiredEvent` and `CertificationRenewedEvent` on a single durable queue bound to both routing keys; idempotent ledger insert, then blocks or unblocks.
+  - **Acceptance criteria:**
+    - [ ] Local `CertificationExpiredEvent`/`CertificationRenewedEvent` records (structurally matching `recycler-service`'s)
+    - [ ] Queue bound to `certification.expired` and `certification.renewed`
+    - [ ] Ledger insert (PK `event_id`, duplicate short-circuits) → `Expired` upserts a `BlockedAssociation` row; `Renewed` removes it
+  - **Verification:**
+    - [ ] Unit tests (Mockito): expired event blocks; renewed event unblocks; duplicate of either short-circuits before the block-state change
+    - [ ] `mvn -pl collection-service test` green
+  - **Dependencies:** Task 35
+  - **Files likely touched:** `.../events/consume/CertificationStatusEventListener.java`, event record classes, plus tests
+  - **Estimated scope:** Medium (4 files)
+
+- [ ] Task 37: Enforce the block in `CollectionRecordService.create()`
+  - **Description:** New `CollectionErrors.COL-009 ASSOCIATION_BLOCKED` (409); `create()` checks `BlockedAssociationRepository` before saving.
+  - **Acceptance criteria:**
+    - [ ] `CollectionErrors.COL-009 ASSOCIATION_BLOCKED` added
+    - [ ] `CollectionRecordService.create()` throws `COL-009` if a `BlockedAssociation` row exists for `command.associationId()`
+    - [ ] Exception handler wiring confirmed (extend `CollectionRecordExceptionHandler`'s mapping, or confirm the existing generic `ApplicationException` path already covers it with no new branching)
+  - **Verification:**
+    - [ ] Unit test: blocked associationId → `COL-009`
+    - [ ] IT test (Postgres-only, no Rabbit): create succeeds when unblocked, 409 `COL-009` when blocked
+    - [ ] `mvn -pl collection-service verify` green
+  - **Dependencies:** Task 36
+  - **Files likely touched:** `CollectionErrors.java`, `CollectionRecordService.java`, `CollectionRecordExceptionHandler.java` (if needed), plus tests
+  - **Estimated scope:** Small-Medium (4 files)
+
+### Checkpoint 18: Direction B wired (unit-level)
+- [ ] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
+- [ ] Human review before the end-to-end IT
+
+- [ ] Task 38: Direction B end-to-end IT
+  - **Description:** Full-flow IT over the real broker: expire → scan → block → reject → renew → unblock → accept. Plus redelivery/idempotency, plus the exact expire→renew→re-expire→re-notify cycle the user caught as missing from the initial design.
+  - **Acceptance criteria:**
+    - [ ] Full-flow IT: expired certification → run `CertificationExpiryScanJob` → `CertificationExpiredEvent` published → association blocked in `collection-service` → `POST .../collection-records` → 409 `COL-009` → `PATCH .../certifications/{id}/renew` → `CertificationRenewedEvent` published → unblocked → `POST .../collection-records` succeeds
+    - [ ] Redelivery/idempotency IT: same expired/renewed event published twice → block state only toggles once
+    - [ ] **Full expire→renew→re-expire cycle IT:** expire → scan → notified+blocked → renew → `notifiedExpiredAt` null + unblocked → push expiration into the past again → scan a second time → a *second*, distinct `CertificationExpiredEvent` published, association blocked again
+  - **Verification:**
+    - [ ] `mvn -pl recycler-service verify` and `mvn -pl collection-service verify` green
+    - [ ] The re-expire cycle test is confirmed to actually fail without Task 32's `renew()` reset (sanity-checked, not just trusted)
+  - **Dependencies:** Task 37
+  - **Files likely touched:** `.../it/CertificationStatusEventFlowIT.java` (or similar, both services)
+  - **Estimated scope:** Large (2-3 files, high test complexity)
+
+### Checkpoint 19: Direction B complete and proven end-to-end
+- [ ] All of Direction B's Success Criteria bullets in `SPEC-cross-service-events.md` verified with real evidence
+- [ ] Human review before the final ordering test + reactor-wide checkpoint
+
+## Phase 17: Ordering test + final verification
+
+- [ ] Task 39: Ordering test
+  - **Description:** Publish `CertificationExpiredEvent` then `CertificationRenewedEvent` for the same association in quick succession *through the outbox* (not directly to the queue) — proves the dispatcher's strict insertion-order processing holds for the common case, while documenting (not hiding) the residual out-of-order-after-redelivery risk.
+  - **Acceptance criteria:**
+    - [ ] Test asserts final state is unblocked after both events flow through the outbox in order
+    - [ ] A test comment documents that true out-of-order delivery after broker-level redelivery remains an accepted, undismissed residual risk (matches the spec's own wording)
+  - **Verification:**
+    - [ ] `mvn -pl recycler-service verify` and `mvn -pl collection-service verify` green
+  - **Dependencies:** Tasks 31, 38
+  - **Files likely touched:** IT test file(s) from Task 38, or a new dedicated ordering test
+  - **Estimated scope:** Small (1-2 files)
+
+### Checkpoint 20: Final — ready for review
+- [ ] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`), RabbitMQ Testcontainer included
+- [ ] All 11 Success Criteria bullets in `SPEC-cross-service-events.md` re-verified line by line with evidence
+- [ ] `recycler-service`/`collection-service`'s pre-existing test suites and manual-check behavior unaffected — no destructive schema change, no existing endpoint contract changed
+- [ ] Human review and approval before moving to `reporting-service`

@@ -525,16 +525,17 @@
 ## Phase 15: Direction A (collection-service → recycler-service, kilos total)
 
 - [ ] Task 27: collection-service outbox + shedlock schema
-  - **Description:** `collection-service`'s own outbox table (Liquibase `v0.1.4`) and `shedlock` table (`v0.1.7`), plus the JPA entity/repo/adapter implementing shared-kernel's `OutboxRepository`, plus a `LockProvider` bean wired to `collection-service`'s own `DataSource`.
+  - **Description:** `collection-service`'s own outbox table (Liquibase `v0.1.4`) and its own distinctly-named `shedlock_collection` table (`v0.1.5`) — never a table literally named `shedlock`, which would collide with `recycler-service`'s own ShedLock table on the shared Postgres database (user-caught risk, resolved in `SPEC-cross-service-events.md`'s Resolved Decisions) — plus the JPA entity/repo/adapter implementing shared-kernel's `OutboxRepository`, plus a `LockProvider` bean wired to `collection-service`'s own `DataSource`.
   - **Acceptance criteria:**
-    - [ ] `v0.1.4_create_outbox_event_table.yaml`, `v0.1.7_create_shedlock_table.yaml` (ShedLock's standard DDL: `name` PK, `lock_until`, `locked_at`, `locked_by`)
+    - [ ] `v0.1.4_create_outbox_event_table.yaml`, `v0.1.5_create_shedlock_collection_table.yaml` — table named `shedlock_collection`, not `shedlock` (ShedLock's standard DDL: `name` PK, `lock_until`, `locked_at`, `locked_by`)
     - [ ] `OutboxEventEntity`/`OutboxEventJpaRepository`/`OutboxEventRepositoryAdapter` implementing `OutboxRepository`
-    - [ ] `shedlock-provider-jdbc-template` added to `collection-service/pom.xml`; `LockProvider` bean
+    - [ ] `shedlock-provider-jdbc-template` added to `collection-service/pom.xml`; `LockProvider` bean built via `JdbcTemplateLockProvider.Configuration.builder().withJdbcTemplate(...).withTableName("shedlock_collection").build()`
   - **Verification:**
     - [ ] IT test proving a saved `OutboxEventEntity` round-trips
     - [ ] `mvn -pl collection-service verify` green
+    - [ ] Manual/IT check: booting `collection-service` after `recycler-service` has already created its own `shedlock_recycler` table does not error — proves the two tables are genuinely independent, not just non-colliding by luck of boot order
   - **Dependencies:** Task 26
-  - **Files likely touched:** `collection-service/src/main/resources/db/changelog/changes/v0.1.4_*.yaml`, `v0.1.7_*.yaml`, `collection-service/pom.xml`, `.../events/outbox/{OutboxEventEntity,OutboxEventJpaRepository,OutboxEventRepositoryAdapter}.java`, plus IT test
+  - **Files likely touched:** `collection-service/src/main/resources/db/changelog/changes/v0.1.4_*.yaml`, `v0.1.5_*.yaml`, `collection-service/pom.xml`, `.../events/outbox/{OutboxEventEntity,OutboxEventJpaRepository,OutboxEventRepositoryAdapter}.java`, `LockProvider` config class, plus IT test
   - **Estimated scope:** Medium (6 files)
 
 - [ ] Task 28: `CollectionRegisteredEvent` + publisher
@@ -551,11 +552,11 @@
   - **Estimated scope:** Medium (4 files)
 
 - [ ] Task 29: recycler-service event-infrastructure schema
-  - **Description:** `recycler-service`'s own outbox table, the `collection_registered_ledger` idempotency table, the `shedlock` table, and the `association`/`certification` alter (total_kilos_collected, notified_expired_at) — plus the adapters and the atomic `incrementTotalKilos` query.
+  - **Description:** `recycler-service`'s own outbox table, the `collection_registered_ledger` idempotency table, its own distinctly-named `shedlock_recycler` table — never a table literally named `shedlock` (user-caught collision risk, resolved in `SPEC-cross-service-events.md`'s Resolved Decisions) — and the `association`/`certification` alter (total_kilos_collected, notified_expired_at) — plus the adapters and the atomic `incrementTotalKilos` query.
   - **Acceptance criteria:**
-    - [ ] `v0.1.3_create_outbox_event_table.yaml`, `v0.1.4_create_collection_registered_ledger_table.yaml` (PK `event_id`), `v0.1.5_alter_association_add_total_kilos_and_certification_notified_at.yaml` (two `changeSet`s: `association.total_kilos_collected DECIMAL NOT NULL DEFAULT 0`, `certification.notified_expired_at` nullable timestamp), `v0.1.6_create_shedlock_table.yaml`
+    - [ ] `v0.1.3_create_outbox_event_table.yaml`, `v0.1.4_create_collection_registered_ledger_table.yaml` (PK `event_id`), `v0.1.5_alter_association_add_total_kilos_and_certification_notified_at.yaml` (two `changeSet`s: `association.total_kilos_collected DECIMAL NOT NULL DEFAULT 0`, `certification.notified_expired_at` nullable timestamp), `v0.1.6_create_shedlock_recycler_table.yaml` — table named `shedlock_recycler`, not `shedlock`
     - [ ] `OutboxEventEntity`/adapter (mirrors Task 27's shape); `CollectionRegisteredLedgerEntity`/repo
-    - [ ] `shedlock-provider-jdbc-template` added to `recycler-service/pom.xml`; `LockProvider` bean
+    - [ ] `shedlock-provider-jdbc-template` added to `recycler-service/pom.xml`; `LockProvider` bean built via `JdbcTemplateLockProvider.Configuration.builder().withJdbcTemplate(...).withTableName("shedlock_recycler").build()`
     - [ ] `AssociationJpaRepository.incrementTotalKilos(UUID, BigDecimal)` — `@Modifying @Query("UPDATE ... SET total_kilos_collected = total_kilos_collected + :amount ...")`, never a load-mutate-save
   - **Verification:**
     - [ ] IT tests: ledger table round-trip, outbox adapter round-trip
@@ -647,13 +648,13 @@
 - [ ] Task 35: collection-service `certification_status_ledger` + `blocked_association` schema/domain
   - **Description:** The idempotency ledger for both incoming certification-status event types, and the minimal `BlockedAssociation` projection (association id + block state only — never a copy of `recycler-service`'s full `Association`).
   - **Acceptance criteria:**
-    - [ ] `v0.1.5_create_certification_status_ledger_table.yaml` (PK `event_id`), `v0.1.6_create_blocked_association_table.yaml` (PK `association_id`, `blocked_at` timestamp only — no name/RUC/contact fields)
+    - [ ] `v0.1.6_create_certification_status_ledger_table.yaml` (PK `event_id`), `v0.1.7_create_blocked_association_table.yaml` (PK `association_id`, `blocked_at` timestamp only — no name/RUC/contact fields) — numbered after Task 27's `v0.1.4`/`v0.1.5` since those are created chronologically first, keeping version numbers in task-execution order
     - [ ] `BlockedAssociation` domain class + `BlockedAssociationEntity`/repo/adapter, `BlockedAssociationRepository` port
   - **Verification:**
     - [ ] IT test round-tripping both tables
     - [ ] `mvn -pl collection-service verify` green
   - **Dependencies:** Task 27
-  - **Files likely touched:** `collection-service/src/main/resources/db/changelog/changes/v0.1.5_*.yaml`, `v0.1.6_*.yaml`, `.../association/domain/BlockedAssociation.java`, `.../association/adapter/out/persistence/{...}.java`, `.../association/port/out/BlockedAssociationRepository.java`, plus IT test
+  - **Files likely touched:** `collection-service/src/main/resources/db/changelog/changes/v0.1.6_*.yaml`, `v0.1.7_*.yaml`, `.../association/domain/BlockedAssociation.java`, `.../association/adapter/out/persistence/{...}.java`, `.../association/port/out/BlockedAssociationRepository.java`, plus IT test
   - **Estimated scope:** Medium (6 files)
 
 - [ ] Task 36: `CertificationStatusEventListener`

@@ -30,6 +30,10 @@
         <!-- Not part of the Spring Boot BOM; pinned here so every module that
              wires Swagger UI later shares one version. -->
         <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
+        <!-- Not part of the Spring Boot BOM either; pinned here so shared-kernel
+             (OutboxDispatcher) and both services (their own LockProvider beans)
+             share one version. -->
+        <shedlock.version>7.10.1</shedlock.version>
         <!-- Overrides Spring Boot 3.3.5's managed Testcontainers version (1.19.8):
              its Windows npipe transport hardcodes an old Docker API version and
              ignores DOCKER_API_VERSION, breaking against recent Docker Engines.
@@ -62,6 +66,16 @@
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc-openapi.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-spring</artifactId>
+                <version>${shedlock.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-provider-jdbc-template</artifactId>
+                <version>${shedlock.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

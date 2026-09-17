@@ -1,5 +1,8 @@
 package pe.esgtrazabilidad.collection.it;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 
@@ -15,6 +18,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import pe.esgtrazabilidad.kernel.events.OutboxEntry;
@@ -48,6 +52,9 @@ class CollectionRecordApiIT {
 
     @Autowired
     private OutboxRepository outboxRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUpRestAssured() {
@@ -139,7 +146,7 @@ class CollectionRecordApiIT {
     }
 
     @Test
-    void creatingARecordWritesAPendingOutboxEntry() {
+    void creatingARecordWritesAPendingOutboxEntry() throws com.fasterxml.jackson.core.JsonProcessingException {
         String neighborId = createNeighbor("Ana Torres IT Outbox");
         String associationId = UUID.randomUUID().toString();
 
@@ -154,12 +161,26 @@ class CollectionRecordApiIT {
                 .path("id");
 
         List<OutboxEntry> pending = outboxRepository.findPendingBatch(50);
-        assertThat(pending)
-                .anySatisfy(entry -> {
-                    assertThat(entry.routingKey()).isEqualTo("collection.record.registered");
-                    assertThat(entry.status()).isEqualTo(OutboxStatus.NEW);
-                    assertThat(entry.payloadJson()).contains(id);
-                });
+        OutboxEntry entry = pending.stream()
+                .filter(e -> e.payloadJson().contains(id))
+                .findFirst()
+                .orElseThrow();
+        assertThat(entry.routingKey()).isEqualTo("collection.record.registered");
+        assertThat(entry.status()).isEqualTo(OutboxStatus.NEW);
+
+        // Real evidence, not assumption: parse the actual JSON this app's real
+        // ObjectMapper bean produced and assert its exact key set. Jackson 2.12+
+        // serializes a record by its canonical components only -- routingKey()
+        // is a plain override method, not a component, so it must NOT appear
+        // here. Confirmed empirically (see CollectionRegisteredEvent's own
+        // Javadoc). If it ever does (a Jackson upgrade, a config change), this
+        // fails loudly instead of silently shipping an extra field a consumer
+        // would reject under FAIL_ON_UNKNOWN_PROPERTIES.
+        Map<String, Object> payloadFields = objectMapper.readValue(entry.payloadJson(), new TypeReference<>() {});
+        assertThat(payloadFields.keySet())
+                .containsExactlyInAnyOrder(
+                        "eventId", "occurredAt", "recordId", "neighborId", "associationId", "collectionDate",
+                        "weightKg");
     }
 
     @Test

@@ -5,8 +5,10 @@ import io.restassured.http.ContentType;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -14,8 +16,10 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
+import java.util.Map;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -37,6 +41,9 @@ class CertificationApiIT {
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUpRestAssured() {
@@ -217,6 +224,22 @@ class CertificationApiIT {
                 .statusCode(200)
                 .body("expirationDate", equalTo(newExpirationDate))
                 .body("expired", equalTo(false));
+
+        // Real evidence, not assumption: CertificationServiceTest (Mockito)
+        // only proves renew() calls eventPublisher.publish() -- it can't prove
+        // the outbox row and the certification update actually landed together
+        // in one real transaction against Postgres. Same direct-SQL
+        // verification pattern as CollectionRecordApiIT
+        // .creatingARecordWritesAPendingOutboxEntry (Task 28) and
+        // CertificationRepositoryAdapterIT
+        // .findExpiredAndNotYetNotifiedReturnsOnlyExpiredCertificationsNeverNotified
+        // (Task 33).
+        Map<String, Object> outboxEntry = jdbcTemplate.queryForMap(
+                "SELECT status, payload_json FROM outbox_event_recycler "
+                        + "WHERE event_type = 'CertificationRenewedEvent' AND payload_json LIKE ?",
+                "%" + certificationId + "%");
+        assertThat(outboxEntry.get("status")).isEqualTo("NEW");
+        assertThat((String) outboxEntry.get("payload_json")).contains(certificationId);
     }
 
     @Test

@@ -551,15 +551,15 @@
   - **Files likely touched:** `collection-service/src/main/resources/db/changelog/changes/v0.1.4_*.yaml`, `v0.1.5_*.yaml`, `collection-service/pom.xml`, `.../events/outbox/{OutboxEventEntity,OutboxEventJpaRepository,OutboxEventRepositoryAdapter}.java`, `.../config/SchedulingConfig.java`, plus IT test
   - **Estimated scope:** Medium (6 files)
 
-- [ ] Task 28: `CollectionRegisteredEvent` + publisher
+- [x] Task 28: `CollectionRegisteredEvent` + publisher
   - **Description:** `collection-service` defines `CollectionRegisteredEvent` (record implementing `DomainEvent`) and `CollectionRegisteredEventPublisher`; `CollectionRecordService.create()` writes the outbox row in the *same* transaction as `repository.save(record)`.
   - **Acceptance criteria:**
-    - [ ] `CollectionRegisteredEvent` record: `recordId, neighborId, associationId, collectionDate, weightKg` (+ `eventId`, `occurredAt`, `routingKey() = "collection.record.registered"`)
-    - [ ] `CollectionRecordService.create()` writes the outbox row in the same `@Transactional` method — no `@TransactionalEventListener(AFTER_COMMIT)`
+    - [x] `CollectionRegisteredEvent` record: `recordId, neighborId, associationId, collectionDate, weightKg` (+ `eventId`, `occurredAt`, `routingKey() = "collection.record.registered"`)
+    - [x] `CollectionRecordService.create()` writes the outbox row in the same `@Transactional` method — no `@TransactionalEventListener(AFTER_COMMIT)`. Design choice beyond the plan's literal text: the publisher reuses the event's own `eventId()`/`occurredAt()` as the `OutboxEntry`'s `id`/`createdAt`, rather than minting a second, unrelated UUID via `OutboxEntry.create(...)` — one canonical identity for the event
   - **Verification:**
-    - [ ] Unit test (Mockito): `create()` calls the outbox save with the right payload
-    - [ ] IT test (Postgres-only, no Rabbit yet): after `POST .../collection-records`, an outbox row exists with `status = NEW`
-    - [ ] `mvn -pl collection-service verify` green
+    - [x] RED→GREEN throughout: `CollectionRegisteredEventTest` (factory mapping), `CollectionRegisteredEventPublisherTest` (Mockito, asserts the `OutboxEntry` written matches the event exactly), `CollectionRecordServiceTest`'s new test (publisher invoked with the right event) — all written first against not-yet-existing classes, confirmed failing to compile, then implemented
+    - [x] IT test (Postgres-only, no Rabbit yet): after `POST .../collection-records`, a pending outbox row exists with the right `routingKey`/`status = NEW` and the created record's id in its payload
+    - [x] `mvn -pl collection-service verify` green — 38 IT tests (was 37), 68 unit tests
   - **Dependencies:** Task 27
   - **Files likely touched:** `.../collectionrecord/events/CollectionRegisteredEvent.java`, `.../events/publish/CollectionRegisteredEventPublisher.java`, `CollectionRecordService.java`, plus tests
   - **Estimated scope:** Medium (4 files)

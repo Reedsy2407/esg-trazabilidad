@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.5-create-shedlock-collection-table
+      author: esg-trazabilidad
+      comment: >
+        ShedLock's own standard schema, named shedlock_collection (not shedlock) --
+        collection-service and recycler-service share one Postgres database with no
+        per-service schema separation, so each service owns a distinctly-named lock
+        table to avoid a create-table collision. See SPEC-cross-service-events.md's
+        Resolved Decisions.
+      changes:
+        - createTable:
+            tableName: shedlock_collection
+            columns:
+              - column:
+                  name: name
+                  type: varchar(64)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: lock_until
+                  type: timestamp(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: locked_at
+                  type: timestamp(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: locked_by
+                  type: varchar(255)
+                  constraints:
+                    nullable: false

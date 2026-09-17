@@ -50,6 +50,16 @@
             <artifactId>liquibase-core</artifactId>
         </dependency>
 
+        <!-- Concrete LockProvider backed by this service's own DataSource,
+             pointed at shedlock_collection via withTableName(...): never a
+             table literally named "shedlock" (see SPEC-cross-service-events.md's
+             Resolved Decisions). shedlock-spring (the @SchedulerLock annotation)
+             comes transitively via shared-kernel. -->
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-provider-jdbc-template</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -101,6 +111,19 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>3.2.5</version>
+                <configuration>
+                    <!-- Every @SpringBootTest IT now boots a real OutboxDispatcher
+                         (an OutboxRepository bean exists since Task 27), each on its
+                         own 5s @Scheduled tick. Without this, a tick firing after a
+                         given test class's own Testcontainers Postgres has already
+                         been torn down logs a noisy connection-refused stack trace:
+                         harmless to the build result, but real test-isolation noise
+                         worth suppressing globally rather than patching every IT test
+                         class with its own @TestPropertySource one at a time. -->
+                    <systemPropertyVariables>
+                        <esg.events.outbox-dispatcher.enabled>false</esg.events.outbox-dispatcher.enabled>
+                    </systemPropertyVariables>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.4-create-outbox-event-table
+      author: esg-trazabilidad
+      changes:
+        - createTable:
+            tableName: outbox_event
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: routing_key
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload_json
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+  - changeSet:
+      id: v0.1.4-outbox-event-status-created-at-index
+      author: esg-trazabilidad
+      comment: Speeds up OutboxDispatcher's every-5s poll for NEW/FAILED rows ordered by age.
+      changes:
+        - createIndex:
+            tableName: outbox_event
+            indexName: ix_outbox_event_status_created_at
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: created_at

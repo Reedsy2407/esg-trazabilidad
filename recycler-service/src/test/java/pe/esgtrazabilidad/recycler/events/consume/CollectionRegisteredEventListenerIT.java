@@ -3,7 +3,13 @@ package pe.esgtrazabilidad.recycler.events.consume;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,5 +87,62 @@ class CollectionRegisteredEventListenerIT {
         // downstream state, not just "doesn't throw".
         listener.handle(event);
         assertThat(totalKilosCollectedInDb(association.getId())).isEqualByComparingTo("15.00");
+    }
+
+    @Test
+    void concurrentEventsForTheSameAssociationBothContributeToTheTotal() throws Exception {
+        // Required to FAIL under a naive load-mutate-save increment -- proves
+        // AssociationJpaRepository.incrementTotalKilos's atomic UPDATE holds
+        // under real concurrent threads, not just sequential calls that
+        // happen not to race. A CountDownLatch forces both threads to start
+        // as close to simultaneously as possible, maximizing the chance of
+        // an actual race rather than accidental serialization.
+        Association association = associationRepository.save(Association.create(
+                "Asociación concurrente IT", "20111111111", "REG-CONC-1", "Dirección", "a@b.pe", "999999999"));
+        CollectionRegisteredEvent first = new CollectionRegisteredEvent(
+                UUID.randomUUID(),
+                Instant.now(),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                association.getId(),
+                LocalDate.now(),
+                new BigDecimal("10.00"));
+        CollectionRegisteredEvent second = new CollectionRegisteredEvent(
+                UUID.randomUUID(),
+                Instant.now(),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                association.getId(),
+                LocalDate.now(),
+                new BigDecimal("5.50"));
+
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<?>> futures = List.of(
+                    executor.submit(() -> processAfterBothReady(first, readyLatch, startLatch)),
+                    executor.submit(() -> processAfterBothReady(second, readyLatch, startLatch)));
+            readyLatch.await();
+            startLatch.countDown();
+            for (Future<?> future : futures) {
+                future.get(10, TimeUnit.SECONDS);
+            }
+        } finally {
+            executor.shutdown();
+        }
+
+        assertThat(totalKilosCollectedInDb(association.getId())).isEqualByComparingTo("15.50");
+    }
+
+    private void processAfterBothReady(CollectionRegisteredEvent event, CountDownLatch readyLatch, CountDownLatch startLatch) {
+        try {
+            readyLatch.countDown();
+            startLatch.await();
+            listener.handle(event);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(exception);
+        }
     }
 }

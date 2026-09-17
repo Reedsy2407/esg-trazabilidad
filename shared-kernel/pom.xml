@@ -63,6 +63,17 @@
             <artifactId>shedlock-spring</artifactId>
         </dependency>
 
+        <!-- RabbitListenerConfig's Jackson2JsonMessageConverter needs
+             ObjectMapper at compile time: not pulled in transitively by
+             spring-boot-starter-amqp (spring-rabbit treats Jackson as
+             optional). Both services already have this via
+             spring-boot-starter-web, but shared-kernel's own build needs
+             it declared directly. Version managed by the Spring Boot BOM. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

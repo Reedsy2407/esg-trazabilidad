@@ -13,7 +13,9 @@ class CollectionRegisteredEventListener {
         this.processor = processor;
     }
 
-    @RabbitListener(queues = CollectionRegisteredQueueConfig.QUEUE_NAME)
+    @RabbitListener(
+            queues = CollectionRegisteredQueueConfig.QUEUE_NAME,
+            containerFactory = "jsonRabbitListenerContainerFactory")
     void handle(CollectionRegisteredEvent event) {
         try {
             processor.process(event);

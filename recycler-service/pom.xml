@@ -76,6 +76,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>rabbitmq</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <!-- Pinned to the 5.x line: 6.0.1 references a Jackson 3 support
                  class not present with Spring Boot 3.3.5's Jackson 2.x. -->
             <groupId>io.rest-assured</groupId>

@@ -506,23 +506,27 @@
   - **Files likely touched:** `shared-kernel/src/main/java/.../events/EventPublishingStrategy.java`, `.../events/DomainEvent.java`, `.../events/OutboxEntry.java`, `.../events/OutboxStatus.java`, `.../events/OutboxRepository.java` (port), plus tests
   - **Estimated scope:** Small-Medium (4-5 files)
 
-- [ ] Task 26: shared-kernel `OutboxDispatcher`
+- [x] Task 26: shared-kernel `OutboxDispatcher`
   - **Description:** Generic, `@ConditionalOnProperty`-gated scheduled component that reads pending rows via the single `OutboxRepository` bean present in whichever service's context it runs in, publishes each to RabbitMQ via `RabbitTemplate` on a shared topic exchange (`esg-trazabilidad.events`), and marks PROCESSED/FAILED — `@SchedulerLock`-guarded so it never double-runs.
   - **Acceptance criteria:**
-    - [ ] `spring-boot-starter-amqp` and `shedlock-spring` added to `shared-kernel/pom.xml`
-    - [ ] `OutboxDispatcher`: `@Component`, `@ConditionalOnProperty`-gated, `@Scheduled` + `@SchedulerLock`
-    - [ ] Publishes via `RabbitTemplate`, marks PROCESSED on success, marks FAILED (not rethrown) on publish exception
-    - [ ] Shared topic exchange declared as a `@Bean` in shared-kernel (both services get it automatically)
+    - [x] `spring-boot-starter-amqp` and `shedlock-spring` added to `shared-kernel/pom.xml`
+    - [x] `OutboxDispatcher`: `@Component`, `@ConditionalOnProperty`-gated, `@Scheduled` + `@SchedulerLock` — also gated by `@ConditionalOnBean(OutboxRepository.class)` (a judgment call beyond the plan's literal text, needed so the bean isn't even attempted before a service wires its own outbox adapter in Task 27/29 — otherwise constructor injection of `OutboxRepository` would fail bean creation in both currently-running services)
+    - [x] Publishes via `RabbitTemplate`, marks PROCESSED on success, marks FAILED (not rethrown) on publish exception
+    - [x] Shared topic exchange declared as a `@Bean` in shared-kernel (both services get it automatically) — `RabbitTopologyConfig`, durable `esg-trazabilidad.events` topic exchange
+    - [x] Both classes registered via shared-kernel's `AutoConfiguration.imports` (same mechanism `GlobalExceptionHandler` already uses — confirmed by reading it first, not assumed)
   - **Verification:**
-    - [ ] Unit tests (Mockito): dispatches all pending rows in order; marks PROCESSED after a successful send; marks FAILED (not rethrown) on a simulated publish exception; no-op when there are no pending rows
-    - [ ] `mvn -pl shared-kernel test` green
+    - [x] RED→GREEN: `OutboxDispatcherTest` written first against the not-yet-existing class, confirmed failing to compile, then `OutboxDispatcher`/`RabbitTopologyConfig` implemented to pass
+    - [x] Unit tests (Mockito): dispatches all pending rows in order; marks PROCESSED after a successful send; marks FAILED (not rethrown) on a simulated publish exception; **one entry failing doesn't stop the rest of the batch** (added beyond the plan's literal scope — a real behavioral question a naive implementation could get wrong); no-op when there are no pending rows
+    - [x] `mvn -pl shared-kernel test` green — 17 tests total
+    - [x] `mvn install` — whole reactor still builds clean
+    - [x] Manual check: both `recycler-service` and `collection-service` boot cleanly with the new AMQP/ShedLock dependencies transitively present and no `OutboxRepository` bean yet — confirms `@ConditionalOnBean` correctly keeps the dispatcher inert, no bean-creation failure, no AMQP connection errors
   - **Dependencies:** Task 25
-  - **Files likely touched:** `shared-kernel/pom.xml`, `.../kernel/amqp/OutboxDispatcher.java`, `.../kernel/amqp/RabbitTopologyConfig.java` (exchange bean), plus tests
+  - **Files likely touched:** `shared-kernel/pom.xml`, `.../kernel/amqp/OutboxDispatcher.java`, `.../kernel/amqp/RabbitTopologyConfig.java` (exchange bean), `AutoConfiguration.imports`, plus tests
   - **Estimated scope:** Medium (4-5 files)
 
 ### Checkpoint 14: Shared event infra ready
-- [ ] `mvn -pl shared-kernel test` green
-- [ ] `mvn install` — whole reactor still builds, `recycler-service`/`collection-service` unaffected (nothing references the new code yet)
+- [x] `mvn -pl shared-kernel test` green
+- [x] `mvn install` — whole reactor still builds, `recycler-service`/`collection-service` unaffected (verified live via boot, not just compile — `OutboxDispatcher`/`RabbitTopologyConfig` are on the classpath but the dispatcher never activates without an `OutboxRepository` bean)
 - [ ] Human review before wiring either direction's business logic
 
 ## Phase 15: Direction A (collection-service → recycler-service, kilos total)

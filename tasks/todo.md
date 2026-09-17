@@ -527,7 +527,7 @@
 ### Checkpoint 14: Shared event infra ready
 - [x] `mvn -pl shared-kernel test` green
 - [x] `mvn install` — whole reactor still builds, `recycler-service`/`collection-service` unaffected (verified live via boot, not just compile — `OutboxDispatcher`/`RabbitTopologyConfig` are on the classpath but the dispatcher never activates without an `OutboxRepository` bean)
-- [ ] Human review before wiring either direction's business logic
+- [x] Human review before wiring either direction's business logic — Tasks 25/26 approved 2026-09-16. Minor non-blocking finding: `OutboxDispatcher.dispatchPending()` published messages via the 3-arg `RabbitTemplate.convertAndSend(exchange, routingKey, String)`, which defaults to `text/plain` even though `payloadJson` is always pre-serialized JSON. Closed immediately (small, self-contained fix) rather than deferred: switched to the `MessagePostProcessor` overload, explicitly setting `MessageProperties.CONTENT_TYPE_JSON`; added `publishesWithAnApplicationJsonContentType` test asserting it. 18 shared-kernel tests green (was 17).
 
 ## Phase 15: Direction A (collection-service → recycler-service, kilos total)
 

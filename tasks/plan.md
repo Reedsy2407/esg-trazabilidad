@@ -294,7 +294,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Checkpoint 14: Shared event infra ready
 - [x] `mvn -pl shared-kernel test` green; `mvn install` — whole reactor still builds, `recycler-service`/`collection-service` unaffected (verified live via boot on both)
-- [ ] Human review before wiring either direction's business logic
+- [x] Human review before wiring either direction's business logic — approved 2026-09-16; content-type gap on published outbox messages caught during review, fixed immediately (see tasks/todo.md)
 
 ### Phase 15: Direction A (collection-service → recycler-service, kilos total)
 

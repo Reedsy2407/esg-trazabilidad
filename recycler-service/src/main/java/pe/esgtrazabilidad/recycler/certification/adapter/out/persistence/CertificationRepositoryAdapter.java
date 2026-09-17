@@ -31,7 +31,8 @@ class CertificationRepositoryAdapter implements CertificationRepository {
                 certification.getAssociationId(),
                 certification.getCertificationType(),
                 certification.getIssuedDate(),
-                certification.getExpirationDate());
+                certification.getExpirationDate(),
+                certification.getNotifiedExpiredAt());
         return toDomain(jpaRepository.save(existing));
     }
 
@@ -53,7 +54,8 @@ class CertificationRepositoryAdapter implements CertificationRepository {
                 certification.getAssociationId(),
                 certification.getCertificationType(),
                 certification.getIssuedDate(),
-                certification.getExpirationDate());
+                certification.getExpirationDate(),
+                certification.getNotifiedExpiredAt());
     }
 
     private Certification toDomain(CertificationEntity entity) {
@@ -62,6 +64,7 @@ class CertificationRepositoryAdapter implements CertificationRepository {
                 entity.getAssociationId(),
                 entity.getCertificationType(),
                 entity.getIssuedDate(),
-                entity.getExpirationDate());
+                entity.getExpirationDate(),
+                entity.getNotifiedExpiredAt());
     }
 }

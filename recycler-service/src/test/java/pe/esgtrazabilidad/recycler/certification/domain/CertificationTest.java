@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.recycler.certification.domain;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -51,7 +52,8 @@ class CertificationTest {
                 associationId,
                 "ISO 14001",
                 LocalDate.now().minusDays(30),
-                LocalDate.now().minusDays(1));
+                LocalDate.now().minusDays(1),
+                null);
 
         assertThat(certification.isExpired()).isTrue();
     }
@@ -82,5 +84,44 @@ class CertificationTest {
 
         assertThatThrownBy(() -> certification.renew(certification.getIssuedDate()))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void aFreshCertificationStartsWithNoNotifiedExpiredAt() {
+        Certification certification = Certification.create(
+                associationId, "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().plusDays(1));
+
+        assertThat(certification.getNotifiedExpiredAt()).isNull();
+    }
+
+    @Test
+    void renewResetsNotifiedExpiredAtToNull() {
+        // User-caught gap: without this reset, a certification that expires,
+        // gets renewed, and later expires again would never be re-notified --
+        // CertificationExpiryScanJob's condition (isExpired() AND
+        // notifiedExpiredAt IS NULL) would never match again once the flag
+        // is set once.
+        Certification certification = Certification.reconstruct(
+                UUID.randomUUID(),
+                associationId,
+                "ISO 14001",
+                LocalDate.now().minusDays(30),
+                LocalDate.now().minusDays(1),
+                Instant.now());
+
+        certification.renew(LocalDate.now().plusYears(1));
+
+        assertThat(certification.getNotifiedExpiredAt()).isNull();
+    }
+
+    @Test
+    void markNotifiedExpiredSetsTheTimestamp() {
+        Certification certification = Certification.create(
+                associationId, "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().minusDays(1));
+        Instant notifiedAt = Instant.now();
+
+        certification.markNotifiedExpired(notifiedAt);
+
+        assertThat(certification.getNotifiedExpiredAt()).isEqualTo(notifiedAt);
     }
 }

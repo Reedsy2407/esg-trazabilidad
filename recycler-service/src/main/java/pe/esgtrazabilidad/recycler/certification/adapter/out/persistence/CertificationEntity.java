@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.recycler.certification.adapter.out.persistence;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -31,6 +32,9 @@ class CertificationEntity implements Persistable<UUID> {
     @Column(name = "expiration_date")
     private LocalDate expirationDate;
 
+    @Column(name = "notified_expired_at")
+    private Instant notifiedExpiredAt;
+
     @Transient
     private boolean isNew = false;
 
@@ -38,12 +42,18 @@ class CertificationEntity implements Persistable<UUID> {
     }
 
     CertificationEntity(
-            UUID id, UUID associationId, String certificationType, LocalDate issuedDate, LocalDate expirationDate) {
+            UUID id,
+            UUID associationId,
+            String certificationType,
+            LocalDate issuedDate,
+            LocalDate expirationDate,
+            Instant notifiedExpiredAt) {
         this.id = id;
         this.associationId = associationId;
         this.certificationType = certificationType;
         this.issuedDate = issuedDate;
         this.expirationDate = expirationDate;
+        this.notifiedExpiredAt = notifiedExpiredAt;
         this.isNew = true;
     }
 
@@ -53,13 +63,19 @@ class CertificationEntity implements Persistable<UUID> {
      * an entity Spring Data routes through merge() instead of persist().
      */
     static CertificationEntity existing(
-            UUID id, UUID associationId, String certificationType, LocalDate issuedDate, LocalDate expirationDate) {
+            UUID id,
+            UUID associationId,
+            String certificationType,
+            LocalDate issuedDate,
+            LocalDate expirationDate,
+            Instant notifiedExpiredAt) {
         CertificationEntity entity = new CertificationEntity();
         entity.id = id;
         entity.associationId = associationId;
         entity.certificationType = certificationType;
         entity.issuedDate = issuedDate;
         entity.expirationDate = expirationDate;
+        entity.notifiedExpiredAt = notifiedExpiredAt;
         entity.isNew = false;
         return entity;
     }
@@ -93,5 +109,9 @@ class CertificationEntity implements Persistable<UUID> {
 
     LocalDate getExpirationDate() {
         return expirationDate;
+    }
+
+    Instant getNotifiedExpiredAt() {
+        return notifiedExpiredAt;
     }
 }

@@ -1,6 +1,8 @@
 package pe.esgtrazabilidad.recycler.certification.adapter.out.persistence;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -77,5 +79,31 @@ class CertificationRepositoryAdapterIT {
         Optional<Certification> reloaded = certificationRepository.findById(id);
         assertThat(reloaded).isPresent();
         assertThat(reloaded.get().getExpirationDate()).isEqualTo(newExpirationDate);
+    }
+
+    @Test
+    void notifiedExpiredAtRoundTripsThroughUpdateAndIsResetByRenew() {
+        UUID associationId = associationRepository
+                .save(Association.create(
+                        "Asociación notificada IT", "20133333333", "REG-NOTIF", "Dirección", "it@test.pe",
+                        "999999999"))
+                .getId();
+        Certification certification = certificationRepository.save(Certification.create(
+                associationId, "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().minusDays(1)));
+        Instant notifiedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        certification.markNotifiedExpired(notifiedAt);
+        certificationRepository.update(certification);
+
+        Optional<Certification> afterNotify = certificationRepository.findById(certification.getId());
+        assertThat(afterNotify).isPresent();
+        assertThat(afterNotify.get().getNotifiedExpiredAt()).isEqualTo(notifiedAt);
+
+        Certification toRenew = afterNotify.get();
+        toRenew.renew(LocalDate.now().plusYears(1));
+        certificationRepository.update(toRenew);
+
+        Optional<Certification> afterRenew = certificationRepository.findById(certification.getId());
+        assertThat(afterRenew).isPresent();
+        assertThat(afterRenew.get().getNotifiedExpiredAt()).isNull();
     }
 }

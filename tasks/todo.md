@@ -585,18 +585,21 @@
   - **Files likely touched:** 4 new changelog files (recycler-service) + 1 rewritten in place (collection-service), `.../events/outbox/{...}.java`, `.../events/ledger/{CollectionRegisteredLedgerEntity,CollectionRegisteredLedgerJpaRepository}.java`, `AssociationEntity.java`/`AssociationJpaRepository.java`/`AssociationRepository.java`/`AssociationRepositoryAdapter.java`, `.../config/SchedulingConfig.java`, `recycler-service/pom.xml`, plus IT tests
   - **Estimated scope:** Large (12+ files, larger than planned due to the outbox-naming fix touching both services)
 
-- [ ] Task 30: `CollectionRegisteredEventListener` (recycler-service)
+- [x] Task 30: `CollectionRegisteredEventListener` (recycler-service)
   - **Description:** `@RabbitListener` consuming `CollectionRegisteredEvent` (a local, structurally-matching record — not imported from `collection-service`), idempotent via a PK-on-`event_id` ledger insert, then an atomic `incrementTotalKilos` call.
   - **Acceptance criteria:**
-    - [ ] Local `CollectionRegisteredEvent` record matching the producer's JSON shape
-    - [ ] `@RabbitListener(queues = "collection.registered.recycler-service")`, durable queue bound to routing key `collection.record.registered`
-    - [ ] Handler: ledger insert inside `try/catch DataIntegrityViolationException` → duplicate short-circuits (return, no error) → on success, call `incrementTotalKilos`
+    - [x] Local `CollectionRegisteredEvent` record matching the producer's JSON shape
+    - [x] `@RabbitListener(queues = "collection.registered.recycler-service")`, durable queue bound to routing key `collection.record.registered` — `CollectionRegisteredQueueConfig` declares the queue+binding against shared-kernel's already-declared `TopicExchange` bean (injected, not redeclared by name)
+    - [x] **Redesigned from the plan's literal "insert inside try/catch, then increment" shape** — see the real transactional-correctness finding below. `CollectionRegisteredEventProcessor.process()` (a separate `@Transactional` bean, not a private method — self-invocation bypasses Spring's proxy) does the increment *first*, then the ledger insert *last* (flushed explicitly) in one flat transaction. A duplicate-key violation on the flush rolls back the whole transaction, increment included, and rethrows to `CollectionRegisteredEventListener`, which is outside that transaction and catches/swallows `DataIntegrityViolationException` to ack the redelivery without retrying it forever
   - **Verification:**
-    - [ ] Unit tests (Mockito): happy path (ledger insert then increment, in that order); duplicate delivery short-circuits before the increment call
-    - [ ] `mvn -pl recycler-service test` green
+    - [x] Unit tests (Mockito): listener delegates to the processor; a `DataIntegrityViolationException` from the processor is swallowed without rethrowing
+    - [x] `mvn -pl recycler-service test` green
+    - [x] **Real transactional-correctness finding, caught by a real-Postgres IT test, not assumed:** the original design (ledger-insert-first, catch `DataIntegrityViolationException` inline, continue to the increment) needs `Propagation.NESTED` (a DB savepoint) to keep the transaction usable after catching a mid-transaction violation — Postgres aborts an *entire* transaction on any statement error, not just the failing one. Tried it; failed with `NestedTransactionNotSupportedException` — Spring's `JpaTransactionManager`/Hibernate's default `JpaDialect` doesn't support savepoints. Redesigned to increment-first/ledger-insert-last instead, which needs no savepoints at all (either the whole method's transaction commits, or none of it does). Proven by `CollectionRegisteredEventListenerIT`: same event handled twice (simulated redelivery) leaves `totalKilosCollected` unchanged after the second call, with a real duplicate-key violation visible in the log
+    - [x] **Second finding, also real, not assumed:** once a real `@RabbitListener` exists, *every* `@SpringBootTest` IT in the module (not just this task's own) boots a real listener container that tries to connect to whatever `spring.rabbitmq.*` resolves to — the actual local broker, since Postgres-only IT tests don't override it. Verified concretely: stopped the local RabbitMQ container, confirmed this doesn't hard-fail existing tests (Spring AMQP retries lazily) but logs noisy connection-refused stack traces — not hermetic. Fixed by disabling `spring.rabbitmq.listener.simple.auto-startup` globally for the test JVM (same `systemPropertyVariables` mechanism as the outbox-dispatcher flag from Task 27/29); re-verified with RabbitMQ stopped: 41 IT tests green, zero connection-refused log lines. **Apply the identical fix to `collection-service/pom.xml` once Task 36 (`CertificationStatusEventListener`) adds that service's first real `@RabbitListener`.**
+    - [x] `mvn install` — whole reactor still builds; `collection-service verify` re-run as a regression check (unaffected, 38 tests green)
   - **Dependencies:** Task 29
-  - **Files likely touched:** `.../events/consume/CollectionRegisteredEventListener.java`, plus test
-  - **Estimated scope:** Small-Medium (2 files)
+  - **Files likely touched:** `.../events/consume/{CollectionRegisteredEvent,CollectionRegisteredQueueConfig,CollectionRegisteredEventProcessor,CollectionRegisteredEventListener}.java`, `recycler-service/pom.xml`, plus unit + IT tests
+  - **Estimated scope:** Small-Medium (2 files) — grew to 7 due to the two real findings above
 
 ### Checkpoint 15: Direction A wired (unit-level)
 - [ ] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
@@ -682,9 +685,12 @@
     - [ ] Local `CertificationExpiredEvent`/`CertificationRenewedEvent` records (structurally matching `recycler-service`'s)
     - [ ] Queue bound to `certification.expired` and `certification.renewed`
     - [ ] Ledger insert (PK `event_id`, duplicate short-circuits) → `Expired` upserts a `BlockedAssociation` row; `Renewed` removes it
+    - [ ] **Apply Task 30's transactional-correctness fix from the start, don't rediscover it:** a `CertificationStatusEventProcessor`-style separate `@Transactional` bean (not a private method — self-invocation bypasses Spring's proxy) does the block/unblock write *first*, then the ledger insert *last* (flushed explicitly), in one flat transaction. `Propagation.NESTED` does NOT work here either (same `NestedTransactionNotSupportedException` Task 30 hit) — don't try it again
   - **Verification:**
     - [ ] Unit tests (Mockito): expired event blocks; renewed event unblocks; duplicate of either short-circuits before the block-state change
+    - [ ] IT test against real Postgres (mirror `CollectionRegisteredEventListenerIT`): same event handled twice leaves the block state unchanged after the second call
     - [ ] `mvn -pl collection-service test` green
+    - [ ] **Apply Task 30's second fix to `collection-service/pom.xml` too:** this is `collection-service`'s first real `@RabbitListener`, so every `@SpringBootTest` IT in the module will now boot a real listener container that tries to connect to the local broker. Add `spring.rabbitmq.listener.simple.auto-startup=false` to the failsafe `systemPropertyVariables` block (already has the outbox-dispatcher flag from Task 27) — verify by stopping RabbitMQ and confirming the full IT suite stays green with zero connection-refused log lines, same as Task 30's verification
   - **Dependencies:** Task 35
   - **Files likely touched:** `.../events/consume/CertificationStatusEventListener.java`, event record classes, plus tests
   - **Estimated scope:** Medium (4 files)

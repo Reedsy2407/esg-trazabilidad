@@ -2,6 +2,7 @@ package pe.esgtrazabilidad.kernel.amqp;
 
 import java.util.List;
 
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -52,7 +53,13 @@ public class OutboxDispatcher {
         List<OutboxEntry> pending = outboxRepository.findPendingBatch(BATCH_SIZE);
         for (OutboxEntry entry : pending) {
             try {
-                rabbitTemplate.convertAndSend(exchangeName, entry.routingKey(), entry.payloadJson());
+                rabbitTemplate.convertAndSend(exchangeName, entry.routingKey(), entry.payloadJson(), message -> {
+                    // payloadJson is always pre-serialized JSON (see OutboxEntry), but the
+                    // default SimpleMessageConverter stamps a String body as text/plain --
+                    // correct it explicitly so the message is self-describing on the wire.
+                    message.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
+                    return message;
+                });
                 outboxRepository.markProcessed(entry.id());
             } catch (RuntimeException exception) {
                 outboxRepository.markFailed(entry.id());

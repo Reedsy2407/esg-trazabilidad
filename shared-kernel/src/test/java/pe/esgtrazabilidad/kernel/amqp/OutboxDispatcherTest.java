@@ -1,21 +1,28 @@
 package pe.esgtrazabilidad.kernel.amqp;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessagePostProcessor;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 import pe.esgtrazabilidad.kernel.events.OutboxEntry;
 import pe.esgtrazabilidad.kernel.events.OutboxRepository;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -43,10 +50,36 @@ class OutboxDispatcherTest {
         new OutboxDispatcher(outboxRepository, rabbitTemplate, EXCHANGE).dispatchPending();
 
         InOrder inOrder = inOrder(rabbitTemplate, outboxRepository);
-        inOrder.verify(rabbitTemplate).convertAndSend(EXCHANGE.getName(), first.routingKey(), first.payloadJson());
+        inOrder.verify(rabbitTemplate)
+                .convertAndSend(
+                        eq(EXCHANGE.getName()),
+                        eq(first.routingKey()),
+                        eq(first.payloadJson()),
+                        any(MessagePostProcessor.class));
         inOrder.verify(outboxRepository).markProcessed(first.id());
-        inOrder.verify(rabbitTemplate).convertAndSend(EXCHANGE.getName(), second.routingKey(), second.payloadJson());
+        inOrder.verify(rabbitTemplate)
+                .convertAndSend(
+                        eq(EXCHANGE.getName()),
+                        eq(second.routingKey()),
+                        eq(second.payloadJson()),
+                        any(MessagePostProcessor.class));
         inOrder.verify(outboxRepository).markProcessed(second.id());
+    }
+
+    @Test
+    void publishesWithAnApplicationJsonContentType() {
+        OutboxEntry entry = OutboxEntry.create("EventA", "a.routing.key", "{\"a\":1}");
+        when(outboxRepository.findPendingBatch(anyInt())).thenReturn(List.of(entry));
+        ArgumentCaptor<MessagePostProcessor> postProcessor = ArgumentCaptor.forClass(MessagePostProcessor.class);
+
+        new OutboxDispatcher(outboxRepository, rabbitTemplate, EXCHANGE).dispatchPending();
+
+        verify(rabbitTemplate)
+                .convertAndSend(
+                        eq(EXCHANGE.getName()), eq(entry.routingKey()), eq(entry.payloadJson()), postProcessor.capture());
+        Message rawMessage = new Message(entry.payloadJson().getBytes(StandardCharsets.UTF_8), new MessageProperties());
+        Message processedMessage = postProcessor.getValue().postProcessMessage(rawMessage);
+        assertThat(processedMessage.getMessageProperties().getContentType()).isEqualTo(MessageProperties.CONTENT_TYPE_JSON);
     }
 
     @Test
@@ -55,7 +88,7 @@ class OutboxDispatcherTest {
         when(outboxRepository.findPendingBatch(anyInt())).thenReturn(List.of(entry));
         doThrow(new AmqpException("broker unreachable"))
                 .when(rabbitTemplate)
-                .convertAndSend(any(String.class), any(String.class), any(Object.class));
+                .convertAndSend(any(String.class), any(String.class), any(Object.class), any(MessagePostProcessor.class));
 
         new OutboxDispatcher(outboxRepository, rabbitTemplate, EXCHANGE).dispatchPending();
 
@@ -70,12 +103,21 @@ class OutboxDispatcherTest {
         when(outboxRepository.findPendingBatch(anyInt())).thenReturn(List.of(failing, healthy));
         doThrow(new AmqpException("broker unreachable"))
                 .when(rabbitTemplate)
-                .convertAndSend(EXCHANGE.getName(), failing.routingKey(), failing.payloadJson());
+                .convertAndSend(
+                        eq(EXCHANGE.getName()),
+                        eq(failing.routingKey()),
+                        eq(failing.payloadJson()),
+                        any(MessagePostProcessor.class));
 
         new OutboxDispatcher(outboxRepository, rabbitTemplate, EXCHANGE).dispatchPending();
 
         verify(outboxRepository).markFailed(failing.id());
-        verify(rabbitTemplate).convertAndSend(EXCHANGE.getName(), healthy.routingKey(), healthy.payloadJson());
+        verify(rabbitTemplate)
+                .convertAndSend(
+                        eq(EXCHANGE.getName()),
+                        eq(healthy.routingKey()),
+                        eq(healthy.payloadJson()),
+                        any(MessagePostProcessor.class));
         verify(outboxRepository).markProcessed(healthy.id());
     }
 

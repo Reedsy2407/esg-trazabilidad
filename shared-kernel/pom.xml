@@ -45,6 +45,24 @@
             <artifactId>spring-data-commons</artifactId>
         </dependency>
 
+        <!-- OutboxDispatcher's transport: RabbitTemplate for publishing. Both
+             services get this transitively, but neither eagerly connects to
+             the broker at boot: CachingConnectionFactory is lazy by default,
+             and nothing here publishes or listens until later tasks wire it. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
+        <!-- @SchedulerLock annotation + LockProvider interface only: the
+             concrete JDBC-backed provider (shedlock-provider-jdbc-template)
+             is added per-service in Tasks 27/29, wired to that service's own
+             DataSource. -->
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-spring</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

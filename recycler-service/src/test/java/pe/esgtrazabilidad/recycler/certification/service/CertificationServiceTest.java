@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -18,8 +19,10 @@ import pe.esgtrazabilidad.recycler.association.domain.Association;
 import pe.esgtrazabilidad.recycler.association.port.out.AssociationRepository;
 import pe.esgtrazabilidad.recycler.certification.domain.Certification;
 import pe.esgtrazabilidad.recycler.certification.exception.CertificationErrors;
+import pe.esgtrazabilidad.recycler.certification.events.CertificationRenewedEvent;
 import pe.esgtrazabilidad.recycler.certification.port.in.CreateCertificationCommand;
 import pe.esgtrazabilidad.recycler.certification.port.out.CertificationRepository;
+import pe.esgtrazabilidad.recycler.events.publish.CertificationRenewedEventPublisher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -37,13 +40,16 @@ class CertificationServiceTest {
     @Mock
     private AssociationRepository associationRepository;
 
+    @Mock
+    private CertificationRenewedEventPublisher eventPublisher;
+
     private CertificationService service;
 
     private final UUID associationId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        service = new CertificationService(certificationRepository, associationRepository);
+        service = new CertificationService(certificationRepository, associationRepository, eventPublisher);
     }
 
     private Association existingAssociation() {
@@ -141,6 +147,12 @@ class CertificationServiceTest {
 
         assertThat(result.getExpirationDate()).isEqualTo(newExpirationDate);
         verify(certificationRepository).update(certification);
+        ArgumentCaptor<CertificationRenewedEvent> eventCaptor =
+                ArgumentCaptor.forClass(CertificationRenewedEvent.class);
+        verify(eventPublisher).publish(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().certificationId()).isEqualTo(certification.getId());
+        assertThat(eventCaptor.getValue().associationId()).isEqualTo(associationId);
+        assertThat(eventCaptor.getValue().newExpirationDate()).isEqualTo(newExpirationDate);
     }
 
     @Test

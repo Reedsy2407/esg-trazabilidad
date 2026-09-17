@@ -123,9 +123,27 @@
                          harmless to the build result, but real test-isolation noise
                          worth suppressing globally rather than patching every IT test
                          class with its own @TestPropertySource one at a time. Same
-                         fix as collection-service's Task 27. -->
+                         fix as collection-service's Task 27.
+
+                         Every @SpringBootTest IT also now boots a real
+                         CollectionRegisteredEventListener (Task 30): Spring AMQP's
+                         listener container tries to connect to whatever
+                         spring.rabbitmq.* resolves to (the real local broker, since
+                         these Postgres-only IT tests don't override it) at context
+                         startup by default. Confirmed this doesn't hard-fail existing
+                         tests (Spring AMQP retries lazily in the background), but it
+                         logs noisy connection-refused stack traces and makes tests
+                         implicitly depend on a locally-running broker, which isn't
+                         hermetic. auto-startup=false stops the listener container
+                         from connecting/consuming until something explicitly starts
+                         it; none of the current IT tests need it started (they call
+                         the listener directly), and Task 31's real broker-integration
+                         tests will opt back in locally via their own
+                         @TestPropertySource, same pattern as the dispatcher flag
+                         above. -->
                     <systemPropertyVariables>
                         <esg.events.outbox-dispatcher.enabled>false</esg.events.outbox-dispatcher.enabled>
+                        <spring.rabbitmq.listener.simple.auto-startup>false</spring.rabbitmq.listener.simple.auto-startup>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>

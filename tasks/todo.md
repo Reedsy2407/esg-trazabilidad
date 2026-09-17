@@ -602,25 +602,27 @@
   - **Estimated scope:** Small-Medium (2 files) — grew to 7 due to the two real findings above
 
 ### Checkpoint 15: Direction A wired (unit-level)
-- [ ] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
-- [ ] Human review before the end-to-end IT proves it over real RabbitMQ
+- [x] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
+- [x] Human review before the end-to-end IT proves it over real RabbitMQ — approved 2026-09-17
 
-- [ ] Task 31: Direction A end-to-end IT
+- [x] Task 31: Direction A end-to-end IT
   - **Description:** Add a RabbitMQ Testcontainer to both services' IT setups; prove the full flow, redelivery/idempotency, and concurrent-increment atomicity over a real broker and real Postgres.
   - **Acceptance criteria:**
-    - [ ] `rabbitmq:3.13-management-alpine` Testcontainer added alongside the existing Postgres one, both services
-    - [ ] Full-flow IT: `POST` a `CollectionRecord` → message lands on the real queue → `Association.totalKilosCollected` increments by `weightKg`
-    - [ ] Redelivery/idempotency IT: publish the same event twice → `totalKilosCollected` changes only once
-    - [ ] Concurrent-increment IT (real `ExecutorService` threads, real Postgres): two concurrent events for the same association → final total is the exact sum of both
+    - [x] `rabbitmq:3.13-management-alpine` Testcontainer added alongside the existing Postgres one, both services
+    - [x] Full-flow IT: `POST` a `CollectionRecord` → message lands on the real queue → `Association.totalKilosCollected` increments by `weightKg`. Design decision beyond the plan's literal text: since `collection-service` never depends on `recycler-service` (even in tests), a single "real recycler-service context in the same IT" isn't possible without breaking that boundary — split into two tests instead, one per service, each proving its own half of the round trip against the same real exchange/routing-key/JSON shape (already verified structurally consistent in Task 28)
+    - [x] Redelivery/idempotency IT: publish the same event twice → `totalKilosCollected` changes only once — proven over the real broker in `recycler-service`'s own suite
+    - [x] Concurrent-increment IT (real `ExecutorService` threads, real Postgres): two concurrent events for the same association → final total is the exact sum of both — added to `CollectionRegisteredEventListenerIT` (bypasses the broker, same as Task 30's own tests, since the concern being tested is DB-level atomicity, not message-passing)
   - **Verification:**
-    - [ ] `mvn -pl recycler-service verify` and `mvn -pl collection-service verify` green
-    - [ ] Concurrent-increment test is confirmed to actually exercise concurrency (not two sequential calls that happen not to race)
+    - [x] `mvn -pl recycler-service verify` and `mvn -pl collection-service verify` green
+    - [x] Concurrent-increment test confirmed to actually exercise concurrency: a `CountDownLatch` forces both threads to start as close to simultaneously as possible, not two sequential calls that happen not to race
+    - [x] **Real gap found and fixed, not assumed:** no `@RabbitListener` method with a typed (non-`String`) payload could ever have worked — Spring AMQP's default `SimpleMessageConverter` can't deserialize JSON bytes into an arbitrary record. Never surfaced before this task since Task 30's own test called the listener directly, bypassing message conversion. Fixed with shared-kernel's new `RabbitListenerConfig`: a `Jackson2JsonMessageConverter` wrapped inside a dedicated container factory bean, deliberately **not** exposed as its own `MessageConverter` bean — that would also become `RabbitTemplate`'s default converter (Spring Boot auto-detects any single `MessageConverter` bean for both publish and consume), double-JSON-encoding `OutboxDispatcher`'s already-serialized `payloadJson` string. Listeners opt in explicitly via `containerFactory = "jsonRabbitListenerContainerFactory"`. **Apply the same `containerFactory` reference to Task 36's `CertificationStatusEventListener` from the start.**
+    - [x] **Second and third findings, only visible when running the FULL suite, not each new test in isolation:** (1) a live listener/dispatcher left enabled with a fast interval for one test class stays alive in Spring's cached context past that class's own Testcontainers lifecycle, reconnect-looping against now-dead containers and polluting/slowing the rest of the module's test run — fixed with `@DirtiesContext` on both new broker test classes. (2) A 10s `rabbitTemplate.receive(...)` timeout that passed reliably in isolation failed under the full suite's heavier resource contention (confirmed: real failure, `Expecting actual not to be null`, not assumed) — bumped to 30s in both services' broker tests. **Apply both fixes to Task 36's own broker-flow test from the start, and always verify new async/broker tests via the full-suite `verify` run, not just in isolation.**
   - **Dependencies:** Task 30
-  - **Files likely touched:** `.../it/CollectionRegisteredEventFlowIT.java` (or similar, both services), Testcontainers config updates
-  - **Estimated scope:** Large (3-4 files, high test complexity)
+  - **Files likely touched:** `CollectionRegisteredEventBrokerFlowIT.java` (recycler-service), `CollectionRegisteredEventPublishFlowIT.java` (collection-service), `RabbitListenerConfig.java` (shared-kernel), both `pom.xml`s (Testcontainers RabbitMQ dependency), `CollectionRegisteredEventListenerIT.java` (concurrent test added)
+  - **Estimated scope:** Large (9 files — grew from the planned 3-4 due to the message-converter gap and the two full-suite-only findings)
 
 ### Checkpoint 16: Direction A complete and proven end-to-end
-- [ ] All of Direction A's Success Criteria bullets in `SPEC-cross-service-events.md` verified with real evidence
+- [x] All of Direction A's Success Criteria bullets in `SPEC-cross-service-events.md` verified with real evidence — full flow, redelivery, and concurrency all proven against real Postgres/RabbitMQ Testcontainers, not mocks or direct calls alone
 - [ ] Human review before starting Direction B
 
 ## Phase 16: Direction B (recycler-service → collection-service, blocking)
@@ -686,11 +688,13 @@
     - [ ] Queue bound to `certification.expired` and `certification.renewed`
     - [ ] Ledger insert (PK `event_id`, duplicate short-circuits) → `Expired` upserts a `BlockedAssociation` row; `Renewed` removes it
     - [ ] **Apply Task 30's transactional-correctness fix from the start, don't rediscover it:** a `CertificationStatusEventProcessor`-style separate `@Transactional` bean (not a private method — self-invocation bypasses Spring's proxy) does the block/unblock write *first*, then the ledger insert *last* (flushed explicitly), in one flat transaction. `Propagation.NESTED` does NOT work here either (same `NestedTransactionNotSupportedException` Task 30 hit) — don't try it again
+    - [ ] **Apply Task 31's message-converter fix from the start, don't rediscover it:** `@RabbitListener(..., containerFactory = "jsonRabbitListenerContainerFactory")` — the default `SimpleMessageConverter` cannot deserialize JSON into a typed record parameter at all; this is `collection-service`'s first `@RabbitListener` with a non-`String` payload, so this WILL fail immediately without it
   - **Verification:**
     - [ ] Unit tests (Mockito): expired event blocks; renewed event unblocks; duplicate of either short-circuits before the block-state change
     - [ ] IT test against real Postgres (mirror `CollectionRegisteredEventListenerIT`): same event handled twice leaves the block state unchanged after the second call
     - [ ] `mvn -pl collection-service test` green
     - [ ] **Apply Task 30's second fix to `collection-service/pom.xml` too:** this is `collection-service`'s first real `@RabbitListener`, so every `@SpringBootTest` IT in the module will now boot a real listener container that tries to connect to the local broker. Add `spring.rabbitmq.listener.simple.auto-startup=false` to the failsafe `systemPropertyVariables` block (already has the outbox-dispatcher flag from Task 27) — verify by stopping RabbitMQ and confirming the full IT suite stays green with zero connection-refused log lines, same as Task 30's verification
+    - [ ] **When Task 36's own real-broker IT test is written (mirroring Task 31's), apply its findings from the start too:** `@DirtiesContext` on any test class that re-enables a live listener/dispatcher with a fast interval, a generous (30s, not 10s) timeout on any `rabbitTemplate.receive(...)`/polling call, and always verify via the full `mvn -pl collection-service verify` run before declaring it done — Task 31's own timeout bug only appeared under the full suite's resource contention, not in isolation
   - **Dependencies:** Task 35
   - **Files likely touched:** `.../events/consume/CertificationStatusEventListener.java`, event record classes, plus tests
   - **Estimated scope:** Medium (4 files)

@@ -304,13 +304,13 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 - [x] Task 30: `CollectionRegisteredEventListener` (recycler-service) — idempotent, atomic increment; redesigned from the plan's literal shape after `Propagation.NESTED` proved unsupported by `JpaTransactionManager`/Hibernate (caught live via IT test): increment-first, ledger-insert-last in one flat transaction, no savepoints needed. Also found and fixed: every IT test now boots a real listener container that tried to reach the local broker — disabled via `auto-startup=false` for the test JVM, same fix needed again in Task 36
 
 ### Checkpoint 15: Direction A wired (unit-level)
-- [ ] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
-- [ ] Human review before the end-to-end IT proves it over real RabbitMQ
+- [x] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
+- [x] Human review before the end-to-end IT proves it over real RabbitMQ — approved 2026-09-17
 
-- [ ] Task 31: Direction A end-to-end IT (RabbitMQ Testcontainer in both services; full-flow, redelivery/idempotency, and concurrent-increment tests)
+- [x] Task 31: Direction A end-to-end IT (RabbitMQ Testcontainer in both services; full-flow, redelivery/idempotency, and concurrent-increment tests, split one test per service since `collection-service` never depends on `recycler-service` even in tests). Found and fixed: no typed `@RabbitListener` payload could ever have worked without a `Jackson2JsonMessageConverter` (shared-kernel's new `RabbitListenerConfig`, kept off `RabbitTemplate`'s default to avoid double-encoding the outbox's already-serialized JSON); a live listener/dispatcher left running past its own test class pollutes the rest of the suite (`@DirtiesContext`); a 10s timeout that passed in isolation failed under the full suite's contention (bumped to 30s) — all three flagged for Task 36 to apply from the start
 
 ### Checkpoint 16: Direction A complete and proven end-to-end
-- [ ] All of Direction A's Success Criteria bullets verified with real evidence
+- [x] All of Direction A's Success Criteria bullets verified with real evidence
 - [ ] Human review before starting Direction B
 
 ### Phase 16: Direction B (recycler-service → collection-service, blocking)
@@ -324,7 +324,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 - [ ] Human review before wiring collection-service's consumption side
 
 - [ ] Task 35: collection-service `certification_status_ledger` + `blocked_association` schema/domain (Liquibase `v0.1.6`, `v0.1.7`; `BlockedAssociation` minimal projection domain + adapter)
-- [ ] Task 36: `CertificationStatusEventListener` — one listener, both event types, idempotent ledger insert then block/unblock (unit tests: expired blocks, renewed unblocks, duplicate short-circuit); apply Task 30's block-first/ledger-insert-last pattern and `auto-startup=false` test fix from the start
+- [ ] Task 36: `CertificationStatusEventListener` — one listener, both event types, idempotent ledger insert then block/unblock (unit tests: expired blocks, renewed unblocks, duplicate short-circuit); apply Task 30's block-first/ledger-insert-last pattern, Task 30's `auto-startup=false` test fix, and Task 31's `jsonRabbitListenerContainerFactory`/`@DirtiesContext`/30s-timeout fixes, all from the start
 - [ ] Task 37: Enforce the block in `CollectionRecordService.create()` — new `CollectionErrors.COL-009 ASSOCIATION_BLOCKED` (409) (unit + IT)
 
 ### Checkpoint 18: Direction B wired (unit-level)

@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.recycler.certification.adapter.out.persistence;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,6 +47,13 @@ class CertificationRepositoryAdapter implements CertificationRepository {
         return jpaRepository
                 .findAll(CertificationSpecifications.hasAssociationId(associationId), pageable)
                 .map(this::toDomain);
+    }
+
+    @Override
+    public List<Certification> findExpiredAndNotYetNotified() {
+        return jpaRepository.findExpiredAndNotYetNotified().stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     private CertificationEntity toEntity(Certification certification) {

@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.recycler.certification.port.out;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,4 +18,11 @@ public interface CertificationRepository {
     Optional<Certification> findById(UUID id);
 
     Page<Certification> findAll(UUID associationId, Pageable pageable);
+
+    /**
+     * Used by CertificationExpiryScanJob (Task 33) -- mirrors
+     * Certification.isExpired()'s own definition of "expired"
+     * (expirationDate before today), plus "never notified".
+     */
+    List<Certification> findExpiredAndNotYetNotified();
 }

@@ -3,6 +3,7 @@ package pe.esgtrazabilidad.recycler.certification.adapter.out.persistence;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -105,5 +106,31 @@ class CertificationRepositoryAdapterIT {
         Optional<Certification> afterRenew = certificationRepository.findById(certification.getId());
         assertThat(afterRenew).isPresent();
         assertThat(afterRenew.get().getNotifiedExpiredAt()).isNull();
+    }
+
+    private UUID newAssociationId(String ruc) {
+        return associationRepository
+                .save(Association.create("Asociación " + ruc, ruc, "REG-" + ruc, "Dirección", "it@test.pe", "999999999"))
+                .getId();
+    }
+
+    @Test
+    void findExpiredAndNotYetNotifiedReturnsOnlyExpiredCertificationsNeverNotified() {
+        // Proves the query's WHERE clause, not just that the method exists --
+        // a Mockito test can't validate this, only real Postgres can.
+        Certification expiredNotNotified = certificationRepository.save(Certification.create(
+                newAssociationId("20111111111"), "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().minusDays(1)));
+
+        Certification expiredAlreadyNotified = certificationRepository.save(Certification.create(
+                newAssociationId("20122222222"), "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().minusDays(1)));
+        expiredAlreadyNotified.markNotifiedExpired(Instant.now());
+        certificationRepository.update(expiredAlreadyNotified);
+
+        certificationRepository.save(Certification.create(
+                newAssociationId("20155555555"), "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().plusYears(1)));
+
+        List<Certification> found = certificationRepository.findExpiredAndNotYetNotified();
+
+        assertThat(found).extracting(Certification::getId).containsExactly(expiredNotNotified.getId());
     }
 }

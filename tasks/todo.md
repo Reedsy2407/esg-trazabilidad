@@ -643,18 +643,20 @@
   - **Files likely touched:** `Certification.java`, `CertificationEntity.java`, `CertificationRepositoryAdapter.java`, plus tests
   - **Estimated scope:** Small-Medium (5 files)
 
-- [ ] Task 33: `CertificationExpiryScanJob` + `CertificationExpiredEventPublisher`
+- [x] Task 33: `CertificationExpiryScanJob` + `CertificationExpiredEventPublisher`
   - **Description:** New `@Scheduled` + `@SchedulerLock` job that finds certifications where `isExpired()` is true and `notifiedExpiredAt IS NULL`, publishes `CertificationExpiredEvent` per one found (outbox write), and sets `notifiedExpiredAt` — all in one transaction per certification.
   - **Acceptance criteria:**
-    - [ ] `CertificationExpiredEvent` record: `associationId, certificationId, expiredAt`
-    - [ ] `CertificationExpiryScanJob`: distinct `@SchedulerLock` name from `OutboxDispatcher`'s
-    - [ ] Finds only expired + not-yet-notified certifications; publishes + sets the flag atomically per certification
+    - [x] `CertificationExpiredEvent` record: `certificationId, associationId, expiredAt` (plus `eventId`/`occurredAt` from `DomainEvent`) — mirrors `CollectionRegisteredEvent`'s exact shape from Task 28
+    - [x] `CertificationExpiryScanJob`: distinct `@SchedulerLock` name (`certificationExpiryScanJob`) from `OutboxDispatcher`'s (`outboxDispatcher`)
+    - [x] Finds only expired + not-yet-notified certifications; publishes + sets the flag atomically per certification
   - **Verification:**
-    - [ ] Unit tests (Mockito): finds only the right certifications; sets the flag; doesn't touch an already-notified expired certification; doesn't touch a non-expired one
-    - [ ] `mvn -pl recycler-service test` green
+    - [x] Unit tests (Mockito): `CertificationExpiryProcessorTest` proves publish+markNotifiedExpired+update all happen per certification; `CertificationExpiryScanJobTest` proves the job processes every certification the repository returns and does nothing when the repository returns none (the "doesn't touch an already-notified/non-expired certification" criterion is proven at the repository-query layer instead — see `CertificationRepositoryAdapterIT`'s real-Postgres test below, since a Mockito test can't validate a `WHERE` clause)
+    - [x] `mvn -pl recycler-service test` and `verify` green — 72 unit tests, 46 IT tests (both +9/+1 beyond Task 32's baseline)
+    - [x] `mvn install` — whole reactor still builds
+  - **Real gap found:** the plan's acceptance criteria didn't call out *where* "finds only expired + not-yet-notified" actually gets proven. Added `CertificationRepository.findExpiredAndNotYetNotified()` (port + `@Query` + adapter) as a prerequisite, with its own real-Postgres IT test (`findExpiredAndNotYetNotifiedReturnsOnlyExpiredCertificationsNeverNotified`, 3 certifications: expired+not-notified, expired+already-notified, not-yet-expired) — this is the actual proof of the job's filtering logic, not the job's own Mockito tests, which can only prove delegation.
   - **Dependencies:** Task 32
-  - **Files likely touched:** `.../certification/job/CertificationExpiryScanJob.java`, `.../certification/events/CertificationExpiredEvent.java`, `.../events/publish/CertificationExpiredEventPublisher.java`, plus tests
-  - **Estimated scope:** Medium (4 files)
+  - **Files touched:** `.../certification/job/CertificationExpiryScanJob.java`, `.../certification/job/CertificationExpiryProcessor.java`, `.../certification/events/CertificationExpiredEvent.java`, `.../events/publish/CertificationExpiredEventPublisher.java`, `.../certification/port/out/CertificationRepository.java`, `.../certification/adapter/out/persistence/CertificationJpaRepository.java`, `.../certification/adapter/out/persistence/CertificationRepositoryAdapter.java`, plus tests
+  - **Estimated scope:** Medium (4 files) — actual: 7 main files + 4 test files, since the repository-layer query wasn't already in place
 
 - [ ] Task 34: `CertificationRenewedEventPublisher`
   - **Description:** `recycler-service` defines `CertificationRenewedEvent`; hook its outbox write into `CertificationService.renew()`'s existing transaction (same call as `certificationRepository.update(certification)`).

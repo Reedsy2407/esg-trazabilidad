@@ -317,10 +317,10 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 - [x] Task 32: `Certification.notifiedExpiredAt` field + `renew()` resets it to `null` (unit tests + a real-Postgres IT test proving the round trip at microsecond precision). Mutator is `public` (`markNotifiedExpired`), not literally package-private as first worded — `CertificationExpiryScanJob` lives in a sibling package, so Java package-private access can't apply; matches the established `Association.suspend()`/`activate()` convention instead
 - [x] Task 33: `CertificationExpiryScanJob` (ShedLock-guarded `@Scheduled`, lock name `certificationExpiryScanJob`) + `CertificationExpiredEventPublisher` + `CertificationExpiryProcessor` (separate `@Transactional` bean, same self-invocation reasoning as `CollectionRegisteredEventProcessor` from Task 30) + `CertificationRepository.findExpiredAndNotYetNotified()` (proven against real Postgres, not just Mockito, since it's the query's `WHERE` clause that matters)
-- [ ] Task 34: `CertificationRenewedEventPublisher`, hooked into `CertificationService.renew()`'s existing transaction (unit test)
+- [x] Task 34: `CertificationRenewedEventPublisher`, hooked into `CertificationService.renew()`'s existing transaction (`@Transactional` added to `renew()`, mirrors `CollectionRecordService.create()`'s Task 28 pattern)
 
 ### Checkpoint 17: recycler-service publishing side complete
-- [ ] `mvn -pl recycler-service verify` green
+- [x] `mvn -pl recycler-service verify` green
 - [ ] Human review before wiring collection-service's consumption side
 
 - [ ] Task 35: collection-service `certification_status_ledger` + `blocked_association` schema/domain (Liquibase `v0.1.6`, `v0.1.7`; `BlockedAssociation` minimal projection domain + adapter)

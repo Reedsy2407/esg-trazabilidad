@@ -658,20 +658,21 @@
   - **Files touched:** `.../certification/job/CertificationExpiryScanJob.java`, `.../certification/job/CertificationExpiryProcessor.java`, `.../certification/events/CertificationExpiredEvent.java`, `.../events/publish/CertificationExpiredEventPublisher.java`, `.../certification/port/out/CertificationRepository.java`, `.../certification/adapter/out/persistence/CertificationJpaRepository.java`, `.../certification/adapter/out/persistence/CertificationRepositoryAdapter.java`, plus tests
   - **Estimated scope:** Medium (4 files) — actual: 7 main files + 4 test files, since the repository-layer query wasn't already in place
 
-- [ ] Task 34: `CertificationRenewedEventPublisher`
+- [x] Task 34: `CertificationRenewedEventPublisher`
   - **Description:** `recycler-service` defines `CertificationRenewedEvent`; hook its outbox write into `CertificationService.renew()`'s existing transaction (same call as `certificationRepository.update(certification)`).
   - **Acceptance criteria:**
-    - [ ] `CertificationRenewedEvent` record: `associationId, certificationId, newExpirationDate`
-    - [ ] `CertificationService.renew()` writes the outbox row in the same transaction as its existing `update()` call
+    - [x] `CertificationRenewedEvent` record: `certificationId, associationId, newExpirationDate` (plus `eventId`/`occurredAt` from `DomainEvent`) — mirrors `CertificationExpiredEvent`'s (Task 33) shape
+    - [x] `CertificationService.renew()` writes the outbox row in the same transaction as its existing `update()` call — `renew()` wasn't `@Transactional` before this task (didn't need to be, with a single repository call); added it, same as `CollectionRecordService.create()`'s Task 28 pattern
   - **Verification:**
-    - [ ] Unit test (Mockito): `renew()` also writes the outbox row with the right payload
-    - [ ] `mvn -pl recycler-service test` green
+    - [x] Unit test (Mockito): `CertificationRenewedEventPublisherTest` proves the outbox row's shape (id/timestamp reuse, event type, routing key, payload); `CertificationServiceTest.renewExtendsTheExpirationDate` proves `renew()` calls `eventPublisher.publish()` with the right event after `update()`
+    - [x] `mvn -pl recycler-service test` and `verify` green — 74 unit tests, 46 IT tests (+2/+0 beyond Task 33's baseline — no new IT needed, this task is pure unit-level wiring)
+    - [x] `mvn install` — whole reactor still builds
   - **Dependencies:** Task 32
-  - **Files likely touched:** `.../certification/events/CertificationRenewedEvent.java`, `.../events/publish/CertificationRenewedEventPublisher.java`, `CertificationService.java`, plus test
-  - **Estimated scope:** Small-Medium (3 files)
+  - **Files touched:** `.../certification/events/CertificationRenewedEvent.java`, `.../events/publish/CertificationRenewedEventPublisher.java`, `CertificationService.java`, `CertificationServiceTest.java`, plus 2 new test files
+  - **Estimated scope:** Small-Medium (3 files) — actual: 3 main files + 3 test files (existing `CertificationServiceTest` also needed its constructor call updated)
 
 ### Checkpoint 17: recycler-service publishing side complete
-- [ ] `mvn -pl recycler-service verify` green
+- [x] `mvn -pl recycler-service verify` green
 - [ ] Human review before wiring collection-service's consumption side
 
 - [ ] Task 35: collection-service `certification_status_ledger` + `blocked_association` schema/domain

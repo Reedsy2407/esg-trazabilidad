@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -18,8 +19,10 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import pe.esgtrazabilidad.collection.collectionrecord.domain.CollectionRecord;
+import pe.esgtrazabilidad.collection.collectionrecord.events.CollectionRegisteredEvent;
 import pe.esgtrazabilidad.collection.collectionrecord.port.in.CreateCollectionRecordCommand;
 import pe.esgtrazabilidad.collection.collectionrecord.port.out.CollectionRecordRepository;
+import pe.esgtrazabilidad.collection.events.publish.CollectionRegisteredEventPublisher;
 import pe.esgtrazabilidad.collection.exception.CollectionErrors;
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
@@ -46,6 +49,9 @@ class CollectionRecordServiceTest {
     @Mock
     private CollectionScheduleRepository scheduleRepository;
 
+    @Mock
+    private CollectionRegisteredEventPublisher eventPublisher;
+
     private CollectionRecordService service;
 
     private final UUID neighborId = UUID.randomUUID();
@@ -53,7 +59,7 @@ class CollectionRecordServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new CollectionRecordService(repository, neighborRepository, scheduleRepository);
+        service = new CollectionRecordService(repository, neighborRepository, scheduleRepository, eventPublisher);
     }
 
     private Neighbor sampleNeighbor() {
@@ -81,6 +87,23 @@ class CollectionRecordServiceTest {
         assertThat(result.getScheduleId()).isEqualTo(schedule.getId());
         assertThat(result.getNeighborId()).isEqualTo(neighborId);
         verify(repository).save(any(CollectionRecord.class));
+    }
+
+    @Test
+    void createPublishesACollectionRegisteredEventForTheSavedRecord() {
+        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(repository.save(any(CollectionRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CollectionRecord result = service.create(sampleCommand(null));
+
+        ArgumentCaptor<CollectionRegisteredEvent> captor = ArgumentCaptor.forClass(CollectionRegisteredEvent.class);
+        verify(eventPublisher).publish(captor.capture());
+        CollectionRegisteredEvent event = captor.getValue();
+        assertThat(event.recordId()).isEqualTo(result.getId());
+        assertThat(event.neighborId()).isEqualTo(neighborId);
+        assertThat(event.associationId()).isEqualTo(associationId);
+        assertThat(event.collectionDate()).isEqualTo(result.getCollectionDate());
+        assertThat(event.weightKg()).isEqualTo(result.getWeightKg());
     }
 
     @Test

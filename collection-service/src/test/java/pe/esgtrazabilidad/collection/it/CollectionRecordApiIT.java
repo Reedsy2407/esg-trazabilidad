@@ -5,6 +5,7 @@ import io.restassured.http.ContentType;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -13,9 +14,15 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.List;
 import java.util.UUID;
 
+import pe.esgtrazabilidad.kernel.events.OutboxEntry;
+import pe.esgtrazabilidad.kernel.events.OutboxRepository;
+import pe.esgtrazabilidad.kernel.events.OutboxStatus;
+
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -38,6 +45,9 @@ class CollectionRecordApiIT {
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private OutboxRepository outboxRepository;
 
     @BeforeEach
     void setUpRestAssured() {
@@ -126,6 +136,30 @@ class CollectionRecordApiIT {
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(id));
+    }
+
+    @Test
+    void creatingARecordWritesAPendingOutboxEntry() {
+        String neighborId = createNeighbor("Ana Torres IT Outbox");
+        String associationId = UUID.randomUUID().toString();
+
+        String id = given()
+                .contentType(ContentType.JSON)
+                .body(createRecordRequest(null, associationId, "2026-01-05", "5"))
+                .when()
+                .post("/neighbors/{neighborId}/collection-records", neighborId)
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        List<OutboxEntry> pending = outboxRepository.findPendingBatch(50);
+        assertThat(pending)
+                .anySatisfy(entry -> {
+                    assertThat(entry.routingKey()).isEqualTo("collection.record.registered");
+                    assertThat(entry.status()).isEqualTo(OutboxStatus.NEW);
+                    assertThat(entry.payloadJson()).contains(id);
+                });
     }
 
     @Test

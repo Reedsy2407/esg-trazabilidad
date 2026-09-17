@@ -6,13 +6,16 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import pe.esgtrazabilidad.collection.collectionrecord.domain.CollectionRecord;
+import pe.esgtrazabilidad.collection.collectionrecord.events.CollectionRegisteredEvent;
 import pe.esgtrazabilidad.collection.collectionrecord.port.in.CreateCollectionRecordCommand;
 import pe.esgtrazabilidad.collection.collectionrecord.port.in.CreateCollectionRecordUseCase;
 import pe.esgtrazabilidad.collection.collectionrecord.port.in.GetCollectionRecordUseCase;
 import pe.esgtrazabilidad.collection.collectionrecord.port.in.ListCollectionRecordsUseCase;
 import pe.esgtrazabilidad.collection.collectionrecord.port.out.CollectionRecordRepository;
+import pe.esgtrazabilidad.collection.events.publish.CollectionRegisteredEventPublisher;
 import pe.esgtrazabilidad.collection.exception.CollectionErrors;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
 import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
@@ -26,17 +29,24 @@ class CollectionRecordService
     private final CollectionRecordRepository repository;
     private final NeighborRepository neighborRepository;
     private final CollectionScheduleRepository scheduleRepository;
+    private final CollectionRegisteredEventPublisher eventPublisher;
 
     CollectionRecordService(
             CollectionRecordRepository repository,
             NeighborRepository neighborRepository,
-            CollectionScheduleRepository scheduleRepository) {
+            CollectionScheduleRepository scheduleRepository,
+            CollectionRegisteredEventPublisher eventPublisher) {
         this.repository = repository;
         this.neighborRepository = neighborRepository;
         this.scheduleRepository = scheduleRepository;
+        this.eventPublisher = eventPublisher;
     }
 
+    // The outbox write (inside eventPublisher.publish()) must land in the same
+    // DB transaction as repository.save() -- neither call gets one on its own
+    // otherwise, since each is a separate SimpleJpaRepository method.
     @Override
+    @Transactional
     public CollectionRecord create(CreateCollectionRecordCommand command) {
         neighborRepository
                 .findById(command.neighborId())
@@ -62,7 +72,9 @@ class CollectionRecordService
                 command.associationId(),
                 command.collectionDate(),
                 command.weightKg());
-        return repository.save(record);
+        CollectionRecord saved = repository.save(record);
+        eventPublisher.publish(CollectionRegisteredEvent.from(saved));
+        return saved;
     }
 
     @Override

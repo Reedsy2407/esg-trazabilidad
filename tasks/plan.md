@@ -315,7 +315,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Phase 16: Direction B (recycler-service → collection-service, blocking)
 
-- [ ] Task 32: `Certification.notifiedExpiredAt` field + `renew()` resets it to `null` (unit tests)
+- [x] Task 32: `Certification.notifiedExpiredAt` field + `renew()` resets it to `null` (unit tests + a real-Postgres IT test proving the round trip at microsecond precision). Mutator is `public` (`markNotifiedExpired`), not literally package-private as first worded — `CertificationExpiryScanJob` lives in a sibling package, so Java package-private access can't apply; matches the established `Association.suspend()`/`activate()` convention instead
 - [ ] Task 33: `CertificationExpiryScanJob` (ShedLock-guarded `@Scheduled`) + `CertificationExpiredEventPublisher` (unit tests: finds only expired+not-yet-notified certifications)
 - [ ] Task 34: `CertificationRenewedEventPublisher`, hooked into `CertificationService.renew()`'s existing transaction (unit test)
 

@@ -627,18 +627,21 @@
 
 ## Phase 16: Direction B (recycler-service → collection-service, blocking)
 
-- [ ] Task 32: `Certification.notifiedExpiredAt` + `renew()` reset
+- [x] Task 32: `Certification.notifiedExpiredAt` + `renew()` reset
   - **Description:** Add the nullable `notifiedExpiredAt` field to `Certification`, and modify `renew()` to reset it to `null` in the same call as its existing expiration-date validation — closes the user-caught gap where a certification renewed and later re-expired would never be re-notified.
   - **Acceptance criteria:**
-    - [ ] `Certification` gains `notifiedExpiredAt` (nullable `Instant`), settable only via a package-visible method used by the scan job
-    - [ ] `renew()` resets it to `null` in the same call as its existing date-range validation
-    - [ ] `CertificationEntity` gains the column; extends the existing `existing()`/`update()` path from Task 12, doesn't rebuild it
+    - [x] `Certification` gains `notifiedExpiredAt` (nullable `Instant`), settable via `markNotifiedExpired(Instant)`. Not literally Java package-private, unlike the plan's original wording: `CertificationExpiryScanJob` (Task 33) will live in a sibling `certification.job` package, and this codebase's own established convention for a domain mutator called from a sibling service/job package is `public` with a restrictive Javadoc (matches `Association.suspend()`/`activate()`), not Java-level access control, which can't span sibling packages anyway
+    - [x] `renew()` resets it to `null` in the same call as its existing date-range validation
+    - [x] `CertificationEntity` gains the column; extends the existing `existing()`/`update()` path from Task 12, doesn't rebuild it
   - **Verification:**
-    - [ ] Unit tests: `renew()` resets `notifiedExpiredAt` to `null`; a fresh `Certification.create()` starts with it `null`
-    - [ ] `mvn -pl recycler-service test` green
+    - [x] RED→GREEN: updated `CertificationTest`'s existing `reconstruct()` call site first (new 6th parameter), confirmed the compile failure, then implemented
+    - [x] Unit tests: `renew()` resets `notifiedExpiredAt` to `null`; a fresh `Certification.create()` starts with it `null`; `markNotifiedExpired()` sets the timestamp — 11 domain tests (was 8)
+    - [x] IT test beyond the plan's literal scope: `notifiedExpiredAtRoundTripsThroughUpdateAndIsResetByRenew` proves the value survives a real Postgres round trip at microsecond precision (`Instant.now()` truncated to `ChronoUnit.MICROS` to match Postgres `timestamp` precision) and is genuinely reset to `null` in the database, not just the in-memory domain object
+    - [x] `mvn -pl recycler-service test` and `verify` green — 63 unit tests, 45 IT tests (both +1 net beyond the previous baseline plus the new suite)
+    - [x] `mvn install` — whole reactor still builds
   - **Dependencies:** Task 29 (schema)
   - **Files likely touched:** `Certification.java`, `CertificationEntity.java`, `CertificationRepositoryAdapter.java`, plus tests
-  - **Estimated scope:** Small-Medium (4 files)
+  - **Estimated scope:** Small-Medium (5 files)
 
 - [ ] Task 33: `CertificationExpiryScanJob` + `CertificationExpiredEventPublisher`
   - **Description:** New `@Scheduled` + `@SchedulerLock` job that finds certifications where `isExpired()` is true and `notifiedExpiredAt IS NULL`, publishes `CertificationExpiredEvent` per one found (outbox write), and sets `notifiedExpiredAt` — all in one transaction per certification.

@@ -665,11 +665,13 @@
     - [x] `CertificationService.renew()` writes the outbox row in the same transaction as its existing `update()` call — `renew()` wasn't `@Transactional` before this task (didn't need to be, with a single repository call); added it, same as `CollectionRecordService.create()`'s Task 28 pattern
   - **Verification:**
     - [x] Unit test (Mockito): `CertificationRenewedEventPublisherTest` proves the outbox row's shape (id/timestamp reuse, event type, routing key, payload); `CertificationServiceTest.renewExtendsTheExpirationDate` proves `renew()` calls `eventPublisher.publish()` with the right event after `update()`
-    - [x] `mvn -pl recycler-service test` and `verify` green — 74 unit tests, 46 IT tests (+2/+0 beyond Task 33's baseline — no new IT needed, this task is pure unit-level wiring)
+    - [x] Real-Postgres IT: `CertificationApiIT.renewingACertificationExtendsItsExpirationDateAndClearsExpiredStatus` extended with a direct `JdbcTemplate` query against `outbox_event_recycler`, confirming a `NEW` row with `event_type = CertificationRenewedEvent` and the right `certificationId` in its payload — same direct-SQL standard as Task 28's `creatingARecordWritesAPendingOutboxEntry` and Task 33's `findExpiredAndNotYetNotifiedReturnsOnlyExpiredCertificationsNeverNotified`
+    - [x] `mvn -pl recycler-service test` and `verify` green — 74 unit tests, 46 IT tests
     - [x] `mvn install` — whole reactor still builds
+  - **Real gap found:** initially closed this task claiming "no new IT needed, pure unit-level wiring" — wrong. A Mockito test on `CertificationService` only proves `renew()` calls `publish()`; it can't prove the outbox write and the certification update actually commit together in one real transaction, which is the entire point of Task 28's and Task 33's established direct-SQL verification standard. Caught by the user, fixed by extending `CertificationApiIT` instead of adding a new test class, since the existing renew-flow test already had the right setup.
   - **Dependencies:** Task 32
-  - **Files touched:** `.../certification/events/CertificationRenewedEvent.java`, `.../events/publish/CertificationRenewedEventPublisher.java`, `CertificationService.java`, `CertificationServiceTest.java`, plus 2 new test files
-  - **Estimated scope:** Small-Medium (3 files) — actual: 3 main files + 3 test files (existing `CertificationServiceTest` also needed its constructor call updated)
+  - **Files touched:** `.../certification/events/CertificationRenewedEvent.java`, `.../events/publish/CertificationRenewedEventPublisher.java`, `CertificationService.java`, `CertificationServiceTest.java`, `CertificationApiIT.java`, plus 2 new test files
+  - **Estimated scope:** Small-Medium (3 files) — actual: 3 main files + 4 test files (existing `CertificationServiceTest` needed its constructor call updated; existing `CertificationApiIT` needed the real-Postgres outbox assertion)
 
 ### Checkpoint 17: recycler-service publishing side complete
 - [x] `mvn -pl recycler-service verify` green

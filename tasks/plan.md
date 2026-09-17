@@ -298,7 +298,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 ### Phase 15: Direction A (collection-service → recycler-service, kilos total)
 
-- [ ] Task 27: collection-service outbox + shedlock schema (Liquibase `v0.1.4` outbox, `v0.1.5` `shedlock_collection`; `OutboxEventEntity`/adapter implementing shared-kernel's `OutboxRepository`; `LockProvider` bean configured with `withTableName("shedlock_collection")`)
+- [x] Task 27: collection-service outbox + shedlock schema (Liquibase `v0.1.4` outbox, `v0.1.5` `shedlock_collection`; `OutboxEventEntity`/adapter implementing shared-kernel's `OutboxRepository`; `LockProvider` bean configured with `withTableName("shedlock_collection")`; `SchedulingConfig` activates `@EnableScheduling`/`@EnableSchedulerLock`, verified live against the real table)
 - [ ] Task 28: `CollectionRegisteredEvent` + publisher, hooked into `CollectionRecordService.create()`'s existing transaction (unit + IT)
 - [ ] Task 29: recycler-service event-infrastructure schema (Liquibase `v0.1.3` outbox, `v0.1.4` ledger, `v0.1.5` alter association+certification, `v0.1.6` `shedlock_recycler`; outbox adapter; ledger entity/repo; `AssociationJpaRepository.incrementTotalKilos` atomic `UPDATE`; `LockProvider` bean configured with `withTableName("shedlock_recycler")`)
 - [ ] Task 30: `CollectionRegisteredEventListener` (recycler-service) — idempotent ledger insert then atomic increment (unit tests: happy path, duplicate short-circuit)

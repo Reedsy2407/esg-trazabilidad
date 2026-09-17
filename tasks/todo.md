@@ -531,18 +531,22 @@
 
 ## Phase 15: Direction A (collection-service → recycler-service, kilos total)
 
-- [ ] Task 27: collection-service outbox + shedlock schema
+- [x] Task 27: collection-service outbox + shedlock schema
   - **Description:** `collection-service`'s own outbox table (Liquibase `v0.1.4`) and its own distinctly-named `shedlock_collection` table (`v0.1.5`) — never a table literally named `shedlock`, which would collide with `recycler-service`'s own ShedLock table on the shared Postgres database (user-caught risk, resolved in `SPEC-cross-service-events.md`'s Resolved Decisions) — plus the JPA entity/repo/adapter implementing shared-kernel's `OutboxRepository`, plus a `LockProvider` bean wired to `collection-service`'s own `DataSource`.
   - **Acceptance criteria:**
-    - [ ] `v0.1.4_create_outbox_event_table.yaml`, `v0.1.5_create_shedlock_collection_table.yaml` — table named `shedlock_collection`, not `shedlock` (ShedLock's standard DDL: `name` PK, `lock_until`, `locked_at`, `locked_by`)
-    - [ ] `OutboxEventEntity`/`OutboxEventJpaRepository`/`OutboxEventRepositoryAdapter` implementing `OutboxRepository`
-    - [ ] `shedlock-provider-jdbc-template` added to `collection-service/pom.xml`; `LockProvider` bean built via `JdbcTemplateLockProvider.Configuration.builder().withJdbcTemplate(...).withTableName("shedlock_collection").build()`
+    - [x] `v0.1.4_create_outbox_event_table.yaml` (with a `status`+`created_at` index for the dispatcher's poll), `v0.1.5_create_shedlock_collection_table.yaml` — table named `shedlock_collection`, not `shedlock` (ShedLock's standard DDL: `name` PK, `lock_until`, `locked_at`, `locked_by`)
+    - [x] `OutboxEventEntity`/`OutboxEventJpaRepository`/`OutboxEventRepositoryAdapter` implementing `OutboxRepository` — no `existing()`/`update()` path: `markProcessed`/`markFailed` are atomic `@Modifying` status-flip `UPDATE`s, not domain-validated mutations, so there's nothing to merge through the entity
+    - [x] `shedlock-provider-jdbc-template` added to `collection-service/pom.xml`; `LockProvider` bean built via `JdbcTemplateLockProvider.Configuration.builder().withJdbcTemplate(...).withTableName("shedlock_collection").build()`, in a new `SchedulingConfig` that also adds `@EnableScheduling`/`@EnableSchedulerLock` — needed for `OutboxDispatcher` to actually activate now that an `OutboxRepository` bean exists, not just compile
   - **Verification:**
-    - [ ] IT test proving a saved `OutboxEventEntity` round-trips
-    - [ ] `mvn -pl collection-service verify` green
-    - [ ] Manual/IT check: booting `collection-service` after `recycler-service` has already created its own `shedlock_recycler` table does not error — proves the two tables are genuinely independent, not just non-colliding by luck of boot order
+    - [x] RED→GREEN: IT test written first against the not-yet-existing adapter, confirmed failing (`No qualifying bean of type OutboxRepository`), then entity/repo/adapter implemented to pass
+    - [x] Real gap found via RED, not assumed: `@Modifying` query methods aren't transactional just by being annotated (`TransactionRequiredException`) — fixed with `@Transactional` on `OutboxEventJpaRepository.updateStatus`
+    - [x] IT test proving a saved `OutboxEventEntity` round-trips, `markProcessed` removes it from the pending batch, `markFailed` keeps it pending for retry (proving the retry semantic `OutboxDispatcher`'s own Task-26 Javadoc documents)
+    - [x] `mvn -pl collection-service verify` green — 36 tests (was 33)
+    - [x] Second gap found and fixed, beyond the plan's literal scope: the now-live `OutboxDispatcher`'s 5s tick raced every other `@SpringBootTest` IT's own Testcontainers teardown, logging a noisy connection-refused stack trace (harmless to the build result, but real test-isolation noise). Disabled globally for the `failsafe` test JVM via `systemPropertyVariables` in `collection-service/pom.xml`, rather than patching each of the 5 existing IT test classes
+    - [x] Manual live-boot check: `outboxDispatcher` lock row confirmed present in the real `shedlock_collection` table (`lock_until`/`locked_at`/`locked_by` all populated) after letting the service run past one 5s tick — proves the whole chain (schema → adapter → `LockProvider` → `@EnableScheduling` → `@SchedulerLock` → `OutboxDispatcher`) genuinely works end-to-end, not just compiles
+    - [ ] Booting `collection-service` alongside `recycler-service`'s own `shedlock_recycler` table — deferred to Task 29, since `recycler-service` doesn't have that table yet
   - **Dependencies:** Task 26
-  - **Files likely touched:** `collection-service/src/main/resources/db/changelog/changes/v0.1.4_*.yaml`, `v0.1.5_*.yaml`, `collection-service/pom.xml`, `.../events/outbox/{OutboxEventEntity,OutboxEventJpaRepository,OutboxEventRepositoryAdapter}.java`, `LockProvider` config class, plus IT test
+  - **Files likely touched:** `collection-service/src/main/resources/db/changelog/changes/v0.1.4_*.yaml`, `v0.1.5_*.yaml`, `collection-service/pom.xml`, `.../events/outbox/{OutboxEventEntity,OutboxEventJpaRepository,OutboxEventRepositoryAdapter}.java`, `.../config/SchedulingConfig.java`, plus IT test
   - **Estimated scope:** Medium (6 files)
 
 - [ ] Task 28: `CollectionRegisteredEvent` + publisher

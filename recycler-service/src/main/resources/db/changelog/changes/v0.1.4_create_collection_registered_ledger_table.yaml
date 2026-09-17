@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.4-create-collection-registered-ledger-table
+      author: esg-trazabilidad
+      comment: >
+        PK on event_id gives idempotent consumption for free via the same
+        DataIntegrityViolationException -> getConstraintName() pattern already
+        used everywhere else in this codebase for TOCTOU races -- a redelivered
+        CollectionRegisteredEvent fails this insert and the listener short-circuits
+        instead of double-incrementing Association.totalKilosCollected.
+      changes:
+        - createTable:
+            tableName: collection_registered_ledger
+            columns:
+              - column:
+                  name: event_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: received_at
+                  type: timestamp
+                  constraints:
+                    nullable: false

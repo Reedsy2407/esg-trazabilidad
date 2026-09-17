@@ -1,22 +1,20 @@
 databaseChangeLog:
   - changeSet:
-      id: v0.1.4-create-outbox-event-table
+      id: v0.1.3-create-outbox-event-table
       author: esg-trazabilidad
       comment: >
-        Named outbox_event_collection (not outbox_event): collection-service and
+        Named outbox_event_recycler (not outbox_event): collection-service and
         recycler-service share one Postgres database with no per-service schema
         separation, so each service's outbox table needs a distinct name to
         avoid a create-table collision -- the same reasoning already applied to
         shedlock_recycler/shedlock_collection, extended here after it was
-        caught live during Task 29 (recycler-service failed to boot with
-        "relation outbox_event already exists" the first time both services'
-        schemas were verified together). Rewritten in place rather than
-        appending an ALTER, same one-time exception already used for
-        v0.1.0_create_neighbor_table.yaml: zero real data exists anywhere yet.
-        See SPEC-cross-service-events.md's Resolved Decisions.
+        caught live (recycler-service failed to boot with "relation
+        outbox_event already exists" the first time both services' schemas
+        were verified together). See SPEC-cross-service-events.md's Resolved
+        Decisions.
       changes:
         - createTable:
-            tableName: outbox_event_collection
+            tableName: outbox_event_recycler
             columns:
               - column:
                   name: id
@@ -50,18 +48,18 @@ databaseChangeLog:
                   constraints:
                     nullable: false
   - changeSet:
-      id: v0.1.4-outbox-event-status-created-at-index
+      id: v0.1.3-outbox-event-recycler-status-created-at-index
       author: esg-trazabilidad
       comment: >
         Speeds up OutboxDispatcher's every-5s poll for NEW/FAILED rows ordered
         by age. Index name is also namespaced per service -- Postgres index
         names share the same per-schema namespace as table names, so a plain
-        ix_outbox_event_status_created_at would collide with recycler-service's
-        own index the same way the bare table name did.
+        ix_outbox_event_status_created_at would collide with
+        collection-service's own index the same way the bare table name did.
       changes:
         - createIndex:
-            tableName: outbox_event_collection
-            indexName: ix_outbox_event_collection_status_created_at
+            tableName: outbox_event_recycler
+            indexName: ix_outbox_event_recycler_status_created_at
             columns:
               - column:
                   name: status

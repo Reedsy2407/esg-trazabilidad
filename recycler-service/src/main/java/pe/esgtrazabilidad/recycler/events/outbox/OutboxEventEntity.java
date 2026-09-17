@@ -1,4 +1,4 @@
-package pe.esgtrazabilidad.collection.events.outbox;
+package pe.esgtrazabilidad.recycler.events.outbox;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -13,14 +13,14 @@ import jakarta.persistence.Transient;
 import org.springframework.data.domain.Persistable;
 
 /**
- * No existing()/update() path here, unlike CollectionScheduleEntity -- every
+ * No existing()/update() path here, unlike CertificationEntity -- every
  * mutation after creation (markProcessed/markFailed) is a pure status flip
  * with no domain validation, done via an atomic UPDATE in
  * OutboxEventJpaRepository, never a load-mutate-save round trip through this
- * entity.
+ * entity. Mirrors collection-service's own OutboxEventEntity (Task 27).
  */
 @Entity
-@Table(name = "outbox_event_collection")
+@Table(name = "outbox_event_recycler")
 class OutboxEventEntity implements Persistable<UUID> {
 
     @Id

@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.recycler.association.adapter.out.persistence;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,6 +55,11 @@ class AssociationRepositoryAdapter implements AssociationRepository {
         String statusValue = status == null ? null : status.name();
         return jpaRepository.findAll(AssociationSpecifications.hasStatus(statusValue), pageable)
                 .map(this::toDomain);
+    }
+
+    @Override
+    public void incrementTotalKilos(UUID associationId, BigDecimal amount) {
+        jpaRepository.incrementTotalKilos(associationId, amount);
     }
 
     private AssociationEntity toEntity(Association association) {

@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.recycler.association.adapter.out.persistence;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -37,6 +38,17 @@ class AssociationEntity implements Persistable<UUID> {
 
     @Column(nullable = false)
     private String status;
+
+    // insertable = false, updatable = false: this column is written ONLY by
+    // AssociationJpaRepository.incrementTotalKilos's atomic UPDATE (Task 29/30),
+    // never through the normal save()/update() path below -- neither the
+    // public constructor nor existing() knows this field exists, so without
+    // these flags, every unrelated update() (e.g. suspend()/activate()) would
+    // silently reset it to null/0. The field default matters only for a
+    // not-yet-persisted entity read before its first DB round trip; the real
+    // value always comes from a SELECT once persisted.
+    @Column(name = "total_kilos_collected", nullable = false, insertable = false, updatable = false)
+    private BigDecimal totalKilosCollected = BigDecimal.ZERO;
 
     @Transient
     private boolean isNew = false;
@@ -132,5 +144,9 @@ class AssociationEntity implements Persistable<UUID> {
 
     String getStatus() {
         return status;
+    }
+
+    BigDecimal getTotalKilosCollected() {
+        return totalKilosCollected;
     }
 }

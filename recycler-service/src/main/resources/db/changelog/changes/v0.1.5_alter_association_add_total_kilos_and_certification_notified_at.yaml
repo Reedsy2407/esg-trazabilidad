@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.5-alter-association-add-total-kilos-collected
+      author: esg-trazabilidad
+      comment: >
+        Denormalized running total, written ONLY via AssociationJpaRepository's
+        atomic incrementTotalKilos UPDATE (Task 29/30) -- never through the
+        normal Association.save()/update() path, which is why the entity maps
+        this column insertable=false, updatable=false. DEFAULT 0 matters: the
+        column is never included in Hibernate's own INSERT statement, so every
+        new association relies on this default to start at zero.
+      changes:
+        - addColumn:
+            tableName: association
+            columns:
+              - column:
+                  name: total_kilos_collected
+                  type: decimal(14,2)
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+  - changeSet:
+      id: v0.1.5-alter-certification-add-notified-expired-at
+      author: esg-trazabilidad
+      comment: >
+        Nullable, set once by CertificationExpiryScanJob (Task 33) and reset to
+        null by Certification.renew() (Task 32) -- schema only in this task, no
+        application code touches it yet.
+      changes:
+        - addColumn:
+            tableName: certification
+            columns:
+              - column:
+                  name: notified_expired_at
+                  type: timestamp
+                  constraints:
+                    nullable: true

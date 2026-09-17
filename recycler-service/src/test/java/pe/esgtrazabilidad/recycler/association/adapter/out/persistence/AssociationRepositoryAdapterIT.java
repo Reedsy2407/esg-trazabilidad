@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.recycler.association.adapter.out.persistence;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -45,6 +47,9 @@ class AssociationRepositoryAdapterIT {
 
     @Autowired
     private AssociationRepository associationRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private Logger sqlLogger;
     private ListAppender<ILoggingEvent> sqlAppender;
@@ -113,5 +118,40 @@ class AssociationRepositoryAdapterIT {
         // a duplicate-key violation rather than silently duplicating a row,
         // so reaching this assertion at all already proves update() went
         // through merge(), not persist() -- this just also checks the value stuck.
+    }
+
+    private BigDecimal totalKilosCollectedInDb(UUID associationId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT total_kilos_collected FROM association WHERE id = ?", BigDecimal.class, associationId);
+    }
+
+    @Test
+    void incrementTotalKilosAtomicallyAddsToTheCurrentTotal() {
+        Association association = associationRepository.save(Association.create(
+                "Asociación kilos", "20166666666", "REG-KG-1", "Dirección", "a@b.pe", "999999999"));
+
+        associationRepository.incrementTotalKilos(association.getId(), new BigDecimal("10.50"));
+        associationRepository.incrementTotalKilos(association.getId(), new BigDecimal("4.25"));
+
+        assertThat(totalKilosCollectedInDb(association.getId())).isEqualByComparingTo("14.75");
+    }
+
+    @Test
+    void incrementTotalKilosSurvivesAnUnrelatedUpdateWithoutBeingClobbered() {
+        // Real risk this proves doesn't happen: AssociationEntity's normal
+        // save()/update() path (suspend/activate) builds its entity from the
+        // domain Association, which carries no totalKilosCollected field at
+        // all. If that column were mapped as a normal writable @Column, this
+        // update() would silently reset it to null/0 on every unrelated
+        // status change -- it's mapped insertable=false, updatable=false
+        // specifically so only incrementTotalKilos ever writes it.
+        Association association = associationRepository.save(Association.create(
+                "Asociación kilos 2", "20155555555", "REG-KG-2", "Dirección", "a@b.pe", "999999999"));
+        associationRepository.incrementTotalKilos(association.getId(), new BigDecimal("20.00"));
+
+        association.suspend();
+        associationRepository.update(association);
+
+        assertThat(totalKilosCollectedInDb(association.getId())).isEqualByComparingTo("20.00");
     }
 }

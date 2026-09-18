@@ -677,17 +677,20 @@
 - [x] `mvn -pl recycler-service verify` green
 - [ ] Human review before wiring collection-service's consumption side
 
-- [ ] Task 35: collection-service `certification_status_ledger` + `blocked_association` schema/domain
+- [x] Task 35: collection-service `certification_status_ledger` + `blocked_association` schema/domain
   - **Description:** The idempotency ledger for both incoming certification-status event types, and the minimal `BlockedAssociation` projection (association id + block state only — never a copy of `recycler-service`'s full `Association`).
   - **Acceptance criteria:**
-    - [ ] `v0.1.6_create_certification_status_ledger_table.yaml` (PK `event_id`), `v0.1.7_create_blocked_association_table.yaml` (PK `association_id`, `blocked_at` timestamp only — no name/RUC/contact fields) — numbered after Task 27's `v0.1.4`/`v0.1.5` since those are created chronologically first, keeping version numbers in task-execution order
-    - [ ] `BlockedAssociation` domain class + `BlockedAssociationEntity`/repo/adapter, `BlockedAssociationRepository` port
+    - [x] `v0.1.6_create_certification_status_ledger_table.yaml` (PK `event_id`), `v0.1.7_create_blocked_association_table.yaml` (PK `association_id`, `blocked_at` timestamp only — no name/RUC/contact fields) — numbered after Task 27's `v0.1.4`/`v0.1.5` since those are created chronologically first, keeping version numbers in task-execution order
+    - [x] `BlockedAssociation` domain class + `BlockedAssociationEntity`/repo/adapter, `BlockedAssociationRepository` port — `block()` upserts via the `existing()`-factory pattern (same as `CertificationEntity`'s update path), so re-blocking an already-blocked association updates `blocked_at` instead of failing on the PK; `unblock()` is a safe no-op when no row exists (`JpaRepository.deleteById()` throws on a missing row, and Task 36 will call `unblock()` on every `CertificationRenewedEvent` whether or not the association was actually blocked)
+    - [x] `CertificationStatusLedgerEntity`/`CertificationStatusLedgerJpaRepository` also added (public, no port/adapter split — mirrors recycler-service's `CollectionRegisteredLedgerEntity` from Task 29) as a prerequisite for Task 36's listener, shared by both `CertificationExpiredEvent` and `CertificationRenewedEvent`
   - **Verification:**
-    - [ ] IT test round-tripping both tables
-    - [ ] `mvn -pl collection-service verify` green
+    - [x] IT test round-tripping both tables: `CertificationStatusLedgerJpaRepositoryIT` (fresh insert + duplicate-key violation, mirrors Task 29's ledger IT), `BlockedAssociationRepositoryAdapterIT` (block→isBlocked→unblock round trip, unblock-when-never-blocked no-op, re-block upsert)
+    - [x] `mvn -pl collection-service test` and `verify` green — 71 unit tests, 44 IT tests
+    - [x] `mvn install` — whole reactor still builds
+  - **Real gap found:** `BlockedAssociationRepositoryAdapterIT`'s re-block test initially read the persisted `blocked_at` back via `JdbcTemplate.queryForObject(sql, java.sql.Timestamp.class, ...)` and got a value exactly 5 hours off from what was written. Cause: Postgres's `timestamp` (no time zone) column stores naive local bits; Hibernate writes an `Instant` as UTC, but pgjdbc's default `getTimestamp()` conversion for that requiredType reinterprets those bits using the JVM's default zone (America/Lima, UTC-5) instead of UTC. Fixed by reading with an explicit `rs.getTimestamp(1, Calendar.getInstance(TimeZone.getTimeZone("UTC")))` instead — flagged here since Task 36/37/38's tests will likely need to read `blocked_at` or ledger timestamps back the same way and would otherwise hit this cold.
   - **Dependencies:** Task 27
-  - **Files likely touched:** `collection-service/src/main/resources/db/changelog/changes/v0.1.6_*.yaml`, `v0.1.7_*.yaml`, `.../association/domain/BlockedAssociation.java`, `.../association/adapter/out/persistence/{...}.java`, `.../association/port/out/BlockedAssociationRepository.java`, plus IT test
-  - **Estimated scope:** Medium (6 files)
+  - **Files touched:** `collection-service/src/main/resources/db/changelog/changes/v0.1.6_create_certification_status_ledger_table.yaml`, `v0.1.7_create_blocked_association_table.yaml`, `.../association/domain/BlockedAssociation.java`, `.../association/adapter/out/persistence/{BlockedAssociationEntity,BlockedAssociationJpaRepository,BlockedAssociationRepositoryAdapter}.java`, `.../association/port/out/BlockedAssociationRepository.java`, `.../events/ledger/{CertificationStatusLedgerEntity,CertificationStatusLedgerJpaRepository}.java`, plus 3 test files
+  - **Estimated scope:** Medium (6 files) — actual: 9 main files + 3 test files (the ledger entity/repo pair wasn't in the original file list but is needed as Task 36's prerequisite, same as Task 29's precedent)
 
 - [ ] Task 36: `CertificationStatusEventListener`
   - **Description:** One `@RabbitListener` handling both `CertificationExpiredEvent` and `CertificationRenewedEvent` on a single durable queue bound to both routing keys; idempotent ledger insert, then blocks or unblocks.
@@ -703,6 +706,7 @@
     - [ ] `mvn -pl collection-service test` green
     - [ ] **Apply Task 30's second fix to `collection-service/pom.xml` too:** this is `collection-service`'s first real `@RabbitListener`, so every `@SpringBootTest` IT in the module will now boot a real listener container that tries to connect to the local broker. Add `spring.rabbitmq.listener.simple.auto-startup=false` to the failsafe `systemPropertyVariables` block (already has the outbox-dispatcher flag from Task 27) — verify by stopping RabbitMQ and confirming the full IT suite stays green with zero connection-refused log lines, same as Task 30's verification
     - [ ] **When Task 36's own real-broker IT test is written (mirroring Task 31's), apply its findings from the start too:** `@DirtiesContext` on any test class that re-enables a live listener/dispatcher with a fast interval, a generous (30s, not 10s) timeout on any `rabbitTemplate.receive(...)`/polling call, and always verify via the full `mvn -pl collection-service verify` run before declaring it done — Task 31's own timeout bug only appeared under the full suite's resource contention, not in isolation
+    - [ ] **Apply Task 35's UTC-timestamp-read fix from the start if any IT here reads `blocked_at` or `certification_status_ledger.received_at` back via `JdbcTemplate`:** `queryForObject(sql, java.sql.Timestamp.class, ...)` reinterprets the stored UTC bits using the JVM's default zone (America/Lima, UTC-5 here) instead of UTC, landing 5 hours off from what Hibernate wrote. Read with an explicit `rs.getTimestamp(1, Calendar.getInstance(TimeZone.getTimeZone("UTC")))` RowMapper instead — don't rediscover this via a failing assertion
   - **Dependencies:** Task 35
   - **Files likely touched:** `.../events/consume/CertificationStatusEventListener.java`, event record classes, plus tests
   - **Estimated scope:** Medium (4 files)

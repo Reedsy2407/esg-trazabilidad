@@ -323,7 +323,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 - [x] `mvn -pl recycler-service verify` green
 - [ ] Human review before wiring collection-service's consumption side
 
-- [ ] Task 35: collection-service `certification_status_ledger` + `blocked_association` schema/domain (Liquibase `v0.1.6`, `v0.1.7`; `BlockedAssociation` minimal projection domain + adapter)
+- [x] Task 35: collection-service `certification_status_ledger` + `blocked_association` schema/domain (Liquibase `v0.1.6`, `v0.1.7`; `BlockedAssociation` minimal projection domain + adapter). Real gap caught: reading a Postgres `timestamp` column back via `JdbcTemplate` with `java.sql.Timestamp` as the requiredType lets the driver reinterpret UTC bits using the JVM's default zone (America/Lima, UTC-5) -- fixed by reading with an explicit UTC `Calendar`
 - [ ] Task 36: `CertificationStatusEventListener` — one listener, both event types, idempotent ledger insert then block/unblock (unit tests: expired blocks, renewed unblocks, duplicate short-circuit); apply Task 30's block-first/ledger-insert-last pattern, Task 30's `auto-startup=false` test fix, and Task 31's `jsonRabbitListenerContainerFactory`/`@DirtiesContext`/30s-timeout fixes, all from the start
 - [ ] Task 37: Enforce the block in `CollectionRecordService.create()` — new `CollectionErrors.COL-009 ASSOCIATION_BLOCKED` (409) (unit + IT)
 

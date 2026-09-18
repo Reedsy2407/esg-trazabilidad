@@ -325,10 +325,10 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 
 - [x] Task 35: collection-service `certification_status_ledger` + `blocked_association` schema/domain (Liquibase `v0.1.6`, `v0.1.7`; `BlockedAssociation` minimal projection domain + adapter). Real gap caught: reading a Postgres `timestamp` column back via `JdbcTemplate` with `java.sql.Timestamp` as the requiredType lets the driver reinterpret UTC bits using the JVM's default zone (America/Lima, UTC-5) -- fixed by reading with an explicit UTC `Calendar`
 - [x] Task 36: `CertificationStatusEventListener` — one listener, both event types, idempotent ledger insert then block/unblock; applied Task 30's block-first/ledger-insert-last pattern and `auto-startup=false` test fix (confirmed zero connection-refused lines). Task 31's `jsonRabbitListenerContainerFactory` pattern doesn't apply as literally planned — one queue with two payload shapes has no single fixed type for Jackson2JsonMessageConverter to infer, so the listener takes the raw AMQP `Message` and dispatches on the routing key header instead, using the default container factory. User-flagged concurrency finding resolved with no code change: the listener's own `try/catch DataIntegrityViolationException` (needed anyway for redelivery) already absorbs the `BlockedAssociationRepositoryAdapter.block()` race, since `CertificationStatusEventProcessor.processExpired()` runs in one flat transaction per Task 30's pattern — confirmed with a real concurrent-threads IT test that reproduces the actual constraint violation
-- [ ] Task 37: Enforce the block in `CollectionRecordService.create()` — new `CollectionErrors.COL-009 ASSOCIATION_BLOCKED` (409) (unit + IT)
+- [x] Task 37: Enforce the block in `CollectionRecordService.create()` — new `CollectionErrors.COL-009 ASSOCIATION_BLOCKED` (409) (unit + IT, real Postgres seeding a `blocked_association` row directly). No new exception-handler wiring needed — shared-kernel's `GlobalExceptionHandler` already maps any `ApplicationException` generically
 
 ### Checkpoint 18: Direction B wired (unit-level)
-- [ ] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
+- [x] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
 - [ ] Human review before the end-to-end IT
 
 - [ ] Task 38: Direction B end-to-end IT (full expire→block→renew→unblock flow, redelivery/idempotency, and the full expire→renew→re-expire→re-notify cycle test)

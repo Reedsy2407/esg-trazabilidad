@@ -711,22 +711,23 @@
   - **Files touched:** `.../events/consume/{CertificationExpiredEvent,CertificationRenewedEvent,CertificationStatusQueueConfig,CertificationStatusEventProcessor,CertificationStatusEventListener}.java`, `collection-service/pom.xml`, plus 2 test files
   - **Estimated scope:** Medium (4 files)
 
-- [ ] Task 37: Enforce the block in `CollectionRecordService.create()`
+- [x] Task 37: Enforce the block in `CollectionRecordService.create()`
   - **Description:** New `CollectionErrors.COL-009 ASSOCIATION_BLOCKED` (409); `create()` checks `BlockedAssociationRepository` before saving.
   - **Acceptance criteria:**
-    - [ ] `CollectionErrors.COL-009 ASSOCIATION_BLOCKED` added
-    - [ ] `CollectionRecordService.create()` throws `COL-009` if a `BlockedAssociation` row exists for `command.associationId()`
-    - [ ] Exception handler wiring confirmed (extend `CollectionRecordExceptionHandler`'s mapping, or confirm the existing generic `ApplicationException` path already covers it with no new branching)
+    - [x] `CollectionErrors.COL-009 ASSOCIATION_BLOCKED` added (409, next free code after `COL-008`)
+    - [x] `CollectionRecordService.create()` throws `COL-009` if `blockedAssociationRepository.isBlocked(command.associationId())` is true — checked after the neighbor/schedule checks, before the domain object is created; the block check is a purely local read against collection-service's own projection, not a call to recycler-service (updated the stale "associationId is deliberately NOT validated" comment, which no longer matched reality after this change — its *existence* is still unvalidated, its *block state* now is)
+    - [x] Exception handler wiring confirmed: shared-kernel's `GlobalExceptionHandler` already maps any `ApplicationException` generically via its `ApplicationError` (code/message/status) — no new branching needed in `CollectionRecordExceptionHandler`
   - **Verification:**
-    - [ ] Unit test: blocked associationId → `COL-009`
-    - [ ] IT test (Postgres-only, no Rabbit): create succeeds when unblocked, 409 `COL-009` when blocked
-    - [ ] `mvn -pl collection-service verify` green
+    - [x] Unit test (Mockito): `rejectsCreationWhenTheAssociationIsBlocked` — blocked associationId → `COL-009`, `repository.save()` never called
+    - [x] IT test (Postgres-only, no Rabbit): `CollectionRecordApiIT.creatingARecordForABlockedAssociationReturns409` — seeds a `blocked_association` row directly via the real `BlockedAssociationRepository` bean, then asserts the real HTTP POST returns 409 with `code: COL-009`; the "succeeds when unblocked" half of this criterion was already covered by the module's existing passing creation tests (an unstubbed/un-seeded association is never blocked)
+    - [x] `mvn -pl collection-service test` and `verify` green — 74 unit tests, 49 IT tests
+    - [x] `mvn install` — whole reactor still builds
   - **Dependencies:** Task 36
-  - **Files likely touched:** `CollectionErrors.java`, `CollectionRecordService.java`, `CollectionRecordExceptionHandler.java` (if needed), plus tests
+  - **Files touched:** `CollectionErrors.java`, `CollectionRecordService.java`, `CollectionRecordServiceTest.java`, `CollectionRecordApiIT.java`
   - **Estimated scope:** Small-Medium (4 files)
 
 ### Checkpoint 18: Direction B wired (unit-level)
-- [ ] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
+- [x] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
 - [ ] Human review before the end-to-end IT
 
 - [ ] Task 38: Direction B end-to-end IT

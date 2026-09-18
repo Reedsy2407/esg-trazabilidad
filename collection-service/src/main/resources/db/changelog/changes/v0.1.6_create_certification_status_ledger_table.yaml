@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.6-create-certification-status-ledger-table
+      author: esg-trazabilidad
+      comment: >
+        One shared ledger for BOTH CertificationExpiredEvent and
+        CertificationRenewedEvent (Task 36's listener handles both on a single
+        queue) -- PK on event_id gives idempotent consumption for free via the
+        same DataIntegrityViolationException -> getConstraintName() pattern
+        already used everywhere else in this codebase for TOCTOU races, the
+        same reasoning as recycler-service's collection_registered_ledger
+        (Task 29).
+      changes:
+        - createTable:
+            tableName: certification_status_ledger
+            columns:
+              - column:
+                  name: event_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: received_at
+                  type: timestamp
+                  constraints:
+                    nullable: false

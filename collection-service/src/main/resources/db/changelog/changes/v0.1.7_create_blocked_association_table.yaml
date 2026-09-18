@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.7-create-blocked-association-table
+      author: esg-trazabilidad
+      comment: >
+        A minimal local projection, never a copy of recycler-service's real
+        Association -- just the association id and when it was blocked. No
+        name, RUC, or contact fields: collection-service depends only on
+        shared-kernel, never recycler-service, even now that real
+        cross-service data flows via events (see
+        SPEC-cross-service-events.md's Resolved Decisions). PK on
+        association_id: presence of a row IS the blocked state, so a
+        renewed-event unblock is a plain delete.
+      changes:
+        - createTable:
+            tableName: blocked_association
+            columns:
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: blocked_at
+                  type: timestamp
+                  constraints:
+                    nullable: false

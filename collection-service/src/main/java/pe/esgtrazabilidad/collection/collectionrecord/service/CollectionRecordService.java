@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import pe.esgtrazabilidad.collection.association.port.out.BlockedAssociationRepository;
 import pe.esgtrazabilidad.collection.collectionrecord.domain.CollectionRecord;
 import pe.esgtrazabilidad.collection.collectionrecord.events.CollectionRegisteredEvent;
 import pe.esgtrazabilidad.collection.collectionrecord.port.in.CreateCollectionRecordCommand;
@@ -30,16 +31,19 @@ class CollectionRecordService
     private final NeighborRepository neighborRepository;
     private final CollectionScheduleRepository scheduleRepository;
     private final CollectionRegisteredEventPublisher eventPublisher;
+    private final BlockedAssociationRepository blockedAssociationRepository;
 
     CollectionRecordService(
             CollectionRecordRepository repository,
             NeighborRepository neighborRepository,
             CollectionScheduleRepository scheduleRepository,
-            CollectionRegisteredEventPublisher eventPublisher) {
+            CollectionRegisteredEventPublisher eventPublisher,
+            BlockedAssociationRepository blockedAssociationRepository) {
         this.repository = repository;
         this.neighborRepository = neighborRepository;
         this.scheduleRepository = scheduleRepository;
         this.eventPublisher = eventPublisher;
+        this.blockedAssociationRepository = blockedAssociationRepository;
     }
 
     // The outbox write (inside eventPublisher.publish()) must land in the same
@@ -63,9 +67,15 @@ class CollectionRecordService
                 throw new ApplicationException(CollectionErrors.SCHEDULE_NOT_FOUND);
             }
         }
-        // associationId is deliberately NOT validated here -- collection-service
-        // depends only on shared-kernel, never recycler-service. Real validation
-        // is deferred to cross-service-events (see SPEC-collection-service.md).
+        // associationId's EXISTENCE is deliberately NOT validated here --
+        // collection-service depends only on shared-kernel, never
+        // recycler-service (see SPEC-collection-service.md). Its BLOCK STATE
+        // is checked below, but that's a purely local read against
+        // BlockedAssociationRepository, a projection CertificationStatusEventListener
+        // (Task 36) populates from events -- not a call to recycler-service.
+        if (blockedAssociationRepository.isBlocked(command.associationId())) {
+            throw new ApplicationException(CollectionErrors.ASSOCIATION_BLOCKED);
+        }
         CollectionRecord record = CollectionRecord.create(
                 command.neighborId(),
                 command.scheduleId(),

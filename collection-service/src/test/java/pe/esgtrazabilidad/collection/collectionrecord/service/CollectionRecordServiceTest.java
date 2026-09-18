@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+import pe.esgtrazabilidad.collection.association.port.out.BlockedAssociationRepository;
 import pe.esgtrazabilidad.collection.collectionrecord.domain.CollectionRecord;
 import pe.esgtrazabilidad.collection.collectionrecord.events.CollectionRegisteredEvent;
 import pe.esgtrazabilidad.collection.collectionrecord.port.in.CreateCollectionRecordCommand;
@@ -52,6 +53,9 @@ class CollectionRecordServiceTest {
     @Mock
     private CollectionRegisteredEventPublisher eventPublisher;
 
+    @Mock
+    private BlockedAssociationRepository blockedAssociationRepository;
+
     private CollectionRecordService service;
 
     private final UUID neighborId = UUID.randomUUID();
@@ -59,7 +63,8 @@ class CollectionRecordServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new CollectionRecordService(repository, neighborRepository, scheduleRepository, eventPublisher);
+        service = new CollectionRecordService(
+                repository, neighborRepository, scheduleRepository, eventPublisher, blockedAssociationRepository);
     }
 
     private Neighbor sampleNeighbor() {
@@ -152,9 +157,24 @@ class CollectionRecordServiceTest {
 
         CollectionRecord result = service.create(sampleCommand(null));
 
-        // No repository/service call ever checks associationId against anything --
-        // it's stored exactly as given, proving the eventual-consistency decision holds.
+        // No repository/service call ever checks associationId's EXISTENCE
+        // against anything -- it's stored exactly as given, proving the
+        // eventual-consistency decision holds. Its block STATE is checked
+        // (Task 37), but blockedAssociationRepository.isBlocked() is an
+        // unstubbed mock here, defaulting to false ("not blocked").
         assertThat(result.getAssociationId()).isEqualTo(associationId);
+    }
+
+    @Test
+    void rejectsCreationWhenTheAssociationIsBlocked() {
+        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(blockedAssociationRepository.isBlocked(associationId)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.create(sampleCommand(null)))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(CollectionErrors.ASSOCIATION_BLOCKED));
+        verify(repository, never()).save(any());
     }
 
     @Test

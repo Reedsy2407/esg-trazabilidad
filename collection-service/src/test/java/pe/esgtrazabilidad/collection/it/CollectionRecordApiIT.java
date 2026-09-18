@@ -17,10 +17,13 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import pe.esgtrazabilidad.collection.association.domain.BlockedAssociation;
+import pe.esgtrazabilidad.collection.association.port.out.BlockedAssociationRepository;
 import pe.esgtrazabilidad.kernel.events.OutboxEntry;
 import pe.esgtrazabilidad.kernel.events.OutboxRepository;
 import pe.esgtrazabilidad.kernel.events.OutboxStatus;
@@ -55,6 +58,9 @@ class CollectionRecordApiIT {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private BlockedAssociationRepository blockedAssociationRepository;
 
     @BeforeEach
     void setUpRestAssured() {
@@ -211,6 +217,22 @@ class CollectionRecordApiIT {
                 .then()
                 .statusCode(201)
                 .body("associationId", equalTo(randomAssociationId));
+    }
+
+    @Test
+    void creatingARecordForABlockedAssociationReturns409() {
+        String neighborId = createNeighbor("Ana Torres IT Blocked");
+        UUID associationId = UUID.randomUUID();
+        blockedAssociationRepository.block(BlockedAssociation.block(associationId, Instant.now()));
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(createRecordRequest(null, associationId.toString(), "2026-01-05", "5"))
+                .when()
+                .post("/neighbors/{neighborId}/collection-records", neighborId)
+                .then()
+                .statusCode(409)
+                .body("code", equalTo("COL-009"));
     }
 
     @Test

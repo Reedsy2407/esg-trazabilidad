@@ -1,7 +1,9 @@
 package pe.esgtrazabilidad.recycler.it;
 
+import java.sql.Date;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.UUID;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,6 +19,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -91,6 +94,9 @@ class CertificationExpiryPublishFlowIT {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUpRestAssured() {
@@ -207,5 +213,68 @@ class CertificationExpiryPublishFlowIT {
         assertThat(renewedPayload.get("certificationId")).isEqualTo(certificationId);
         assertThat(renewedPayload.get("associationId")).isEqualTo(associationId);
         assertThat(renewedPayload.get("newExpirationDate")).isEqualTo(newExpirationDate);
+    }
+
+    @Test
+    void aCertificationThatExpiresIsRenewedThenExpiresAgainCausesTheScanJobToPublishASecondDistinctEvent()
+            throws Exception {
+        // The exact scenario the user caught as missing from the initial
+        // design: without Certification.renew() resetting notifiedExpiredAt
+        // back to null (Task 32), CertificationExpiryScanJob's own WHERE
+        // clause (notifiedExpiredAt IS NULL, Task 33) would never match this
+        // certification again, and the second receive() below would time out.
+        String testQueue = declareThrowawayQueueBoundToCertificationEvents();
+        String associationId = createAssociation("20909090903");
+        String issuedDate = LocalDate.now().minusYears(2).toString();
+        String expiredDate = LocalDate.now().minusDays(1).toString();
+
+        String certificationId = given()
+                .contentType(ContentType.JSON)
+                .body(createCertificationRequest(issuedDate, expiredDate))
+                .when()
+                .post("/associations/{associationId}/certifications", associationId)
+                .then()
+                .statusCode(201)
+                .body("expired", equalTo(true))
+                .extract()
+                .path("id");
+
+        Message firstExpiredMessage = rabbitTemplate.receive(testQueue, 30_000);
+        assertThat(firstExpiredMessage).isNotNull();
+        Map<String, Object> firstPayload =
+                objectMapper.readValue(firstExpiredMessage.getBody(), new TypeReference<>() {});
+        assertThat(firstPayload.get("certificationId")).isEqualTo(certificationId);
+
+        String renewRequest = """
+                {
+                  "newExpirationDate": "%s"
+                }
+                """.formatted(LocalDate.now().plusYears(1).toString());
+        given()
+                .contentType(ContentType.JSON)
+                .body(renewRequest)
+                .when()
+                .patch("/associations/{associationId}/certifications/{id}/renew", associationId, certificationId)
+                .then()
+                .statusCode(200);
+
+        Message renewedMessage = rabbitTemplate.receive(testQueue, 30_000);
+        assertThat(renewedMessage).isNotNull();
+
+        // No "un-renew" HTTP endpoint exists (nor should one) -- pushing the
+        // SAME certification's expiration back into the past directly via
+        // the DB is the only way to simulate time passing and it expiring
+        // again, without waiting a real year.
+        jdbcTemplate.update(
+                "UPDATE certification SET expiration_date = ? WHERE id = ?",
+                Date.valueOf(LocalDate.now().minusDays(1)),
+                UUID.fromString(certificationId));
+
+        Message secondExpiredMessage = rabbitTemplate.receive(testQueue, 30_000);
+        assertThat(secondExpiredMessage).isNotNull();
+        Map<String, Object> secondPayload =
+                objectMapper.readValue(secondExpiredMessage.getBody(), new TypeReference<>() {});
+        assertThat(secondPayload.get("certificationId")).isEqualTo(certificationId);
+        assertThat(secondPayload.get("eventId")).isNotEqualTo(firstPayload.get("eventId"));
     }
 }

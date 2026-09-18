@@ -334,7 +334,7 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 - [ ] Task 38: Direction B end-to-end IT (full expire→block→renew→unblock flow, redelivery/idempotency, and the full expire→renew→re-expire→re-notify cycle test)
 
 ### Checkpoint 19: Direction B complete and proven end-to-end
-- [ ] All of Direction B's Success Criteria bullets verified with real evidence
+- [x] All of Direction B's Success Criteria bullets verified with real evidence (Task 38's two IT classes)
 - [ ] Human review before the final ordering test + reactor-wide checkpoint
 
 ### Phase 17: Ordering test + final verification

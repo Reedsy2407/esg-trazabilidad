@@ -730,21 +730,23 @@
 - [x] `mvn -pl recycler-service test` and `mvn -pl collection-service test` green
 - [ ] Human review before the end-to-end IT
 
-- [ ] Task 38: Direction B end-to-end IT
+- [x] Task 38: Direction B end-to-end IT
   - **Description:** Full-flow IT over the real broker: expire → scan → block → reject → renew → unblock → accept. Plus redelivery/idempotency, plus the exact expire→renew→re-expire→re-notify cycle the user caught as missing from the initial design.
   - **Acceptance criteria:**
-    - [ ] Full-flow IT: expired certification → run `CertificationExpiryScanJob` → `CertificationExpiredEvent` published → association blocked in `collection-service` → `POST .../collection-records` → 409 `COL-009` → `PATCH .../certifications/{id}/renew` → `CertificationRenewedEvent` published → unblocked → `POST .../collection-records` succeeds
-    - [ ] Redelivery/idempotency IT: same expired/renewed event published twice → block state only toggles once
-    - [ ] **Full expire→renew→re-expire cycle IT:** expire → scan → notified+blocked → renew → `notifiedExpiredAt` null + unblocked → push expiration into the past again → scan a second time → a *second*, distinct `CertificationExpiredEvent` published, association blocked again
+    - [x] Full-flow IT: expired certification → run `CertificationExpiryScanJob` → `CertificationExpiredEvent` published → association blocked in `collection-service` → `POST .../collection-records` → 409 `COL-009` → `PATCH .../certifications/{id}/renew` → `CertificationRenewedEvent` published → unblocked → `POST .../collection-records` succeeds. Split across two IT classes, one per service — same precedent as Task 31's Direction A tests, since `collection-service` never depends on `recycler-service` even in tests: `recycler-service`'s `CertificationExpiryPublishFlowIT` proves the real HTTP → scan → dispatch → broker path for both event types; `collection-service`'s `CertificationStatusEventBrokerFlowIT` proves the real broker → listener → block/unblock → HTTP 409/201 path
+    - [x] Redelivery/idempotency IT: same expired event published twice over the real broker → block state only toggles once (a genuine `DataIntegrityViolationException` on `certification_status_ledger_pkey` was caught in the log, confirming the redelivery was actually exercised, not just assumed harmless)
+    - [x] **Full expire→renew→re-expire cycle IT — both sides:** consumer side (`CertificationStatusEventBrokerFlowIT.aFullExpireRenewReExpireCycleReBlocksOnADistinctSecondExpiredEvent`) proves a second, distinct `CertificationExpiredEvent` re-blocks after `unblock()` deleted the row; producer side (`CertificationExpiryPublishFlowIT.aCertificationThatExpiresIsRenewedThenExpiresAgainCausesTheScanJobToPublishASecondDistinctEvent`) proves a real certification renewed via HTTP then pushed back into the past via JDBC (no "un-renew" endpoint exists) gets picked up by the scan job's own second tick and published as a genuinely new, distinct event
   - **Verification:**
-    - [ ] `mvn -pl recycler-service verify` and `mvn -pl collection-service verify` green
-    - [ ] The re-expire cycle test is confirmed to actually fail without Task 32's `renew()` reset (sanity-checked, not just trusted)
+    - [x] `mvn -pl recycler-service verify` and `mvn -pl collection-service verify` green — 70 unit / 48 IT (recycler-service), 74 unit / 52 IT (collection-service)
+    - [x] `mvn install` — whole reactor still builds
+    - [x] The re-expire cycle test is confirmed to actually fail without Task 32's `renew()` reset — sanity-checked, not just trusted: temporarily removed the `notifiedExpiredAt = null` line from `Certification.renew()`, re-ran the producer-side re-expire IT in isolation (bypassing surefire to reach the IT phase directly), confirmed it failed with `Expecting actual not to be null` (the second `receive()` timed out because the scan job's own `notifiedExpiredAt IS NULL` filter never matched again) — then reverted and confirmed green again
+  - **Real gap found:** the throwaway-queue helper's `autoDelete=true` (carried over from Direction A's `declareThrowawayQueueBoundToTheRoutingKey`, which only ever calls `rabbitTemplate.receive()` once per test) deletes the queue the moment its temporary consumer count drops to zero. Direction B's producer-side test calls `receive()` twice on the same queue (expired event, then renewed event) — the queue was gone by the second call (`NOT_FOUND - no queue ... in vhost '/'`), confirmed via a real failing run before switching to `autoDelete=false`
   - **Dependencies:** Task 37
-  - **Files likely touched:** `.../it/CertificationStatusEventFlowIT.java` (or similar, both services)
+  - **Files touched:** `recycler-service/.../it/CertificationExpiryPublishFlowIT.java`, `collection-service/.../events/consume/CertificationStatusEventBrokerFlowIT.java`
   - **Estimated scope:** Large (2-3 files, high test complexity)
 
 ### Checkpoint 19: Direction B complete and proven end-to-end
-- [ ] All of Direction B's Success Criteria bullets in `SPEC-cross-service-events.md` verified with real evidence
+- [x] All of Direction B's Success Criteria bullets in `SPEC-cross-service-events.md` verified with real evidence (Task 38's `CertificationExpiryPublishFlowIT` + `CertificationStatusEventBrokerFlowIT`) — the SPEC file's own checkboxes are left for Checkpoint 20's full line-by-line pass, per this project's established convention (none are ticked incrementally per task)
 - [ ] Human review before the final ordering test + reactor-wide checkpoint
 
 ## Phase 17: Ordering test + final verification

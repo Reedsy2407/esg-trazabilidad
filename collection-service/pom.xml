@@ -124,9 +124,21 @@
                          been torn down logs a noisy connection-refused stack trace:
                          harmless to the build result, but real test-isolation noise
                          worth suppressing globally rather than patching every IT test
-                         class with its own @TestPropertySource one at a time. -->
+                         class with its own @TestPropertySource one at a time.
+
+                         Every @SpringBootTest IT also now boots a real
+                         CertificationStatusEventListener (Task 36): collection-
+                         service's first real @RabbitListener. Same fix and reasoning
+                         as recycler-service's pom.xml (Task 30): auto-startup=false
+                         stops the listener container from connecting/consuming at
+                         context startup; none of the current IT tests need it
+                         started (they call the listener directly), and any future
+                         real-broker-integration test opts back in locally via its
+                         own @TestPropertySource, same pattern as the dispatcher flag
+                         above. -->
                     <systemPropertyVariables>
                         <esg.events.outbox-dispatcher.enabled>false</esg.events.outbox-dispatcher.enabled>
+                        <spring.rabbitmq.listener.simple.auto-startup>false</spring.rabbitmq.listener.simple.auto-startup>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>

@@ -29,6 +29,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import pe.esgtrazabilidad.collection.association.port.out.BlockedAssociationRepository;
+import pe.esgtrazabilidad.collection.events.ledger.CertificationStatusLedgerJpaRepository;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -97,6 +98,9 @@ class CertificationStatusEventBrokerFlowIT {
 
     @Autowired
     private BlockedAssociationRepository blockedAssociationRepository;
+
+    @Autowired
+    private CertificationStatusLedgerJpaRepository certificationStatusLedgerJpaRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -169,6 +173,17 @@ class CertificationStatusEventBrokerFlowIT {
         return last;
     }
 
+    private boolean awaitLedgered(UUID eventId, Duration timeout) throws InterruptedException {
+        Instant deadline = Instant.now().plus(timeout);
+        do {
+            if (certificationStatusLedgerJpaRepository.existsById(eventId)) {
+                return true;
+            }
+            Thread.sleep(200);
+        } while (Instant.now().isBefore(deadline));
+        return false;
+    }
+
     @Test
     void anExpiredEventBlocksTheAssociationAndEnforces409ThenARenewedEventUnblocksAndAllowsCreation()
             throws Exception {
@@ -236,5 +251,58 @@ class CertificationStatusEventBrokerFlowIT {
         // lingering one left behind by the first block.
         publish(EXPIRED_ROUTING_KEY, expiredEventJson(UUID.randomUUID(), certificationId, associationId));
         assertThat(awaitBlocked(associationId, true, Duration.ofSeconds(30))).isTrue();
+    }
+
+    @Test
+    void publishingExpiredThenRenewedInQuickSuccessionThroughTheOutboxLeavesTheFinalStateUnblocked()
+            throws Exception {
+        UUID associationId = UUID.randomUUID();
+        UUID certificationId = UUID.randomUUID();
+        UUID expiredEventId = UUID.randomUUID();
+        UUID renewedEventId = UUID.randomUUID();
+
+        // Task 39's ordering test (SPEC-cross-service-events.md, "Ordering
+        // test (best-effort, documented limit)"). Unlike the happy-path test
+        // above, which deliberately awaits the intermediate blocked state
+        // before publishing the renewed event, this publishes BOTH back to
+        // back with no wait in between -- the "quick succession" the spec
+        // asks for. publish() here (rabbitTemplate.convertAndSend with the
+        // JSON content type set) is the exact same faithful stand-in for the
+        // real OutboxDispatcher's own wire behaviour already established by
+        // this class's other tests (see the class-level Javadoc): a single
+        // dispatcher publishes each service's outbox strictly in insertion
+        // order, one row at a time, waiting for the publish to succeed
+        // before advancing (SPEC's own Resolved Decisions) -- so two rows
+        // written moments apart still reach the wire, and this listener's
+        // single-consumer queue (default @RabbitListener concurrency, no
+        // concurrency override anywhere in this class), in that same order.
+        // If the dispatcher ever processed its outbox out of order, this
+        // test would fail here: a reversed delivery (renewed before expired)
+        // leaves the association BLOCKED, not unblocked, since the renewed
+        // event's unblock() would be a no-op (nothing blocked yet) and the
+        // expired event's block() would run last.
+        //
+        // Explicitly NOT covered (documented, accepted residual risk,
+        // matching the spec's own wording): true out-of-order delivery after
+        // a broker-level redelivery. If RabbitMQ redelivers the renewed
+        // event before the expired event's own first-time delivery is ever
+        // acknowledged -- e.g. a consumer crash between the two -- nothing
+        // in this design prevents the renewed event from being processed
+        // first, incorrectly leaving a since-renewed association blocked.
+        // Closing that gap would need per-aggregate sequence numbers or a
+        // saga, disproportionate to this MVP's scope (SPEC-cross-service-
+        // events.md, Resolved Decisions: "Ordering risk is mitigated, not
+        // eliminated").
+        publish(EXPIRED_ROUTING_KEY, expiredEventJson(expiredEventId, certificationId, associationId));
+        publish(RENEWED_ROUTING_KEY, renewedEventJson(renewedEventId, certificationId, associationId));
+
+        // Both events reaching the ledger proves the listener actually
+        // processed them -- final state alone (checked below) would be
+        // false/unblocked vacuously if nothing had been consumed at all,
+        // since unblocked is also this association's untouched starting
+        // state.
+        assertThat(awaitLedgered(expiredEventId, Duration.ofSeconds(30))).isTrue();
+        assertThat(awaitLedgered(renewedEventId, Duration.ofSeconds(30))).isTrue();
+        assertThat(awaitBlocked(associationId, false, Duration.ofSeconds(30))).isFalse();
     }
 }

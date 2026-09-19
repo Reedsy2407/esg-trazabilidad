@@ -202,16 +202,7 @@
 
 - [x] Task 44: SigersolSync persistence — detalle: tasks/LEARNINGS.md (grep "## Task 44:")
 
-- [ ] Task 45: SigersolSync API
-  - **Description:** Controller → Mapper → UseCase → Service for register/get/list. `RPT-006 DUPLICATE_SIGERSOL_SYNC_PERIOD` (409), `RPT-007 SIGERSOL_SYNC_NOT_FOUND` (404). A `SigersolSyncExceptionHandler` translates the exclusion-constraint `DataIntegrityViolationException` (`excl_sigersol_sync_association_period`) to `RPT-006`. `SigersolSyncRepository` also gains `findCovering(associationId, periodStart, periodEnd)` — the query `CertificateService` (Phase 22) will use to look up compliance data for a certificate's period.
-  - **Acceptance criteria:**
-    - [ ] `POST /sigersol-syncs` → 201; an overlapping period for the same association → 409 `RPT-006`; a non-overlapping adjacent period → 201
-    - [ ] `GET /sigersol-syncs/{id}` → 200 or 404 `RPT-007`; `GET /sigersol-syncs?associationId=...` → paginated list
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service verify` green
-  - **Dependencies:** Task 44
-  - **Files likely touched:** `sigersolsync/adapter/in/web/*`, `sigersolsync/port/in/*`, `sigersolsync/service/SigersolSyncService.java`, `ReportingErrors.java`
-  - **Estimated scope:** Medium (6-8 files)
+- [x] Task 45: SigersolSync API — detalle: tasks/LEARNINGS.md (grep "## Task 45:")
 
 - [ ] Task 46: SigersolSync overlap concurrency test
   - **Description:** The required (per spec, not optional) real two-thread concurrency test: an `ExecutorService` + `CountDownLatch` releasing two threads at once, both registering an overlapping period for the same `associationId`. Must be empirically confirmed to FAIL against a naive service-check-only implementation and PASS with the exclusion constraint in place — same negative-verification discipline Task 40 already established for this codebase (temporarily weaken the guard, confirm the test catches it, revert, confirm green again; document the negative result in `tasks/LEARNINGS.md`).

@@ -189,17 +189,7 @@
 
 ## Phase 19: TrackedCompany
 
-- [ ] Task 42: TrackedCompany persistence
-  - **Description:** `TrackedCompany` domain (id, name, ruc, associationId, status ACTIVE/INACTIVE — same shape as `collection-service`'s `Company`, plus the bare `associationId` field this service adds). Liquibase `v0.1.0_create_tracked_company_table.yaml` with a real `UNIQUE` constraint on `ruc` (same TOCTOU-closing pattern as `Company`/`Association`'s own RUC uniqueness — a plain unique index is enough here, not an exclusion constraint, since this is exact-value uniqueness, not range overlap). JPA entity + adapter + port, same `adapter/out/persistence` shape as every other entity in this codebase.
-  - **Acceptance criteria:**
-    - [ ] `TrackedCompany.create()` validates RUC format (11 digits) same as `Company`'s own constructor guard
-    - [ ] Liquibase creates `tracked_company` with a unique constraint on `ruc`
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service test` green (domain unit test for RUC validation)
-    - [ ] A direct-repository IT (`TrackedCompanyRepositoryAdapterIT`) proves the DB-level unique constraint fires on a duplicate RUC even bypassing the service layer — same "prove the DB backstop independently of the service check" discipline as `AssociationRepositoryAdapterIT`
-  - **Dependencies:** Task 41
-  - **Files likely touched:** `trackedcompany/domain/TrackedCompany.java`, `trackedcompany/adapter/out/persistence/*`, `trackedcompany/port/out/TrackedCompanyRepository.java`, `v0.1.0_create_tracked_company_table.yaml`
-  - **Estimated scope:** Medium (5-6 files)
+- [x] Task 42: TrackedCompany persistence — detalle: tasks/LEARNINGS.md (grep "## Task 42:")
 
 - [ ] Task 43: TrackedCompany API
   - **Description:** Controller → Mapper → UseCase → Service for register/get/list. `ReportingErrors.RPT-001 TRACKED_COMPANY_NOT_FOUND` (404), `RPT-002 DUPLICATE_TRACKED_COMPANY_RUC` (409). A `TrackedCompanyExceptionHandler` (`@RestControllerAdvice(assignableTypes = TrackedCompanyController.class)`, `getConstraintName()` dispatch) translates the unique-constraint `DataIntegrityViolationException` to `RPT-002` — same shape as `CompanyExceptionHandler` in `collection-service`.

@@ -844,3 +844,16 @@ All 11 `SPEC-cross-service-events.md` Success Criteria bullets, re-verified line
   - **Dependencies:** none
   - **Files touched:** `pom.xml` (root), `reporting-service/pom.xml`, `reporting-service/src/main/java/pe/esgtrazabilidad/reporting/ReportingServiceApplication.java`, `reporting-service/src/main/resources/application.yml`, `reporting-service/src/main/resources/db/changelog/{db.changelog-master.yaml,changes/.gitkeep}`
   - **Estimated scope:** Medium (5-7 files)
+
+## Task 42: TrackedCompany persistence
+
+- [x] Task 42: TrackedCompany persistence
+  - **Description:** `TrackedCompany` domain (id, name, ruc, associationId, status ACTIVE/INACTIVE) mirroring `collection-service`'s `Company` shape exactly (same `Persistable<UUID>` JPA entity pattern, same RUC-regex validation in the domain constructor), plus the bare unvalidated `associationId` field this service adds — the Company↔Association link nothing else in the system has. Liquibase `v0.1.0_create_tracked_company_table.yaml` with a real `UNIQUE` constraint on `ruc`.
+  - **Verification:**
+    - [x] `mvn -pl reporting-service verify` green — `TrackedCompanyTest` 5/5, `TrackedCompanyRepositoryAdapterIT` 2/2
+    - [x] Direct-repository IT proves the DB-level unique constraint fires on a duplicate RUC bypassing any service layer (none exists yet) — a genuine `duplicate key value violates unique constraint "tracked_company_ruc_key"` was confirmed in the log, not just assumed
+  - **`persistable_update_path` memory checked and confirmed not applicable here:** `TrackedCompany` has no mutator and `TrackedCompanyRepository` exposes no `update()` — no "modify an existing row" path exists yet in this task's scope, unlike `Association`'s `suspend()`/`update()`. Will need re-checking whenever a future task adds a mutation (e.g. deactivating a tracked company).
+  - **code-reviewer verdict:** PASS, no findings — independently re-ran `mvn -pl reporting-service verify`, compared `TrackedCompanyEntity` line-by-line against `CompanyEntity`, and confirmed the IT calls the repository port directly with no service layer in between.
+  - **Dependencies:** Task 41
+  - **Files touched:** `trackedcompany/domain/{TrackedCompany,TrackedCompanyStatus}.java`, `trackedcompany/adapter/out/persistence/*`, `trackedcompany/port/out/TrackedCompanyRepository.java`, `v0.1.0_create_tracked_company_table.yaml`, `trackedcompany/domain/TrackedCompanyTest.java`, `trackedcompany/adapter/out/persistence/TrackedCompanyRepositoryAdapterIT.java`
+  - **Estimated scope:** Medium (5-6 files)

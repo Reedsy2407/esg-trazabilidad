@@ -232,18 +232,7 @@
 
 - [x] Task 51: Certificate summary preview — detalle: tasks/LEARNINGS.md (grep "## Task 51:")
 
-- [ ] Task 52: Certificate issuance
-  - **Description:** `IssueCertificateUseCase` / `POST /tracked-companies/{companyId}/certificates`: `RPT-003` (tracked company not found), `RPT-004` (overlapping period — service check first, DB exclusion constraint as the real backstop), `RPT-005` (no covering `SigersolSync` record). On success, freezes company name/RUC/associationId, the computed sum, and the compliance % into `EsgCertificate`, and snapshots the contributing `TracedCollectionEntry` rows into `EsgCertificateLineItem` — all in one `@Transactional` method. `CertificateExceptionHandler` (`getConstraintName()` dispatch) translates the exclusion-constraint violation to `RPT-004`.
-  - **Acceptance criteria:**
-    - [ ] Issuing succeeds and returns 201 with the frozen certificate
-    - [ ] An overlapping period for the same tracked company → 409 `RPT-004`; a non-overlapping adjacent period → 201
-    - [ ] No covering `SigersolSync` record → 409 `RPT-005`
-    - [ ] `GET .../certificates/{id}` and `GET .../certificates` (paginated) work
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service verify` green
-  - **Dependencies:** Task 50, Task 51
-  - **Files likely touched:** `certificate/port/in/IssueCertificateUseCase.java`, `certificate/service/CertificateService.java`, `certificate/adapter/in/web/{CertificateController,CertificateExceptionHandler}.java`, `ReportingErrors.java`
-  - **Estimated scope:** Large (6-8 files)
+- [x] Task 52: Certificate issuance — detalle: tasks/LEARNINGS.md (grep "## Task 52:")
 
 - [ ] Task 53: Certificate concurrency + immutability tests
   - **Description:** The required real two-thread concurrency test for `RPT-004` (same shape and same negative-verification discipline as Task 46 — must fail without the exclusion constraint, pass with it, documented in `tasks/LEARNINGS.md`). Plus the immutability test: issue a certificate, then insert a new `TracedCollectionEntry` for the same association with a `collectionDate` inside the already-issued period, and assert re-fetching that certificate returns the exact same frozen numbers/line items as before.

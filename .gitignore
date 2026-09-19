@@ -1,5 +1,6 @@
 docs/architecture/GUIA-PROYECTO-ESG-TRAZABILIDAD.md
 CLAUDE.md
+.claude/
 .env
 .env.local
 CAPABILITY-MAP.md
@@ -7,6 +8,7 @@ SPEC-shared-kernel.md
 SPEC-recycler-service.md
 SPEC-collection-service.md
 SPEC-cross-service-events.md
+SPEC-reporting-service.md
 
 target/
 *.class

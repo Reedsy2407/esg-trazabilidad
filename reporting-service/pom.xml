@@ -50,6 +50,24 @@
             <artifactId>liquibase-core</artifactId>
         </dependency>
 
+        <!-- PDF generation for issued certificates. Apache License 2.0,
+             deliberately not iText 5+ (AGPL, a real licensing trap for code
+             meant to be public on GitHub). See SPEC-reporting-service.md's
+             Resolved Decisions. -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.8</version>
+        </dependency>
+        <!-- CSV export of a certificate's frozen line items. Apache License
+             2.0; used instead of hand-rolled string-joining so a value
+             containing a comma or quote is escaped correctly. -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>1.14.1</version>
+        </dependency>
+
         <!-- No shedlock-provider-jdbc-template here, unlike recycler-service/
              collection-service: this module runs no @Scheduled job (it never
              publishes, so OutboxDispatcher never activates; see

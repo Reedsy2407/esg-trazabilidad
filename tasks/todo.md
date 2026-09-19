@@ -244,15 +244,7 @@
 
 ## Phase 23: PDF/CSV export
 
-- [ ] Task 54: CertificatePdfExporter
-  - **Description:** `CertificatePdfExporter` (Apache PDFBox) generating a formatted certificate document (company name/RUC, period, kilos trazados, compliance %, issue date) from an in-memory `EsgCertificate`. Pure function, no Postgres/RabbitMQ dependency.
-  - **Acceptance criteria:**
-    - [ ] Output is a real, valid PDF
-  - **Verification:**
-    - [ ] Unit test parses the generated PDF back with PDFBox's own reader (`PDFTextStripper` or equivalent) and asserts the company name, period, kilos, and compliance % are all present — not just "the byte array is non-empty"
-  - **Dependencies:** Task 52
-  - **Files likely touched:** `certificate/export/CertificatePdfExporter.java`, `pom.xml` (PDFBox dependency)
-  - **Estimated scope:** Medium (2 files)
+- [x] Task 54: CertificatePdfExporter — detalle: tasks/LEARNINGS.md (grep "## Task 54:")
 
 - [ ] Task 55: CertificateCsvExporter
   - **Description:** `CertificateCsvExporter` (Apache Commons CSV) writing the certificate's frozen `EsgCertificateLineItem` rows (one row per contributing collection date/weight) plus a summary header/section.

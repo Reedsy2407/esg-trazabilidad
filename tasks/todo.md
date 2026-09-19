@@ -173,6 +173,8 @@
 
 ### Checkpoint 20: Final — ready for review
 - [x] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`), RabbitMQ Testcontainer included — 0 failures/errors: shared-kernel 18 unit; recycler-service 70 unit + 48 IT; collection-service 74 unit + 53 IT (was 52, +1 from Task 39's ordering test — the only count that moved)
-- [x] All 11 Success Criteria bullets in `SPEC-cross-service-events.md` re-verified line by line with evidence — detalle: tasks/LEARNINGS.md (grep "## Checkpoint 20:")
+- [x] All 11 Success Criteria bullets in `SPEC-cross-service-events.md` re-verified line by line with evidence — detalle: tasks/LEARNINGS.md (grep "## Checkpoint 20:"); **amended by Task 40** below — criterion 8's original re-verification trusted `isBlocked()` alone as evidence of dedup on the Direction B (expired→blocked) side, which a Cowork review caught as insufficient
 - [x] `recycler-service`/`collection-service`'s pre-existing test suites and manual-check behavior unaffected — no destructive schema change, no existing endpoint contract changed (Task 39's commit touches exactly one test file, no migration/schema files)
 - [ ] Human review and approval before moving to `reporting-service`
+
+- [x] Task 40: Fortalecer test de idempotencia real en Direction B (hallazgo de Cowork sobre Checkpoint 20) — detalle: tasks/LEARNINGS.md (grep "## Task 40:")

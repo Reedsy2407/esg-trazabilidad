@@ -789,3 +789,27 @@
   - **Dependencies:** Tasks 31, 38
   - **Files touched:** `collection-service/src/test/java/pe/esgtrazabilidad/collection/events/consume/CertificationStatusEventBrokerFlowIT.java`
   - **Estimated scope:** Small (1 file)
+
+## Checkpoint 20: Final — ready for review
+
+`mvn verify` across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`, RabbitMQ Testcontainer included) — 0 failures, 0 errors:
+- `shared-kernel`: 18 unit
+- `recycler-service`: 70 unit + 48 IT
+- `collection-service`: 74 unit + 53 IT (was 52 as of Task 38 — the only count that moved across the whole reactor, +1 from Task 39's new ordering test)
+- 4 IT classes across both modules declare a real `RabbitMQContainer` (Testcontainers), confirmed via grep, not assumed.
+
+All 11 `SPEC-cross-service-events.md` Success Criteria bullets, re-verified line by line against the real code (not against this file's own prior summaries):
+
+1. `EventPublishingStrategy` is `{ RABBITMQ, MOCK }` — ✅ confirmed directly in `shared-kernel/.../events/EventPublishingStrategy.java`; Javadoc documents the `GCP_PUB_SUB`/`SPRING_EVENTS` removal rationale in place.
+2. `docker compose --env-file .env.local up -d` starts Postgres *and* RabbitMQ, both services connect to both — ✅ `docker-compose.yml` declares both `postgres` and `rabbitmq` services (root level); every IT class across both services connects to both via `@DynamicPropertySource`, exercised continuously since Task 24.
+3. Creating a `CollectionRecord` increments `Association.totalKilosCollected` by `weightKg` — ✅ proven end-to-end by Task 31's Direction A IT (`CollectionRegisteredEventBrokerFlowIT` family); unaffected and still green this run.
+4. A certification transitioning to expired (via the scan job, not a manual trigger) causes new `CollectionRecord` creation for that association to be rejected 409 in `collection-service` — ✅ proven by Task 38's `CertificationStatusEventBrokerFlowIT.anExpiredEventBlocksTheAssociationAndEnforces409ThenARenewedEventUnblocksAndAllowsCreation` (COL-009) and reaffirmed by Task 39's new test taking the same expired path.
+5. Renewing that certification lets new `CollectionRecord` creation succeed again — ✅ same test as (4), second half; also reaffirmed by Task 39.
+6. A certification that expires, is renewed, and later expires again is notified/blocks both times — ✅ `aFullExpireRenewReExpireCycleReBlocksOnADistinctSecondExpiredEvent` (collection-service, Task 38) and `aCertificationThatExpiresIsRenewedThenExpiresAgainCausesTheScanJobToPublishASecondDistinctEvent` (recycler-service, Task 38) — both still green.
+7. Two concurrent `CollectionRegisteredEvent`s for the same association both correctly contribute to `totalKilosCollected` under real concurrency — ✅ `CollectionRegisteredEventListenerIT.concurrentEventsForTheSameAssociationBothContributeToTheTotal` uses a real `ExecutorService` (2 threads) + `CountDownLatch` to force simultaneous invocation, not sequential calls — confirmed by reading the test, not just its name.
+8. Redelivering the same message to either consumer is a verified no-op on downstream state — ✅ both directions covered: `CollectionRegisteredEventListenerIT`/`CollectionRegisteredEventBrokerFlowIT` (recycler-service) and `CertificationStatusEventBrokerFlowIT.redeliveringTheSameExpiredEventOverTheRealBrokerLeavesTheBlockStateUnchanged` (collection-service) — a genuine `DataIntegrityViolationException` on the ledger's PK was confirmed in the log during Task 38, not just assumed harmless.
+9. `CertificationExpiryScanJob` and both outbox dispatchers are `@SchedulerLock`-guarded, per-service ShedLock tables — ✅ confirmed via grep: `CertificationExpiryScanJob` and `OutboxDispatcher` both carry `@SchedulerLock`; `SchedulingConfig` in each service points at its own table (`shedlock_recycler`, `shedlock_collection`) via `.withTableName(...)`, never a shared `shedlock` table.
+10. `mvn verify` passes across the whole reactor, RabbitMQ container included — ✅ this checkpoint's own run, see counts above.
+11. `recycler-service`/`collection-service`'s pre-existing test suites and manual-check behavior unaffected — ✅ every pre-Task-39 count is byte-for-byte identical to Task 38's own recorded numbers (`shared-kernel` 18, `recycler-service` 70/48 both unchanged); Task 39's commit (`0dcb15e`) touches exactly one test file, zero schema/migration files, zero already-shipped endpoint contracts.
+
+**Human review and approval before moving to `reporting-service`: deliberately left unchecked** — per this project's hard gate (`CLAUDE.md`, "Flujo automatizado de revisión", nivel 3), a module/spec-complete checkpoint is never auto-approved. Reviewed by the user together with a Claude Desktop/Cowork session against the real code, not this summary.

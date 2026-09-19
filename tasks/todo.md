@@ -172,7 +172,7 @@
 - [x] Task 39: Ordering test — detalle: tasks/LEARNINGS.md (grep "## Task 39:")
 
 ### Checkpoint 20: Final — ready for review
-- [ ] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`), RabbitMQ Testcontainer included
-- [ ] All 11 Success Criteria bullets in `SPEC-cross-service-events.md` re-verified line by line with evidence
-- [ ] `recycler-service`/`collection-service`'s pre-existing test suites and manual-check behavior unaffected — no destructive schema change, no existing endpoint contract changed
+- [x] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`), RabbitMQ Testcontainer included — 0 failures/errors: shared-kernel 18 unit; recycler-service 70 unit + 48 IT; collection-service 74 unit + 53 IT (was 52, +1 from Task 39's ordering test — the only count that moved)
+- [x] All 11 Success Criteria bullets in `SPEC-cross-service-events.md` re-verified line by line with evidence — detalle: tasks/LEARNINGS.md (grep "## Checkpoint 20:")
+- [x] `recycler-service`/`collection-service`'s pre-existing test suites and manual-check behavior unaffected — no destructive schema change, no existing endpoint contract changed (Task 39's commit touches exactly one test file, no migration/schema files)
 - [ ] Human review and approval before moving to `reporting-service`

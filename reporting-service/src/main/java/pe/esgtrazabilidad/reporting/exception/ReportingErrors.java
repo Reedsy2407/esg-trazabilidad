@@ -13,10 +13,15 @@ public enum ReportingErrors implements ApplicationError {
 
     TRACKED_COMPANY_NOT_FOUND("RPT-001", "Empresa no encontrada en reporting-service", HttpStatus.NOT_FOUND),
     DUPLICATE_TRACKED_COMPANY_RUC("RPT-002", "Ya existe una empresa rastreada con ese RUC", HttpStatus.CONFLICT),
-    // RPT-003 (CERTIFICATE_NOT_FOUND), RPT-004 (OVERLAPPING_CERTIFICATE_PERIOD),
-    // RPT-005 (MISSING_SIGERSOL_DATA_FOR_PERIOD) are reserved for the
-    // certificate slice (Phase 22) -- not implemented yet, same
-    // reserved-but-undefined convention collection-service used for COL-003.
+    CERTIFICATE_NOT_FOUND("RPT-003", "Certificado no encontrado", HttpStatus.NOT_FOUND),
+    OVERLAPPING_CERTIFICATE_PERIOD(
+            "RPT-004",
+            "Ya existe un certificado emitido que se superpone con ese periodo",
+            HttpStatus.CONFLICT),
+    MISSING_SIGERSOL_DATA_FOR_PERIOD(
+            "RPT-005",
+            "No hay datos oficiales de SIGERSOL cargados para esa asociación y periodo",
+            HttpStatus.CONFLICT),
     DUPLICATE_SIGERSOL_SYNC_PERIOD(
             "RPT-006",
             "Ya existe un registro SIGERSOL para esa asociación que se superpone con ese periodo",

@@ -191,23 +191,12 @@
 
 - [x] Task 42: TrackedCompany persistence — detalle: tasks/LEARNINGS.md (grep "## Task 42:")
 
-- [ ] Task 43: TrackedCompany API
-  - **Description:** Controller → Mapper → UseCase → Service for register/get/list. `ReportingErrors.RPT-001 TRACKED_COMPANY_NOT_FOUND` (404), `RPT-002 DUPLICATE_TRACKED_COMPANY_RUC` (409). A `TrackedCompanyExceptionHandler` (`@RestControllerAdvice(assignableTypes = TrackedCompanyController.class)`, `getConstraintName()` dispatch) translates the unique-constraint `DataIntegrityViolationException` to `RPT-002` — same shape as `CompanyExceptionHandler` in `collection-service`.
-  - **Acceptance criteria:**
-    - [ ] `POST /tracked-companies` (name, ruc, associationId) → 201; duplicate RUC → 409 `RPT-002`
-    - [ ] `GET /tracked-companies/{id}` → 200 or 404 `RPT-001`
-    - [ ] `GET /tracked-companies` → paginated `PageResponse<TrackedCompanyResponse>`
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service verify` green (unit + IT, RestAssured + Testcontainers Postgres)
-    - [ ] IT proves the concurrent-duplicate-RUC race is closed by the DB constraint, not just the service-level check (two threads registering the same RUC at once — mirrors `AssociationServiceTest`'s own RUC-race precedent)
-  - **Dependencies:** Task 42
-  - **Files likely touched:** `trackedcompany/adapter/in/web/*`, `trackedcompany/port/in/*`, `trackedcompany/service/TrackedCompanyService.java`, `ReportingErrors.java`
-  - **Estimated scope:** Medium (6-8 files)
+- [x] Task 43: TrackedCompany API — detalle: tasks/LEARNINGS.md (grep "## Task 43:")
 
 ### Checkpoint 22: TrackedCompany CRUD works end-to-end
-- [ ] `mvn -pl reporting-service verify` green
-- [ ] Manual check: register → get → list a tracked company via curl; duplicate RUC → 409 `RPT-002`
-- [ ] Human review before SigersolSync slice
+- [x] `mvn -pl reporting-service verify` green
+- [x] Manual check: register → get → list a tracked company via curl; duplicate RUC → 409 `RPT-002` — real curl against `spring-boot:run`, not just the IT
+- [x] Human review before SigersolSync slice — implicit approval: user directed `/build auto` for the whole module, automated flow per CLAUDE.md
 
 ## Phase 20: SigersolSync (introduces the EXCLUDE USING gist pattern)
 

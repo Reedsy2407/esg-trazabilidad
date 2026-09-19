@@ -902,3 +902,16 @@ All 11 `SPEC-cross-service-events.md` Success Criteria bullets, re-verified line
   - **Dependencies:** Task 44
   - **Files touched:** `exception/ReportingErrors.java`, `sigersolsync/port/{in,out}/*`, `sigersolsync/adapter/{in/web,out/persistence}/*`, `sigersolsync/service/SigersolSyncService.java`, `sigersolsync/service/SigersolSyncServiceTest.java`, `it/SigersolSyncApiIT.java`, `sigersolsync/adapter/out/persistence/SigersolSyncRepositoryAdapterIT.java`, `sigersolsync/domain/{SigersolSync,SigersolSyncTest}.java`
   - **Estimated scope:** Medium (6-8 files) — actual: larger, due to 4 review rounds each adding test coverage
+
+## Task 46: SigersolSync overlap concurrency test
+
+- [x] Task 46: SigersolSync overlap concurrency test
+  - **Description:** `SigersolSyncConcurrencyApiIT` (new file, `reporting-service/.../it/`) — two threads (`ExecutorService` + two-phase `CountDownLatch`, same shape as `recycler-service`'s `CollectionRegisteredEventListenerIT.concurrentEventsForTheSameAssociationBothContributeToTheTotal`), each firing a real HTTP `POST /sigersol-syncs` for the same `associationId` with overlapping periods as simultaneously as possible. Goes through the real HTTP layer, not the service bean directly — only `SigersolSyncExceptionHandler` (web layer) translates the DB's `DataIntegrityViolationException` into the typed `409 RPT-006` the acceptance criteria asks for.
+  - **Required negative verification, performed before considering this task done:** temporarily swapped the real `EXCLUDE USING gist` DDL in `v0.1.1_create_sigersol_sync_table.yaml` for a no-op `SELECT 1`, re-ran the test in isolation → failed exactly as expected (`expected: 1L but was: 2L` — both concurrent requests got 201, two overlapping rows landed in the DB, the race genuinely manifested under real synchronized load, not just in theory). Reverted, confirmed `git diff --stat` showed zero residual change, re-ran the full module `verify` green.
+  - **Verification:**
+    - [x] `mvn -pl reporting-service verify` green with the real constraint in place — `SigersolSyncConcurrencyApiIT` 1/1
+    - [x] Manual check via real `spring-boot:run` + curl (Checkpoint 23's own bullet): register → 201, overlapping period → 409 `RPT-006` with the exact expected body, adjacent non-overlapping period → 201
+  - **code-reviewer verdict:** PASS. Noted (not a finding) that in principle either the service's `existsOverlapping()` check or the DB constraint could be the one that rejects the loser, since both map to the identical HTTP response — but the negative verification already empirically settles that, under this test's actual synchronization, it's the DB constraint doing the rejecting (both threads pass the service check before either commits).
+  - **Dependencies:** Task 45
+  - **Files touched:** `it/SigersolSyncConcurrencyApiIT.java`
+  - **Estimated scope:** Small (1 file)

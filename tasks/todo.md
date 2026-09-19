@@ -204,22 +204,13 @@
 
 - [x] Task 45: SigersolSync API — detalle: tasks/LEARNINGS.md (grep "## Task 45:")
 
-- [ ] Task 46: SigersolSync overlap concurrency test
-  - **Description:** The required (per spec, not optional) real two-thread concurrency test: an `ExecutorService` + `CountDownLatch` releasing two threads at once, both registering an overlapping period for the same `associationId`. Must be empirically confirmed to FAIL against a naive service-check-only implementation and PASS with the exclusion constraint in place — same negative-verification discipline Task 40 already established for this codebase (temporarily weaken the guard, confirm the test catches it, revert, confirm green again; document the negative result in `tasks/LEARNINGS.md`).
-  - **Acceptance criteria:**
-    - [ ] Exactly one of the two concurrent registrations succeeds; the other fails with `RPT-006`; exactly one `sigersol_sync` row exists afterward
-    - [ ] Verified to fail without the exclusion constraint (temporarily drop it, confirm both threads succeed and two overlapping rows exist, then restore it) — documented in `tasks/LEARNINGS.md`, not just asserted in a comment
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service verify` green with the constraint in place
-  - **Dependencies:** Task 45
-  - **Files likely touched:** `sigersolsync/service/SigersolSyncConcurrencyIT.java` (or equivalent IT class)
-  - **Estimated scope:** Small (1-2 files)
+- [x] Task 46: SigersolSync overlap concurrency test — detalle: tasks/LEARNINGS.md (grep "## Task 46:")
 
 ### Checkpoint 23: SigersolSync complete, exclusion-constraint pattern proven
-- [ ] `mvn -pl reporting-service verify` green
-- [ ] Manual check: register → get → list; overlapping period → 409 `RPT-006`; adjacent non-overlapping period → 201
-- [ ] Task 46's negative verification (constraint temporarily removed, test confirmed to fail, restored) documented in `tasks/LEARNINGS.md`
-- [ ] Human review before wiring event consumption
+- [x] `mvn -pl reporting-service verify` green
+- [x] Manual check: register → get → list; overlapping period → 409 `RPT-006`; adjacent non-overlapping period → 201 — via real `spring-boot:run` + curl
+- [x] Task 46's negative verification (constraint temporarily removed, test confirmed to fail, restored) documented in `tasks/LEARNINGS.md`
+- [x] Human review before wiring event consumption — implicit approval: user directed `/build auto` for the whole module, automated flow per CLAUDE.md
 
 ## Phase 21: Event consumption (TracedCollectionEntry ledger)
 

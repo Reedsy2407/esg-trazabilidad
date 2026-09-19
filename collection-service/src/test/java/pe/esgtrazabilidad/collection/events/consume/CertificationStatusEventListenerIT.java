@@ -2,7 +2,9 @@ package pe.esgtrazabilidad.collection.events.consume;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Calendar;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -17,6 +19,7 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
@@ -56,8 +59,28 @@ class CertificationStatusEventListenerIT {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     private Message messageFor(Object event) throws Exception {
         return MessageBuilder.withBody(objectMapper.writeValueAsBytes(event)).build();
+    }
+
+    // isBlocked() alone can't distinguish "dedup worked" from "dedup is
+    // completely broken": BlockedAssociationRepositoryAdapter.block()
+    // unconditionally upserts on every call, so a second (supposedly
+    // deduped) delivery would still read isBlocked()==true even if the
+    // ledger's own event_id dedup never ran at all. blocked_at DOES change
+    // on every successful block() call, so reading it directly (same
+    // UTC-Calendar pattern as BlockedAssociationRepositoryAdapterIT, to
+    // avoid pgjdbc reinterpreting the stored UTC timestamp in the JVM's
+    // local zone) is real evidence a second delivery's transaction never
+    // reached its own block() write.
+    private Instant blockedAtOf(UUID associationId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT blocked_at FROM blocked_association WHERE association_id = ?",
+                (rs, rowNum) -> rs.getTimestamp(1, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).toInstant(),
+                associationId);
     }
 
     private CertificationExpiredEvent expiredEventFor(UUID associationId) {
@@ -72,11 +95,13 @@ class CertificationStatusEventListenerIT {
 
         listener.handle(messageFor(event), "certification.expired");
         assertThat(blockedAssociationRepository.isBlocked(associationId)).isTrue();
+        Instant blockedAtAfterFirstDelivery = blockedAtOf(associationId);
 
         // Same eventId, simulating RabbitMQ redelivery -- must be a no-op on
         // downstream state (still blocked), not just "doesn't throw".
         listener.handle(messageFor(event), "certification.expired");
         assertThat(blockedAssociationRepository.isBlocked(associationId)).isTrue();
+        assertThat(blockedAtOf(associationId)).isEqualTo(blockedAtAfterFirstDelivery);
     }
 
     @Test

@@ -3,6 +3,8 @@ package pe.esgtrazabilidad.collection.events.consume;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Calendar;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -19,6 +21,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -102,7 +105,27 @@ class CertificationStatusEventBrokerFlowIT {
     @Autowired
     private CertificationStatusLedgerJpaRepository certificationStatusLedgerJpaRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+
+    // isBlocked() alone can't distinguish "dedup worked" from "dedup is
+    // completely broken": BlockedAssociationRepositoryAdapter.block()
+    // unconditionally upserts on every call, so a second (supposedly
+    // deduped) delivery would still read isBlocked()==true even if the
+    // ledger's own event_id dedup never ran at all. blocked_at DOES change
+    // on every successful block() call, so reading it directly (same
+    // UTC-Calendar pattern as BlockedAssociationRepositoryAdapterIT, to
+    // avoid pgjdbc reinterpreting the stored UTC timestamp in the JVM's
+    // local zone) is real evidence a second delivery's transaction never
+    // reached its own block() write.
+    private Instant blockedAtOf(UUID associationId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT blocked_at FROM blocked_association WHERE association_id = ?",
+                (rs, rowNum) -> rs.getTimestamp(1, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).toInstant(),
+                associationId);
+    }
 
     private String createNeighborRequest(String fullName) {
         return """
@@ -223,6 +246,7 @@ class CertificationStatusEventBrokerFlowIT {
 
         publish(EXPIRED_ROUTING_KEY, json);
         assertThat(awaitBlocked(associationId, true, Duration.ofSeconds(30))).isTrue();
+        Instant blockedAtAfterFirstDelivery = blockedAtOf(associationId);
 
         publish(EXPIRED_ROUTING_KEY, json); // same eventId -- simulated broker redelivery
         // No positive signal to await for a no-op -- give the second
@@ -230,6 +254,7 @@ class CertificationStatusEventBrokerFlowIT {
         Thread.sleep(5000);
 
         assertThat(blockedAssociationRepository.isBlocked(associationId)).isTrue();
+        assertThat(blockedAtOf(associationId)).isEqualTo(blockedAtAfterFirstDelivery);
     }
 
     @Test

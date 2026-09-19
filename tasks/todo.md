@@ -265,7 +265,7 @@
 - [x] `recycler-service`/`collection-service`/`cross-service-events`'s pre-existing test suites and manual-check behavior unaffected
 
 ### Checkpoint 28: Final — ready for review (M5 module close)
-- [ ] `mvn verify` green across the whole reactor, RabbitMQ Testcontainer included
-- [ ] All Success Criteria bullets in `SPEC-reporting-service.md` re-verified line by line with evidence, same discipline as `cross-service-events`' Checkpoint 20
-- [ ] `shared-kernel`/`recycler-service`/`collection-service`/`cross-service-events`'s pre-existing test suites and manual-check behavior unaffected — no destructive schema change, no existing endpoint contract changed
+- [x] `mvn verify` green across the whole reactor, RabbitMQ Testcontainer included
+- [x] All Success Criteria bullets in `SPEC-reporting-service.md` re-verified line by line with evidence, same discipline as `cross-service-events`' Checkpoint 20 — detalle: tasks/LEARNINGS.md (grep "## Checkpoint 28:")
+- [x] `shared-kernel`/`recycler-service`/`collection-service`/`cross-service-events`'s pre-existing test suites and manual-check behavior unaffected — no destructive schema change, no existing endpoint contract changed
 - [ ] Human review and approval — this is the last business-logic module before `ci-pipeline`/`deployment` per the capability map's build order

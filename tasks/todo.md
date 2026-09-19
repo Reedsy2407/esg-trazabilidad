@@ -230,16 +230,7 @@
 
 - [x] Task 50: EsgCertificate + EsgCertificateLineItem persistence — detalle: tasks/LEARNINGS.md (grep "## Task 50:")
 
-- [ ] Task 51: Certificate summary preview
-  - **Description:** `CertificateSummary` (plain record, not persisted — per spec's Resolved Decisions) + `PreviewCertificateSummaryUseCase` + `GET /tracked-companies/{companyId}/certificate-summary?from=...&to=...`. Computes live: `TracedCollectionEntryRepository` sum for the company's `associationId` within the period, plus `SigersolSyncRepository.findCovering(...)` for the compliance percentage (nullable in the preview if none exists yet — RPT-005 only blocks actual issuance, not the preview, so an operator can see "what would this look like" before the SIGERSOL data is even entered).
-  - **Acceptance criteria:**
-    - [ ] Preview returns the correct live sum and compliance % (or `null` compliance if no covering `SigersolSync` record exists) for a tracked company + period
-    - [ ] Preview persists nothing
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service verify` green
-  - **Dependencies:** Task 43, Task 45, Task 49
-  - **Files likely touched:** `certificate/CertificateSummary.java`, `certificate/port/in/PreviewCertificateSummaryUseCase.java`, `certificate/service/CertificateService.java`, `certificate/adapter/in/web/CertificateController.java`
-  - **Estimated scope:** Medium (4-5 files)
+- [x] Task 51: Certificate summary preview — detalle: tasks/LEARNINGS.md (grep "## Task 51:")
 
 - [ ] Task 52: Certificate issuance
   - **Description:** `IssueCertificateUseCase` / `POST /tracked-companies/{companyId}/certificates`: `RPT-003` (tracked company not found), `RPT-004` (overlapping period — service check first, DB exclusion constraint as the real backstop), `RPT-005` (no covering `SigersolSync` record). On success, freezes company name/RUC/associationId, the computed sum, and the compliance % into `EsgCertificate`, and snapshots the contributing `TracedCollectionEntry` rows into `EsgCertificateLineItem` — all in one `@Transactional` method. `CertificateExceptionHandler` (`getConstraintName()` dispatch) translates the exclusion-constraint violation to `RPT-004`.

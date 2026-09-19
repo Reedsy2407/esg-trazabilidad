@@ -965,3 +965,15 @@ All 11 `SPEC-cross-service-events.md` Success Criteria bullets, re-verified line
   - **Dependencies:** Task 42 (`TrackedCompany`, now via a real FK, not a bare UUID), Task 44 (reuses `btree_gist`, already enabled)
   - **Files touched:** `certificate/domain/{EsgCertificate,EsgCertificateLineItem}.java`, `certificate/adapter/out/persistence/*`, `certificate/port/out/EsgCertificateRepository.java`, `v0.1.3_create_esg_certificate_table.yaml`, `v0.1.4_create_esg_certificate_line_item_table.yaml`, `certificate/domain/EsgCertificateTest.java`, `certificate/adapter/out/persistence/EsgCertificateRepositoryAdapterIT.java`
   - **Estimated scope:** Large (7-9 files) — actual: 12 files
+
+## Task 51: Certificate summary preview
+
+- [x] Task 51: Certificate summary preview
+  - **Description:** `CertificateSummary` (plain record, lives directly in the `certificate` package, not `certificate/domain` — deliberate, since it's a computed DTO, never a persisted JPA entity, per the spec's Resolved Decisions) + `PreviewCertificateSummaryUseCase` + `GET /tracked-companies/{companyId}/certificate-summary?periodStart=...&periodEnd=...`. Computes live: `TracedCollectionEntryJpaRepository` sum for the company's `associationId` within the period, plus `SigersolSyncRepository.findCovering(...)` for the compliance % (nullable — a missing `SigersolSync` record does NOT block the preview; RPT-005 only blocks actual issuance in Task 52). Read-only service: no `save()`/`saveAndFlush()` anywhere.
+  - **Real test-assertion bug found and fixed while writing this task (not a business-logic bug):** `CertificateApiIT`'s zero-kilos test initially asserted `kilosTrazados == 0.0f`; Jackson serializes `BigDecimal.ZERO` as the JSON integer `0`, not `0.0`, so RestAssured/Hamcrest failed with a type mismatch even though the underlying computed value was correct. Fixed to `equalTo(0)`.
+  - **Verification:**
+    - [x] `mvn -pl reporting-service verify` green — `CertificateServiceTest` 3/3, `CertificateApiIT` 3/3
+  - **code-reviewer verdict:** PASS. One low-severity, non-blocking suggestion: no HTTP-level test exercises `kilosTrazados > 0` end-to-end (the sum itself is proven with real `BigDecimal` math in `CertificateServiceTest`, and the underlying query has its own dedicated boundary-inclusive IT from Task 47) — flagged as something Task 52's real issuance flow will likely exercise anyway, not required to add here.
+  - **Dependencies:** Task 43, Task 45, Task 49
+  - **Files touched:** `certificate/CertificateSummary.java`, `certificate/port/in/PreviewCertificateSummaryUseCase.java`, `certificate/service/CertificateService.java`, `certificate/adapter/in/web/{CertificateController,CertificateMapper,CertificateSummaryResponse}.java`, `certificate/service/CertificateServiceTest.java`, `it/CertificateApiIT.java`
+  - **Estimated scope:** Medium (4-5 files) — actual: 8 files

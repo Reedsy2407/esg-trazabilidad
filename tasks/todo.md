@@ -216,15 +216,7 @@
 
 - [x] Task 47: reporting-service RabbitMQ wiring + TracedCollectionEntry schema — detalle: tasks/LEARNINGS.md (grep "## Task 47:")
 
-- [ ] Task 48: `CollectionRegisteredEventListener` (reporting-service)
-  - **Description:** Own local `CollectionRegisteredEvent` record (structurally matching `collection-service`'s publisher, independently defined — same "never a shared Java type across services" convention as `recycler-service`'s Direction A consumer), `CollectionRegisteredEventListener` (`@RabbitListener`), `CollectionRegisteredEventProcessor` (separate `@Transactional` bean, same self-invocation reasoning as `recycler-service`'s Task 30), `CollectionRegisteredQueueConfig` (own queue `collection.registered.reporting-service`, bound to the existing exchange/routing key — zero change to `collection-service`). Unit-tested with Mockito only at this stage (real broker IT is Task 49).
-  - **Acceptance criteria:**
-    - [ ] Listener inserts a `TracedCollectionEntry` row keyed by `event_id`; a simulated duplicate `event_id` is caught (`DataIntegrityViolationException`) and treated as a no-op, not an error
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service test` green (Mockito-mocked repository, same shape as `CollectionRegisteredEventListenerTest`/`CertificationStatusEventListenerTest` precedent)
-  - **Dependencies:** Task 47
-  - **Files likely touched:** `events/consume/CollectionRegisteredEvent.java`, `events/consume/CollectionRegisteredEventListener.java`, `events/consume/CollectionRegisteredEventProcessor.java`, `events/consume/CollectionRegisteredQueueConfig.java`
-  - **Estimated scope:** Medium (4-5 files)
+- [x] Task 48: `CollectionRegisteredEventListener` (reporting-service) — detalle: tasks/LEARNINGS.md (grep "## Task 48:")
 
 - [ ] Task 49: Event consumption end-to-end IT
   - **Description:** RabbitMQ Testcontainer IT proving the real broker path: publish a structurally-matching `CollectionRegisteredEvent` JSON payload directly (same "faithful stand-in for the real publisher's wire shape" convention already established and reused across every broker-flow IT in this codebase) → assert it lands in `traced_collection_entry`. Redelivery/idempotency test: the SAME event published twice → assert the period-scoped `SUM(weight_kg)` is unaffected by the duplicate, not just that the row count didn't grow (mirrors Task 40's own correction — a weaker check would not have caught that class of bug).

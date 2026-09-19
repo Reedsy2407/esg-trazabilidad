@@ -926,3 +926,15 @@ All 11 `SPEC-cross-service-events.md` Success Criteria bullets, re-verified line
   - **Dependencies:** Task 41
   - **Files touched:** `events/ledger/{TracedCollectionEntryEntity,TracedCollectionEntryJpaRepository}.java`, `v0.1.2_create_traced_collection_entry_table.yaml`, `events/ledger/TracedCollectionEntryJpaRepositoryIT.java`
   - **Estimated scope:** Small (3-4 files)
+
+## Task 48: `CollectionRegisteredEventListener` (reporting-service)
+
+- [x] Task 48: `CollectionRegisteredEventListener` (reporting-service)
+  - **Description:** Own local `CollectionRegisteredEvent` record (structurally matching `collection-service`'s publisher, independently defined — same "never a shared Java type across services" convention as `recycler-service`'s Direction A consumer), `CollectionRegisteredEventListener` (`@RabbitListener`), `CollectionRegisteredQueueConfig` (own queue `collection.registered.reporting-service`, bound to the existing exchange/routing key — zero change to `collection-service`).
+  - **Deliberate deviation from the plan, reviewed and confirmed correct:** no separate `CollectionRegisteredEventProcessor` bean, unlike the plan's own description ("same self-invocation reasoning as recycler-service's Task 30"). `recycler-service`'s processor exists because `incrementTotalKilos()` + the ledger insert are two writes needing one shared transaction (self-invocation from the listener would bypass Spring's `@Transactional` proxy). Here, `TracedCollectionEntryEntity`'s own row IS the entire write — already atomic via `JpaRepository`'s per-method transaction — so a wrapping processor would be ceremony without a corresponding correctness need. Confirmed by the reviewer to also correctly sidestep the `UnexpectedRollbackException` trap `SPEC-reporting-service.md`'s own illustrative snippet would have hit (a `@Transactional handle()` with an internal catch around the failing flush).
+  - **code-reviewer FAIL → fixed → PASS:** first pass found `verify(repository).saveAndFlush(any(TracedCollectionEntryEntity.class))` couldn't catch a field-mapping bug (e.g. `neighborId` used where `associationId` belongs), since the entity has no `equals()`. Fixed with an `ArgumentCaptor` asserting each field (`eventId`, `associationId`, `collectionDate`, `weightKg`) against the source event's own independently-random UUIDs — confirmed by the re-reviewer that this genuinely would catch such a bug, not just superficially. Also fixed a comment that said `save()` where the code uses `saveAndFlush()`.
+  - **Verification:**
+    - [x] `mvn -pl reporting-service test` green — `CollectionRegisteredEventListenerTest` 2/2
+  - **Dependencies:** Task 47
+  - **Files touched:** `events/consume/{CollectionRegisteredEvent,CollectionRegisteredEventListener,CollectionRegisteredQueueConfig}.java`, `events/consume/CollectionRegisteredEventListenerTest.java`
+  - **Estimated scope:** Medium (4 files)

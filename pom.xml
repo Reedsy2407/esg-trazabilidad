@@ -16,6 +16,7 @@
         <module>shared-kernel</module>
         <module>recycler-service</module>
         <module>collection-service</module>
+        <module>reporting-service</module>
     </modules>
 
     <properties>

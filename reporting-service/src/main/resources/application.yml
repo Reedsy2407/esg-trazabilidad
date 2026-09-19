@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: reporting-service
+  config:
+    import: "optional:file:../.env.local[.properties]"
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/esg_trazabilidad}
+    username: ${DB_USERNAME:esg}
+    password: ${DB_PASSWORD}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:esg}
+    password: ${RABBITMQ_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  liquibase:
+    enabled: true
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+
+server:
+  port: 8083

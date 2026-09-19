@@ -9,6 +9,7 @@ SPEC-recycler-service.md
 SPEC-collection-service.md
 SPEC-cross-service-events.md
 SPEC-reporting-service.md
+SPEC-ci-pipeline.md
 
 target/
 *.class

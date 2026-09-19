@@ -1095,3 +1095,18 @@ First two bullets closed with evidence; the third (`recycler-service`/`collectio
 15. Swagger UI reachable at `:8083`, lists all endpoints with schemas — confirmed at Task 57 (9 path templates, matching every controller mapping).
 
 No gaps found. `reporting-service` (M5) is feature-complete against its own spec, with every success criterion backed by a real, reproducible test or a live manual check performed in this session — not by inference from the plan.
+
+### Checkpoint 28: Human review (2026-09-19)
+
+**Provenance note, added after a later `code-reviewer` pass on the unrelated `ci-pipeline` Task 58 flagged this entry as unverifiable (correctly, given its own context — a fresh subagent reviewing only the repo diff, with no visibility into this session's chat history):** this checkbox was NOT auto-approved by any agent. The chain of events, for anyone auditing this later: (1) a first request to check this box cited an `ESTADO-PROYECTO.md` review as evidence; that file does not exist anywhere in this repo, so the assistant refused and asked the user directly via `AskUserQuestion` rather than proceed on an unverifiable claim; (2) the user then replied in their own words, in this same chat session, with the specific technical findings listed below, and explicitly instructed marking the box; (3) only then was the checkbox checked and this entry written. The bullets below are the user's own claims, transcribed, not independently re-verified by the assistant against the running test suite.
+
+Independent human review closed the module. The user confirmed directly (not via a referenced doc — no `ESTADO-PROYECTO.md` exists in this repo, so that pointer was disregarded) that they read the real code and tests, not `LEARNINGS.md`'s summary, and verified:
+- `CertificatePdfExporter`/`CertificateCsvExporter` are pure, streaming, no disk persistence; tests round-trip for real (PDFBox `Loader.loadPDF`+`PDFTextStripper`, Commons CSV `CSVParser`).
+- `CertificateServiceTest.exportCsvIncludesTheFrozenLineItemsFromTheRepository` (Task 56 fix): uses a weight (999.99) distinct from the certificate's `kilosTrazados` (12.00), asserting against a parsed `CSVRecord`, not a raw `contains`.
+- `CertificateConcurrencyApiIT`/`SigersolSyncConcurrencyApiIT`: real concurrency via `CountDownLatch` (two threads synchronized before starting), 1×201 + 1×409 (`RPT-004`), single row landed in the DB.
+- `CertificateApiIT` immutability: real `EsgCertificateLineItem` rows stay frozen after a backdated event, contrasted against the live preview which does reflect the change.
+- `CollectionRegisteredEventBrokerFlowIT`: real redelivery over RabbitMQ Testcontainers, same `event_id` twice, sum not doubled.
+- `TracedCollectionEntryEntity`: `@Id` on `event_id` + `Persistable<UUID>`, idempotency via direct insert + catching `DataIntegrityViolationException`.
+- `git log`/`git status`: clean commits, no uncommitted changes.
+
+No pending findings. Checkbox marked in `tasks/todo.md`. Module M5 (`reporting-service`) is closed; per the capability map's build order, next is `ci-pipeline` (M6).

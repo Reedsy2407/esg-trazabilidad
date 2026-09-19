@@ -1,6 +1,6 @@
-# Task List: shared-kernel + recycler-service + collection-service + cross-service-events + reporting-service
+# Task List: shared-kernel + recycler-service + collection-service + cross-service-events + reporting-service + ci-pipeline
 
-> See `tasks/plan.md` for architecture decisions, dependency graph, and risks. Source specs: `SPEC-shared-kernel.md`, `SPEC-recycler-service.md`, `SPEC-collection-service.md`, `SPEC-cross-service-events.md`, `SPEC-reporting-service.md`.
+> See `tasks/plan.md` for architecture decisions, dependency graph, and risks. Source specs: `SPEC-shared-kernel.md`, `SPEC-recycler-service.md`, `SPEC-collection-service.md`, `SPEC-cross-service-events.md`, `SPEC-reporting-service.md`, `SPEC-ci-pipeline.md`.
 
 ## Phase 1: Foundation (`shared-kernel`)
 
@@ -268,4 +268,16 @@
 - [x] `mvn verify` green across the whole reactor, RabbitMQ Testcontainer included
 - [x] All Success Criteria bullets in `SPEC-reporting-service.md` re-verified line by line with evidence, same discipline as `cross-service-events`' Checkpoint 20 — detalle: tasks/LEARNINGS.md (grep "## Checkpoint 28:")
 - [x] `shared-kernel`/`recycler-service`/`collection-service`/`cross-service-events`'s pre-existing test suites and manual-check behavior unaffected — no destructive schema change, no existing endpoint contract changed
-- [ ] Human review and approval — this is the last business-logic module before `ci-pipeline`/`deployment` per the capability map's build order
+- [x] Human review and approval — this is the last business-logic module before `ci-pipeline`/`deployment` per the capability map's build order — ver tasks/LEARNINGS.md#checkpoint-28-human-review
+
+## Phase 25: ci-pipeline workflow
+
+- [ ] Task 58: Add .github/workflows/ci.yml (GitHub Actions: build+test on push/PR)
+
+### Checkpoint 29: CI proven live (M6 module close)
+- [ ] Push to main triggers a real Actions run; `mvn -B verify` passes reactor-wide (shared-kernel + recycler-service + collection-service + reporting-service), including at least one Postgres IT and one RabbitMQ IT, zero repo secrets configured
+- [ ] Negative check: a deliberately broken test turns the run red with that test named in the log; reverted; green again
+- [ ] A real PR (throwaway branch) shows the same workflow as a status check on the PR itself, not only on direct pushes to `main`
+- [ ] Two rapid pushes to the same branch show the earlier run cancelled (concurrency block proven live, not just present in the YAML)
+- [ ] `mvn verify` still green locally across the whole reactor — zero regression from adding the workflow file
+- [ ] Human review and approval — last module before `deployment` per the capability map's build order

@@ -1,11 +1,11 @@
-# Implementation Plan: shared-kernel + recycler-service + collection-service + cross-service-events + reporting-service
+# Implementation Plan: shared-kernel + recycler-service + collection-service + cross-service-events + reporting-service + ci-pipeline
 
-> Source specs: [[SPEC-shared-kernel.md]], [[SPEC-recycler-service.md]], [[SPEC-collection-service.md]], [[SPEC-cross-service-events.md]], [[SPEC-reporting-service.md]]. Module ids per [[CAPABILITY-MAP.md]]: `shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`.
-> `shared-kernel` + `recycler-service` (Tasks 1-12, Checkpoints 1-6), `collection-service` (Tasks 13-23, Checkpoints 7-13), and `cross-service-events` (Tasks 24-40, Checkpoints 14-20) are complete and approved. `reporting-service` (Tasks 41-57, Checkpoints 21-28) is planned below, not yet built — the last business-logic module before `ci-pipeline`/`deployment` per the capability map's build order.
+> Source specs: [[SPEC-shared-kernel.md]], [[SPEC-recycler-service.md]], [[SPEC-collection-service.md]], [[SPEC-cross-service-events.md]], [[SPEC-reporting-service.md]], [[SPEC-ci-pipeline.md]]. Module ids per [[CAPABILITY-MAP.md]]: `shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`, `ci-pipeline`.
+> `shared-kernel` + `recycler-service` (Tasks 1-12, Checkpoints 1-6), `collection-service` (Tasks 13-23, Checkpoints 7-13), `cross-service-events` (Tasks 24-40, Checkpoints 14-20), and `reporting-service` (Tasks 41-57, Checkpoints 21-28) are complete and approved. `ci-pipeline` (Task 58, Checkpoint 29) is planned below, not yet built — the last module before `deployment` per the capability map's build order.
 
 ## Overview
 
-Build the first three modules of the ESG traceability monorepo: `shared-kernel` (error handling, event-strategy enum, ID generation — a dependency-light library), `recycler-service` (the first real Spring Boot service, covering `Association`, `Recycler`, and `Certification` CRUD, Liquibase-managed Postgres schema, and Docker Compose local infra), and `collection-service` (a second Spring Boot service in the same reactor, covering `Neighbor`, `Company`, `CollectionSchedule`, `CollectionRecord` CRUD against the same shared Postgres). Then `cross-service-events`: RabbitMQ-based transactional Outbox (publish) + Inbox/idempotency (consume) infrastructure wiring the two services together — `collection-service` publishes `CollectionRegisteredEvent` (consumed by `recycler-service` to increment `Association.totalKilosCollected`), and `recycler-service` publishes `CertificationExpiredEvent`/`CertificationRenewedEvent` (consumed by `collection-service` to block/unblock new `CollectionRecord` creation for an association with a lapsed certification). Finally `reporting-service`: a third Spring Boot service, pure consumer of the already-existing `CollectionRegisteredEvent`, that turns the platform's own data plus a manually-entered official SIGERSOL/MINAM data point into an immutable, exportable (PDF/CSV) ESG traceability certificate for a B2B client.
+Build the first three modules of the ESG traceability monorepo: `shared-kernel` (error handling, event-strategy enum, ID generation — a dependency-light library), `recycler-service` (the first real Spring Boot service, covering `Association`, `Recycler`, and `Certification` CRUD, Liquibase-managed Postgres schema, and Docker Compose local infra), and `collection-service` (a second Spring Boot service in the same reactor, covering `Neighbor`, `Company`, `CollectionSchedule`, `CollectionRecord` CRUD against the same shared Postgres). Then `cross-service-events`: RabbitMQ-based transactional Outbox (publish) + Inbox/idempotency (consume) infrastructure wiring the two services together — `collection-service` publishes `CollectionRegisteredEvent` (consumed by `recycler-service` to increment `Association.totalKilosCollected`), and `recycler-service` publishes `CertificationExpiredEvent`/`CertificationRenewedEvent` (consumed by `collection-service` to block/unblock new `CollectionRecord` creation for an association with a lapsed certification). Finally `reporting-service`: a third Spring Boot service, pure consumer of the already-existing `CollectionRegisteredEvent`, that turns the platform's own data plus a manually-entered official SIGERSOL/MINAM data point into an immutable, exportable (PDF/CSV) ESG traceability certificate for a B2B client. Then `ci-pipeline`: a single GitHub Actions workflow that runs `mvn -B verify` against the whole reactor on every push to `main` and every pull request, closing the gap where a regression could otherwise reach `main` without anyone running the full test suite by hand first.
 
 ## Architecture Decisions
 
@@ -28,6 +28,7 @@ Build the first three modules of the ESG traceability monorepo: `shared-kernel` 
 - **`SigersolSync` and `EsgCertificate` each get their own dedicated concurrency-test task** (Tasks 46, 53) rather than folding the concurrency proof into their API/issuance tasks — same reasoning `cross-service-events` already applied to keeping its own concurrency/redelivery proofs (Tasks 31, 38, 40) as distinct, individually-reviewable tasks rather than bundled into the business-logic task that introduces the rule.
 - **PDF and CSV export are split into three tasks** (pure-function exporters, Tasks 54/55, then the HTTP endpoints wiring them, Task 56) rather than one — the exporters need zero Postgres/RabbitMQ and are fully unit-testable in isolation (round-trip: generate, then parse the output back with the same library's own reader), while the endpoint task is what actually needs Testcontainers Postgres for a real issued certificate to export.
 - **No new error-handling infra needed for the generic `DataIntegrityViolationException` fallback** — `shared-kernel`'s `GlobalExceptionHandler` already covers it generically; each new controller-scoped `*ExceptionHandler` (mirrors `ScheduleExceptionHandler`/`CompanyExceptionHandler`) only needs to add the specific `getConstraintName()` branches this module's own constraints introduce.
+- **`ci-pipeline` is a single GitHub Actions workflow file, not a new Maven module** — no addition to the root `pom.xml`'s `<modules>` list. It runs `mvn -B verify` at the reactor root on `ubuntu-latest`, needing zero repository secrets because every `@SpringBootTest`/`@Testcontainers` class in the reactor already overrides `spring.datasource.*`/`spring.rabbitmq.*` via `@DynamicPropertySource` at higher precedence than `application.yml`'s `${RABBITMQ_PASSWORD}`-style placeholders (confirmed by reading every such test class before writing `SPEC-ci-pipeline.md`).
 
 ## Dependency Graph (shared-kernel + recycler-service)
 
@@ -504,10 +505,30 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 - [ ] `recycler-service`/`collection-service`/`cross-service-events`'s pre-existing test suites and manual-check behavior unaffected
 
 ### Checkpoint 28: Final — ready for review (M5 module close)
-- [ ] `mvn verify` green across the whole reactor, RabbitMQ Testcontainer included
-- [ ] All Success Criteria bullets in `SPEC-reporting-service.md` re-verified line by line with evidence, same discipline as `cross-service-events`' Checkpoint 20
-- [ ] `shared-kernel`/`recycler-service`/`collection-service`/`cross-service-events`'s pre-existing test suites and manual-check behavior unaffected
-- [ ] Human review and approval — last business-logic module before `ci-pipeline`/`deployment`
+- [x] `mvn verify` green across the whole reactor, RabbitMQ Testcontainer included
+- [x] All Success Criteria bullets in `SPEC-reporting-service.md` re-verified line by line with evidence, same discipline as `cross-service-events`' Checkpoint 20
+- [x] `shared-kernel`/`recycler-service`/`collection-service`/`cross-service-events`'s pre-existing test suites and manual-check behavior unaffected
+- [x] Human review and approval — last business-logic module before `ci-pipeline`/`deployment` (closed 2026-09-19, see `tasks/LEARNINGS.md`'s Checkpoint 28 entry)
+
+## Dependency Graph (ci-pipeline)
+
+```
+Task 58: .github/workflows/ci.yml
+(build+test on push/PR, no code dependency — gated only on the
+reactor existing, i.e. every module built so far)
+```
+
+### Phase 25: ci-pipeline workflow
+
+- [ ] Task 58: Add `.github/workflows/ci.yml` — triggers on `push` to `main` and `pull_request` targeting `main`; `ubuntu-latest`; `actions/checkout@v4`; `actions/setup-java@v4` (temurin, java-version 21, `cache: maven`); one step running `mvn -B verify`; `concurrency` block (`group: ci-${{ github.ref }}`, `cancel-in-progress: true`) — content per `SPEC-ci-pipeline.md`'s Code Style section verbatim. No `pom.xml` change.
+
+### Checkpoint 29: CI proven live (M6 module close)
+- [ ] Push to `main` triggers a real Actions run; `mvn -B verify` passes reactor-wide (`shared-kernel` + `recycler-service` + `collection-service` + `reporting-service`), including at least one Postgres IT and one RabbitMQ IT, zero repository secrets configured
+- [ ] Negative check: a deliberately broken test turns the run red with that test named in the log; reverted; green again
+- [ ] A real PR (throwaway branch) shows the same workflow as a status check on the PR itself, not only on direct pushes to `main`
+- [ ] Two rapid pushes to the same branch show the earlier run cancelled (`concurrency` block proven live, not just present in the YAML)
+- [ ] `mvn verify` still green locally across the whole reactor — zero regression from adding the workflow file
+- [ ] Human review and approval — last module before `deployment` per the capability map's build order
 
 ## Risks and Mitigations
 
@@ -532,7 +553,8 @@ Strict "≤5 files per task" isn't achievable for a full Controller→Mapper→U
 | A naive `assertNoOverlappingCertificate`/`SigersolSync`-equivalent service check could look sufficient in every sequential test and only fail under real concurrency — exactly the class of bug this project has already been burned by once (Cowork's Checkpoint-20 finding on `cross-service-events`) | Medium if skipped | Tasks 46 and 53 are dedicated, required tasks (not folded into the API/issuance tasks) specifically so the concurrency proof can't be quietly deprioritized or forgotten; both require the documented fail-without-constraint/pass-with-constraint negative verification before being considered done |
 | `reporting-service` consuming `CollectionRegisteredEvent` independently from `recycler-service`'s own Direction A consumer means the event's JSON shape now has two independent consumers that must both stay in sync with `collection-service`'s publisher | Medium — a future field rename in `collection-service`'s event could silently break one consumer's deserialization without the other's tests catching it | Same mitigation already accepted for the existing two-consumer risk on `CertificationExpiredEvent`/`CertificationRenewedEvent`: each consumer's own broker-flow IT (Task 49) is the real contract test, exercising real JSON over a real queue — a drift fails loudly there, per consumer, independently |
 | `EsgCertificateLineItem` snapshotting could grow the table indefinitely with no archival/retention policy | Low at pilot scale (2-3 companies, MVP) | Explicitly out of scope per `SPEC-reporting-service.md` — revisit only if real client volume makes it a real storage concern, same YAGNI discipline applied throughout this project |
+| Checkpoint 29's live-verification bullets (real push, real PR, real concurrent-push cancellation) can't be proven by any local command — they require pushing to the actual GitHub remote under the user's own identity | Low-medium — a "hard-to-reverse / visible to others" class of action per this session's own operating guidance | `/build` confirms with the user before each push/PR in Checkpoint 29, and prefers a throwaway branch (not `main`) for the deliberately-broken-test negative check specifically, per `SPEC-ci-pipeline.md`'s Testing Strategy |
 
 ## Open Questions
 
-None outstanding — all five source specs (`shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`) are fully resolved. `SPEC-reporting-service.md`'s own three Open Questions (real SIGERSOL integration timing, PDF template/branding, whether `TrackedCompany` should ever track more than one association) are deliberately deferred, not blocking — none of Tasks 41-57 depend on resolving them. Any new question that surfaces during implementation should be raised before the task it blocks, not worked around silently.
+None outstanding — all six source specs (`shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`, `ci-pipeline`) are fully resolved. `SPEC-reporting-service.md`'s own three Open Questions (real SIGERSOL integration timing, PDF template/branding, whether `TrackedCompany` should ever track more than one association) are deliberately deferred, not blocking — none of Tasks 41-57 depend on resolving them. `SPEC-ci-pipeline.md`'s own three Open Questions (README CI badge, Dependabot, branch protection) are likewise deliberately deferred, not blocking — none of Task 58/Checkpoint 29 depend on resolving them. Any new question that surfaces during implementation should be raised before the task it blocks, not worked around silently.

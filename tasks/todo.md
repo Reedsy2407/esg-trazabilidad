@@ -257,16 +257,7 @@
 
 ## Phase 24: Polish
 
-- [ ] Task 57: springdoc-openapi wiring
-  - **Description:** Same wiring as Task 11 (`recycler-service`)/Task 23 (`collection-service`).
-  - **Acceptance criteria:**
-    - [ ] Swagger UI reachable at `:8083`, lists every endpoint with request/response schemas
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service verify` green
-    - [ ] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service` + `reporting-service`)
-  - **Dependencies:** Tasks 43, 45, 51, 52, 56 (needs every controller to exist)
-  - **Files likely touched:** `pom.xml` (springdoc dependency), `application.yml`
-  - **Estimated scope:** Small (2 files)
+- [x] Task 57: springdoc-openapi wiring — detalle: tasks/LEARNINGS.md (grep "## Task 57:")
 
 ### Checkpoint 27: Full reporting path complete
 - [ ] `mvn verify` green across the whole reactor

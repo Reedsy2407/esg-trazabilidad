@@ -1,6 +1,6 @@
-# Task List: shared-kernel + recycler-service + collection-service + cross-service-events
+# Task List: shared-kernel + recycler-service + collection-service + cross-service-events + reporting-service
 
-> See `tasks/plan.md` for architecture decisions, dependency graph, and risks. Source specs: `SPEC-shared-kernel.md`, `SPEC-recycler-service.md`, `SPEC-collection-service.md`, `SPEC-cross-service-events.md`.
+> See `tasks/plan.md` for architecture decisions, dependency graph, and risks. Source specs: `SPEC-shared-kernel.md`, `SPEC-recycler-service.md`, `SPEC-collection-service.md`, `SPEC-cross-service-events.md`, `SPEC-reporting-service.md`.
 
 ## Phase 1: Foundation (`shared-kernel`)
 
@@ -175,6 +175,256 @@
 - [x] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service`), RabbitMQ Testcontainer included — 0 failures/errors: shared-kernel 18 unit; recycler-service 70 unit + 48 IT; collection-service 74 unit + 53 IT (was 52, +1 from Task 39's ordering test — the only count that moved)
 - [x] All 11 Success Criteria bullets in `SPEC-cross-service-events.md` re-verified line by line with evidence — detalle: tasks/LEARNINGS.md (grep "## Checkpoint 20:"); **amended by Task 40** below — criterion 8's original re-verification trusted `isBlocked()` alone as evidence of dedup on the Direction B (expired→blocked) side, which a Cowork review caught as insufficient
 - [x] `recycler-service`/`collection-service`'s pre-existing test suites and manual-check behavior unaffected — no destructive schema change, no existing endpoint contract changed (Task 39's commit touches exactly one test file, no migration/schema files)
-- [ ] Human review and approval before moving to `reporting-service`
-
 - [x] Task 40: Fortalecer test de idempotencia real en Direction B (hallazgo de Cowork sobre Checkpoint 20) — detalle: tasks/LEARNINGS.md (grep "## Task 40:")
+- [x] Human review and approval before moving to `reporting-service` — approved 2026-09-19; user confirmed `cross-service-events` (M4) closed and approved, including Task 40's fix, before starting `/plan` for `reporting-service`
+
+## Phase 18: reporting-service infra
+
+- [ ] Task 41: reporting-service scaffolding
+  - **Description:** New Maven module `reporting-service` joining the root reactor. Spring Boot application class, `application.yml` (port 8083, same shared Postgres/RabbitMQ connection-property pattern as the other two services, `.env.local` import), empty Liquibase master changelog (`includeAll` on `changes/`), `ReportingErrors` enum stub (no cases yet — added per entity as each lands). Root `pom.xml` gains `<module>reporting-service</module>`. No RabbitMQ queue/listener yet — that's Phase 21.
+  - **Acceptance criteria:**
+    - [ ] `mvn -pl reporting-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies without touching any other service's tables
+    - [ ] `GlobalExceptionHandler`/`RabbitTopologyConfig`/`RabbitListenerConfig`/`OutboxDispatcher` auto-configure from `shared-kernel` with zero explicit wiring (same `AutoConfiguration.imports` mechanism already confirmed for the other two services) — `OutboxDispatcher` stays inert since this module defines no `OutboxRepository` bean
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service test` green (no tests yet beyond a trivial context-load smoke test)
+    - [ ] `mvn install` — whole reactor still builds with the new module added
+  - **Dependencies:** none (parallel to existing modules)
+  - **Files likely touched:** `pom.xml` (root), `reporting-service/pom.xml`, `reporting-service/src/main/java/.../ReportingServiceApplication.java`, `application.yml`, `db.changelog-master.yaml`, `ReportingErrors.java`
+  - **Estimated scope:** Medium (5-7 files)
+
+### Checkpoint 21: Service boots
+- [ ] `mvn -pl reporting-service spring-boot:run` boots cleanly, empty changelog applies
+- [ ] `mvn verify` still green across the whole reactor with the new module present
+- [ ] Human review before first entity slice
+
+## Phase 19: TrackedCompany
+
+- [ ] Task 42: TrackedCompany persistence
+  - **Description:** `TrackedCompany` domain (id, name, ruc, associationId, status ACTIVE/INACTIVE — same shape as `collection-service`'s `Company`, plus the bare `associationId` field this service adds). Liquibase `v0.1.0_create_tracked_company_table.yaml` with a real `UNIQUE` constraint on `ruc` (same TOCTOU-closing pattern as `Company`/`Association`'s own RUC uniqueness — a plain unique index is enough here, not an exclusion constraint, since this is exact-value uniqueness, not range overlap). JPA entity + adapter + port, same `adapter/out/persistence` shape as every other entity in this codebase.
+  - **Acceptance criteria:**
+    - [ ] `TrackedCompany.create()` validates RUC format (11 digits) same as `Company`'s own constructor guard
+    - [ ] Liquibase creates `tracked_company` with a unique constraint on `ruc`
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service test` green (domain unit test for RUC validation)
+    - [ ] A direct-repository IT (`TrackedCompanyRepositoryAdapterIT`) proves the DB-level unique constraint fires on a duplicate RUC even bypassing the service layer — same "prove the DB backstop independently of the service check" discipline as `AssociationRepositoryAdapterIT`
+  - **Dependencies:** Task 41
+  - **Files likely touched:** `trackedcompany/domain/TrackedCompany.java`, `trackedcompany/adapter/out/persistence/*`, `trackedcompany/port/out/TrackedCompanyRepository.java`, `v0.1.0_create_tracked_company_table.yaml`
+  - **Estimated scope:** Medium (5-6 files)
+
+- [ ] Task 43: TrackedCompany API
+  - **Description:** Controller → Mapper → UseCase → Service for register/get/list. `ReportingErrors.RPT-001 TRACKED_COMPANY_NOT_FOUND` (404), `RPT-002 DUPLICATE_TRACKED_COMPANY_RUC` (409). A `TrackedCompanyExceptionHandler` (`@RestControllerAdvice(assignableTypes = TrackedCompanyController.class)`, `getConstraintName()` dispatch) translates the unique-constraint `DataIntegrityViolationException` to `RPT-002` — same shape as `CompanyExceptionHandler` in `collection-service`.
+  - **Acceptance criteria:**
+    - [ ] `POST /tracked-companies` (name, ruc, associationId) → 201; duplicate RUC → 409 `RPT-002`
+    - [ ] `GET /tracked-companies/{id}` → 200 or 404 `RPT-001`
+    - [ ] `GET /tracked-companies` → paginated `PageResponse<TrackedCompanyResponse>`
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service verify` green (unit + IT, RestAssured + Testcontainers Postgres)
+    - [ ] IT proves the concurrent-duplicate-RUC race is closed by the DB constraint, not just the service-level check (two threads registering the same RUC at once — mirrors `AssociationServiceTest`'s own RUC-race precedent)
+  - **Dependencies:** Task 42
+  - **Files likely touched:** `trackedcompany/adapter/in/web/*`, `trackedcompany/port/in/*`, `trackedcompany/service/TrackedCompanyService.java`, `ReportingErrors.java`
+  - **Estimated scope:** Medium (6-8 files)
+
+### Checkpoint 22: TrackedCompany CRUD works end-to-end
+- [ ] `mvn -pl reporting-service verify` green
+- [ ] Manual check: register → get → list a tracked company via curl; duplicate RUC → 409 `RPT-002`
+- [ ] Human review before SigersolSync slice
+
+## Phase 20: SigersolSync (introduces the EXCLUDE USING gist pattern)
+
+- [ ] Task 44: SigersolSync persistence
+  - **Description:** `SigersolSync` domain (id, associationId — bare UUID, periodStart, periodEnd, hierarchyCompliancePercent [0-100], officialKilosDeclared [nullable], declaredAt, sourceNote). Liquibase `v0.1.1_create_sigersol_sync_table.yaml`: `CREATE EXTENSION IF NOT EXISTS btree_gist`, then the table, then `CONSTRAINT excl_sigersol_sync_association_period EXCLUDE USING gist (association_id WITH =, daterange(period_start, period_end, '[]') WITH &&)` — the real DB-level backstop for RPT-006, per `SPEC-reporting-service.md`'s Cowork-amended Resolved Decisions.
+  - **Acceptance criteria:**
+    - [ ] `SigersolSync.create()` validates `hierarchyCompliancePercent` is between 0 and 100, and `periodEnd` is not before `periodStart`
+    - [ ] Liquibase creates `sigersol_sync` with the exclusion constraint in place (confirmed via `psql \d sigersol_sync`, same manual-check discipline as every other schema task in this project)
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service test` green
+    - [ ] A direct-repository IT proves two overlapping-period rows for the same `associationId` cannot both be inserted, even bypassing any service-level check — the actual DB-level proof the constraint exists and works, independent of Task 46's concurrency test (which proves it closes a *race*, not just that a sequential second insert fails)
+  - **Dependencies:** Task 41
+  - **Files likely touched:** `sigersolsync/domain/SigersolSync.java`, `sigersolsync/adapter/out/persistence/*`, `sigersolsync/port/out/SigersolSyncRepository.java`, `v0.1.1_create_sigersol_sync_table.yaml`
+  - **Estimated scope:** Medium (5-6 files)
+
+- [ ] Task 45: SigersolSync API
+  - **Description:** Controller → Mapper → UseCase → Service for register/get/list. `RPT-006 DUPLICATE_SIGERSOL_SYNC_PERIOD` (409), `RPT-007 SIGERSOL_SYNC_NOT_FOUND` (404). A `SigersolSyncExceptionHandler` translates the exclusion-constraint `DataIntegrityViolationException` (`excl_sigersol_sync_association_period`) to `RPT-006`. `SigersolSyncRepository` also gains `findCovering(associationId, periodStart, periodEnd)` — the query `CertificateService` (Phase 22) will use to look up compliance data for a certificate's period.
+  - **Acceptance criteria:**
+    - [ ] `POST /sigersol-syncs` → 201; an overlapping period for the same association → 409 `RPT-006`; a non-overlapping adjacent period → 201
+    - [ ] `GET /sigersol-syncs/{id}` → 200 or 404 `RPT-007`; `GET /sigersol-syncs?associationId=...` → paginated list
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service verify` green
+  - **Dependencies:** Task 44
+  - **Files likely touched:** `sigersolsync/adapter/in/web/*`, `sigersolsync/port/in/*`, `sigersolsync/service/SigersolSyncService.java`, `ReportingErrors.java`
+  - **Estimated scope:** Medium (6-8 files)
+
+- [ ] Task 46: SigersolSync overlap concurrency test
+  - **Description:** The required (per spec, not optional) real two-thread concurrency test: an `ExecutorService` + `CountDownLatch` releasing two threads at once, both registering an overlapping period for the same `associationId`. Must be empirically confirmed to FAIL against a naive service-check-only implementation and PASS with the exclusion constraint in place — same negative-verification discipline Task 40 already established for this codebase (temporarily weaken the guard, confirm the test catches it, revert, confirm green again; document the negative result in `tasks/LEARNINGS.md`).
+  - **Acceptance criteria:**
+    - [ ] Exactly one of the two concurrent registrations succeeds; the other fails with `RPT-006`; exactly one `sigersol_sync` row exists afterward
+    - [ ] Verified to fail without the exclusion constraint (temporarily drop it, confirm both threads succeed and two overlapping rows exist, then restore it) — documented in `tasks/LEARNINGS.md`, not just asserted in a comment
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service verify` green with the constraint in place
+  - **Dependencies:** Task 45
+  - **Files likely touched:** `sigersolsync/service/SigersolSyncConcurrencyIT.java` (or equivalent IT class)
+  - **Estimated scope:** Small (1-2 files)
+
+### Checkpoint 23: SigersolSync complete, exclusion-constraint pattern proven
+- [ ] `mvn -pl reporting-service verify` green
+- [ ] Manual check: register → get → list; overlapping period → 409 `RPT-006`; adjacent non-overlapping period → 201
+- [ ] Task 46's negative verification (constraint temporarily removed, test confirmed to fail, restored) documented in `tasks/LEARNINGS.md`
+- [ ] Human review before wiring event consumption
+
+## Phase 21: Event consumption (TracedCollectionEntry ledger)
+
+- [ ] Task 47: reporting-service RabbitMQ wiring + TracedCollectionEntry schema
+  - **Description:** `TracedCollectionEntryEntity` (event_id PK, association_id, collection_date, weight_kg, received_at) — doubles as Inbox-idempotency marker and the queryable fact table, per the spec's own deliberate simplification versus `recycler-service`'s split ledger+atomic-counter design. Liquibase `v0.1.2_create_traced_collection_entry_table.yaml`. No queue/listener yet (Task 48) — this task is schema + entity + repository only, verified by boot + a direct-repository IT, no contrived RED step (per `[[tdd_scope_for_config_fixes]]`, same convention already applied to the equivalent schema-only tasks in `cross-service-events`, e.g. Tasks 27/29/35).
+  - **Acceptance criteria:**
+    - [ ] Liquibase creates `traced_collection_entry` with `event_id` as primary key
+    - [ ] `TracedCollectionEntryRepository` exposes `findByAssociationIdAndCollectionDateBetween(...)` — the query `CertificateService` will need
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service verify` green
+    - [ ] `mvn install` — whole reactor still builds
+  - **Dependencies:** Task 41
+  - **Files likely touched:** `events/ledger/TracedCollectionEntryEntity.java`, `events/ledger/TracedCollectionEntryJpaRepository.java`, `v0.1.2_create_traced_collection_entry_table.yaml`
+  - **Estimated scope:** Small (3-4 files)
+
+- [ ] Task 48: `CollectionRegisteredEventListener` (reporting-service)
+  - **Description:** Own local `CollectionRegisteredEvent` record (structurally matching `collection-service`'s publisher, independently defined — same "never a shared Java type across services" convention as `recycler-service`'s Direction A consumer), `CollectionRegisteredEventListener` (`@RabbitListener`), `CollectionRegisteredEventProcessor` (separate `@Transactional` bean, same self-invocation reasoning as `recycler-service`'s Task 30), `CollectionRegisteredQueueConfig` (own queue `collection.registered.reporting-service`, bound to the existing exchange/routing key — zero change to `collection-service`). Unit-tested with Mockito only at this stage (real broker IT is Task 49).
+  - **Acceptance criteria:**
+    - [ ] Listener inserts a `TracedCollectionEntry` row keyed by `event_id`; a simulated duplicate `event_id` is caught (`DataIntegrityViolationException`) and treated as a no-op, not an error
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service test` green (Mockito-mocked repository, same shape as `CollectionRegisteredEventListenerTest`/`CertificationStatusEventListenerTest` precedent)
+  - **Dependencies:** Task 47
+  - **Files likely touched:** `events/consume/CollectionRegisteredEvent.java`, `events/consume/CollectionRegisteredEventListener.java`, `events/consume/CollectionRegisteredEventProcessor.java`, `events/consume/CollectionRegisteredQueueConfig.java`
+  - **Estimated scope:** Medium (4-5 files)
+
+- [ ] Task 49: Event consumption end-to-end IT
+  - **Description:** RabbitMQ Testcontainer IT proving the real broker path: publish a structurally-matching `CollectionRegisteredEvent` JSON payload directly (same "faithful stand-in for the real publisher's wire shape" convention already established and reused across every broker-flow IT in this codebase) → assert it lands in `traced_collection_entry`. Redelivery/idempotency test: the SAME event published twice → assert the period-scoped `SUM(weight_kg)` is unaffected by the duplicate, not just that the row count didn't grow (mirrors Task 40's own correction — a weaker check would not have caught that class of bug).
+  - **Acceptance criteria:**
+    - [ ] A published event's data appears in `traced_collection_entry` within the IT's polling window
+    - [ ] Redelivering the same event is a verified no-op on the period-scoped sum
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service verify` green (RabbitMQ + Postgres Testcontainers)
+  - **Dependencies:** Task 48
+  - **Files likely touched:** `it/events/consume/CollectionRegisteredEventBrokerFlowIT.java`
+  - **Estimated scope:** Medium (1-2 files, high test complexity)
+
+### Checkpoint 24: Event consumption wired and proven
+- [ ] `mvn -pl reporting-service verify` green
+- [ ] A `CollectionRecord` created in `collection-service` results in a new `traced_collection_entry` row here, over the real shared exchange, with zero changes to `collection-service` (confirmed by exercising the real `collection-service` HTTP endpoint against the shared broker, not just this service's own faithful-stand-in test)
+- [ ] Redelivery proven a no-op on the sum, not just the row count
+- [ ] Human review before certificate issuance
+
+## Phase 22: Certificate issuance
+
+- [ ] Task 50: EsgCertificate + EsgCertificateLineItem persistence
+  - **Description:** `EsgCertificate` domain (id, trackedCompanyId, associationId [snapshot], companyName [snapshot], companyRuc [snapshot], periodStart, periodEnd, kilosTrazados [snapshot], hierarchyCompliancePercent [snapshot], issuedAt) and `EsgCertificateLineItem` (certificateId FK, collectionDate, weightKg) — the frozen copy of contributing `TracedCollectionEntry` rows. Liquibase `v0.1.3_create_esg_certificate_table.yaml`: `CONSTRAINT excl_esg_certificate_company_period EXCLUDE USING gist (tracked_company_id WITH =, daterange(period_start, period_end, '[]') WITH &&)` (reuses `btree_gist`, already enabled by Task 44) — the DB-level backstop for RPT-004. `v0.1.4_create_esg_certificate_line_item_table.yaml` for the child table.
+  - **Acceptance criteria:**
+    - [ ] Liquibase creates both tables; `esg_certificate` carries the exclusion constraint scoped to `tracked_company_id`
+    - [ ] `EsgCertificateRepository.save(certificate, lineItems)` persists both in one transaction
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service test` green
+    - [ ] A direct-repository IT proves the exclusion constraint fires on a sequential duplicate-period insert (same discipline as Task 44's equivalent)
+  - **Dependencies:** Task 42 (needs `TrackedCompany` for the FK-less `tracked_company_id` reference), Task 44 (reuses `btree_gist`, already enabled)
+  - **Files likely touched:** `certificate/domain/{EsgCertificate,EsgCertificateLineItem}.java`, `certificate/adapter/out/persistence/*`, `certificate/port/out/EsgCertificateRepository.java`, `v0.1.3_create_esg_certificate_table.yaml`, `v0.1.4_create_esg_certificate_line_item_table.yaml`
+  - **Estimated scope:** Large (7-9 files)
+
+- [ ] Task 51: Certificate summary preview
+  - **Description:** `CertificateSummary` (plain record, not persisted — per spec's Resolved Decisions) + `PreviewCertificateSummaryUseCase` + `GET /tracked-companies/{companyId}/certificate-summary?from=...&to=...`. Computes live: `TracedCollectionEntryRepository` sum for the company's `associationId` within the period, plus `SigersolSyncRepository.findCovering(...)` for the compliance percentage (nullable in the preview if none exists yet — RPT-005 only blocks actual issuance, not the preview, so an operator can see "what would this look like" before the SIGERSOL data is even entered).
+  - **Acceptance criteria:**
+    - [ ] Preview returns the correct live sum and compliance % (or `null` compliance if no covering `SigersolSync` record exists) for a tracked company + period
+    - [ ] Preview persists nothing
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service verify` green
+  - **Dependencies:** Task 43, Task 45, Task 49
+  - **Files likely touched:** `certificate/CertificateSummary.java`, `certificate/port/in/PreviewCertificateSummaryUseCase.java`, `certificate/service/CertificateService.java`, `certificate/adapter/in/web/CertificateController.java`
+  - **Estimated scope:** Medium (4-5 files)
+
+- [ ] Task 52: Certificate issuance
+  - **Description:** `IssueCertificateUseCase` / `POST /tracked-companies/{companyId}/certificates`: `RPT-003` (tracked company not found), `RPT-004` (overlapping period — service check first, DB exclusion constraint as the real backstop), `RPT-005` (no covering `SigersolSync` record). On success, freezes company name/RUC/associationId, the computed sum, and the compliance % into `EsgCertificate`, and snapshots the contributing `TracedCollectionEntry` rows into `EsgCertificateLineItem` — all in one `@Transactional` method. `CertificateExceptionHandler` (`getConstraintName()` dispatch) translates the exclusion-constraint violation to `RPT-004`.
+  - **Acceptance criteria:**
+    - [ ] Issuing succeeds and returns 201 with the frozen certificate
+    - [ ] An overlapping period for the same tracked company → 409 `RPT-004`; a non-overlapping adjacent period → 201
+    - [ ] No covering `SigersolSync` record → 409 `RPT-005`
+    - [ ] `GET .../certificates/{id}` and `GET .../certificates` (paginated) work
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service verify` green
+  - **Dependencies:** Task 50, Task 51
+  - **Files likely touched:** `certificate/port/in/IssueCertificateUseCase.java`, `certificate/service/CertificateService.java`, `certificate/adapter/in/web/{CertificateController,CertificateExceptionHandler}.java`, `ReportingErrors.java`
+  - **Estimated scope:** Large (6-8 files)
+
+- [ ] Task 53: Certificate concurrency + immutability tests
+  - **Description:** The required real two-thread concurrency test for `RPT-004` (same shape and same negative-verification discipline as Task 46 — must fail without the exclusion constraint, pass with it, documented in `tasks/LEARNINGS.md`). Plus the immutability test: issue a certificate, then insert a new `TracedCollectionEntry` for the same association with a `collectionDate` inside the already-issued period, and assert re-fetching that certificate returns the exact same frozen numbers/line items as before.
+  - **Acceptance criteria:**
+    - [ ] Two concurrent `issue()` calls for the same tracked company + overlapping period: exactly one succeeds, the other gets `RPT-004`, exactly one `esg_certificate` row exists afterward
+    - [ ] Verified to fail without the exclusion constraint (temporarily removed, confirmed both succeed, restored) — documented in `tasks/LEARNINGS.md`
+    - [ ] A backdated `TracedCollectionEntry` arriving after issuance does not change an already-issued certificate's frozen `kilosTrazados`/line items
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service verify` green
+  - **Dependencies:** Task 52
+  - **Files likely touched:** `it/certificate/{CertificateConcurrencyIT,CertificateImmutabilityIT}.java` (or combined)
+  - **Estimated scope:** Medium (1-2 files, high test complexity)
+
+### Checkpoint 25: Certificate issuance complete
+- [ ] `mvn -pl reporting-service verify` green
+- [ ] Manual check: preview → issue → 409 on overlap (`RPT-004`) → 409 on missing SIGERSOL data (`RPT-005`) → immutability confirmed against a real backdated event
+- [ ] Task 53's negative verification documented in `tasks/LEARNINGS.md`
+- [ ] Human review before PDF/CSV export
+
+## Phase 23: PDF/CSV export
+
+- [ ] Task 54: CertificatePdfExporter
+  - **Description:** `CertificatePdfExporter` (Apache PDFBox) generating a formatted certificate document (company name/RUC, period, kilos trazados, compliance %, issue date) from an in-memory `EsgCertificate`. Pure function, no Postgres/RabbitMQ dependency.
+  - **Acceptance criteria:**
+    - [ ] Output is a real, valid PDF
+  - **Verification:**
+    - [ ] Unit test parses the generated PDF back with PDFBox's own reader (`PDFTextStripper` or equivalent) and asserts the company name, period, kilos, and compliance % are all present — not just "the byte array is non-empty"
+  - **Dependencies:** Task 52
+  - **Files likely touched:** `certificate/export/CertificatePdfExporter.java`, `pom.xml` (PDFBox dependency)
+  - **Estimated scope:** Medium (2 files)
+
+- [ ] Task 55: CertificateCsvExporter
+  - **Description:** `CertificateCsvExporter` (Apache Commons CSV) writing the certificate's frozen `EsgCertificateLineItem` rows (one row per contributing collection date/weight) plus a summary header/section.
+  - **Acceptance criteria:**
+    - [ ] Output is real, valid CSV, correctly escaping any field that could contain a comma/quote
+  - **Verification:**
+    - [ ] Unit test parses the generated CSV back with Commons CSV's own parser and asserts the line items and summary values round-trip correctly
+  - **Dependencies:** Task 52
+  - **Files likely touched:** `certificate/export/CertificateCsvExporter.java`, `pom.xml` (Commons CSV dependency)
+  - **Estimated scope:** Small (2 files)
+
+- [ ] Task 56: Export HTTP endpoints
+  - **Description:** `GET /tracked-companies/{companyId}/certificates/{id}/pdf` and `.../csv`, streaming the exporter output directly in the response (`Content-Disposition: attachment`), no file persisted anywhere.
+  - **Acceptance criteria:**
+    - [ ] Both endpoints return the correct content type and a downloadable attachment
+  - **Verification:**
+    - [ ] IT (RestAssured) downloads both, parses the real HTTP response bytes with PDFBox's/Commons CSV's own reader, and asserts correctness — same round-trip standard as Tasks 54/55's unit tests, now proven over real HTTP
+  - **Dependencies:** Task 54, Task 55
+  - **Files likely touched:** `certificate/adapter/in/web/CertificateController.java`
+  - **Estimated scope:** Small (1-2 files)
+
+### Checkpoint 26: Export complete
+- [ ] `mvn -pl reporting-service verify` green
+- [ ] Manual check: `curl` both `.../pdf` and `.../csv` for a real issued certificate, open/parse both
+- [ ] Human review before Polish
+
+## Phase 24: Polish
+
+- [ ] Task 57: springdoc-openapi wiring
+  - **Description:** Same wiring as Task 11 (`recycler-service`)/Task 23 (`collection-service`).
+  - **Acceptance criteria:**
+    - [ ] Swagger UI reachable at `:8083`, lists every endpoint with request/response schemas
+  - **Verification:**
+    - [ ] `mvn -pl reporting-service verify` green
+    - [ ] `mvn verify` green across the whole reactor (`shared-kernel` + `recycler-service` + `collection-service` + `reporting-service`)
+  - **Dependencies:** Tasks 43, 45, 51, 52, 56 (needs every controller to exist)
+  - **Files likely touched:** `pom.xml` (springdoc dependency), `application.yml`
+  - **Estimated scope:** Small (2 files)
+
+### Checkpoint 27: Full reporting path complete
+- [ ] `mvn verify` green across the whole reactor
+- [ ] Manual check: full flow through real HTTP — register a `TrackedCompany` → register a `SigersolSync` → a real `collection-service` `CollectionRecord` lands as a `traced_collection_entry` here → preview → issue → download PDF and CSV
+- [ ] `recycler-service`/`collection-service`/`cross-service-events`'s pre-existing test suites and manual-check behavior unaffected
+
+### Checkpoint 28: Final — ready for review (M5 module close)
+- [ ] `mvn verify` green across the whole reactor, RabbitMQ Testcontainer included
+- [ ] All Success Criteria bullets in `SPEC-reporting-service.md` re-verified line by line with evidence, same discipline as `cross-service-events`' Checkpoint 20
+- [ ] `shared-kernel`/`recycler-service`/`collection-service`/`cross-service-events`'s pre-existing test suites and manual-check behavior unaffected — no destructive schema change, no existing endpoint contract changed
+- [ ] Human review and approval — this is the last business-logic module before `ci-pipeline`/`deployment` per the capability map's build order

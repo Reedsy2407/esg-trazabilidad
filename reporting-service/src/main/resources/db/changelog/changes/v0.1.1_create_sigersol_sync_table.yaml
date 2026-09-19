@@ -1,0 +1,74 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.1-create-sigersol-sync-table
+      author: esg-trazabilidad
+      changes:
+        - createTable:
+            tableName: sigersol_sync
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: period_start
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: period_end
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: hierarchy_compliance_percent
+                  type: decimal(5,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: official_kilos_declared
+                  type: decimal(14,2)
+              - column:
+                  name: declared_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_note
+                  type: varchar(255)
+  - changeSet:
+      id: v0.1.1-sigersol-sync-association-period-exclusion
+      author: esg-trazabilidad
+      comment: >
+        RPT-006's real DB-level backstop -- "no two overlapping date ranges
+        for the same association" isn't expressible as a plain UNIQUE index
+        (the conflict is on range OVERLAP, not identical values), so this
+        uses Postgres's EXCLUDE constraint instead, same closing-the-race
+        intent as COL-002's partial unique index in collection-service but a
+        different SQL primitive because the shape of the conflict differs.
+        Requires btree_gist for the equality operator class on a UUID column
+        to combine with the range's GiST operator class in one exclusion
+        constraint. See SPEC-reporting-service.md's Resolved Decisions
+        (Cowork-amended after the first spec draft only described a
+        service-level check with no DB backstop).
+      changes:
+        - sql:
+            sql: >
+              CREATE EXTENSION IF NOT EXISTS btree_gist;
+              ALTER TABLE sigersol_sync ADD CONSTRAINT excl_sigersol_sync_association_period
+              EXCLUDE USING gist (association_id WITH =, daterange(period_start, period_end, '[]') WITH &&);
+      rollback:
+        # Deliberately does NOT DROP EXTENSION btree_gist: Task 50's
+        # esg_certificate table reuses the same extension for its own
+        # EXCLUDE constraint (excl_esg_certificate_company_period). Dropping
+        # it here would silently break that later table if this changeset
+        # were ever rolled back after Task 50 has already run.
+        - sql:
+            sql: ALTER TABLE sigersol_sync DROP CONSTRAINT excl_sigersol_sync_association_period;

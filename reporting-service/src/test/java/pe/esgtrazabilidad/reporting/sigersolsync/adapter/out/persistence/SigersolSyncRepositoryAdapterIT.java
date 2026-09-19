@@ -44,6 +44,30 @@ class SigersolSyncRepositoryAdapterIT {
     private SigersolSyncRepository sigersolSyncRepository;
 
     @Test
+    void existsOverlappingDetectsAPeriodSharingExactlyOneBoundaryDayWithoutTouchingTheExclusionConstraint() {
+        // Isolates the service-level existsOverlapping() JPQL from the
+        // EXCLUDE USING gist constraint entirely -- no second save() here,
+        // so this can't pass merely because the DB backstop happens to
+        // reject the insert. A previous review round found that an HTTP-level
+        // test alone couldn't tell "existsOverlapping() correctly detected
+        // the overlap" apart from "existsOverlapping() missed it, but the DB
+        // constraint silently caught the mistake and produced the identical
+        // 409 RPT-006 anyway" (SigersolSyncExceptionHandler maps both the
+        // service's ApplicationException and the DB's
+        // DataIntegrityViolationException to the exact same response shape).
+        UUID associationId = UUID.randomUUID();
+        sigersolSyncRepository.save(SigersolSync.create(
+                associationId, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), new BigDecimal("80.00"), null, null));
+
+        assertThat(sigersolSyncRepository.existsOverlapping(
+                        associationId, LocalDate.of(2026, 1, 31), LocalDate.of(2026, 2, 28)))
+                .isTrue();
+        assertThat(sigersolSyncRepository.existsOverlapping(
+                        associationId, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28)))
+                .isFalse();
+    }
+
+    @Test
     void savingASigersolSyncPersistsItWithAGeneratedId() {
         SigersolSync sigersolSync = sigersolSyncRepository.save(SigersolSync.create(
                 UUID.randomUUID(),

@@ -63,6 +63,9 @@ public class SigersolSync {
                 || hierarchyCompliancePercent.compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new IllegalArgumentException("El porcentaje de cumplimiento debe estar entre 0 y 100");
         }
+        if (officialKilosDeclared != null && officialKilosDeclared.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Los kilos oficiales declarados no pueden ser negativos");
+        }
         return new SigersolSync(
                 IdGenerator.generate(),
                 associationId,

@@ -106,6 +106,18 @@ class SigersolSyncTest {
     }
 
     @Test
+    void rejectsANegativeOfficialKilosDeclared() {
+        assertThatThrownBy(() -> SigersolSync.create(
+                        associationId(),
+                        LocalDate.of(2026, 1, 1),
+                        LocalDate.of(2026, 1, 31),
+                        new BigDecimal("50"),
+                        new BigDecimal("-0.01"),
+                        null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void reconstructRebuildsAnExistingSigersolSyncWithoutGeneratingANewId() {
         UUID id = UUID.randomUUID();
         UUID associationId = associationId();

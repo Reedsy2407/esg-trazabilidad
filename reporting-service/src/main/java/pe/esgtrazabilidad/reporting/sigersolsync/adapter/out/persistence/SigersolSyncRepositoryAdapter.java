@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.reporting.sigersolsync.adapter.out.persistence;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -32,6 +33,16 @@ class SigersolSyncRepositoryAdapter implements SigersolSyncRepository {
     @Override
     public Page<SigersolSync> findAll(Pageable pageable) {
         return jpaRepository.findAll(pageable).map(this::toDomain);
+    }
+
+    @Override
+    public boolean existsOverlapping(UUID associationId, LocalDate periodStart, LocalDate periodEnd) {
+        return jpaRepository.existsOverlapping(associationId, periodStart, periodEnd);
+    }
+
+    @Override
+    public Optional<SigersolSync> findCovering(UUID associationId, LocalDate periodStart, LocalDate periodEnd) {
+        return jpaRepository.findCovering(associationId, periodStart, periodEnd).map(this::toDomain);
     }
 
     private SigersolSyncEntity toEntity(SigersolSync sigersolSync) {

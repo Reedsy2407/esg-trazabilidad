@@ -14,5 +14,7 @@ public interface TrackedCompanyRepository {
 
     Optional<TrackedCompany> findById(UUID id);
 
+    Optional<TrackedCompany> findByRuc(String ruc);
+
     Page<TrackedCompany> findAll(Pageable pageable);
 }

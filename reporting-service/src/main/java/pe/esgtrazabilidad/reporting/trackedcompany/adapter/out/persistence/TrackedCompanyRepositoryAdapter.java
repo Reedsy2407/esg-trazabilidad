@@ -31,6 +31,11 @@ class TrackedCompanyRepositoryAdapter implements TrackedCompanyRepository {
     }
 
     @Override
+    public Optional<TrackedCompany> findByRuc(String ruc) {
+        return jpaRepository.findByRuc(ruc).map(this::toDomain);
+    }
+
+    @Override
     public Page<TrackedCompany> findAll(Pageable pageable) {
         return jpaRepository.findAll(pageable).map(this::toDomain);
     }

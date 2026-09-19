@@ -228,17 +228,7 @@
 
 ## Phase 22: Certificate issuance
 
-- [ ] Task 50: EsgCertificate + EsgCertificateLineItem persistence
-  - **Description:** `EsgCertificate` domain (id, trackedCompanyId, associationId [snapshot], companyName [snapshot], companyRuc [snapshot], periodStart, periodEnd, kilosTrazados [snapshot], hierarchyCompliancePercent [snapshot], issuedAt) and `EsgCertificateLineItem` (certificateId FK, collectionDate, weightKg) — the frozen copy of contributing `TracedCollectionEntry` rows. Liquibase `v0.1.3_create_esg_certificate_table.yaml`: `CONSTRAINT excl_esg_certificate_company_period EXCLUDE USING gist (tracked_company_id WITH =, daterange(period_start, period_end, '[]') WITH &&)` (reuses `btree_gist`, already enabled by Task 44) — the DB-level backstop for RPT-004. `v0.1.4_create_esg_certificate_line_item_table.yaml` for the child table.
-  - **Acceptance criteria:**
-    - [ ] Liquibase creates both tables; `esg_certificate` carries the exclusion constraint scoped to `tracked_company_id`
-    - [ ] `EsgCertificateRepository.save(certificate, lineItems)` persists both in one transaction
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service test` green
-    - [ ] A direct-repository IT proves the exclusion constraint fires on a sequential duplicate-period insert (same discipline as Task 44's equivalent)
-  - **Dependencies:** Task 42 (needs `TrackedCompany` for the FK-less `tracked_company_id` reference), Task 44 (reuses `btree_gist`, already enabled)
-  - **Files likely touched:** `certificate/domain/{EsgCertificate,EsgCertificateLineItem}.java`, `certificate/adapter/out/persistence/*`, `certificate/port/out/EsgCertificateRepository.java`, `v0.1.3_create_esg_certificate_table.yaml`, `v0.1.4_create_esg_certificate_line_item_table.yaml`
-  - **Estimated scope:** Large (7-9 files)
+- [x] Task 50: EsgCertificate + EsgCertificateLineItem persistence — detalle: tasks/LEARNINGS.md (grep "## Task 50:")
 
 - [ ] Task 51: Certificate summary preview
   - **Description:** `CertificateSummary` (plain record, not persisted — per spec's Resolved Decisions) + `PreviewCertificateSummaryUseCase` + `GET /tracked-companies/{companyId}/certificate-summary?from=...&to=...`. Computes live: `TracedCollectionEntryRepository` sum for the company's `associationId` within the period, plus `SigersolSyncRepository.findCovering(...)` for the compliance percentage (nullable in the preview if none exists yet — RPT-005 only blocks actual issuance, not the preview, so an operator can see "what would this look like" before the SIGERSOL data is even entered).

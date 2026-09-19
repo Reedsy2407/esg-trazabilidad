@@ -203,6 +203,28 @@ class CertificateApiIT {
     }
 
     @Test
+    void issuingANonOverlappingAdjacentPeriodForTheSameTrackedCompanySucceeds() {
+        UUID associationId = UUID.randomUUID();
+        String companyId = registerTrackedCompany("20777777778", associationId);
+        registerSigersolSync(associationId, "2026-04-01", "2026-05-31");
+        given()
+                .contentType(ContentType.JSON)
+                .body(issueCertificateRequest("2026-04-01", "2026-04-30"))
+                .when()
+                .post("/tracked-companies/{companyId}/certificates", companyId)
+                .then()
+                .statusCode(201);
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(issueCertificateRequest("2026-05-01", "2026-05-31"))
+                .when()
+                .post("/tracked-companies/{companyId}/certificates", companyId)
+                .then()
+                .statusCode(201);
+    }
+
+    @Test
     void issuingWithoutCoveringSigersolDataReturnsConflict() {
         UUID associationId = UUID.randomUUID();
         String companyId = registerTrackedCompany("20888888888", associationId);

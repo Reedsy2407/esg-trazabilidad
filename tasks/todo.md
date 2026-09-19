@@ -260,9 +260,9 @@
 - [x] Task 57: springdoc-openapi wiring — detalle: tasks/LEARNINGS.md (grep "## Task 57:")
 
 ### Checkpoint 27: Full reporting path complete
-- [ ] `mvn verify` green across the whole reactor
-- [ ] Manual check: full flow through real HTTP — register a `TrackedCompany` → register a `SigersolSync` → a real `collection-service` `CollectionRecord` lands as a `traced_collection_entry` here → preview → issue → download PDF and CSV
-- [ ] `recycler-service`/`collection-service`/`cross-service-events`'s pre-existing test suites and manual-check behavior unaffected
+- [x] `mvn verify` green across the whole reactor
+- [x] Manual check: full flow through real HTTP — register a `TrackedCompany` → register a `SigersolSync` → a real `collection-service` `CollectionRecord` lands as a `traced_collection_entry` here → preview → issue → download PDF and CSV — detalle: tasks/LEARNINGS.md (grep "## Checkpoint 27:")
+- [x] `recycler-service`/`collection-service`/`cross-service-events`'s pre-existing test suites and manual-check behavior unaffected
 
 ### Checkpoint 28: Final — ready for review (M5 module close)
 - [ ] `mvn verify` green across the whole reactor, RabbitMQ Testcontainer included

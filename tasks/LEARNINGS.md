@@ -1058,3 +1058,15 @@ All three bullets closed: `mvn -pl reporting-service verify` green (see Task 56,
   - **Dependencies:** Tasks 43, 45, 51, 52, 56
   - **Files touched:** none (verification-only task)
   - **Estimated scope:** Small (2 files) — actual: 0 files
+
+## Checkpoint 27: Full reporting path complete
+
+All three bullets closed. `mvn verify` green across the whole reactor (confirmed twice: once at Task 57, once independently by the reviewer). Manual check performed: booted both `collection-service` and `reporting-service` for real, together, against the shared Docker Postgres/RabbitMQ (`mvn org.springframework.boot:spring-boot-maven-plugin:run` from inside each module directory). Full sequence over real HTTP:
+1. Registered a `TrackedCompany` in `reporting-service` (`POST /tracked-companies`).
+2. Registered a covering `SigersolSync` (`POST /sigersol-syncs`, 81.25% compliance).
+3. Created a `Neighbor` and a `CollectionRecord` in `collection-service` (`POST /neighbors`, `POST /neighbors/{id}/collection-records`, 33.75 kg dated inside the covered period) — this is the real cross-service trigger, publishing a genuine `CollectionRegisteredEvent` over RabbitMQ, not a direct DB insert.
+4. After a short wait for real broker propagation, `GET .../certificate-summary` on `reporting-service` returned `kilosTrazados: 33.75` — proving the event actually crossed the broker and landed in `traced_collection_entry`, not a coincidental zero.
+5. Issued the certificate (`POST .../certificates`) — froze the same 33.75 kg and 81.25% compliance.
+6. Downloaded both `.../pdf` (confirmed a genuine "PDF document, version 1.6" via `file`) and `.../csv` (confirmed the summary section plus the exact line item `2026-08-15,33.75` matching the real `CollectionRecord` just created).
+
+Both processes shut down cleanly afterward (confirmed via `netstat`/`taskkill`, verified connection-refused on retry for both ports). No destructive schema change or endpoint contract change touched `recycler-service`/`collection-service`/`cross-service-events` in this module — confirmed by the same full-reactor `mvn verify` run (their pre-existing test suites all green, no modifications to their source in any reporting-service task). Phase 24 (Polish) and the full reporting path are complete.

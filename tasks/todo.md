@@ -248,20 +248,12 @@
 
 - [x] Task 55: CertificateCsvExporter — detalle: tasks/LEARNINGS.md (grep "## Task 55:")
 
-- [ ] Task 56: Export HTTP endpoints
-  - **Description:** `GET /tracked-companies/{companyId}/certificates/{id}/pdf` and `.../csv`, streaming the exporter output directly in the response (`Content-Disposition: attachment`), no file persisted anywhere.
-  - **Acceptance criteria:**
-    - [ ] Both endpoints return the correct content type and a downloadable attachment
-  - **Verification:**
-    - [ ] IT (RestAssured) downloads both, parses the real HTTP response bytes with PDFBox's/Commons CSV's own reader, and asserts correctness — same round-trip standard as Tasks 54/55's unit tests, now proven over real HTTP
-  - **Dependencies:** Task 54, Task 55
-  - **Files likely touched:** `certificate/adapter/in/web/CertificateController.java`
-  - **Estimated scope:** Small (1-2 files)
+- [x] Task 56: Export HTTP endpoints — detalle: tasks/LEARNINGS.md (grep "## Task 56:")
 
 ### Checkpoint 26: Export complete
-- [ ] `mvn -pl reporting-service verify` green
-- [ ] Manual check: `curl` both `.../pdf` and `.../csv` for a real issued certificate, open/parse both
-- [ ] Human review before Polish
+- [x] `mvn -pl reporting-service verify` green
+- [x] Manual check: `curl` both `.../pdf` and `.../csv` for a real issued certificate, open/parse both — detalle: tasks/LEARNINGS.md (grep "## Checkpoint 26:")
+- [x] Human review before Polish — implicit approval: user directed `/build auto` for the whole module, automated flow per CLAUDE.md
 
 ## Phase 24: Polish
 

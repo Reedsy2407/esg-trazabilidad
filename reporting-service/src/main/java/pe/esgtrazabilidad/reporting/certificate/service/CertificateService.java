@@ -14,6 +14,9 @@ import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.reporting.certificate.CertificateSummary;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
+import pe.esgtrazabilidad.reporting.certificate.export.CertificateCsvExporter;
+import pe.esgtrazabilidad.reporting.certificate.export.CertificatePdfExporter;
+import pe.esgtrazabilidad.reporting.certificate.port.in.ExportCertificateUseCase;
 import pe.esgtrazabilidad.reporting.certificate.port.in.GetCertificateUseCase;
 import pe.esgtrazabilidad.reporting.certificate.port.in.IssueCertificateCommand;
 import pe.esgtrazabilidad.reporting.certificate.port.in.IssueCertificateUseCase;
@@ -30,22 +33,32 @@ import pe.esgtrazabilidad.reporting.trackedcompany.port.out.TrackedCompanyReposi
 
 @Service
 class CertificateService
-        implements PreviewCertificateSummaryUseCase, IssueCertificateUseCase, GetCertificateUseCase, ListCertificatesUseCase {
+        implements PreviewCertificateSummaryUseCase,
+                IssueCertificateUseCase,
+                GetCertificateUseCase,
+                ListCertificatesUseCase,
+                ExportCertificateUseCase {
 
     private final TrackedCompanyRepository trackedCompanyRepository;
     private final TracedCollectionEntryJpaRepository tracedCollectionEntryRepository;
     private final SigersolSyncRepository sigersolSyncRepository;
     private final EsgCertificateRepository esgCertificateRepository;
+    private final CertificatePdfExporter certificatePdfExporter;
+    private final CertificateCsvExporter certificateCsvExporter;
 
     CertificateService(
             TrackedCompanyRepository trackedCompanyRepository,
             TracedCollectionEntryJpaRepository tracedCollectionEntryRepository,
             SigersolSyncRepository sigersolSyncRepository,
-            EsgCertificateRepository esgCertificateRepository) {
+            EsgCertificateRepository esgCertificateRepository,
+            CertificatePdfExporter certificatePdfExporter,
+            CertificateCsvExporter certificateCsvExporter) {
         this.trackedCompanyRepository = trackedCompanyRepository;
         this.tracedCollectionEntryRepository = tracedCollectionEntryRepository;
         this.sigersolSyncRepository = sigersolSyncRepository;
         this.esgCertificateRepository = esgCertificateRepository;
+        this.certificatePdfExporter = certificatePdfExporter;
+        this.certificateCsvExporter = certificateCsvExporter;
     }
 
     @Override
@@ -118,6 +131,19 @@ class CertificateService
     @Override
     public Page<EsgCertificate> list(UUID trackedCompanyId, Pageable pageable) {
         return esgCertificateRepository.findAll(trackedCompanyId, pageable);
+    }
+
+    @Override
+    public byte[] exportPdf(UUID trackedCompanyId, UUID id) {
+        EsgCertificate certificate = getById(trackedCompanyId, id);
+        return certificatePdfExporter.export(certificate);
+    }
+
+    @Override
+    public byte[] exportCsv(UUID trackedCompanyId, UUID id) {
+        EsgCertificate certificate = getById(trackedCompanyId, id);
+        List<EsgCertificateLineItem> lineItems = esgCertificateRepository.findLineItems(certificate.getId());
+        return certificateCsvExporter.export(certificate, lineItems);
     }
 
     private TrackedCompany findTrackedCompany(UUID trackedCompanyId) {

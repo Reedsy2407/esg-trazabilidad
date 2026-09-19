@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.reporting.certificate.service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -7,6 +8,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +26,8 @@ import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.reporting.certificate.CertificateSummary;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
+import pe.esgtrazabilidad.reporting.certificate.export.CertificateCsvExporter;
+import pe.esgtrazabilidad.reporting.certificate.export.CertificatePdfExporter;
 import pe.esgtrazabilidad.reporting.certificate.port.in.IssueCertificateCommand;
 import pe.esgtrazabilidad.reporting.certificate.port.out.EsgCertificateRepository;
 import pe.esgtrazabilidad.reporting.events.ledger.TracedCollectionEntryEntity;
@@ -68,7 +74,12 @@ class CertificateServiceTest {
     @BeforeEach
     void setUp() {
         service = new CertificateService(
-                trackedCompanyRepository, tracedCollectionEntryRepository, sigersolSyncRepository, esgCertificateRepository);
+                trackedCompanyRepository,
+                tracedCollectionEntryRepository,
+                sigersolSyncRepository,
+                esgCertificateRepository,
+                new CertificatePdfExporter(),
+                new CertificateCsvExporter());
     }
 
     private TrackedCompany sampleTrackedCompany() {
@@ -228,5 +239,53 @@ class CertificateServiceTest {
         Page<EsgCertificate> result = service.list(trackedCompanyId, pageable);
 
         assertThat(result).isSameAs(expectedPage);
+    }
+
+    // --- exportPdf() / exportCsv() ---
+
+    @Test
+    void exportPdfReturnsNonEmptyBytesForACertificateBelongingToTheCompany() {
+        EsgCertificate certificate = EsgCertificate.issue(
+                sampleTrackedCompany(), periodStart, periodEnd, new BigDecimal("12.00"), new BigDecimal("75.00"));
+        when(esgCertificateRepository.findById(certificate.getId())).thenReturn(Optional.of(certificate));
+
+        byte[] pdfBytes = service.exportPdf(trackedCompanyId, certificate.getId());
+
+        assertThat(pdfBytes).isNotEmpty();
+    }
+
+    @Test
+    void exportCsvIncludesTheFrozenLineItemsFromTheRepository() throws IOException {
+        // Line item weight deliberately differs from the certificate's own
+        // kilosTrazados (12.00): the summary section always prints
+        // kilosTrazados regardless of what findLineItems() returns, so using
+        // the same value here would let this test pass even if exportCsv()
+        // ignored the repository's line items entirely.
+        EsgCertificate certificate = EsgCertificate.issue(
+                sampleTrackedCompany(), periodStart, periodEnd, new BigDecimal("12.00"), new BigDecimal("75.00"));
+        when(esgCertificateRepository.findById(certificate.getId())).thenReturn(Optional.of(certificate));
+        when(esgCertificateRepository.findLineItems(certificate.getId()))
+                .thenReturn(List.of(EsgCertificateLineItem.of(certificate.getId(), periodStart, new BigDecimal("999.99"))));
+
+        byte[] csvBytes = service.exportCsv(trackedCompanyId, certificate.getId());
+
+        List<CSVRecord> records;
+        try (CSVParser parser = CSVParser.parse(new String(csvBytes), CSVFormat.DEFAULT)) {
+            records = parser.getRecords();
+        }
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly(periodStart.toString(), "999.99"));
+    }
+
+    @Test
+    void throwsNotFoundWhenExportingACertificateBelongingToADifferentCompany() {
+        EsgCertificate certificate = EsgCertificate.issue(
+                sampleTrackedCompany(), periodStart, periodEnd, BigDecimal.TEN, BigDecimal.TEN);
+        when(esgCertificateRepository.findById(certificate.getId())).thenReturn(Optional.of(certificate));
+        UUID differentCompanyId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> service.exportPdf(differentCompanyId, certificate.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(ReportingErrors.CERTIFICATE_NOT_FOUND));
     }
 }

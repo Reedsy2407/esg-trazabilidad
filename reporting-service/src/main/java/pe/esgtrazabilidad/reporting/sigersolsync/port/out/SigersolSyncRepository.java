@@ -15,7 +15,7 @@ public interface SigersolSyncRepository {
 
     Optional<SigersolSync> findById(UUID id);
 
-    Page<SigersolSync> findAll(Pageable pageable);
+    Page<SigersolSync> findAll(UUID associationId, Pageable pageable);
 
     /**
      * Fast service-level check before the DB's own EXCLUDE constraint would

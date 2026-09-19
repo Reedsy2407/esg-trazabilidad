@@ -159,6 +159,38 @@ class SigersolSyncApiIT {
     }
 
     @Test
+    void listingFilteredByAssociationIdOnlyReturnsThatAssociationsRecords() {
+        UUID targetAssociation = UUID.randomUUID();
+        UUID otherAssociation = UUID.randomUUID();
+        given()
+                .contentType(ContentType.JSON)
+                .body(registerRequest(targetAssociation, "2026-10-01", "2026-10-31"))
+                .when()
+                .post("/sigersol-syncs")
+                .then()
+                .statusCode(201);
+        given()
+                .contentType(ContentType.JSON)
+                .body(registerRequest(otherAssociation, "2026-10-01", "2026-10-31"))
+                .when()
+                .post("/sigersol-syncs")
+                .then()
+                .statusCode(201);
+
+        given()
+                .queryParam("associationId", targetAssociation.toString())
+                .when()
+                .get("/sigersol-syncs")
+                .then()
+                .statusCode(200)
+                // Both a size assertion AND everyItem: everyItem alone is
+                // vacuously true against an empty result, which would not
+                // catch a broken filter that silently returns zero rows.
+                .body("content.size()", equalTo(1))
+                .body("content.associationId", org.hamcrest.Matchers.everyItem(equalTo(targetAssociation.toString())));
+    }
+
+    @Test
     void gettingAMissingSigersolSyncReturnsNotFound() {
         given()
                 .when()

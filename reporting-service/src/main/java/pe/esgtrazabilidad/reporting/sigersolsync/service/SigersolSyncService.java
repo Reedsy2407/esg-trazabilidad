@@ -50,7 +50,7 @@ class SigersolSyncService implements RegisterSigersolSyncUseCase, GetSigersolSyn
     }
 
     @Override
-    public Page<SigersolSync> list(Pageable pageable) {
-        return repository.findAll(pageable);
+    public Page<SigersolSync> list(UUID associationId, Pageable pageable) {
+        return repository.findAll(associationId, pageable);
     }
 }

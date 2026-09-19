@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -58,8 +59,10 @@ class SigersolSyncController {
 
     @GetMapping
     PageResponse<SigersolSyncResponse> list(
+            @RequestParam(required = false) UUID associationId,
             @PageableDefault(size = 20, sort = "periodStart", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<SigersolSyncResponse> page = listSigersolSyncsUseCase.list(pageable).map(mapper::toResponse);
+        Page<SigersolSyncResponse> page =
+                listSigersolSyncsUseCase.list(associationId, pageable).map(mapper::toResponse);
         return PageResponse.from(page);
     }
 }

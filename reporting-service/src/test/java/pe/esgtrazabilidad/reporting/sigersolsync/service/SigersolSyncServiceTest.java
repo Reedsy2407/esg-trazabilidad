@@ -115,11 +115,12 @@ class SigersolSyncServiceTest {
 
     @Test
     void listDelegatesToTheRepository() {
+        UUID associationId = UUID.randomUUID();
         Pageable pageable = Pageable.ofSize(10);
         Page<SigersolSync> expectedPage = new PageImpl<>(List.of());
-        when(repository.findAll(pageable)).thenReturn(expectedPage);
+        when(repository.findAll(associationId, pageable)).thenReturn(expectedPage);
 
-        Page<SigersolSync> result = service.list(pageable);
+        Page<SigersolSync> result = service.list(associationId, pageable);
 
         assertThat(result).isSameAs(expectedPage);
     }

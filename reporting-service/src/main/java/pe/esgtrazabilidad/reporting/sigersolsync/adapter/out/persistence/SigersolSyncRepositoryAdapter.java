@@ -31,8 +31,11 @@ class SigersolSyncRepositoryAdapter implements SigersolSyncRepository {
     }
 
     @Override
-    public Page<SigersolSync> findAll(Pageable pageable) {
-        return jpaRepository.findAll(pageable).map(this::toDomain);
+    public Page<SigersolSync> findAll(UUID associationId, Pageable pageable) {
+        Page<SigersolSyncEntity> page = associationId == null
+                ? jpaRepository.findAll(pageable)
+                : jpaRepository.findByAssociationId(associationId, pageable);
+        return page.map(this::toDomain);
     }
 
     @Override

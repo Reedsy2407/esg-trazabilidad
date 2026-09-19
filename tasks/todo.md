@@ -214,17 +214,7 @@
 
 ## Phase 21: Event consumption (TracedCollectionEntry ledger)
 
-- [ ] Task 47: reporting-service RabbitMQ wiring + TracedCollectionEntry schema
-  - **Description:** `TracedCollectionEntryEntity` (event_id PK, association_id, collection_date, weight_kg, received_at) — doubles as Inbox-idempotency marker and the queryable fact table, per the spec's own deliberate simplification versus `recycler-service`'s split ledger+atomic-counter design. Liquibase `v0.1.2_create_traced_collection_entry_table.yaml`. No queue/listener yet (Task 48) — this task is schema + entity + repository only, verified by boot + a direct-repository IT, no contrived RED step (per `[[tdd_scope_for_config_fixes]]`, same convention already applied to the equivalent schema-only tasks in `cross-service-events`, e.g. Tasks 27/29/35).
-  - **Acceptance criteria:**
-    - [ ] Liquibase creates `traced_collection_entry` with `event_id` as primary key
-    - [ ] `TracedCollectionEntryRepository` exposes `findByAssociationIdAndCollectionDateBetween(...)` — the query `CertificateService` will need
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service verify` green
-    - [ ] `mvn install` — whole reactor still builds
-  - **Dependencies:** Task 41
-  - **Files likely touched:** `events/ledger/TracedCollectionEntryEntity.java`, `events/ledger/TracedCollectionEntryJpaRepository.java`, `v0.1.2_create_traced_collection_entry_table.yaml`
-  - **Estimated scope:** Small (3-4 files)
+- [x] Task 47: reporting-service RabbitMQ wiring + TracedCollectionEntry schema — detalle: tasks/LEARNINGS.md (grep "## Task 47:")
 
 - [ ] Task 48: `CollectionRegisteredEventListener` (reporting-service)
   - **Description:** Own local `CollectionRegisteredEvent` record (structurally matching `collection-service`'s publisher, independently defined — same "never a shared Java type across services" convention as `recycler-service`'s Direction A consumer), `CollectionRegisteredEventListener` (`@RabbitListener`), `CollectionRegisteredEventProcessor` (separate `@Transactional` bean, same self-invocation reasoning as `recycler-service`'s Task 30), `CollectionRegisteredQueueConfig` (own queue `collection.registered.reporting-service`, bound to the existing exchange/routing key — zero change to `collection-service`). Unit-tested with Mockito only at this stage (real broker IT is Task 49).

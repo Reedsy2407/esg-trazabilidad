@@ -915,3 +915,14 @@ All 11 `SPEC-cross-service-events.md` Success Criteria bullets, re-verified line
   - **Dependencies:** Task 45
   - **Files touched:** `it/SigersolSyncConcurrencyApiIT.java`
   - **Estimated scope:** Small (1 file)
+
+## Task 47: reporting-service RabbitMQ wiring + TracedCollectionEntry schema
+
+- [x] Task 47: reporting-service RabbitMQ wiring + TracedCollectionEntry schema — the "RabbitMQ wiring" half of the title is deferred entirely to Task 48 by design (confirmed against the task's own acceptance criteria, which never mention a listener/queue); this task is pure schema.
+  - **Description:** `TracedCollectionEntryEntity` (event_id PK, association_id, collection_date, weight_kg, received_at) — doubles as Inbox-idempotency marker and the queryable fact table, mirroring `recycler-service`'s `CollectionRegisteredLedgerEntity` `Persistable<UUID>` shape exactly, plus the business columns this service's period-scoped-sum need requires. Liquibase `v0.1.2_create_traced_collection_entry_table.yaml`, including a composite index on `(association_id, collection_date)` added in the original migration (not a later one) since `CertificateService` (Task 51+) will run `findByAssociationIdAndCollectionDateBetween` repeatedly and this project avoids editing already-shipped changelogs.
+  - **Verification:**
+    - [x] `mvn -pl reporting-service verify` green — `TracedCollectionEntryJpaRepositoryIT` 4/4 (was 3, +1 after review)
+  - **code-reviewer verdict:** PASS with two non-blocking findings, both addressed before closing: (1) the period-range query test never exercised the inclusive boundary (`collectionDate == periodStart`/`periodEnd`) — added `findByAssociationIdAndCollectionDateBetweenIsInclusiveOnBothBoundaryDates`; (2) the same test never proved the `associationId` half of the compound query actually filters (all three original rows shared one association) — added a fourth row for a different association within the same date range to the existing test, asserting it's excluded.
+  - **Dependencies:** Task 41
+  - **Files touched:** `events/ledger/{TracedCollectionEntryEntity,TracedCollectionEntryJpaRepository}.java`, `v0.1.2_create_traced_collection_entry_table.yaml`, `events/ledger/TracedCollectionEntryJpaRepositoryIT.java`
+  - **Estimated scope:** Small (3-4 files)

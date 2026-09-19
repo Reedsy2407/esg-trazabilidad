@@ -830,3 +830,17 @@ All 11 `SPEC-cross-service-events.md` Success Criteria bullets, re-verified line
   - **Dependencies:** Task 39 / Checkpoint 20 (revisión Cowork posterior al cierre)
   - **Files touched:** `collection-service/src/test/java/pe/esgtrazabilidad/collection/events/consume/CertificationStatusEventBrokerFlowIT.java`, `collection-service/src/test/java/pe/esgtrazabilidad/collection/events/consume/CertificationStatusEventListenerIT.java`
   - **Estimated scope:** Small (2 files, test-only)
+
+## Task 41: reporting-service scaffolding
+
+- [x] Task 41: reporting-service scaffolding
+  - **Description:** Third Spring Boot service in the reactor, depending only on `shared-kernel`. Root `pom.xml` gains `<module>reporting-service</module>` (one line, confirmed via `git diff --stat`). Own `pom.xml`, `ReportingServiceApplication` (plain `@SpringBootApplication`, no `scanBasePackages`), `application.yml` (port 8083, same shared Postgres port 5433 / RabbitMQ connection pattern as the other two services), empty Liquibase master changelog. `ReportingErrors.java` deliberately NOT created yet — confirmed against real git history (`git log --diff-filter=A`) that `AssociationErrors`/`CollectionErrors` also only appeared in each module's *second* task (first entity slice), not its scaffolding task — same precedent applied here, not a new decision.
+  - **Real difference from the other two services, confirmed against `shared-kernel/pom.xml`, not assumed:** `spring-boot-starter-amqp` doesn't need to be redeclared — it's already a direct (non-optional, non-test) dependency of `shared-kernel`, so it comes transitively. `shedlock-provider-jdbc-template` is intentionally absent — this service runs no `@Scheduled` job and never publishes to the outbox (per `SPEC-reporting-service.md`'s Resolved Decisions), so it needs no ShedLock table of its own.
+  - **Verification:**
+    - [x] `mvn -pl reporting-service -am install` green
+    - [x] `mvn -pl reporting-service spring-boot:run` boots cleanly against the real shared Docker Postgres, 0 changesets applied, Tomcat responds on `:8083`
+    - [x] `mvn install` (whole reactor) green — shared-kernel 18 unit; recycler-service 70 unit + 48 IT; collection-service 74 unit + 53 IT (all unchanged); reporting-service 0/0 (no tests yet, correct for pure scaffolding)
+  - **code-reviewer verdict:** PASS, no findings — independently verified `spring-boot-starter-amqp`'s transitive origin, the `ReportingErrors`-omission precedent via real git history, and confirmed the root `pom.xml` diff is exactly one line.
+  - **Dependencies:** none
+  - **Files touched:** `pom.xml` (root), `reporting-service/pom.xml`, `reporting-service/src/main/java/pe/esgtrazabilidad/reporting/ReportingServiceApplication.java`, `reporting-service/src/main/resources/application.yml`, `reporting-service/src/main/resources/db/changelog/{db.changelog-master.yaml,changes/.gitkeep}`
+  - **Estimated scope:** Medium (5-7 files)

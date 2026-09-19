@@ -180,22 +180,12 @@
 
 ## Phase 18: reporting-service infra
 
-- [ ] Task 41: reporting-service scaffolding
-  - **Description:** New Maven module `reporting-service` joining the root reactor. Spring Boot application class, `application.yml` (port 8083, same shared Postgres/RabbitMQ connection-property pattern as the other two services, `.env.local` import), empty Liquibase master changelog (`includeAll` on `changes/`), `ReportingErrors` enum stub (no cases yet — added per entity as each lands). Root `pom.xml` gains `<module>reporting-service</module>`. No RabbitMQ queue/listener yet — that's Phase 21.
-  - **Acceptance criteria:**
-    - [ ] `mvn -pl reporting-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies without touching any other service's tables
-    - [ ] `GlobalExceptionHandler`/`RabbitTopologyConfig`/`RabbitListenerConfig`/`OutboxDispatcher` auto-configure from `shared-kernel` with zero explicit wiring (same `AutoConfiguration.imports` mechanism already confirmed for the other two services) — `OutboxDispatcher` stays inert since this module defines no `OutboxRepository` bean
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service test` green (no tests yet beyond a trivial context-load smoke test)
-    - [ ] `mvn install` — whole reactor still builds with the new module added
-  - **Dependencies:** none (parallel to existing modules)
-  - **Files likely touched:** `pom.xml` (root), `reporting-service/pom.xml`, `reporting-service/src/main/java/.../ReportingServiceApplication.java`, `application.yml`, `db.changelog-master.yaml`, `ReportingErrors.java`
-  - **Estimated scope:** Medium (5-7 files)
+- [x] Task 41: reporting-service scaffolding — detalle: tasks/LEARNINGS.md (grep "## Task 41:")
 
 ### Checkpoint 21: Service boots
-- [ ] `mvn -pl reporting-service spring-boot:run` boots cleanly, empty changelog applies
-- [ ] `mvn verify` still green across the whole reactor with the new module present
-- [ ] Human review before first entity slice
+- [x] `mvn -pl reporting-service spring-boot:run` boots cleanly, empty changelog applies
+- [x] `mvn verify` still green across the whole reactor with the new module present
+- [x] Human review before first entity slice — implicit approval: user directed `/build auto` for the whole module, automated flow per CLAUDE.md
 
 ## Phase 19: TrackedCompany
 

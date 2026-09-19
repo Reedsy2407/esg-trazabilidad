@@ -20,7 +20,7 @@ class PageResponseTest {
         assertThat(response.content()).containsExactly("a", "b");
         assertThat(response.page()).isEqualTo(0);
         assertThat(response.size()).isEqualTo(2);
-        assertThat(response.totalElements()).isEqualTo(5);
+        assertThat(response.totalElements()).isEqualTo(999); // deliberately wrong -- CI negative check, see SPEC-ci-pipeline.md Testing Strategy
         assertThat(response.totalPages()).isEqualTo(3);
     }
 }

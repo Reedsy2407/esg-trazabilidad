@@ -112,6 +112,24 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>3.2.5</version>
+                <configuration>
+                    <!-- Every @SpringBootTest IT now boots a real
+                         CollectionRegisteredEventListener (Task 48): Spring AMQP's
+                         listener container tries to connect to whatever
+                         spring.rabbitmq.* resolves to (the real local broker, since
+                         these Postgres-only IT tests don't override it) at context
+                         startup by default. Doesn't hard-fail (Spring AMQP retries
+                         lazily in the background), but logs noisy connection-refused
+                         stack traces and makes tests implicitly depend on a
+                         locally-running broker, which isn't hermetic. Same fix as
+                         recycler-service's pom.xml (Task 30): auto-startup=false stops
+                         the listener container from connecting/consuming at context
+                         startup; Task 49's real broker-integration test opts back in
+                         locally via its own @TestPropertySource. -->
+                    <systemPropertyVariables>
+                        <spring.rabbitmq.listener.simple.auto-startup>false</spring.rabbitmq.listener.simple.auto-startup>
+                    </systemPropertyVariables>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

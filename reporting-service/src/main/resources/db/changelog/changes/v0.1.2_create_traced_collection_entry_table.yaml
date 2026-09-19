@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.2-create-traced-collection-entry-table
+      author: esg-trazabilidad
+      comment: >
+        PK on event_id gives idempotent consumption for free via the same
+        DataIntegrityViolationException -> getConstraintName() pattern
+        already used everywhere else in this codebase for TOCTOU races -- a
+        redelivered CollectionRegisteredEvent fails this insert and the
+        listener short-circuits instead of double-counting traced material.
+        Unlike recycler-service's equivalent ledger, this table also carries
+        the business columns (association_id, collection_date, weight_kg)
+        needed for period-scoped SUM queries -- see
+        SPEC-reporting-service.md's Resolved Decisions.
+      changes:
+        - createTable:
+            tableName: traced_collection_entry
+            columns:
+              - column:
+                  name: event_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: collection_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: weight_kg
+                  type: decimal(14,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: received_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: ix_traced_collection_entry_association_date
+            tableName: traced_collection_entry
+            columns:
+              - column:
+                  name: association_id
+              - column:
+                  name: collection_date

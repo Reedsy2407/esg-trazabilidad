@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.4-create-esg-certificate-line-item-table
+      author: esg-trazabilidad
+      comment: >
+        Frozen copy of the TracedCollectionEntry rows that contributed to a
+        certificate's kilosTrazados total at issuance time -- so re-exporting
+        an already-issued certificate's CSV always reproduces the exact same
+        rows, even if the live ledger keeps growing with backdated entries.
+      changes:
+        - createTable:
+            tableName: esg_certificate_line_item
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: certificate_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_esg_certificate_line_item_certificate
+                    references: esg_certificate(id)
+              - column:
+                  name: collection_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: weight_kg
+                  type: decimal(14,2)
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: ix_esg_certificate_line_item_certificate
+            tableName: esg_certificate_line_item
+            columns:
+              - column:
+                  name: certificate_id

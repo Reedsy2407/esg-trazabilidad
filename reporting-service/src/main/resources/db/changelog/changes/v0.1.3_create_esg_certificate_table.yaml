@@ -1,0 +1,82 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.3-create-esg-certificate-table
+      author: esg-trazabilidad
+      changes:
+        - createTable:
+            tableName: esg_certificate
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tracked_company_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_esg_certificate_tracked_company
+                    references: tracked_company(id)
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: company_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: company_ruc
+                  type: varchar(11)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: period_start
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: period_end
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: kilos_trazados
+                  type: decimal(14,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: hierarchy_compliance_percent
+                  type: decimal(5,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: issued_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+  - changeSet:
+      id: v0.1.3-esg-certificate-company-period-exclusion
+      author: esg-trazabilidad
+      comment: >
+        RPT-004's real DB-level backstop, same EXCLUDE USING gist mechanism
+        Task 44 already proved for RPT-006, reusing the btree_gist extension
+        that changeset already enabled. Scoped to tracked_company_id, not
+        association_id: a certificate's uniqueness is per client, not per
+        association, so two different tracked companies issuing certificates
+        over the same dates is fine (see SPEC-reporting-service.md's
+        Resolved Decisions on the documented double-counting limitation when
+        one association is tracked by more than one company).
+      changes:
+        - sql:
+            sql: >
+              CREATE EXTENSION IF NOT EXISTS btree_gist;
+              ALTER TABLE esg_certificate ADD CONSTRAINT excl_esg_certificate_company_period
+              EXCLUDE USING gist (tracked_company_id WITH =, daterange(period_start, period_end, '[]') WITH &&);
+      rollback:
+        - sql:
+            sql: ALTER TABLE esg_certificate DROP CONSTRAINT excl_esg_certificate_company_period;

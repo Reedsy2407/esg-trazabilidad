@@ -1019,6 +1019,16 @@ All 11 `SPEC-cross-service-events.md` Success Criteria bullets, re-verified line
   - **Files touched:** `certificate/export/CertificatePdfExporter.java`, `certificate/export/CertificatePdfExporterTest.java`, `pom.xml` (PDFBox + Commons CSV)
   - **Estimated scope:** Medium (2 files) — actual: 2 files + pom.xml
 
+- [x] Task 55: CertificateCsvExporter — clean first-pass PASS.
+  - **Description:** `CertificateCsvExporter` (Apache Commons CSV, dependency already added in Task 54's commit), a pure function from an in-memory `EsgCertificate` + its frozen `List<EsgCertificateLineItem>` to CSV bytes — a summary section (company, RUC, period, kilos, compliance %, issued date) followed by one row per contributing collection date/weight.
+  - **Design:** every row, summary or line-item, goes through `CSVPrinter.printRecord(...)` (never manual string-joining), so Commons CSV's own quoting/escaping applies uniformly. A `printer.println()` blank line separates the summary section from the line-items table — since `CSVFormat.DEFAULT` has `ignoreEmptyLines=true` on read-back, that blank line is silently skipped when parsed, so the summary rows land at fixed indices 0-6 with no phantom row to account for.
+  - **Escaping proof:** one test uses a company name with a literal comma (`"Empresa, S.A.C."`) and asserts the round-tripped value is still a single field. This is a real proof, not a happy-path coincidence — a naive manual join (`"Empresa" + "," + name`) would split it into 3 columns on reparse and fail the assertion. A second test covers the zero-line-items edge case.
+  - **Verification:** `mvn -pl reporting-service -am test -Dtest=CertificateCsvExporterTest -Dsurefire.failIfNoSpecifiedTests=false` → 2/2 green; full `mvn -pl reporting-service -am test` → all 13 test classes green, no regression.
+  - **code-reviewer verdict:** PASS on first pass. No findings.
+  - **Dependencies:** Task 52
+  - **Files touched:** `certificate/export/CertificateCsvExporter.java`, `certificate/export/CertificateCsvExporterTest.java`
+  - **Estimated scope:** Small (2 files) — actual: 2 files
+
 ## Checkpoint 25: Certificate issuance complete
 
 All three bullets closed: `mvn -pl reporting-service verify` green (see Task 53); the manual curl check against real running services (see Task 53's own entry above — preview → issue → both conflict codes → real cross-service immutability proof); Task 53's negative verification documented above, from evidence gathered live in this session rather than reconstructed after the fact. Phase 22 (Certificate issuance) is complete. Same implicit-approval pattern already applied to Checkpoints 21-24 in this module: this is an internal phase checkpoint, not the final module-close gate (that's Checkpoint 28) — the user's own instruction for this `/build auto` run was to proceed through the whole module without pausing at each one.

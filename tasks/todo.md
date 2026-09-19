@@ -246,15 +246,7 @@
 
 - [x] Task 54: CertificatePdfExporter — detalle: tasks/LEARNINGS.md (grep "## Task 54:")
 
-- [ ] Task 55: CertificateCsvExporter
-  - **Description:** `CertificateCsvExporter` (Apache Commons CSV) writing the certificate's frozen `EsgCertificateLineItem` rows (one row per contributing collection date/weight) plus a summary header/section.
-  - **Acceptance criteria:**
-    - [ ] Output is real, valid CSV, correctly escaping any field that could contain a comma/quote
-  - **Verification:**
-    - [ ] Unit test parses the generated CSV back with Commons CSV's own parser and asserts the line items and summary values round-trip correctly
-  - **Dependencies:** Task 52
-  - **Files likely touched:** `certificate/export/CertificateCsvExporter.java`, `pom.xml` (Commons CSV dependency)
-  - **Estimated scope:** Small (2 files)
+- [x] Task 55: CertificateCsvExporter — detalle: tasks/LEARNINGS.md (grep "## Task 55:")
 
 - [ ] Task 56: Export HTTP endpoints
   - **Description:** `GET /tracked-companies/{companyId}/certificates/{id}/pdf` and `.../csv`, streaming the exporter output directly in the response (`Content-Disposition: attachment`), no file persisted anywhere.

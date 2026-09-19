@@ -272,7 +272,7 @@
 
 ## Phase 25: ci-pipeline workflow
 
-- [ ] Task 58: Add .github/workflows/ci.yml (GitHub Actions: build+test on push/PR)
+- [x] Task 58: Add .github/workflows/ci.yml (GitHub Actions: build+test on push/PR) — detalle: tasks/LEARNINGS.md (grep "## Task 58:")
 
 ### Checkpoint 29: CI proven live (M6 module close)
 - [ ] Push to main triggers a real Actions run; `mvn -B verify` passes reactor-wide (shared-kernel + recycler-service + collection-service + reporting-service), including at least one Postgres IT and one RabbitMQ IT, zero repo secrets configured

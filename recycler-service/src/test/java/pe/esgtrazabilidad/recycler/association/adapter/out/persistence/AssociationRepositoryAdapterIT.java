@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -24,9 +25,11 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 
+import pe.esgtrazabilidad.kernel.amqp.OutboxDispatcher;
 import pe.esgtrazabilidad.recycler.association.domain.Association;
 import pe.esgtrazabilidad.recycler.association.domain.AssociationStatus;
 import pe.esgtrazabilidad.recycler.association.port.out.AssociationRepository;
+import pe.esgtrazabilidad.recycler.certification.job.CertificationExpiryScanJob;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -50,6 +53,22 @@ class AssociationRepositoryAdapterIT {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    // Both are @Scheduled with no initialDelay, so Spring fires their first
+    // run shortly after context startup regardless of the configured
+    // interval -- on a slower runner (this failed on CI, never locally) that
+    // first run can land inside savingANewAssociationIssuesOnlyOneInsertWithNoPriorSelect's
+    // own SQL-capture window and add an extra SELECT, making the exact-count
+    // assertion flaky. A CGLIB mock's overridden @Scheduled method carries no
+    // annotation (method annotations aren't inherited across overrides), so
+    // @MockBean-ing them here removes both from the scheduler entirely for
+    // this test class's context, deterministically -- not just for this one
+    // test method.
+    @MockBean
+    private CertificationExpiryScanJob certificationExpiryScanJob;
+
+    @MockBean
+    private OutboxDispatcher outboxDispatcher;
 
     private Logger sqlLogger;
     private ListAppender<ILoggingEvent> sqlAppender;

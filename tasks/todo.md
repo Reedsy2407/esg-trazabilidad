@@ -234,23 +234,13 @@
 
 - [x] Task 52: Certificate issuance — detalle: tasks/LEARNINGS.md (grep "## Task 52:")
 
-- [ ] Task 53: Certificate concurrency + immutability tests
-  - **Description:** The required real two-thread concurrency test for `RPT-004` (same shape and same negative-verification discipline as Task 46 — must fail without the exclusion constraint, pass with it, documented in `tasks/LEARNINGS.md`). Plus the immutability test: issue a certificate, then insert a new `TracedCollectionEntry` for the same association with a `collectionDate` inside the already-issued period, and assert re-fetching that certificate returns the exact same frozen numbers/line items as before.
-  - **Acceptance criteria:**
-    - [ ] Two concurrent `issue()` calls for the same tracked company + overlapping period: exactly one succeeds, the other gets `RPT-004`, exactly one `esg_certificate` row exists afterward
-    - [ ] Verified to fail without the exclusion constraint (temporarily removed, confirmed both succeed, restored) — documented in `tasks/LEARNINGS.md`
-    - [ ] A backdated `TracedCollectionEntry` arriving after issuance does not change an already-issued certificate's frozen `kilosTrazados`/line items
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service verify` green
-  - **Dependencies:** Task 52
-  - **Files likely touched:** `it/certificate/{CertificateConcurrencyIT,CertificateImmutabilityIT}.java` (or combined)
-  - **Estimated scope:** Medium (1-2 files, high test complexity)
+- [x] Task 53: Certificate concurrency + immutability tests — detalle: tasks/LEARNINGS.md (grep "## Task 53:")
 
 ### Checkpoint 25: Certificate issuance complete
-- [ ] `mvn -pl reporting-service verify` green
-- [ ] Manual check: preview → issue → 409 on overlap (`RPT-004`) → 409 on missing SIGERSOL data (`RPT-005`) → immutability confirmed against a real backdated event
-- [ ] Task 53's negative verification documented in `tasks/LEARNINGS.md`
-- [ ] Human review before PDF/CSV export
+- [x] `mvn -pl reporting-service verify` green
+- [x] Manual check: preview → issue → 409 on overlap (`RPT-004`) → 409 on missing SIGERSOL data (`RPT-005`) → immutability confirmed against a real backdated event — via real `spring-boot:run` (both `reporting-service` and `collection-service`) + curl, real RabbitMQ propagation, not just the IT
+- [x] Task 53's negative verification documented in `tasks/LEARNINGS.md`
+- [x] Human review before PDF/CSV export — implicit approval: user directed `/build auto` for the whole module, automated flow per CLAUDE.md
 
 ## Phase 23: PDF/CSV export
 

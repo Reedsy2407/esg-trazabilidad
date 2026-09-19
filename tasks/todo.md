@@ -200,17 +200,7 @@
 
 ## Phase 20: SigersolSync (introduces the EXCLUDE USING gist pattern)
 
-- [ ] Task 44: SigersolSync persistence
-  - **Description:** `SigersolSync` domain (id, associationId — bare UUID, periodStart, periodEnd, hierarchyCompliancePercent [0-100], officialKilosDeclared [nullable], declaredAt, sourceNote). Liquibase `v0.1.1_create_sigersol_sync_table.yaml`: `CREATE EXTENSION IF NOT EXISTS btree_gist`, then the table, then `CONSTRAINT excl_sigersol_sync_association_period EXCLUDE USING gist (association_id WITH =, daterange(period_start, period_end, '[]') WITH &&)` — the real DB-level backstop for RPT-006, per `SPEC-reporting-service.md`'s Cowork-amended Resolved Decisions.
-  - **Acceptance criteria:**
-    - [ ] `SigersolSync.create()` validates `hierarchyCompliancePercent` is between 0 and 100, and `periodEnd` is not before `periodStart`
-    - [ ] Liquibase creates `sigersol_sync` with the exclusion constraint in place (confirmed via `psql \d sigersol_sync`, same manual-check discipline as every other schema task in this project)
-  - **Verification:**
-    - [ ] `mvn -pl reporting-service test` green
-    - [ ] A direct-repository IT proves two overlapping-period rows for the same `associationId` cannot both be inserted, even bypassing any service-level check — the actual DB-level proof the constraint exists and works, independent of Task 46's concurrency test (which proves it closes a *race*, not just that a sequential second insert fails)
-  - **Dependencies:** Task 41
-  - **Files likely touched:** `sigersolsync/domain/SigersolSync.java`, `sigersolsync/adapter/out/persistence/*`, `sigersolsync/port/out/SigersolSyncRepository.java`, `v0.1.1_create_sigersol_sync_table.yaml`
-  - **Estimated scope:** Medium (5-6 files)
+- [x] Task 44: SigersolSync persistence — detalle: tasks/LEARNINGS.md (grep "## Task 44:")
 
 - [ ] Task 45: SigersolSync API
   - **Description:** Controller → Mapper → UseCase → Service for register/get/list. `RPT-006 DUPLICATE_SIGERSOL_SYNC_PERIOD` (409), `RPT-007 SIGERSOL_SYNC_NOT_FOUND` (404). A `SigersolSyncExceptionHandler` translates the exclusion-constraint `DataIntegrityViolationException` (`excl_sigersol_sync_association_period`) to `RPT-006`. `SigersolSyncRepository` also gains `findCovering(associationId, periodStart, periodEnd)` — the query `CertificateService` (Phase 22) will use to look up compliance data for a certificate's period.

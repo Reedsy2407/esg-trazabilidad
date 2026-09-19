@@ -3,6 +3,7 @@ package pe.esgtrazabilidad.reporting.it;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import io.restassured.RestAssured;
@@ -19,10 +20,13 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
+import pe.esgtrazabilidad.reporting.certificate.port.out.EsgCertificateRepository;
 import pe.esgtrazabilidad.reporting.events.ledger.TracedCollectionEntryEntity;
 import pe.esgtrazabilidad.reporting.events.ledger.TracedCollectionEntryJpaRepository;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -45,6 +49,9 @@ class CertificateApiIT {
 
     @Autowired
     private TracedCollectionEntryJpaRepository tracedCollectionEntryRepository;
+
+    @Autowired
+    private EsgCertificateRepository esgCertificateRepository;
 
     @BeforeEach
     void setUpRestAssured() {
@@ -280,6 +287,67 @@ class CertificateApiIT {
                 .statusCode(200)
                 .body("content.size()", equalTo(1))
                 .body("content[0].id", equalTo(certificateId));
+    }
+
+    @Test
+    void anIssuedCertificatesFrozenKilosNeverChangeEvenAfterABackdatedEntryArrives() {
+        // The exact success criterion SPEC-reporting-service.md names
+        // explicitly: a certificate handed to a client must never silently
+        // change, even if a CollectionRegisteredEvent for an already-covered
+        // date arrives after issuance (e.g. a delayed/redelivered message,
+        // or a correction entered late).
+        UUID associationId = UUID.randomUUID();
+        String companyId = registerTrackedCompany("20111111112", associationId);
+        registerSigersolSync(associationId, "2026-09-01", "2026-09-30");
+        seedTracedCollection(associationId, LocalDate.of(2026, 9, 10), new BigDecimal("6.00"));
+
+        String certificateId = given()
+                .contentType(ContentType.JSON)
+                .body(issueCertificateRequest("2026-09-01", "2026-09-30"))
+                .when()
+                .post("/tracked-companies/{companyId}/certificates", companyId)
+                .then()
+                .statusCode(201)
+                .body("kilosTrazados", equalTo(6.0f))
+                .extract()
+                .path("id");
+
+        // Arrives AFTER issuance, dated INSIDE the already-issued period.
+        seedTracedCollection(associationId, LocalDate.of(2026, 9, 15), new BigDecimal("100.00"));
+
+        given()
+                .when()
+                .get("/tracked-companies/{companyId}/certificates/{id}", companyId, certificateId)
+                .then()
+                .statusCode(200)
+                .body("kilosTrazados", equalTo(6.0f));
+
+        // kilosTrazados alone isn't proof of the actual snapshot mechanism:
+        // it's a denormalized column written once at issuance and never
+        // recomputed, so it would "pass" this check even if the line-item
+        // freeze (the real mechanism Task 50 built, and the one an eventual
+        // CSV export would rely on) were completely broken and re-queried
+        // the live ledger on every read. Assert the frozen EsgCertificateLineItem
+        // rows directly: still exactly the one entry captured at issuance,
+        // not two, and not the backdated 100.00 kilos.
+        List<EsgCertificateLineItem> lineItems =
+                esgCertificateRepository.findLineItems(UUID.fromString(certificateId));
+        assertThat(lineItems).hasSize(1);
+        assertThat(lineItems.get(0).getWeightKg()).isEqualByComparingTo("6.00");
+        assertThat(lineItems.get(0).getCollectionDate()).isEqualTo(LocalDate.of(2026, 9, 10));
+
+        // The live preview for the SAME period, by contrast, DOES reflect
+        // the backdated entry -- proving the freeze is specific to the
+        // issued certificate, not a general staleness bug in the ledger
+        // query itself.
+        given()
+                .queryParam("periodStart", "2026-09-01")
+                .queryParam("periodEnd", "2026-09-30")
+                .when()
+                .get("/tracked-companies/{companyId}/certificate-summary", companyId)
+                .then()
+                .statusCode(200)
+                .body("kilosTrazados", equalTo(106.0f));
     }
 
     @Test

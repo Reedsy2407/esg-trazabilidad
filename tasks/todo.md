@@ -275,9 +275,9 @@
 - [x] Task 58: Add .github/workflows/ci.yml (GitHub Actions: build+test on push/PR) — detalle: tasks/LEARNINGS.md (grep "## Task 58:")
 
 ### Checkpoint 29: CI proven live (M6 module close)
-- [ ] Push to main triggers a real Actions run; `mvn -B verify` passes reactor-wide (shared-kernel + recycler-service + collection-service + reporting-service), including at least one Postgres IT and one RabbitMQ IT, zero repo secrets configured
-- [ ] Negative check: a deliberately broken test turns the run red with that test named in the log; reverted; green again
-- [ ] A real PR (throwaway branch) shows the same workflow as a status check on the PR itself, not only on direct pushes to `main`
-- [ ] Two rapid pushes to the same branch show the earlier run cancelled (concurrency block proven live, not just present in the YAML)
-- [ ] `mvn verify` still green locally across the whole reactor — zero regression from adding the workflow file
+- [x] Push to main triggers a real Actions run; `mvn -B verify` passes reactor-wide (shared-kernel + recycler-service + collection-service + reporting-service), including at least one Postgres IT and one RabbitMQ IT, zero repo secrets configured — detalle: tasks/LEARNINGS.md (grep "## Checkpoint 29:")
+- [x] Negative check: a deliberately broken test turns the run red with that test named in the log; reverted; green again — same grep
+- [x] A real PR (throwaway branch) shows the same workflow as a status check on the PR itself, not only on direct pushes to `main` — same grep
+- [x] Two rapid pushes to the same branch show the earlier run cancelled (concurrency block proven live, not just present in the YAML) — same grep
+- [x] `mvn verify` still green locally across the whole reactor — zero regression from adding the workflow file
 - [ ] Human review and approval — last module before `deployment` per the capability map's build order

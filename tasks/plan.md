@@ -523,11 +523,11 @@ reactor existing, i.e. every module built so far)
 - [ ] Task 58: Add `.github/workflows/ci.yml` — triggers on `push` to `main` and `pull_request` targeting `main`; `ubuntu-latest`; `actions/checkout@v4`; `actions/setup-java@v4` (temurin, java-version 21, `cache: maven`); one step running `mvn -B verify`; `concurrency` block (`group: ci-${{ github.ref }}`, `cancel-in-progress: true`) — content per `SPEC-ci-pipeline.md`'s Code Style section verbatim. No `pom.xml` change.
 
 ### Checkpoint 29: CI proven live (M6 module close)
-- [ ] Push to `main` triggers a real Actions run; `mvn -B verify` passes reactor-wide (`shared-kernel` + `recycler-service` + `collection-service` + `reporting-service`), including at least one Postgres IT and one RabbitMQ IT, zero repository secrets configured
-- [ ] Negative check: a deliberately broken test turns the run red with that test named in the log; reverted; green again
-- [ ] A real PR (throwaway branch) shows the same workflow as a status check on the PR itself, not only on direct pushes to `main`
-- [ ] Two rapid pushes to the same branch show the earlier run cancelled (`concurrency` block proven live, not just present in the YAML)
-- [ ] `mvn verify` still green locally across the whole reactor — zero regression from adding the workflow file
+- [x] Push to `main` triggers a real Actions run; `mvn -B verify` passes reactor-wide (`shared-kernel` + `recycler-service` + `collection-service` + `reporting-service`), including at least one Postgres IT and one RabbitMQ IT, zero repository secrets configured
+- [x] Negative check: a deliberately broken test turns the run red with that test named in the log; reverted; green again
+- [x] A real PR (throwaway branch) shows the same workflow as a status check on the PR itself, not only on direct pushes to `main`
+- [x] Two rapid pushes to the same branch show the earlier run cancelled (`concurrency` block proven live, not just present in the YAML)
+- [x] `mvn verify` still green locally across the whole reactor — zero regression from adding the workflow file
 - [ ] Human review and approval — last module before `deployment` per the capability map's build order
 
 ## Risks and Mitigations

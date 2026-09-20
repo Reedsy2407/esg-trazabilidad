@@ -528,7 +528,7 @@ reactor existing, i.e. every module built so far)
 - [x] A real PR (throwaway branch) shows the same workflow as a status check on the PR itself, not only on direct pushes to `main`
 - [x] Two rapid pushes to the same branch show the earlier run cancelled (`concurrency` block proven live, not just present in the YAML)
 - [x] `mvn verify` still green locally across the whole reactor — zero regression from adding the workflow file
-- [ ] Human review and approval — last module before `deployment` per the capability map's build order
+- [x] Human review and approval — last module before `deployment` per the capability map's build order — approved 2026-09-19 (independent Cowork review, no findings)
 
 ## Risks and Mitigations
 

@@ -1128,4 +1128,8 @@ All four live-verification bullets from `SPEC-ci-pipeline.md`'s Testing Strategy
 5. **Concurrency check:** two empty commits pushed back-to-back to the verification branch (`91785f0` then `2891990`) produced run [35479393183](https://github.com/Reedsy2407/esg-trazabilidad/actions/runs/35479393183) (the first push) with `conclusion: cancelled` the moment the second push's run ([35479398518](https://github.com/Reedsy2407/esg-trazabilidad/actions/runs/35479398518), `conclusion: success`) started — the `concurrency: {group: ci-${{ github.ref }}, cancel-in-progress: true}` block proven live, not just present in the YAML.
 6. Verification branch deleted (`git push origin --delete ci/checkpoint-29-verification`) after all four checks passed — deleting it auto-closed PR #1 on GitHub (`state: closed`, `merged: false`), per the user's own instruction not to merge the throwaway branch.
 
-All Checkpoint 29 bullets checked except **Human review and approval**, which stays unchecked — module-close hard stop, same as Checkpoint 28. `ci-pipeline` (M6) is otherwise complete; next per the capability map's build order is `deployment`.
+### Checkpoint 29: Human review (2026-09-19)
+
+The user confirmed directly, in this same chat session, that an independent Cowork review of the module was completed with no findings, and instructed marking the box. Transcribed as given, not independently re-verified against the running test suite beyond what this session's own commits/CI runs already show above.
+
+All Checkpoint 29 bullets now checked, including Human review and approval. `ci-pipeline` (M6) is closed; per the capability map's build order, next is `deployment` (M7).

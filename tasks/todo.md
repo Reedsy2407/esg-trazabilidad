@@ -1,6 +1,7 @@
-# Task List: shared-kernel + recycler-service + collection-service + cross-service-events + reporting-service + ci-pipeline
+# Task List: shared-kernel + recycler-service + collection-service + cross-service-events + reporting-service + ci-pipeline + auth-service
 
-> See `tasks/plan.md` for architecture decisions, dependency graph, and risks. Source specs: `SPEC-shared-kernel.md`, `SPEC-recycler-service.md`, `SPEC-collection-service.md`, `SPEC-cross-service-events.md`, `SPEC-reporting-service.md`, `SPEC-ci-pipeline.md`.
+> See `tasks/plan.md` for architecture decisions, dependency graph, and risks. Source specs: `SPEC-shared-kernel.md`, `SPEC-recycler-service.md`, `SPEC-collection-service.md`, `SPEC-cross-service-events.md`, `SPEC-reporting-service.md`, `SPEC-ci-pipeline.md`, `SPEC-auth-service.md`.
+> Confirmed before `/build` starts: `JWT_SECRET` lives only in `.env.local`, shared identically across all four services via the existing `spring.config.import` mechanism, never hardcoded. `AdminBootstrapRunner` (Task 61) only ever creates an account when `staff_user` is empty (never resets credentials on a later restart) and logs a `SecureRandom`-generated password exactly once — never an env-supplied or predictable value.
 
 ## Phase 1: Foundation (`shared-kernel`)
 
@@ -281,3 +282,70 @@
 - [x] Two rapid pushes to the same branch show the earlier run cancelled (concurrency block proven live, not just present in the YAML) — same grep
 - [x] `mvn verify` still green locally across the whole reactor — zero regression from adding the workflow file
 - [x] Human review and approval — last module before `deployment` per the capability map's build order — ver tasks/LEARNINGS.md#checkpoint-29-human-review
+
+## Phase 26: auth-service infra
+
+- [ ] Task 59: auth-service scaffolding (new Maven module, pom, application.yml port 8084, empty Liquibase master, AuthErrors stub)
+
+### Checkpoint 30: Service boots
+- [ ] `mvn -pl auth-service spring-boot:run` boots cleanly, empty changelog applies
+- [ ] `mvn verify` still green across the whole reactor with the new module present
+- [ ] Human review before first entity slice
+
+## Phase 27: StaffUser + login core
+
+- [ ] Task 60: StaffUser persistence (Liquibase v0.1.0, unique email constraint, BCryptPasswordEncoder bean)
+- [ ] Task 61: Admin bootstrap runner (SecureRandom password, logged once, gated on staff_user being empty — never a later reset)
+- [ ] Task 62: shared-kernel JwtSecurityAutoConfiguration (JwtDecoder, JwtAuthenticationEntryPoint/AccessDeniedHandler) + auth-service's own SecurityConfig
+- [ ] Task 63: Login API (JwtIssuer via Nimbus, POST /auth/login, AUTH-001 same error for unknown email or wrong password)
+
+### Checkpoint 31: auth-service core proven
+- [ ] `mvn -pl auth-service verify` green
+- [ ] Manual check: boot with ADMIN_BOOTSTRAP_EMAIL set, retrieve the logged password, curl POST /auth/login, decode the returned JWT and confirm claims
+- [ ] Human review before wiring the other three services
+
+## Phase 28: Staff onboarding + self endpoint
+
+- [ ] Task 64: POST /auth/staff-users (requires a valid token; AUTH-002 on duplicate email)
+- [ ] Task 65: GET /auth/me
+
+### Checkpoint 32: auth-service feature-complete
+- [ ] `mvn -pl auth-service verify` green
+- [ ] Manual check: login as bootstrap account → create second staff user → login as second user → GET /auth/me confirms the right identity
+- [ ] Human review before retrofitting recycler-service/collection-service/reporting-service
+
+## Phase 29: Retrofit recycler-service
+
+- [ ] Task 66: recycler-service SecurityConfig + oauth2-resource-server dependency + shared test-token helper + retrofit every existing *ApiIT + negative checks (no token, wrong-secret token)
+
+### Checkpoint 33: recycler-service secured
+- [ ] `mvn -pl recycler-service verify` green — every pre-existing test still passes, zero loosened assertions
+- [ ] Human review before collection-service
+
+## Phase 30: Retrofit collection-service
+
+- [ ] Task 67: same shape as Task 66, applied to collection-service
+
+### Checkpoint 34: collection-service secured
+- [ ] `mvn -pl collection-service verify` green
+- [ ] Human review before reporting-service
+
+## Phase 31: Retrofit reporting-service
+
+- [ ] Task 68: same shape as Task 66, applied to reporting-service
+
+### Checkpoint 35: reporting-service secured
+- [ ] `mvn -pl reporting-service verify` green
+- [ ] Human review before the cross-service proof and polish
+
+## Phase 32: Cross-service proof + polish
+
+- [ ] Task 69: Cross-service token portability IT (a real auth-service token works, unmodified, against recycler-service/collection-service/reporting-service)
+- [ ] Task 70: springdoc-openapi wiring for auth-service
+
+### Checkpoint 36: Final — ready for review (M7 module close)
+- [ ] `mvn verify` green across the whole reactor (five modules)
+- [ ] All Success Criteria bullets in SPEC-auth-service.md re-verified line by line with evidence
+- [ ] Every pre-existing *ApiIT across all three retrofitted services still green, now sending tokens — zero lost coverage
+- [ ] Swagger UI and /actuator/health remain publicly reachable with no token on all four services
+- [ ] Human review and approval — last module before `deployment` per the capability map's build order

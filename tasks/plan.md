@@ -1,11 +1,11 @@
-# Implementation Plan: shared-kernel + recycler-service + collection-service + cross-service-events + reporting-service + ci-pipeline
+# Implementation Plan: shared-kernel + recycler-service + collection-service + cross-service-events + reporting-service + ci-pipeline + auth-service
 
-> Source specs: [[SPEC-shared-kernel.md]], [[SPEC-recycler-service.md]], [[SPEC-collection-service.md]], [[SPEC-cross-service-events.md]], [[SPEC-reporting-service.md]], [[SPEC-ci-pipeline.md]]. Module ids per [[CAPABILITY-MAP.md]]: `shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`, `ci-pipeline`.
-> `shared-kernel` + `recycler-service` (Tasks 1-12, Checkpoints 1-6), `collection-service` (Tasks 13-23, Checkpoints 7-13), `cross-service-events` (Tasks 24-40, Checkpoints 14-20), and `reporting-service` (Tasks 41-57, Checkpoints 21-28) are complete and approved. `ci-pipeline` (Task 58, Checkpoint 29) is planned below, not yet built — the last module before `deployment` per the capability map's build order.
+> Source specs: [[SPEC-shared-kernel.md]], [[SPEC-recycler-service.md]], [[SPEC-collection-service.md]], [[SPEC-cross-service-events.md]], [[SPEC-reporting-service.md]], [[SPEC-ci-pipeline.md]], [[SPEC-auth-service.md]]. Module ids per [[CAPABILITY-MAP.md]]: `shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`, `ci-pipeline`, `auth-service`.
+> `shared-kernel` + `recycler-service` (Tasks 1-12, Checkpoints 1-6), `collection-service` (Tasks 13-23, Checkpoints 7-13), `cross-service-events` (Tasks 24-40, Checkpoints 14-20), `reporting-service` (Tasks 41-57, Checkpoints 21-28), and `ci-pipeline` (Task 58, Checkpoint 29) are complete and approved. `auth-service` (Tasks 59-70, Checkpoints 30-36) is planned below, not yet built — the last module before `deployment` per the capability map's build order.
 
 ## Overview
 
-Build the first three modules of the ESG traceability monorepo: `shared-kernel` (error handling, event-strategy enum, ID generation — a dependency-light library), `recycler-service` (the first real Spring Boot service, covering `Association`, `Recycler`, and `Certification` CRUD, Liquibase-managed Postgres schema, and Docker Compose local infra), and `collection-service` (a second Spring Boot service in the same reactor, covering `Neighbor`, `Company`, `CollectionSchedule`, `CollectionRecord` CRUD against the same shared Postgres). Then `cross-service-events`: RabbitMQ-based transactional Outbox (publish) + Inbox/idempotency (consume) infrastructure wiring the two services together — `collection-service` publishes `CollectionRegisteredEvent` (consumed by `recycler-service` to increment `Association.totalKilosCollected`), and `recycler-service` publishes `CertificationExpiredEvent`/`CertificationRenewedEvent` (consumed by `collection-service` to block/unblock new `CollectionRecord` creation for an association with a lapsed certification). Finally `reporting-service`: a third Spring Boot service, pure consumer of the already-existing `CollectionRegisteredEvent`, that turns the platform's own data plus a manually-entered official SIGERSOL/MINAM data point into an immutable, exportable (PDF/CSV) ESG traceability certificate for a B2B client. Then `ci-pipeline`: a single GitHub Actions workflow that runs `mvn -B verify` against the whole reactor on every push to `main` and every pull request, closing the gap where a regression could otherwise reach `main` without anyone running the full test suite by hand first.
+Build the first three modules of the ESG traceability monorepo: `shared-kernel` (error handling, event-strategy enum, ID generation — a dependency-light library), `recycler-service` (the first real Spring Boot service, covering `Association`, `Recycler`, and `Certification` CRUD, Liquibase-managed Postgres schema, and Docker Compose local infra), and `collection-service` (a second Spring Boot service in the same reactor, covering `Neighbor`, `Company`, `CollectionSchedule`, `CollectionRecord` CRUD against the same shared Postgres). Then `cross-service-events`: RabbitMQ-based transactional Outbox (publish) + Inbox/idempotency (consume) infrastructure wiring the two services together — `collection-service` publishes `CollectionRegisteredEvent` (consumed by `recycler-service` to increment `Association.totalKilosCollected`), and `recycler-service` publishes `CertificationExpiredEvent`/`CertificationRenewedEvent` (consumed by `collection-service` to block/unblock new `CollectionRecord` creation for an association with a lapsed certification). Finally `reporting-service`: a third Spring Boot service, pure consumer of the already-existing `CollectionRegisteredEvent`, that turns the platform's own data plus a manually-entered official SIGERSOL/MINAM data point into an immutable, exportable (PDF/CSV) ESG traceability certificate for a B2B client. Then `ci-pipeline`: a single GitHub Actions workflow that runs `mvn -B verify` against the whole reactor on every push to `main` and every pull request, closing the gap where a regression could otherwise reach `main` without anyone running the full test suite by hand first. Finally `auth-service`: a fifth Spring Boot service (own JWT, HS256, staff login only — no external users yet) that closes the platform's last remaining pre-`deployment` gap, since every endpoint in every other service is still unauthenticated today. `recycler-service`, `collection-service`, and `reporting-service` each get retrofitted with a minimal `SecurityConfig` that validates tokens offline (no synchronous call back to `auth-service`), and every one of their pre-existing integration tests gets a valid token attached rather than losing coverage.
 
 ## Architecture Decisions
 
@@ -29,6 +29,12 @@ Build the first three modules of the ESG traceability monorepo: `shared-kernel` 
 - **PDF and CSV export are split into three tasks** (pure-function exporters, Tasks 54/55, then the HTTP endpoints wiring them, Task 56) rather than one — the exporters need zero Postgres/RabbitMQ and are fully unit-testable in isolation (round-trip: generate, then parse the output back with the same library's own reader), while the endpoint task is what actually needs Testcontainers Postgres for a real issued certificate to export.
 - **No new error-handling infra needed for the generic `DataIntegrityViolationException` fallback** — `shared-kernel`'s `GlobalExceptionHandler` already covers it generically; each new controller-scoped `*ExceptionHandler` (mirrors `ScheduleExceptionHandler`/`CompanyExceptionHandler`) only needs to add the specific `getConstraintName()` branches this module's own constraints introduce.
 - **`ci-pipeline` is a single GitHub Actions workflow file, not a new Maven module** — no addition to the root `pom.xml`'s `<modules>` list. It runs `mvn -B verify` at the reactor root on `ubuntu-latest`, needing zero repository secrets because every `@SpringBootTest`/`@Testcontainers` class in the reactor already overrides `spring.datasource.*`/`spring.rabbitmq.*` via `@DynamicPropertySource` at higher precedence than `application.yml`'s `${RABBITMQ_PASSWORD}`-style placeholders (confirmed by reading every such test class before writing `SPEC-ci-pipeline.md`).
+- **`auth-service` is a new Maven module** (own `pom.xml`, port 8084, own Liquibase changelog), same shape as `recycler-service`/`collection-service`/`reporting-service` — joining the reactor as its fifth module.
+- **Confirmed explicitly before `/build` starts (per the user's own request before approving this plan):**
+  - **The HS256 signing secret (`JWT_SECRET`) lives only in `.env.local`, never hardcoded, and is shared byte-for-byte identically across all four services** — `auth-service` (which signs) and `recycler-service`/`collection-service`/`reporting-service` (which only verify) each pick it up automatically through the same `spring.config.import: optional:file:../.env.local[.properties]` mechanism every service's `application.yml` already declares. No new plumbing needed beyond adding the one `JWT_SECRET=` line to `.env.local` — same "app fails to start if the variable is missing, never a `${VAR:default}` fallback" rule already enforced for `POSTGRES_PASSWORD`/`RABBITMQ_PASSWORD`.
+  - **`AdminBootstrapRunner` (Task 61) creates the first staff account if and only if the `staff_user` table is empty at startup — gated on table state, not on env var presence alone** — so a later restart with `ADMIN_BOOTSTRAP_EMAIL` still configured is a safe no-op that never re-creates the account or resets its credentials. The password itself is never supplied via an env var or any other predictable/hardcoded value: it's generated with `SecureRandom` at bootstrap time, bcrypt-hashed before being persisted, and the plaintext is logged exactly once at WARN level for the operator to retrieve from that one deploy's own startup logs and rotate on first login. This corrects `SPEC-auth-service.md`'s very first draft (which had planned an `ADMIN_BOOTSTRAP_PASSWORD` env var) — fixed in the spec itself before this plan was written, since an operator-chosen fixed password is exactly the kind of "predictable default" this project's security rule already forbids, even though it wouldn't have been literally hardcoded in source.
+- **Retrofitting all three existing services' `*ApiIT` suites is explicit, first-class scope (Tasks 66-68), not an incidental side effect discovered mid-`/build`.** Each retrofit task covers: adding `spring-boot-starter-oauth2-resource-server`, that service's own minimal `SecurityConfig`, a shared per-service test helper that mints a locally-signed test token (same `JWT_SECRET` test value — no live `auth-service` HTTP call, see `SPEC-auth-service.md`'s Resolved Decisions for why that's legitimate here), attaching it to every pre-existing `*ApiIT`, and the two required negative-check tests (no token, wrong-secret token) per service.
+- **No synchronous call from any resource service to `auth-service`, ever** — JWT validation is fully offline (`NimbusJwtDecoder` against the shared secret), preserving the same no-direct-cross-service-HTTP-call constraint this codebase has held since `collection-service`'s own spec first drew that boundary.
 
 ## Dependency Graph (shared-kernel + recycler-service)
 
@@ -530,6 +536,109 @@ reactor existing, i.e. every module built so far)
 - [x] `mvn verify` still green locally across the whole reactor — zero regression from adding the workflow file
 - [x] Human review and approval — last module before `deployment` per the capability map's build order — approved 2026-09-19 (independent Cowork review, no findings)
 
+## Dependency Graph (auth-service)
+
+```
+Task 59: auth-service scaffolding (pom module, port 8084, Liquibase master, AuthErrors stub)
+    │
+    ▼
+Task 60: StaffUser persistence (v0.1.0, unique email constraint, BCryptPasswordEncoder bean)
+    │
+    ▼
+Task 61: Admin bootstrap runner (SecureRandom password, logged once, gated on table emptiness)
+    │
+    ▼
+Task 62: shared-kernel JwtSecurityAutoConfiguration (JwtDecoder, JwtAuthenticationEntryPoint/
+    │     AccessDeniedHandler) + auth-service's own SecurityConfig
+    ▼
+Task 63: Login API (JwtIssuer via Nimbus JWSSigner, POST /auth/login, AUTH-001)
+    │
+    ├── Task 64: POST /auth/staff-users (AUTH-002 duplicate email)
+    └── Task 65: GET /auth/me
+    │
+    ▼ (both done)
+Task 66: recycler-service retrofit (SecurityConfig, resource-server dep, test-token helper,
+    │     retrofit every existing *ApiIT, negative checks)
+    ▼
+Task 67: collection-service retrofit (same shape)
+    │
+    ▼
+Task 68: reporting-service retrofit (same shape)
+    │
+    ▼
+Task 69: Cross-service token portability IT (a real auth-service-issued token works,
+    │     unmodified, against a real running instance of each of the other three services)
+    ▼
+Task 70: springdoc-openapi wiring for auth-service's own controllers
+```
+
+### Phase 26: auth-service infra
+
+- [ ] Task 59: auth-service scaffolding (new Maven module, `pom.xml`, `application.yml` port 8084, empty Liquibase master changelog, `AuthErrors` stub) — no security config, no entities yet
+
+### Checkpoint 30: Service boots
+- [ ] `mvn -pl auth-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies
+- [ ] `mvn verify` still green across the whole reactor with the new module present
+- [ ] Human review before the first entity slice
+
+### Phase 27: StaffUser + login core
+
+- [ ] Task 60: `StaffUser` persistence (Liquibase `v0.1.0` with a unique index on `email`, `StaffUserEntity`/`JpaRepository`/`RepositoryAdapter`, `BCryptPasswordEncoder` bean) — no `role` field, per Resolved Decisions
+- [ ] Task 61: Admin bootstrap runner (`ApplicationRunner`; if `staff_user` is empty AND `ADMIN_BOOTSTRAP_EMAIL` is set, generate a `SecureRandom` password, bcrypt-hash it, persist the account, log the plaintext once at WARN — never on a later restart, never from an env-supplied password)
+- [ ] Task 62: shared-kernel `JwtSecurityAutoConfiguration` (`JwtDecoder` bean off `${JWT_SECRET}`, `JwtAuthenticationEntryPoint`/`JwtAccessDeniedHandler` shaping 401/403 in `GlobalExceptionHandler`'s `{code, message}` shape, registered in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`) + `auth-service`'s own `SecurityConfig` (permits `/auth/login`, Swagger, actuator health; authenticates everything else)
+- [ ] Task 63: Login API (`JwtIssuer` wrapping Nimbus's `JWSSigner`, `POST /auth/login`, `AuthErrors.INVALID_CREDENTIALS`/`AUTH-001` — same error whether the email doesn't exist or the password is wrong)
+
+### Checkpoint 31: auth-service core proven
+- [ ] `mvn -pl auth-service verify` green
+- [ ] Manual check: `docker compose --env-file .env.local up -d`, set `ADMIN_BOOTSTRAP_EMAIL`, boot `auth-service`, retrieve the logged bootstrap password from the startup log, `curl POST /auth/login`, get a real JWT back, decode it (e.g. jwt.io or a one-line script) and confirm `sub`/`email`/`exp` claims are present and correct
+- [ ] Human review before wiring the other three services
+
+### Phase 28: Staff onboarding + self endpoint
+
+- [ ] Task 64: `POST /auth/staff-users` (requires a valid token; any authenticated staff member can onboard another, per Resolved Decisions) — `AuthErrors.DUPLICATE_STAFF_EMAIL`/`AUTH-002` on a repeat email
+- [ ] Task 65: `GET /auth/me` (requires a valid token; returns the calling staff user's own identity)
+
+### Checkpoint 32: auth-service feature-complete
+- [ ] `mvn -pl auth-service verify` green
+- [ ] Manual check: login as the bootstrap account → create a second staff user with that token → log in as the second user → `GET /auth/me` confirms the second user's own identity, not the bootstrap account's
+- [ ] Human review before retrofitting `recycler-service`/`collection-service`/`reporting-service`
+
+### Phase 29: Retrofit recycler-service
+
+- [ ] Task 66: `recycler-service` gets `spring-boot-starter-oauth2-resource-server`, its own `SecurityConfig` (permits Swagger/actuator health, authenticates everything else), a shared per-module test helper that mints a locally-signed test token against the same `JWT_SECRET` test value, every pre-existing `*ApiIT` retrofitted to attach it, and the two required negative-check tests (no `Authorization` header, and a syntactically-valid token signed with the wrong secret — both `401`)
+
+### Checkpoint 33: recycler-service secured
+- [ ] `mvn -pl recycler-service verify` green — every pre-existing test still passes, now sending a token; zero loosened assertions
+- [ ] Human review before `collection-service`
+
+### Phase 30: Retrofit collection-service
+
+- [ ] Task 67: same shape as Task 66, applied to `collection-service`
+
+### Checkpoint 34: collection-service secured
+- [ ] `mvn -pl collection-service verify` green — same standard as Checkpoint 33
+- [ ] Human review before `reporting-service`
+
+### Phase 31: Retrofit reporting-service
+
+- [ ] Task 68: same shape as Task 66, applied to `reporting-service`
+
+### Checkpoint 35: reporting-service secured
+- [ ] `mvn -pl reporting-service verify` green — same standard as Checkpoint 33
+- [ ] Human review before the cross-service proof and polish
+
+### Phase 32: Cross-service proof + polish
+
+- [ ] Task 69: Cross-service token portability IT — a real `auth-service` login (Testcontainers Postgres) issues a token used, unmodified, against a real running instance of each of `recycler-service`/`collection-service`/`reporting-service` sharing the same `JWT_SECRET` test value; no gateway, no synchronous call to `auth-service` from any of them
+- [ ] Task 70: springdoc-openapi wiring for `auth-service`'s own controllers (same pattern as Task 57 for `reporting-service`)
+
+### Checkpoint 36: Final — ready for review (M7 module close)
+- [ ] `mvn verify` green across the whole reactor (five modules: `shared-kernel`, `recycler-service`, `collection-service`, `reporting-service`, `auth-service`)
+- [ ] All Success Criteria bullets in `SPEC-auth-service.md` re-verified line by line with evidence, same discipline as every prior module-close checkpoint
+- [ ] Every pre-existing `*ApiIT` across all three retrofitted services still green, now sending tokens — zero lost coverage, confirmed by comparing test counts before/after this module against `tasks/LEARNINGS.md`'s own historical totals for each service
+- [ ] Swagger UI and `/actuator/health` remain publicly reachable with no token on all four services — verified with a real unauthenticated `curl` against each
+- [ ] Human review and approval — last module before `deployment` per the capability map's build order
+
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
@@ -554,7 +663,10 @@ reactor existing, i.e. every module built so far)
 | `reporting-service` consuming `CollectionRegisteredEvent` independently from `recycler-service`'s own Direction A consumer means the event's JSON shape now has two independent consumers that must both stay in sync with `collection-service`'s publisher | Medium — a future field rename in `collection-service`'s event could silently break one consumer's deserialization without the other's tests catching it | Same mitigation already accepted for the existing two-consumer risk on `CertificationExpiredEvent`/`CertificationRenewedEvent`: each consumer's own broker-flow IT (Task 49) is the real contract test, exercising real JSON over a real queue — a drift fails loudly there, per consumer, independently |
 | `EsgCertificateLineItem` snapshotting could grow the table indefinitely with no archival/retention policy | Low at pilot scale (2-3 companies, MVP) | Explicitly out of scope per `SPEC-reporting-service.md` — revisit only if real client volume makes it a real storage concern, same YAGNI discipline applied throughout this project |
 | Checkpoint 29's live-verification bullets (real push, real PR, real concurrent-push cancellation) can't be proven by any local command — they require pushing to the actual GitHub remote under the user's own identity | Low-medium — a "hard-to-reverse / visible to others" class of action per this session's own operating guidance | `/build` confirms with the user before each push/PR in Checkpoint 29, and prefers a throwaway branch (not `main`) for the deliberately-broken-test negative check specifically, per `SPEC-ci-pipeline.md`'s Testing Strategy |
+| Retrofitting auth onto three already-built, fully-tested services (Tasks 66-68) could silently loosen or delete a pre-existing assertion just to make a red `*ApiIT` pass again once every endpoint requires a token | Medium — would quietly erode test coverage this project has been careful to build up through every prior module | Each retrofit task's own Definition of Done requires the *same* test count and the *same* business assertions as before, plus the two new negative-check tests — `code-reviewer` explicitly checks for a deleted or weakened pre-existing assertion, not just for the new tests passing |
+| `JWT_SECRET` not actually present/identical across all four services' `.env.local` reads at deploy time (e.g. a typo, or a value regenerated for one service but not the others) would silently break cross-service token validation | Medium — would surface as every request from a valid login getting a `401` against the *other* services, confusing to debug from a stack trace alone | Task 69's cross-service portability IT is the real end-to-end proof this can't happen unnoticed; Checkpoint 36 additionally requires a documented `.env.local`-keys list naming `JWT_SECRET` once, shared, not per-service |
+| `AdminBootstrapRunner`'s once-only logged password could be missed by the operator (log rotated/lost before it's read) with no other way to recover the bootstrap account | Low — recoverable by resetting the row directly in Postgres and re-triggering bootstrap, but not elegant | Accepted at this pilot's scale (one operator, one bootstrap event, local/self-hosted logs); revisit only if this friction is hit for real |
 
 ## Open Questions
 
-None outstanding — all six source specs (`shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`, `ci-pipeline`) are fully resolved. `SPEC-reporting-service.md`'s own three Open Questions (real SIGERSOL integration timing, PDF template/branding, whether `TrackedCompany` should ever track more than one association) are deliberately deferred, not blocking — none of Tasks 41-57 depend on resolving them. `SPEC-ci-pipeline.md`'s own three Open Questions (README CI badge, Dependabot, branch protection) are likewise deliberately deferred, not blocking — none of Task 58/Checkpoint 29 depend on resolving them. Any new question that surfaces during implementation should be raised before the task it blocks, not worked around silently.
+None outstanding — all seven source specs (`shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`, `ci-pipeline`, `auth-service`) are fully resolved. `SPEC-reporting-service.md`'s own three Open Questions (real SIGERSOL integration timing, PDF template/branding, whether `TrackedCompany` should ever track more than one association) are deliberately deferred, not blocking — none of Tasks 41-57 depend on resolving them. `SPEC-ci-pipeline.md`'s own three Open Questions (README CI badge, Dependabot, branch protection) are likewise deliberately deferred, not blocking — none of Task 58/Checkpoint 29 depend on resolving them. `SPEC-auth-service.md`'s own four Open Questions (login rate limiting, CORS, RBAC, refresh tokens) are likewise deliberately deferred, not blocking — none of Tasks 59-70 depend on resolving them. Any new question that surfaces during implementation should be raised before the task it blocks, not worked around silently.

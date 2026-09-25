@@ -294,9 +294,9 @@
 
 ## Phase 27: StaffUser + login core
 
-- [ ] Task 60: StaffUser persistence (Liquibase v0.1.0, unique email constraint, BCryptPasswordEncoder bean)
-- [ ] Task 61: Admin bootstrap runner (SecureRandom password, logged once, gated on staff_user being empty — never a later reset)
-- [ ] Task 62: shared-kernel JwtSecurityAutoConfiguration (JwtDecoder, JwtAuthenticationEntryPoint/AccessDeniedHandler) + auth-service's own SecurityConfig
+- [x] Task 60: StaffUser persistence (Liquibase v0.1.0, unique email constraint, BCryptPasswordEncoder bean) — detalle: tasks/LEARNINGS.md (grep "## Task 60:")
+- [x] Task 61: Admin bootstrap runner (SecureRandom password, logged once, gated on staff_user being empty — never a later reset) — detalle: tasks/LEARNINGS.md (grep "## Task 61:")
+- [ ] Task 62: shared-kernel JwtSecurityConfig (JwtDecoder, JwtAuthenticationEntryPoint/AccessDeniedHandler) + auth-service's own SecurityConfig
 - [ ] Task 63: Login API (JwtIssuer via Nimbus, POST /auth/login, AUTH-001 same error for unknown email or wrong password)
 
 ### Checkpoint 31: auth-service core proven

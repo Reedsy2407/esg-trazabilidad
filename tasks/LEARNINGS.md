@@ -1241,3 +1241,9 @@ Same shape as Task 66, with all three of its learnings applied up front: `RestAs
 One miss caught by the first CI-like run: `CertificationStatusEventBrokerFlowIT` lives in `events/consume/`, not `it/`, yet calls the HTTP API — and sets RestAssured up inside its `createNeighbor()` helper rather than a `@BeforeEach`, so a search for `@BeforeEach` setups missed it (401). For Task 68, find HTTP-calling tests by grepping `given()`/`RestAssured`/`WebEnvironment.RANDOM_PORT` across the whole test tree, not by package.
 
 Verified in a clean worktree without `.env.local`: 74 unit + 56 IT green. `code-reviewer`: `PASS` (ran its own offline verify too); one nit — `TestJwtTokens` javadoc copied verbatim from recycler — fixed before commit.
+
+## Task 68: reporting-service auth retrofit
+
+Same shape as Tasks 66/67; green on the first CI-like run (47 unit + 52 IT — the 49 pre-existing plus `SecurityRetrofitIT`'s 3, against `GET /tracked-companies`). Searching the whole test tree for HTTP callers (Task 67's lesson) found only the six `it/*ApiIT` classes — no `@WebMvcTest`, and the five `@SpringBootTest` classes outside `it/` are all `WebEnvironment.NONE`. The two `*ConcurrencyApiIT` classes call `given()` from `ExecutorService` threads; they only read the static spec set in `@BeforeEach`, so the retrofit covers them unchanged. First `config` package in this service. `code-reviewer` confirmed no reporting endpoint (PDF/CSV export included) is meant to be public per either spec.
+
+`code-reviewer`: `PASS`. Nits: `TestJwtTokens` javadoc again named its own service (a single-line `sed` missed text wrapped across two lines — fixed before commit). Also flagged: `CollectionRegisteredEventBrokerFlowIT` (reporting-service, untouched here) failed once on the reviewer's own run with an AMQP handshake `EOFException` against the RabbitMQ Testcontainer and passed on re-run — pre-existing flakiness to watch in Checkpoint 36's reactor-wide verify and in CI.

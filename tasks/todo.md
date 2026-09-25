@@ -332,10 +332,10 @@
 
 ## Phase 31: Retrofit reporting-service
 
-- [ ] Task 68: same shape as Task 66, applied to reporting-service
+- [x] Task 68: reporting-service auth retrofit — detalle: tasks/LEARNINGS.md (grep "## Task 68:")
 
 ### Checkpoint 35: reporting-service secured
-- [ ] `mvn -pl reporting-service verify` green
+- [x] `mvn -pl reporting-service verify` green (verified without .env.local, CI-like)
 - [x] Human review before the cross-service proof and polish — waived 2026-09-25 by user decision (see tasks/plan.md "Gate change for the rest of M7")
 
 ## Phase 32: Cross-service proof + polish

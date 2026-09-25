@@ -624,10 +624,10 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 
 ### Phase 31: Retrofit reporting-service
 
-- [ ] Task 68: same shape as Task 66, applied to `reporting-service`
+- [x] Task 68: same shape as Task 66, applied to `reporting-service`
 
 ### Checkpoint 35: reporting-service secured
-- [ ] `mvn -pl reporting-service verify` green — same standard as Checkpoint 33
+- [x] `mvn -pl reporting-service verify` green — same standard as Checkpoint 33 — verified without `.env.local` (CI-like)
 - [x] Human review before the cross-service proof and polish — waived 2026-09-25 by user decision (see "Gate change for the rest of M7" below)
 
 ### Phase 32: Cross-service proof + polish

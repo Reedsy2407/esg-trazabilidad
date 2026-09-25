@@ -63,10 +63,17 @@ class SecurityConfigIT {
 
     @Test
     void loginPathIsNotBlockedBySecurity() {
-        // No real /auth/login controller exists yet (Task 63) -- a 404 here
-        // (not 401) is exactly what proves permitAll let the request reach
-        // MVC dispatch instead of being rejected by the security filter chain.
-        given().when().post("/auth/login").then().statusCode(404);
+        // A malformed body reaching MVC's own 400 (VALIDATION_ERROR) -- not
+        // security's 401 -- is what proves permitAll actually let the
+        // request through to the controller. The real login behavior
+        // (valid/invalid credentials, 200/401) is AuthApiIT's job.
+        given().contentType("application/json")
+                .body("{}")
+                .when()
+                .post("/auth/login")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("VALIDATION_ERROR"));
     }
 
     @Test

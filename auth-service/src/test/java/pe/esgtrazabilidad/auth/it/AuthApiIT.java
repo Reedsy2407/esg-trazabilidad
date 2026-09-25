@@ -52,7 +52,22 @@ class AuthApiIT {
     }
 
     private void registerStaffUser(String email, String rawPassword) {
-        staffUserRepository.save(StaffUser.create(email, passwordEncoder.encode(rawPassword), "Usuario de prueba IT"));
+        registerStaffUser(email, rawPassword, "Usuario de prueba IT");
+    }
+
+    private void registerStaffUser(String email, String rawPassword, String fullName) {
+        staffUserRepository.save(StaffUser.create(email, passwordEncoder.encode(rawPassword), fullName));
+    }
+
+    private String loginAndGetToken(String email, String rawPassword) {
+        return given().contentType("application/json")
+                .body("{\"email\": \"%s\", \"password\": \"%s\"}".formatted(email, rawPassword))
+                .when()
+                .post("/auth/login")
+                .then()
+                .statusCode(200)
+                .extract()
+                .path("accessToken");
     }
 
     @Test
@@ -124,5 +139,26 @@ class AuthApiIT {
                 .then()
                 .statusCode(400)
                 .body("code", equalTo("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void meWithoutATokenReturns401() {
+        given().when().get("/auth/me").then().statusCode(401);
+    }
+
+    @Test
+    void meReturnsTheIdentityOfTheAuthenticatedCallerNotAnyoneElses() {
+        registerStaffUser("primera@esgtrazabilidad.pe", "password-primera-123", "Primera Persona");
+        registerStaffUser("segunda@esgtrazabilidad.pe", "password-segunda-123", "Segunda Persona");
+        String tokenForSegunda = loginAndGetToken("segunda@esgtrazabilidad.pe", "password-segunda-123");
+
+        given().header("Authorization", "Bearer " + tokenForSegunda)
+                .when()
+                .get("/auth/me")
+                .then()
+                .statusCode(200)
+                .body("email", equalTo("segunda@esgtrazabilidad.pe"))
+                .body("fullName", equalTo("Segunda Persona"))
+                .body("active", equalTo(true));
     }
 }

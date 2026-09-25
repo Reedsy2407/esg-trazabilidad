@@ -4,16 +4,19 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 import pe.esgtrazabilidad.auth.exception.AuthErrors;
 import pe.esgtrazabilidad.auth.staffuser.domain.StaffUser;
 import pe.esgtrazabilidad.auth.staffuser.port.in.CreateStaffUserCommand;
 import pe.esgtrazabilidad.auth.staffuser.port.in.CreateStaffUserUseCase;
+import pe.esgtrazabilidad.auth.staffuser.port.in.GetCurrentStaffUserUseCase;
 import pe.esgtrazabilidad.auth.staffuser.port.in.LoginUseCase;
 import pe.esgtrazabilidad.auth.staffuser.port.out.StaffUserRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 
 @Service
-class StaffUserService implements LoginUseCase, CreateStaffUserUseCase {
+class StaffUserService implements LoginUseCase, CreateStaffUserUseCase, GetCurrentStaffUserUseCase {
 
     private final StaffUserRepository staffUserRepository;
     private final PasswordEncoder passwordEncoder;
@@ -45,5 +48,12 @@ class StaffUserService implements LoginUseCase, CreateStaffUserUseCase {
         StaffUser staffUser =
                 StaffUser.create(command.email(), passwordEncoder.encode(command.rawPassword()), command.fullName());
         return staffUserRepository.save(staffUser);
+    }
+
+    @Override
+    public StaffUser getCurrent(UUID staffUserId) {
+        return staffUserRepository
+                .findById(staffUserId)
+                .orElseThrow(() -> new ApplicationException(AuthErrors.STAFF_USER_NOT_FOUND));
     }
 }

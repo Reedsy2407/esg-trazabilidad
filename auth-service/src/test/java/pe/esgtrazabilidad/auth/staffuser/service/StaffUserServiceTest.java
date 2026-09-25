@@ -1,6 +1,7 @@
 package pe.esgtrazabilidad.auth.staffuser.service;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -124,5 +125,25 @@ class StaffUserServiceTest {
                 .isInstanceOf(ApplicationException.class)
                 .hasMessage("Ya existe una cuenta de staff con ese email");
         verify(staffUserRepository, never()).save(any());
+    }
+
+    @Test
+    void getCurrentReturnsTheMatchingStaffUser() {
+        StaffUser staffUser = StaffUser.create("actual@esgtrazabilidad.pe", "hashed-password", "Usuario Actual");
+        when(staffUserRepository.findById(staffUser.getId())).thenReturn(Optional.of(staffUser));
+
+        StaffUser found = service.getCurrent(staffUser.getId());
+
+        assertThat(found).isEqualTo(staffUser);
+    }
+
+    @Test
+    void getCurrentThrowsStaffUserNotFoundForAnUnknownId() {
+        UUID unknownId = UUID.randomUUID();
+        when(staffUserRepository.findById(unknownId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getCurrent(unknownId))
+                .isInstanceOf(ApplicationException.class)
+                .hasMessage("Cuenta de staff no encontrada");
     }
 }

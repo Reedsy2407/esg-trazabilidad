@@ -14,7 +14,12 @@ public enum AuthErrors implements ApplicationError {
     // -- a classic enumeration-prevention rule, never let a caller
     // distinguish "that account doesn't exist" from "that password is wrong".
     INVALID_CREDENTIALS("AUTH-001", "Credenciales inválidas", HttpStatus.UNAUTHORIZED),
-    DUPLICATE_STAFF_EMAIL("AUTH-002", "Ya existe una cuenta de staff con ese email", HttpStatus.CONFLICT);
+    DUPLICATE_STAFF_EMAIL("AUTH-002", "Ya existe una cuenta de staff con ese email", HttpStatus.CONFLICT),
+    // Defensive: the token's sub always refers to a real account at issuance
+    // time, and there's no delete/deactivation endpoint in this MVP, so this
+    // path is expected to be effectively unreachable in practice -- kept for
+    // the same reason every other *NotFoundUseCase in this codebase has one.
+    STAFF_USER_NOT_FOUND("AUTH-003", "Cuenta de staff no encontrada", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String message;

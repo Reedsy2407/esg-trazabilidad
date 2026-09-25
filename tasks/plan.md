@@ -633,7 +633,7 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 ### Phase 32: Cross-service proof + polish
 
 - [x] Task 69: Cross-service token portability IT — a real `auth-service` login (Testcontainers Postgres) issues a token used, unmodified, against a real running instance of each of `recycler-service`/`collection-service`/`reporting-service` sharing the same `JWT_SECRET` test value; no gateway, no synchronous call to `auth-service` from any of them
-- [ ] Task 70: springdoc-openapi wiring for `auth-service`'s own controllers (same pattern as Task 57 for `reporting-service`)
+- [x] Task 70: springdoc-openapi wiring for `auth-service`'s own controllers (same pattern as Task 57 for `reporting-service`)
 
 ### Checkpoint 36: Final — ready for review (M7 module close)
 - [ ] `mvn verify` green across the whole reactor (six modules: `shared-kernel`, `recycler-service`, `collection-service`, `reporting-service`, `auth-service`, plus the test-only `e2e-tests` added by Task 69 — its `CrossServiceTokenPortabilityIT` must run and pass, not be skipped)

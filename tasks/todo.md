@@ -341,7 +341,7 @@
 ## Phase 32: Cross-service proof + polish
 
 - [x] Task 69: cross-service token portability IT (new e2e-tests module) — detalle: tasks/LEARNINGS.md (grep "## Task 69:")
-- [ ] Task 70: springdoc-openapi wiring for auth-service
+- [x] Task 70: springdoc-openapi wiring for auth-service — detalle: tasks/LEARNINGS.md (grep "## Task 70:")
 
 ### Checkpoint 36: Final — ready for review (M7 module close)
 - [ ] `mvn verify` green across the whole reactor (six modules incl. test-only e2e-tests — CrossServiceTokenPortabilityIT must run and pass)

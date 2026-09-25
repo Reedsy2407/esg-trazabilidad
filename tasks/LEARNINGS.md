@@ -1257,3 +1257,13 @@ Lives in a new test-only Maven module, `e2e-tests`, last in the reactor. Neither
 Mutation check: giving reporting-service a different `JWT_SECRET` failed the test exactly on that call (200 expected, 401). Gotcha: `--` inside an XML comment makes the POM non-parseable.
 
 `code-reviewer`: `PASS`. Acted on: Checkpoint 36's reactor bullet now says six modules and requires this IT to run; env-var inheritance stripped; shutdown hook added (re-run green). Left as-is: `freePort()` has a TOCTOU window between closing the probe socket and the child binding — fails loudly ("did not start"), revisit only if CI shows it. Open for the user: CLAUDE.md's monorepo-structure section lists neither `auth-service` nor `e2e-tests` (commit scope `e2e-tests` used here as a real reactor module).
+
+## Task 70: springdoc-openapi wiring for auth-service
+
+No production change needed for springdoc itself (dependency already present; `POST /auth/staff-users` already had `@ResponseStatus(CREATED)`). Unlike Tasks 11/23/57, the checks are automated: `auth-service/.../it/OpenApiDocsIT` asserts, over real HTTP and without a token, that `/v3/api-docs` lists `/auth/login`, `/auth/me`, `/auth/staff-users` (by HTTP method), staff-user creation documents `201`, `/auth/me`'s `@AuthenticationPrincipal Jwt` is **not** documented as a client parameter (springdoc 2.6 already ignores it — confirmed, not assumed), and both request DTOs list their `required` fields.
+
+That IT surfaced a real M7 regression: `/swagger-ui.html` — springdoc's documented entry point, verified as a 302 back in Task 23 — returned 401 without a token on **all four** services, because every `SecurityConfig` permitted only `/swagger-ui/**`. Fixed in all four (commit `fix(recycler-service,collection-service,reporting-service,auth-service)`, landed before the Task 70 commit since `OpenApiDocsIT` depends on it); each `SecurityRetrofitIT` now asserts the 302. Any manual Swagger check should hit both URLs.
+
+Dropped assertion: springdoc 2.6 does not emit `format: email` for `@Email`. Not "fixed" with `@Schema(format = "email")` — no service uses `io.swagger` annotations, and prior springdoc tasks only required what springdoc infers (`required`, `@Pattern`, minimums); `@Email` is still enforced at runtime. `SPEC-auth-service.md`'s file-tree line for `SecurityConfig` updated to the real permit list (local, gitignored file).
+
+`code-reviewer`: `PASS`. Full reactor (7 modules incl. `e2e-tests`) green in a clean worktree without `.env.local`: recycler 70+52, collection 74+57, reporting 47+53, auth 19+26, e2e 1.

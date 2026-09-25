@@ -9,7 +9,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +27,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+
+import pe.esgtrazabilidad.recycler.it.support.RestAssuredSetup;
+import pe.esgtrazabilidad.recycler.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,7 +63,8 @@ import static org.hamcrest.Matchers.equalTo;
         properties = {
             "esg.events.outbox-dispatcher.enabled=true",
             "esg.events.outbox-dispatcher.interval-ms=500",
-            "esg.certification.expiry-scan.interval-ms=500"
+            "esg.certification.expiry-scan.interval-ms=500",
+            "JWT_SECRET=" + TestJwtTokens.TEST_SECRET
         })
 @DirtiesContext
 class CertificationExpiryPublishFlowIT {
@@ -100,7 +103,7 @@ class CertificationExpiryPublishFlowIT {
 
     @BeforeEach
     void setUpRestAssured() {
-        RestAssured.port = port;
+        RestAssuredSetup.authenticated(port);
     }
 
     private String createAssociationRequest(String ruc) {

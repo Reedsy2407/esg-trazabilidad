@@ -2,6 +2,7 @@ package pe.esgtrazabilidad.recycler.association.adapter.in.web;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -26,8 +27,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * (findByRuc + save is not atomic). This simulates that race by having the
  * use case throw the same exception Postgres would, without needing real
  * concurrency or a database.
+ *
+ * @AutoConfigureMockMvc(addFilters = false): recycler-service now has a
+ * real SecurityConfig requiring a token on every request -- this test is
+ * only about exception translation, not auth, so the servlet filter chain
+ * (including security) is disabled here rather than faking a JWT for a
+ * concern this class doesn't test.
  */
 @WebMvcTest(AssociationController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AssociationExceptionHandlerTest {
 
     @Autowired

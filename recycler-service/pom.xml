@@ -40,6 +40,17 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
 
+        <!-- shared-kernel only declares this at scope=provided specifically so
+             it does NOT propagate here automatically; each service that wants
+             JWT support (this one now) declares it explicitly at normal scope,
+             at the same time it adds its own SecurityFilterChain bean, per
+             shared-kernel's own pom.xml comment and SPEC-auth-service.md's
+             Resolved Decisions. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>

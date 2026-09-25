@@ -1,6 +1,5 @@
 package pe.esgtrazabilidad.recycler.it;
 
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -9,9 +8,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+
+import pe.esgtrazabilidad.recycler.it.support.RestAssuredSetup;
+import pe.esgtrazabilidad.recycler.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -20,6 +23,7 @@ import static org.hamcrest.Matchers.notNullValue;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(properties = "JWT_SECRET=" + TestJwtTokens.TEST_SECRET)
 class AssociationApiIT {
 
     @Container
@@ -35,9 +39,14 @@ class AssociationApiIT {
     @LocalServerPort
     private int port;
 
+    // Every request in this class needs a token now that SecurityConfig
+    // requires authentication by default -- setting the default spec once
+    // here means none of the existing given() call sites below need
+    // touching individually. RestAssuredSetup resets RestAssured's static
+    // state first; see its javadoc for why that reset is required.
     @BeforeEach
     void setUpRestAssured() {
-        RestAssured.port = port;
+        RestAssuredSetup.authenticated(port);
     }
 
     private String createAssociationRequest(String ruc) {

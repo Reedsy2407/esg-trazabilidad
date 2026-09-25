@@ -53,6 +53,18 @@ class StaffUserServiceTest {
     }
 
     @Test
+    void loginLowercasesTheEmailBeforeLookingItUp() {
+        StaffUser staffUser = StaffUser.create("ana@esgtrazabilidad.pe", "hashed-password", "Ana Pérez");
+        when(staffUserRepository.findByEmail("ana@esgtrazabilidad.pe")).thenReturn(Optional.of(staffUser));
+        when(passwordEncoder.matches("correct-password", "hashed-password")).thenReturn(true);
+        when(jwtIssuer.issue(staffUser.getId(), staffUser.getEmail())).thenReturn("a-real-jwt");
+
+        String token = service.login("Ana@ESGtrazabilidad.PE", "correct-password");
+
+        assertThat(token).isEqualTo("a-real-jwt");
+    }
+
+    @Test
     void loginRejectsAnUnknownEmailWithInvalidCredentials() {
         when(staffUserRepository.findByEmail(any())).thenReturn(Optional.empty());
 

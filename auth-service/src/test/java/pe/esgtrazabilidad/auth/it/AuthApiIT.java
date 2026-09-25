@@ -71,6 +71,21 @@ class AuthApiIT {
     }
 
     @Test
+    void loginWithADifferentlyCasedEmailThanTheOneRegisteredStillSucceeds() {
+        registerStaffUser("mayusculas@esgtrazabilidad.pe", "correct-password-123");
+
+        given().contentType("application/json")
+                .body("""
+                        {"email": "MAYUSCULAS@ESGtrazabilidad.pe", "password": "correct-password-123"}
+                        """)
+                .when()
+                .post("/auth/login")
+                .then()
+                .statusCode(200)
+                .body("accessToken", notNullValue());
+    }
+
+    @Test
     void loginWithAnUnknownEmailReturnsAuth001() {
         given().contentType("application/json")
                 .body("""

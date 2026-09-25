@@ -29,7 +29,7 @@ class StaffUserService implements LoginUseCase, CreateStaffUserUseCase {
     @Transactional
     public String login(String email, String rawPassword) {
         StaffUser staffUser = staffUserRepository
-                .findByEmail(email)
+                .findByEmail(email.toLowerCase())
                 .filter(StaffUser::isActive)
                 .filter(user -> passwordEncoder.matches(rawPassword, user.getPasswordHash()))
                 .orElseThrow(() -> new ApplicationException(AuthErrors.INVALID_CREDENTIALS));

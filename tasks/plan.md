@@ -632,11 +632,11 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 
 ### Phase 32: Cross-service proof + polish
 
-- [ ] Task 69: Cross-service token portability IT — a real `auth-service` login (Testcontainers Postgres) issues a token used, unmodified, against a real running instance of each of `recycler-service`/`collection-service`/`reporting-service` sharing the same `JWT_SECRET` test value; no gateway, no synchronous call to `auth-service` from any of them
+- [x] Task 69: Cross-service token portability IT — a real `auth-service` login (Testcontainers Postgres) issues a token used, unmodified, against a real running instance of each of `recycler-service`/`collection-service`/`reporting-service` sharing the same `JWT_SECRET` test value; no gateway, no synchronous call to `auth-service` from any of them
 - [ ] Task 70: springdoc-openapi wiring for `auth-service`'s own controllers (same pattern as Task 57 for `reporting-service`)
 
 ### Checkpoint 36: Final — ready for review (M7 module close)
-- [ ] `mvn verify` green across the whole reactor (five modules: `shared-kernel`, `recycler-service`, `collection-service`, `reporting-service`, `auth-service`)
+- [ ] `mvn verify` green across the whole reactor (six modules: `shared-kernel`, `recycler-service`, `collection-service`, `reporting-service`, `auth-service`, plus the test-only `e2e-tests` added by Task 69 — its `CrossServiceTokenPortabilityIT` must run and pass, not be skipped)
 - [ ] All Success Criteria bullets in `SPEC-auth-service.md` re-verified line by line with evidence, same discipline as every prior module-close checkpoint
 - [ ] Every pre-existing `*ApiIT` across all three retrofitted services still green, now sending tokens — zero lost coverage, confirmed by comparing test counts before/after this module against `tasks/LEARNINGS.md`'s own historical totals for each service
 - [ ] Swagger UI and `/actuator/health` remain publicly reachable with no token on all four services — verified with a real unauthenticated `curl` against each

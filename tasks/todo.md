@@ -340,11 +340,11 @@
 
 ## Phase 32: Cross-service proof + polish
 
-- [ ] Task 69: Cross-service token portability IT (a real auth-service token works, unmodified, against recycler-service/collection-service/reporting-service)
+- [x] Task 69: cross-service token portability IT (new e2e-tests module) — detalle: tasks/LEARNINGS.md (grep "## Task 69:")
 - [ ] Task 70: springdoc-openapi wiring for auth-service
 
 ### Checkpoint 36: Final — ready for review (M7 module close)
-- [ ] `mvn verify` green across the whole reactor (five modules)
+- [ ] `mvn verify` green across the whole reactor (six modules incl. test-only e2e-tests — CrossServiceTokenPortabilityIT must run and pass)
 - [ ] All Success Criteria bullets in SPEC-auth-service.md re-verified line by line with evidence
 - [ ] Every pre-existing *ApiIT across all three retrofitted services still green, now sending tokens — zero lost coverage
 - [ ] Swagger UI and /actuator/health remain publicly reachable with no token on all four services

@@ -13,7 +13,8 @@ public enum AuthErrors implements ApplicationError {
     // Deliberately the same error for "no such email" and "wrong password"
     // -- a classic enumeration-prevention rule, never let a caller
     // distinguish "that account doesn't exist" from "that password is wrong".
-    INVALID_CREDENTIALS("AUTH-001", "Credenciales inválidas", HttpStatus.UNAUTHORIZED);
+    INVALID_CREDENTIALS("AUTH-001", "Credenciales inválidas", HttpStatus.UNAUTHORIZED),
+    DUPLICATE_STAFF_EMAIL("AUTH-002", "Ya existe una cuenta de staff con ese email", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

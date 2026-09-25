@@ -6,12 +6,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import pe.esgtrazabilidad.auth.exception.AuthErrors;
 import pe.esgtrazabilidad.auth.staffuser.domain.StaffUser;
+import pe.esgtrazabilidad.auth.staffuser.port.in.CreateStaffUserCommand;
+import pe.esgtrazabilidad.auth.staffuser.port.in.CreateStaffUserUseCase;
 import pe.esgtrazabilidad.auth.staffuser.port.in.LoginUseCase;
 import pe.esgtrazabilidad.auth.staffuser.port.out.StaffUserRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 
 @Service
-class StaffUserService implements LoginUseCase {
+class StaffUserService implements LoginUseCase, CreateStaffUserUseCase {
 
     private final StaffUserRepository staffUserRepository;
     private final PasswordEncoder passwordEncoder;
@@ -32,5 +34,16 @@ class StaffUserService implements LoginUseCase {
                 .filter(user -> passwordEncoder.matches(rawPassword, user.getPasswordHash()))
                 .orElseThrow(() -> new ApplicationException(AuthErrors.INVALID_CREDENTIALS));
         return jwtIssuer.issue(staffUser.getId(), staffUser.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public StaffUser createStaffUser(CreateStaffUserCommand command) {
+        staffUserRepository.findByEmail(command.email().toLowerCase()).ifPresent(existing -> {
+            throw new ApplicationException(AuthErrors.DUPLICATE_STAFF_EMAIL);
+        });
+        StaffUser staffUser =
+                StaffUser.create(command.email(), passwordEncoder.encode(command.rawPassword()), command.fullName());
+        return staffUserRepository.save(staffUser);
     }
 }

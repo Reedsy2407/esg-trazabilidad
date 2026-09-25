@@ -70,4 +70,9 @@ class SecurityRetrofitIT {
     void swaggerUiRemainsReachableWithoutAToken() {
         given().redirects().follow(false).when().get("/swagger-ui/index.html").then().statusCode(200);
     }
+
+    @Test
+    void theSwaggerUiEntryPointRedirectsWithoutAToken() {
+        given().redirects().follow(false).when().get("/swagger-ui.html").then().statusCode(302);
+    }
 }

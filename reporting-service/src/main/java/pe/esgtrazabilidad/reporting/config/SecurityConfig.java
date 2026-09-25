@@ -32,6 +32,8 @@ public class SecurityConfig {
         return http.csrf(CsrfConfigurer::disable) // stateless JWT API, no cookies/session -- CSRF doesn't apply
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.requestMatchers(
+                                // springdoc's documented entry point; it 302s into /swagger-ui/index.html.
+                                "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/actuator/health",

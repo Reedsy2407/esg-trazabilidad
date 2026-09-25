@@ -9,7 +9,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 
@@ -19,9 +18,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+
+import pe.esgtrazabilidad.reporting.it.support.RestAssuredSetup;
+import pe.esgtrazabilidad.reporting.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(properties = "JWT_SECRET=" + TestJwtTokens.TEST_SECRET)
 class CertificateConcurrencyApiIT {
 
     @Container
@@ -57,7 +61,7 @@ class CertificateConcurrencyApiIT {
 
     @BeforeEach
     void setUpRestAssured() {
-        RestAssured.port = port;
+        RestAssuredSetup.authenticated(port);
     }
 
     private String registerTrackedCompanyRequest(String ruc, UUID associationId) {

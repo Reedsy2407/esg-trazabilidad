@@ -8,7 +8,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 
 import org.apache.commons.csv.CSVFormat;
@@ -23,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -31,6 +31,9 @@ import pe.esgtrazabilidad.reporting.events.ledger.TracedCollectionEntryEntity;
 import pe.esgtrazabilidad.reporting.events.ledger.TracedCollectionEntryJpaRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
+
+import pe.esgtrazabilidad.reporting.it.support.RestAssuredSetup;
+import pe.esgtrazabilidad.reporting.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +48,7 @@ import static org.hamcrest.Matchers.startsWith;
  */
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(properties = "JWT_SECRET=" + TestJwtTokens.TEST_SECRET)
 class CertificateExportApiIT {
 
     @Container
@@ -65,7 +69,7 @@ class CertificateExportApiIT {
 
     @BeforeEach
     void setUpRestAssured() {
-        RestAssured.port = port;
+        RestAssuredSetup.authenticated(port);
     }
 
     private String registerTrackedCompanyRequest(String ruc, UUID associationId) {

@@ -2,7 +2,6 @@ package pe.esgtrazabilidad.reporting.it;
 
 import java.util.UUID;
 
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -11,9 +10,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+
+import pe.esgtrazabilidad.reporting.it.support.RestAssuredSetup;
+import pe.esgtrazabilidad.reporting.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -23,6 +26,7 @@ import static org.hamcrest.Matchers.notNullValue;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(properties = "JWT_SECRET=" + TestJwtTokens.TEST_SECRET)
 class TrackedCompanyApiIT {
 
     @Container
@@ -40,7 +44,7 @@ class TrackedCompanyApiIT {
 
     @BeforeEach
     void setUpRestAssured() {
-        RestAssured.port = port;
+        RestAssuredSetup.authenticated(port);
     }
 
     private String registerTrackedCompanyRequest(String ruc, UUID associationId) {

@@ -94,7 +94,8 @@ class SecurityConfigIT {
                 .when()
                 .get("/test/ping")
                 .then()
-                .statusCode(401);
+                .statusCode(401)
+                .body("code", equalTo("AUTH-000"));
     }
 
     @Test

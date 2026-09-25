@@ -49,7 +49,12 @@ public class SecurityConfig {
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         .accessDeniedHandler(jwtAccessDeniedHandler))
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()))
+                // Tokens that are present but invalid (bad signature, expired) are
+                // rejected by the bearer filter, which uses the resource server's own
+                // entry point, not exceptionHandling()'s -- without this they get an
+                // empty 401 instead of the AUTH-000 body SPEC-auth-service.md defines
+                // for missing, invalid and expired tokens alike.
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()).authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .build();
     }
 }

@@ -307,12 +307,12 @@
 ## Phase 28: Staff onboarding + self endpoint
 
 - [x] Task 64: POST /auth/staff-users (requires a valid token; AUTH-002 on duplicate email) — detalle: tasks/LEARNINGS.md (grep "## Task 64:")
-- [ ] Task 65: GET /auth/me
+- [x] Task 65: GET /auth/me — detalle: tasks/LEARNINGS.md (grep "## Task 65:")
 
 ### Checkpoint 32: auth-service feature-complete
-- [ ] `mvn -pl auth-service verify` green
-- [ ] Manual check: login as bootstrap account → create second staff user → login as second user → GET /auth/me confirms the right identity
-- [ ] Human review before retrofitting recycler-service/collection-service/reporting-service
+- [x] `mvn -pl auth-service verify` green
+- [x] Manual check: login as bootstrap account → create second staff user → login as second user → GET /auth/me confirms the right identity
+- [x] Human review before retrofitting recycler-service/collection-service/reporting-service — implicit approval, user directed `/build auto` for the whole module
 
 ## Phase 29: Retrofit recycler-service
 

@@ -597,12 +597,12 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 ### Phase 28: Staff onboarding + self endpoint
 
 - [x] Task 64: `POST /auth/staff-users` (requires a valid token; any authenticated staff member can onboard another, per Resolved Decisions) — `AuthErrors.DUPLICATE_STAFF_EMAIL`/`AUTH-002` on a repeat email
-- [ ] Task 65: `GET /auth/me` (requires a valid token; returns the calling staff user's own identity)
+- [x] Task 65: `GET /auth/me` (requires a valid token; returns the calling staff user's own identity)
 
 ### Checkpoint 32: auth-service feature-complete
-- [ ] `mvn -pl auth-service verify` green
-- [ ] Manual check: login as the bootstrap account → create a second staff user with that token → log in as the second user → `GET /auth/me` confirms the second user's own identity, not the bootstrap account's
-- [ ] Human review before retrofitting `recycler-service`/`collection-service`/`reporting-service`
+- [x] `mvn -pl auth-service verify` green
+- [x] Manual check: login as the bootstrap account → create a second staff user with that token → log in as the second user → `GET /auth/me` confirms the second user's own identity, not the bootstrap account's — confirmed live, id/email/fullName all matched the second user exactly
+- [x] Human review before retrofitting `recycler-service`/`collection-service`/`reporting-service` — implicit approval, user directed `/build auto` for the whole module
 
 ### Phase 29: Retrofit recycler-service
 

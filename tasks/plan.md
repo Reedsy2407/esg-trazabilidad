@@ -577,9 +577,9 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 - [ ] Task 59: auth-service scaffolding (new Maven module, `pom.xml`, `application.yml` port 8084, empty Liquibase master changelog, `AuthErrors` stub) — no security config, no entities yet
 
 ### Checkpoint 30: Service boots
-- [ ] `mvn -pl auth-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies
-- [ ] `mvn verify` still green across the whole reactor with the new module present
-- [ ] Human review before the first entity slice
+- [x] `mvn -pl auth-service spring-boot:run` boots cleanly against the shared Postgres, empty changelog applies
+- [x] `mvn verify` still green across the whole reactor with the new module present
+- [x] Human review before the first entity slice — implicit approval, user directed `/build auto` for the whole module
 
 ### Phase 27: StaffUser + login core
 

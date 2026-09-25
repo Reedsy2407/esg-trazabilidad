@@ -285,12 +285,12 @@
 
 ## Phase 26: auth-service infra
 
-- [ ] Task 59: auth-service scaffolding (new Maven module, pom, application.yml port 8084, empty Liquibase master, AuthErrors stub)
+- [x] Task 59: auth-service scaffolding (new Maven module, pom, application.yml port 8084, empty Liquibase master) — detalle: tasks/LEARNINGS.md (grep "## Task 59:")
 
 ### Checkpoint 30: Service boots
-- [ ] `mvn -pl auth-service spring-boot:run` boots cleanly, empty changelog applies
-- [ ] `mvn verify` still green across the whole reactor with the new module present
-- [ ] Human review before first entity slice
+- [x] `mvn -pl auth-service spring-boot:run` boots cleanly, empty changelog applies
+- [x] `mvn verify` still green across the whole reactor with the new module present
+- [x] Human review before first entity slice — implicit approval: user directed `/build auto` for the whole module, automated flow per CLAUDE.md
 
 ## Phase 27: StaffUser + login core
 

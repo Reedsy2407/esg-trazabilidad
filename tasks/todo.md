@@ -344,8 +344,8 @@
 - [x] Task 70: springdoc-openapi wiring for auth-service — detalle: tasks/LEARNINGS.md (grep "## Task 70:")
 
 ### Checkpoint 36: Final — ready for review (M7 module close)
-- [ ] `mvn verify` green across the whole reactor (six modules incl. test-only e2e-tests — CrossServiceTokenPortabilityIT must run and pass)
-- [ ] All Success Criteria bullets in SPEC-auth-service.md re-verified line by line with evidence
-- [ ] Every pre-existing *ApiIT across all three retrofitted services still green, now sending tokens — zero lost coverage
-- [ ] Swagger UI and /actuator/health remain publicly reachable with no token on all four services
+- [x] `mvn verify` green across the whole reactor (six modules incl. test-only e2e-tests — CrossServiceTokenPortabilityIT must run and pass) — clean worktree, no .env.local; see tasks/LEARNINGS.md "### Checkpoint 36"
+- [x] All Success Criteria bullets in SPEC-auth-service.md re-verified line by line with evidence — 2 were uncovered by any task and fixed here (actuator, .env.local.example); see tasks/LEARNINGS.md "### Checkpoint 36"
+- [x] Every pre-existing *ApiIT across all three retrofitted services still green, now sending tokens — zero lost coverage (counts: see tasks/LEARNINGS.md "### Checkpoint 36")
+- [x] Swagger UI and /actuator/health remain publicly reachable with no token on all four services — proven over real HTTP against the 4 real processes (e2e) + per-service ITs; the manual compose-backed curl was blocked by Hyper-V excluded ports, see tasks/LEARNINGS.md "### Checkpoint 36"
 - [ ] Human review and approval — last module before `deployment` per the capability map's build order

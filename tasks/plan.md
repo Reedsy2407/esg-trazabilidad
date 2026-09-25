@@ -636,10 +636,10 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 - [x] Task 70: springdoc-openapi wiring for `auth-service`'s own controllers (same pattern as Task 57 for `reporting-service`)
 
 ### Checkpoint 36: Final — ready for review (M7 module close)
-- [ ] `mvn verify` green across the whole reactor (six modules: `shared-kernel`, `recycler-service`, `collection-service`, `reporting-service`, `auth-service`, plus the test-only `e2e-tests` added by Task 69 — its `CrossServiceTokenPortabilityIT` must run and pass, not be skipped)
-- [ ] All Success Criteria bullets in `SPEC-auth-service.md` re-verified line by line with evidence, same discipline as every prior module-close checkpoint
-- [ ] Every pre-existing `*ApiIT` across all three retrofitted services still green, now sending tokens — zero lost coverage, confirmed by comparing test counts before/after this module against `tasks/LEARNINGS.md`'s own historical totals for each service
-- [ ] Swagger UI and `/actuator/health` remain publicly reachable with no token on all four services — verified with a real unauthenticated `curl` against each
+- [x] `mvn verify` green across the whole reactor (six modules: `shared-kernel`, `recycler-service`, `collection-service`, `reporting-service`, `auth-service`, plus the test-only `e2e-tests` added by Task 69 — its `CrossServiceTokenPortabilityIT` must run and pass, not be skipped)
+- [x] All Success Criteria bullets in `SPEC-auth-service.md` re-verified line by line with evidence, same discipline as every prior module-close checkpoint
+- [x] Every pre-existing `*ApiIT` across all three retrofitted services still green, now sending tokens — zero lost coverage, confirmed by comparing test counts before/after this module against `tasks/LEARNINGS.md`'s own historical totals for each service
+- [x] Swagger UI and `/actuator/health` remain publicly reachable with no token on all four services — verified with a real unauthenticated `curl` against each (evidence actually used: real unauthenticated HTTP from `e2e-tests` against the four real service processes, plus each service's security IT; the manual `curl` against compose-backed services was blocked by Hyper-V excluded port ranges covering 5433/5672 — see `tasks/LEARNINGS.md` Checkpoint 36)
 - [ ] Human review and approval — last module before `deployment` per the capability map's build order
 
 ## Risks and Mitigations

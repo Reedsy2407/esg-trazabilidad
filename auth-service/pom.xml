@@ -67,6 +67,17 @@
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
 
+        <!-- JWT resource-server support (JwtDecoder, and the security-config/
+             security-web machinery SecurityConfig below needs). Declared
+             explicitly here at normal scope; shared-kernel only has it as
+             scope=provided, precisely so it does NOT propagate to every
+             shared-kernel consumer automatically (see shared-kernel's own
+             pom.xml comment and SPEC-auth-service.md's Resolved Decisions). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

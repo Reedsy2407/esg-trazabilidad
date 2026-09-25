@@ -54,6 +54,34 @@
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
+        <!-- JwtSecurityConfig's JwtDecoder/NimbusJwtDecoder, plus
+             AuthenticationEntryPoint/AccessDeniedHandler (spring-security-web,
+             pulled in transitively by this starter). scope=provided
+             deliberately: this starter's mere PRESENCE on a service's
+             classpath (regardless of any bean registration) triggers Spring
+             Boot's own SecurityAutoConfiguration default lockdown (HTTP
+             Basic + a generated password on every endpoint), confirmed
+             the hard way (a @WebMvcTest against recycler-service started
+             getting 403 the moment this was declared at normal compile
+             scope here, even with JwtSecurityConfig itself not registered
+             anywhere). provided scope means shared-kernel compiles against
+             it, but it does NOT propagate transitively to consumers; each
+             service that wants JWT support (auth-service, and later
+             recycler-service/collection-service/reporting-service's own
+             retrofit tasks) adds it explicitly to its OWN pom.xml at normal
+             scope, at the same time it adds its own SecurityFilterChain
+             bean, so Spring Boot's default never gets a chance to apply. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- @SchedulerLock annotation + LockProvider interface only: the
              concrete JDBC-backed provider (shedlock-provider-jdbc-template)
              is added per-service in Tasks 27/29, wired to that service's own

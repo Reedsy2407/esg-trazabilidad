@@ -316,10 +316,10 @@
 
 ## Phase 29: Retrofit recycler-service
 
-- [ ] Task 66: recycler-service SecurityConfig + oauth2-resource-server dependency + shared test-token helper + retrofit every existing *ApiIT + negative checks (no token, wrong-secret token)
+- [x] Task 66: recycler-service auth retrofit — detalle: tasks/LEARNINGS.md (grep "## Task 66:")
 
 ### Checkpoint 33: recycler-service secured
-- [ ] `mvn -pl recycler-service verify` green — every pre-existing test still passes, zero loosened assertions
+- [x] `mvn -pl recycler-service verify` green — every pre-existing test still passes, zero loosened assertions (verified without .env.local, CI-like)
 - [ ] Human review before collection-service
 
 ## Phase 30: Retrofit collection-service

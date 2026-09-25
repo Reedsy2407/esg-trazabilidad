@@ -17,6 +17,7 @@
         <module>recycler-service</module>
         <module>collection-service</module>
         <module>reporting-service</module>
+        <module>auth-service</module>
     </modules>
 
     <properties>

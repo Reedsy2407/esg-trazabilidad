@@ -297,12 +297,12 @@
 - [x] Task 60: StaffUser persistence (Liquibase v0.1.0, unique email constraint, BCryptPasswordEncoder bean) — detalle: tasks/LEARNINGS.md (grep "## Task 60:")
 - [x] Task 61: Admin bootstrap runner (SecureRandom password, logged once, gated on staff_user being empty — never a later reset) — detalle: tasks/LEARNINGS.md (grep "## Task 61:")
 - [x] Task 62: shared-kernel JwtSecurityConfig (JwtDecoder, JwtAuthenticationEntryPoint/AccessDeniedHandler) + auth-service's own SecurityConfig — detalle: tasks/LEARNINGS.md (grep "## Task 62:")
-- [ ] Task 63: Login API (JwtIssuer via Nimbus, POST /auth/login, AUTH-001 same error for unknown email or wrong password)
+- [x] Task 63: Login API (JwtIssuer via Nimbus, POST /auth/login, AUTH-001 same error for unknown email or wrong password) — detalle: tasks/LEARNINGS.md (grep "## Task 63:")
 
 ### Checkpoint 31: auth-service core proven
-- [ ] `mvn -pl auth-service verify` green
-- [ ] Manual check: boot with ADMIN_BOOTSTRAP_EMAIL set, retrieve the logged password, curl POST /auth/login, decode the returned JWT and confirm claims
-- [ ] Human review before wiring the other three services
+- [x] `mvn -pl auth-service verify` green
+- [x] Manual check: boot with ADMIN_BOOTSTRAP_EMAIL set, retrieve the logged password, curl POST /auth/login, decode the returned JWT and confirm claims
+- [x] Human review before wiring the other three services — implicit approval, user directed `/build auto` for the whole module
 
 ## Phase 28: Staff onboarding + self endpoint
 

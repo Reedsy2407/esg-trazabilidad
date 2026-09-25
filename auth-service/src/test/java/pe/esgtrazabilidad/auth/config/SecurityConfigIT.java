@@ -23,7 +23,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
 
 /**
  * Proves the security perimeter itself, end to end over real HTTP -- not
@@ -59,6 +61,19 @@ class SecurityConfigIT {
     @Test
     void swaggerUiIsReachableWithoutAToken() {
         given().redirects().follow(false).when().get("/swagger-ui/index.html").then().statusCode(200);
+    }
+
+    @Test
+    void actuatorHealthIsReachableWithoutAToken() {
+        // Security must let it through and the actuator must answer. The
+        // aggregate status itself can be DOWN (503) here: shared-kernel puts
+        // spring-rabbit on the classpath and this IT has no RabbitMQ container.
+        // The real UP check runs in e2e-tests with a live broker.
+        given().when()
+                .get("/actuator/health")
+                .then()
+                .statusCode(anyOf(equalTo(200), equalTo(503)))
+                .body("status", notNullValue());
     }
 
     @Test

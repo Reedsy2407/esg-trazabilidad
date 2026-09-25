@@ -11,7 +11,10 @@ import io.restassured.specification.RequestSpecification;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -42,6 +45,7 @@ import static org.hamcrest.Matchers.equalTo;
  * called auth-service to check a token, that call would now fail.
  */
 @Testcontainers
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class CrossServiceTokenPortabilityIT {
 
     private static final String SHARED_JWT_SECRET = "e2e-shared-test-only-jwt-secret-at-least-32-bytes";
@@ -81,7 +85,21 @@ class CrossServiceTokenPortabilityIT {
         }
     }
 
+    /**
+     * With a live Postgres and RabbitMQ behind them, every service's health
+     * endpoint answers UP to an unauthenticated caller. Runs first: the
+     * portability test below shuts auth-service down.
+     */
     @Test
+    @Order(1)
+    void everyServiceReportsHealthyWithoutAToken() {
+        for (ServiceProcess service : List.of(auth, recycler, collection, reporting)) {
+            on(service).when().get("/actuator/health").then().statusCode(200).body("status", equalTo("UP"));
+        }
+    }
+
+    @Test
+    @Order(2)
     void aTokenFromARealAuthServiceLoginWorksUnmodifiedOnTheOtherThreeServicesWithAuthServiceDown()
             throws Exception {
         Matcher bootstrap = auth.findInLog("email=(\\S+) password=(\\S+)");

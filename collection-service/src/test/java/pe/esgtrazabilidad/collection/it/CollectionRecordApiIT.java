@@ -3,7 +3,6 @@ package pe.esgtrazabilidad.collection.it;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -28,6 +28,9 @@ import pe.esgtrazabilidad.kernel.events.OutboxEntry;
 import pe.esgtrazabilidad.kernel.events.OutboxRepository;
 import pe.esgtrazabilidad.kernel.events.OutboxStatus;
 
+import pe.esgtrazabilidad.collection.it.support.RestAssuredSetup;
+import pe.esgtrazabilidad.collection.it.support.TestJwtTokens;
+
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -38,6 +41,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(properties = "JWT_SECRET=" + TestJwtTokens.TEST_SECRET)
 class CollectionRecordApiIT {
 
     @Container
@@ -64,7 +68,7 @@ class CollectionRecordApiIT {
 
     @BeforeEach
     void setUpRestAssured() {
-        RestAssured.port = port;
+        RestAssuredSetup.authenticated(port);
     }
 
     private String createNeighborRequest(String fullName) {

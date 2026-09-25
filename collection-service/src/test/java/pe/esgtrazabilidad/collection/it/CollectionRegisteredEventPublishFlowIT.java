@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +24,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Map;
 import java.util.UUID;
+
+import pe.esgtrazabilidad.collection.it.support.RestAssuredSetup;
+import pe.esgtrazabilidad.collection.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,7 +57,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestPropertySource(
         properties = {
             "esg.events.outbox-dispatcher.enabled=true",
-            "esg.events.outbox-dispatcher.interval-ms=500"
+            "esg.events.outbox-dispatcher.interval-ms=500",
+            "JWT_SECRET=" + TestJwtTokens.TEST_SECRET
         })
 @DirtiesContext
 class CollectionRegisteredEventPublishFlowIT {
@@ -91,7 +94,7 @@ class CollectionRegisteredEventPublishFlowIT {
 
     @BeforeEach
     void setUpRestAssured() {
-        RestAssured.port = port;
+        RestAssuredSetup.authenticated(port);
     }
 
     private String createNeighborRequest(String fullName) {

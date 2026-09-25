@@ -11,7 +11,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 
 import org.junit.jupiter.api.Test;
@@ -33,6 +32,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import pe.esgtrazabilidad.collection.association.port.out.BlockedAssociationRepository;
 import pe.esgtrazabilidad.collection.events.ledger.CertificationStatusLedgerJpaRepository;
+
+import pe.esgtrazabilidad.collection.it.support.RestAssuredSetup;
+import pe.esgtrazabilidad.collection.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,7 +67,8 @@ import static org.hamcrest.Matchers.equalTo;
 @TestPropertySource(
         properties = {
             "esg.events.outbox-dispatcher.enabled=false",
-            "spring.rabbitmq.listener.simple.auto-startup=true"
+            "spring.rabbitmq.listener.simple.auto-startup=true",
+            "JWT_SECRET=" + TestJwtTokens.TEST_SECRET
         })
 @DirtiesContext
 class CertificationStatusEventBrokerFlowIT {
@@ -139,7 +142,7 @@ class CertificationStatusEventBrokerFlowIT {
     }
 
     private String createNeighbor(String fullName) {
-        RestAssured.port = port;
+        RestAssuredSetup.authenticated(port);
         return given()
                 .contentType(ContentType.JSON)
                 .body(createNeighborRequest(fullName))

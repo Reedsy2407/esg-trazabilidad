@@ -3,6 +3,7 @@ package pe.esgtrazabilidad.collection.schedule.adapter.in.web;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,7 +31,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * caught by anything else. This simulates each race the way Postgres would
  * report it, without needing real concurrency or a database.
  */
+// addFilters = false: collection-service now has a real SecurityConfig requiring
+// a token on every request -- this test is only about exception translation,
+// not auth, so the servlet filter chain (including security) is disabled here
+// rather than faking a JWT for a concern this class doesn't test.
 @WebMvcTest(CollectionScheduleController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class ScheduleExceptionHandlerTest {
 
     @Autowired

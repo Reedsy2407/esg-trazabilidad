@@ -606,19 +606,21 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 
 ### Phase 29: Retrofit recycler-service
 
-- [ ] Task 66: `recycler-service` gets `spring-boot-starter-oauth2-resource-server`, its own `SecurityConfig` (permits Swagger/actuator health, authenticates everything else), a shared per-module test helper that mints a locally-signed test token against the same `JWT_SECRET` test value, every pre-existing `*ApiIT` retrofitted to attach it, and the two required negative-check tests (no `Authorization` header, and a syntactically-valid token signed with the wrong secret — both `401`)
+- [x] Task 66: `recycler-service` gets `spring-boot-starter-oauth2-resource-server`, its own `SecurityConfig` (permits Swagger/actuator health, authenticates everything else), a shared per-module test helper that mints a locally-signed test token against the same `JWT_SECRET` test value, every pre-existing `*ApiIT` retrofitted to attach it, and the two required negative-check tests (no `Authorization` header, and a syntactically-valid token signed with the wrong secret — both `401`)
 
 ### Checkpoint 33: recycler-service secured
-- [ ] `mvn -pl recycler-service verify` green — every pre-existing test still passes, now sending a token; zero loosened assertions
-- [ ] Human review before `collection-service`
+- [x] `mvn -pl recycler-service verify` green — every pre-existing test still passes, now sending a token; zero loosened assertions — verified without `.env.local` (CI-like), see `tasks/LEARNINGS.md` Task 66
+- [x] Human review before `collection-service` — approved 2026-09-25 (independent Cowork review of the real code, no findings)
 
 ### Phase 30: Retrofit collection-service
 
-- [ ] Task 67: same shape as Task 66, applied to `collection-service`
+- [x] Task 67: same shape as Task 66, applied to `collection-service`
 
 ### Checkpoint 34: collection-service secured
-- [ ] `mvn -pl collection-service verify` green — same standard as Checkpoint 33
-- [ ] Human review before `reporting-service`
+- [x] `mvn -pl collection-service verify` green — same standard as Checkpoint 33 — verified without `.env.local` (CI-like)
+- [x] Human review before `reporting-service` — approved 2026-09-25 by the user together with the gate change below; no separate human code review of Task 67 (relies on `code-reviewer` PASS + CI-like verify)
+
+> **Gate change for the rest of M7 (user decision, 2026-09-25).** The intermediate human-review stops of Checkpoints 34 and 35 are removed (34 approved by the user without a separate code walkthrough, 35 waived outright): after Checkpoint 33 was approved by an independent review of the real code with no findings, Task 67 showed the retrofit is a mechanical repeat of an already-reviewed shape (same `SecurityConfig`, `RestAssuredSetup`, `TestJwtTokens`, test-only `JWT_SECRET`, negative checks), so a human stop between near-identical service retrofits adds latency without adding review signal. Tasks 68, 69 and 70 run back to back. Nothing else is relaxed: every task still goes through `code-reviewer` (PASS required before marking `[x]`), every checkpoint's `verify` bullet is still checked (CI-like, without `.env.local`), and Checkpoint 36 (M7 module close) remains the hard stop for human review and approval, unchanged.
 
 ### Phase 31: Retrofit reporting-service
 
@@ -626,7 +628,7 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 
 ### Checkpoint 35: reporting-service secured
 - [ ] `mvn -pl reporting-service verify` green — same standard as Checkpoint 33
-- [ ] Human review before the cross-service proof and polish
+- [x] Human review before the cross-service proof and polish — waived 2026-09-25 by user decision (see "Gate change for the rest of M7" below)
 
 ### Phase 32: Cross-service proof + polish
 

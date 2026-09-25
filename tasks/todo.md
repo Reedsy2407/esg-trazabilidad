@@ -328,7 +328,7 @@
 
 ### Checkpoint 34: collection-service secured
 - [x] `mvn -pl collection-service verify` green (verified without .env.local, CI-like)
-- [ ] Human review before reporting-service
+- [x] Human review before reporting-service — approved 2026-09-25 by user with the M7 gate change (see tasks/plan.md "Gate change for the rest of M7")
 
 ## Phase 31: Retrofit reporting-service
 
@@ -336,7 +336,7 @@
 
 ### Checkpoint 35: reporting-service secured
 - [ ] `mvn -pl reporting-service verify` green
-- [ ] Human review before the cross-service proof and polish
+- [x] Human review before the cross-service proof and polish — waived 2026-09-25 by user decision (see tasks/plan.md "Gate change for the rest of M7")
 
 ## Phase 32: Cross-service proof + polish
 

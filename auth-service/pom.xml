@@ -52,14 +52,20 @@
 
         <!-- No shedlock-provider-jdbc-template here, same reasoning as
              reporting-service: this module runs no @Scheduled job and never
-             publishes, so it needs no ShedLock table of its own.
+             publishes, so it needs no ShedLock table of its own. -->
 
-             Spring Security / JWT dependencies (spring-boot-starter-security,
-             spring-boot-starter-oauth2-resource-server) are added in Task 60
-             (BCryptPasswordEncoder) and Task 62 (JwtDecoder/SecurityConfig)
-             respectively, not here, matching this project's own convention
-             of adding a dependency exactly when the task that needs it lands,
-             not speculatively at scaffolding time. -->
+        <!-- Just the crypto module (BCryptPasswordEncoder), not the full
+             spring-boot-starter-security starter: that starter would trigger
+             Spring Boot's default SecurityAutoConfiguration (HTTP Basic + a
+             generated password on every endpoint) before Task 62 wires the
+             real JWT-based SecurityConfig. spring-boot-starter-oauth2-resource-server
+             (added in Task 62) pulls in the full spring-security-web/config
+             stack once there's an actual SecurityFilterChain bean to replace
+             the default with. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

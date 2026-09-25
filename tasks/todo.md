@@ -324,10 +324,10 @@
 
 ## Phase 30: Retrofit collection-service
 
-- [ ] Task 67: same shape as Task 66, applied to collection-service
+- [x] Task 67: collection-service auth retrofit — detalle: tasks/LEARNINGS.md (grep "## Task 67:")
 
 ### Checkpoint 34: collection-service secured
-- [ ] `mvn -pl collection-service verify` green
+- [x] `mvn -pl collection-service verify` green (verified without .env.local, CI-like)
 - [ ] Human review before reporting-service
 
 ## Phase 31: Retrofit reporting-service

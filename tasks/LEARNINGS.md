@@ -1233,3 +1233,11 @@ Three things the first green run hid:
 Tasks 67/68 must replicate all three. Separately: the first full-reactor run hung ~18 min in a Testcontainers container kill over npipe (daemon healthy, JVM-side call lost); re-run passed — intermittent, not code.
 
 `code-reviewer`: first `FAIL` (items 2 and 3), then `PASS` after fixes. Open for Checkpoint 36: `/actuator/health` is `permitAll` but no module declares actuator.
+
+## Task 67: collection-service auth retrofit
+
+Same shape as Task 66, with all three of its learnings applied up front: `RestAssuredSetup` (reset before building the spec), test-only `JWT_SECRET` in `src/test/resources/application.properties`, and `oauth2ResourceServer(...).authenticationEntryPoint(jwtAuthenticationEntryPoint)` with `AUTH-000` asserted in both negative tests (`SecurityRetrofitIT` against `GET /companies`). The two `@WebMvcTest` exception-handler tests run with `@AutoConfigureMockMvc(addFilters = false)`.
+
+One miss caught by the first CI-like run: `CertificationStatusEventBrokerFlowIT` lives in `events/consume/`, not `it/`, yet calls the HTTP API — and sets RestAssured up inside its `createNeighbor()` helper rather than a `@BeforeEach`, so a search for `@BeforeEach` setups missed it (401). For Task 68, find HTTP-calling tests by grepping `given()`/`RestAssured`/`WebEnvironment.RANDOM_PORT` across the whole test tree, not by package.
+
+Verified in a clean worktree without `.env.local`: 74 unit + 56 IT green. `code-reviewer`: `PASS` (ran its own offline verify too); one nit — `TestJwtTokens` javadoc copied verbatim from recycler — fixed before commit.

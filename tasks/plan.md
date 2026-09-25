@@ -596,7 +596,7 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 
 ### Phase 28: Staff onboarding + self endpoint
 
-- [ ] Task 64: `POST /auth/staff-users` (requires a valid token; any authenticated staff member can onboard another, per Resolved Decisions) — `AuthErrors.DUPLICATE_STAFF_EMAIL`/`AUTH-002` on a repeat email
+- [x] Task 64: `POST /auth/staff-users` (requires a valid token; any authenticated staff member can onboard another, per Resolved Decisions) — `AuthErrors.DUPLICATE_STAFF_EMAIL`/`AUTH-002` on a repeat email
 - [ ] Task 65: `GET /auth/me` (requires a valid token; returns the calling staff user's own identity)
 
 ### Checkpoint 32: auth-service feature-complete

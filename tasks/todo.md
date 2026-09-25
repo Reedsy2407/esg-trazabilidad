@@ -306,7 +306,7 @@
 
 ## Phase 28: Staff onboarding + self endpoint
 
-- [ ] Task 64: POST /auth/staff-users (requires a valid token; AUTH-002 on duplicate email)
+- [x] Task 64: POST /auth/staff-users (requires a valid token; AUTH-002 on duplicate email) — detalle: tasks/LEARNINGS.md (grep "## Task 64:")
 - [ ] Task 65: GET /auth/me
 
 ### Checkpoint 32: auth-service feature-complete

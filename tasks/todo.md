@@ -320,7 +320,7 @@
 
 ### Checkpoint 33: recycler-service secured
 - [x] `mvn -pl recycler-service verify` green — every pre-existing test still passes, zero loosened assertions (verified without .env.local, CI-like)
-- [ ] Human review before collection-service
+- [x] Human review before collection-service — approved 2026-09-25 (independent Cowork review of the real code, no findings)
 
 ## Phase 30: Retrofit collection-service
 

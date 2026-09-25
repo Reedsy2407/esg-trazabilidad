@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>pe.esgtrazabilidad</groupId>
+        <artifactId>esg-trazabilidad-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>e2e-tests</artifactId>
+    <packaging>jar</packaging>
+    <description>
+        Cross-service integration tests that run the real, packaged services as
+        separate OS processes. No production code lives here.
+    </description>
+
+    <dependencies>
+        <!-- The four services are declared only so the reactor builds (and
+             packages) them before this module; their classes are never loaded
+             here — the ITs launch each service's own -exec.jar as a separate
+             process, and failsafe's classpathDependencyExcludes below keeps
+             them off the test JVM's classpath. Exclusions: none of their
+             transitive dependencies are needed either. -->
+        <dependency>
+            <groupId>pe.esgtrazabilidad</groupId>
+            <artifactId>recycler-service</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>pe.esgtrazabilidad</groupId>
+            <artifactId>collection-service</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>pe.esgtrazabilidad</groupId>
+            <artifactId>reporting-service</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>pe.esgtrazabilidad</groupId>
+            <artifactId>auth-service</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>rabbitmq</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Same 5.x pin as auth-service: 6.0.1 references a Jackson 3
+                 support class not present alongside Jackson 2.x. -->
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>5.5.7</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>pe.esgtrazabilidad:recycler-service</classpathDependencyExclude>
+                        <classpathDependencyExclude>pe.esgtrazabilidad:collection-service</classpathDependencyExclude>
+                        <classpathDependencyExclude>pe.esgtrazabilidad:reporting-service</classpathDependencyExclude>
+                        <classpathDependencyExclude>pe.esgtrazabilidad:auth-service</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
+                    <systemPropertyVariables>
+                        <!-- Where each service's repackaged, runnable jar lives
+                             (spring-boot-maven-plugin's `exec` classifier). -->
+                        <e2e.repo.root>${project.basedir}/..</e2e.repo.root>
+                        <e2e.logs.dir>${project.build.directory}/e2e-logs</e2e.logs.dir>
+                    </systemPropertyVariables>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

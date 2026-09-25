@@ -18,6 +18,9 @@
         <module>collection-service</module>
         <module>reporting-service</module>
         <module>auth-service</module>
+        <!-- Last on purpose: runs the other services' packaged jars as real
+             processes (see e2e-tests/pom.xml). -->
+        <module>e2e-tests</module>
     </modules>
 
     <properties>

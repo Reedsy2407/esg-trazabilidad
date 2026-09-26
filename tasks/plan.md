@@ -642,6 +642,125 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 - [x] Swagger UI and `/actuator/health` remain publicly reachable with no token on all four services — verified with a real unauthenticated `curl` against each (evidence actually used: real unauthenticated HTTP from `e2e-tests` against the four real service processes, plus each service's security IT; the manual `curl` against compose-backed services was blocked by Hyper-V excluded port ranges covering 5433/5672 — see `tasks/LEARNINGS.md` Checkpoint 36)
 - [x] Human review and approval — last module before `deployment` per the capability map's build order — approved 2026-09-26 (independent Cowork review of the real code, no findings; manual curl skipped by user decision, covered by e2e-tests)
 
+## Dependency Graph (deployment)
+
+```
+Task 71: recycler-service liveness probe + exact-path permit + IT (shape reviewed once)
+    │
+    ▼
+Task 72: same liveness shape on collection-service, reporting-service, auth-service
+    │
+    ▼
+Task 73: server.port ${PORT:808x} (4 services) + rabbitmq virtual-host/ssl.enabled (3 AMQP services)
+    │     + .env.local.example
+    ▼
+Task 74: recycler-service Dockerfile + root .dockerignore — local 512m/0.1-CPU boot (go/no-go)
+    │
+    ▼
+Task 75: Dockerfiles for collection-service, reporting-service, auth-service + same measurement
+    │
+    ├── Task 76: AUTH-004 + ClientIpResolver + login bucket (pure logic, unit tests)
+    │       │
+    │       ▼
+    │   Task 77: LoginRateLimitFilter wired on POST /auth/login + IT
+    │
+    ├── Task 78: render.yaml Blueprint (names only)
+    ├── Task 79: docs/deployment.md runbook
+    └── Task 80: .github/dependabot.yml
+    │
+    ▼ (all of 75-80 done, pushed, CI green on main)
+Task 81: Provisioning go-live — USER-driven (Neon, CloudAMQP, Render, esg-shared, Blueprint)
+    │
+    ▼
+Task 82: Confirm Render's client-IP header against a real request, finalize ClientIpResolver
+    │
+    ├── Task 83: Production smoke check (the 6-item curl list) → evidence in LEARNINGS
+    └── Task 84: CD proof (buildFilter + checksPass negative check) + Dependabot parse check
+```
+
+Task numbering continues from M7 (last was 70); phases from 33, checkpoints from 37.
+
+**Plan-level decisions (the *how* of `/build`, not reopening the spec):**
+- **Build stage image is `maven:3.9-eclipse-temurin-21`, not `eclipse-temurin:21-jdk`.** The repo has no Maven wrapper (`mvnw`/`.mvn` absent), and the plain JDK image has no `mvn`. The spec's intent (JDK 21 + `mvn -B -pl <service> -am package -DskipTests`) is unchanged; runtime stage stays `eclipse-temurin:21-jre`. Adding a wrapper instead would be a repo-wide change this module doesn't need.
+- **Liveness is done on one service first (Task 71), then repeated mechanically (Task 72).** Same approach as the M7 retrofits: review the shape once, then apply the reviewed shape to the other three. Task 72 touches ~9 small files (3 × yml/SecurityConfig/IT), over the ~5-file guideline, on purpose: it is a mechanical repeat of the shape reviewed in Task 71, not new design.
+- **`auth-service`'s unused `spring.rabbitmq` block is deleted in Task 73 (user decision at plan approval, 2026-09-26).** It has no AMQP starter (its `pom.xml` even excludes the RabbitMQ Testcontainer on purpose), so nothing ever binds the block. `SPEC-auth-service.md` and `SPEC-deployment.md` both define auth-service as publishing and consuming nothing, and no future event from it is planned. There is no reason to keep it, and a dead block makes the service look AMQP-capable to a reviewer. The commit message says so explicitly. If auth-service ever needs to publish, that module adds the starter and the config together.
+- **Local image runs publish on a non-8081–8084 host port (e.g. `-p 18081:8081`) or are probed from inside compose's network.** The Hyper-V excluded range has swallowed 8016–8115 before (memory `hyperv_excluded_port_range`). The container port is unchanged.
+- **`/build auto` has a natural stop at Task 81.** Tasks 71–80 are fully executable by the agent. Tasks 81–84 need accounts, dashboard input and pushes to `main` that only the user can do or must approve. `/build` pauses there and asks. This is a hands-on dependency, not a human-review gate. Every push to `main` in Phases 36–38 is confirmed with the user first (same rule as Checkpoint 29).
+
+### Phase 33: Production-ready configuration
+
+- [ ] Task 71: `recycler-service` liveness — `management.endpoint.health.probes.enabled: true` in `application.yml`; `"/actuator/health/liveness"` (exact path, never a `/**` pattern) added to `SecurityConfig`'s permit list; `SecurityRetrofitIT` gains two assertions in its existing Rabbit-less context: `/actuator/health/liveness` → **exactly 200** with no token, `/actuator/health/readiness` → `401` with no token. The existing `/actuator/health` "200 or 503" assertion stays as it is. Verify: `mvn -pl recycler-service verify`.
+- [ ] Task 72: same liveness shape on `collection-service`, `reporting-service` (their `SecurityRetrofitIT`) and `auth-service` (its `SecurityConfigIT`). Mechanical repeat of Task 71. Verify: `mvn -pl collection-service,reporting-service,auth-service -am verify`.
+- [ ] Task 73: `server.port: ${PORT:808x}` in all four `application.yml` (8081–8084 kept as local defaults); `spring.rabbitmq.virtual-host: ${RABBITMQ_VHOST:/}` and `spring.rabbitmq.ssl.enabled: ${RABBITMQ_SSL_ENABLED:false}` in the three AMQP services only; `.env.local.example` gains `RABBITMQ_VHOST`, `RABBITMQ_SSL_ENABLED` and `PORT` in the Optional section, plus a note that production values live in Render's `esg-shared` group. Neither secret gets a default. **Also deletes `auth-service`'s unused `spring.rabbitmq` block** (see the plan-level decision above); the commit message states why (no AMQP starter, publishes/consumes nothing, nothing planned). Verify: `mvn -B verify` reactor-wide. `e2e-tests` must still pass: that proves its `SERVER_PORT` override still wins over `${PORT:...}`.
+
+### Checkpoint 37: Configuration ready, zero regression
+- [ ] `mvn -B verify` green reactor-wide in a **clean worktree without `.env.local`** (memory `env_local_masks_ci`), `e2e-tests` included, not skipped
+- [ ] Test count per service = M7's Checkpoint 36 totals + only the new liveness/readiness assertions (no lost or loosened test)
+- [ ] `grep` shows the liveness permit is the exact path in all four `SecurityConfig`s and that `/actuator/**` / `/actuator/health/**` appears nowhere
+
+### Phase 34: Container images (highest risk, done first)
+
+- [ ] Task 74: `recycler-service/Dockerfile` (multi-stage, build context = repo root, `maven:3.9-eclipse-temurin-21` → `mvn -B -pl recycler-service -am package -DskipTests`; runtime `eclipse-temurin:21-jre`, non-root user, `ENV JAVA_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k"`, `java $JAVA_OPTS -jar app.jar`) + root `.dockerignore` (`.env*`, `**/target`, `.git`, `docs/architecture/`, `e2e-tests/`). Verify, with Rancher Desktop running (`docker ps` first): the image builds from the repo root; it boots with `--memory=512m --cpus=0.1` on `esg-trazabilidad_default` against compose's Postgres/RabbitMQ by service name; liveness answers 200. **Startup time (Spring's "Started … in N s") and resident memory (`docker stats`) are recorded in LEARNINGS**; an image file listing shows no `.env.local`.
+- [ ] Task 75: `collection-service/`, `reporting-service/`, `auth-service/` Dockerfiles, same shape as Task 74; same boot + measurement for each, all four recorded side by side in LEARNINGS. `reporting-service`'s PDF export is the likely heaviest memory user, so one real export call is made inside the 512m container, not just a boot.
+
+### Checkpoint 38: Images within Render free limits (go/no-go)
+- [ ] All four images build from the repo root and boot at `--memory=512m --cpus=0.1`, liveness 200 on each, no OOM kill (`docker inspect` `OOMKilled=false`)
+- [ ] Measured startup and memory for all four are in `tasks/LEARNINGS.md`. **If any startup is unacceptable for a cold start on Render, stop and ask the user** (the spec's Open Question: AOT/CDS vs trimming autoconfiguration, decided on measured numbers). Don't pick a fix on your own.
+- [ ] No image contains `.env.local` or any `target/` from the host (verified on at least one image by listing its filesystem)
+
+### Phase 35: Login rate limiting
+
+- [ ] Task 76: `AuthErrors.TOO_MANY_LOGIN_ATTEMPTS("AUTH-004", "Demasiados intentos de inicio de sesión, intenta más tarde", 429)`; `ratelimit/ClientIpResolver` (provisional header rule, pinned by unit tests: header present / absent / multi-hop / malformed; fallback to `remoteAddr`); a bounded per-IP bucket store (Bucket4j `bucket4j_jdk17-core`, version managed in the root `pom.xml`; 5 tokens per minute, burst 5; LRU capped at 10,000 keys). Unit tests: the 6th call inside a minute is refused, a call after refill is allowed, the key cap evicts instead of growing. No filter wiring yet.
+- [ ] Task 77: `ratelimit/LoginRateLimitFilter` (`OncePerRequestFilter`, active only for `POST /auth/login`; on exhaustion `429` + `Retry-After` + the standard `{code, message}` error body) registered in `auth-service`'s security chain. **First, before writing it,** count the logins each existing Spring test context makes (`AuthApiIT` alone has about 13) and the `e2e-tests` logins. If any context goes over 5 from 127.0.0.1 within a minute, give those tests a test-only way around the limit (e.g. a distinct client-IP header per test, or a `src/test/resources` override), never a `src/main` default that weakens production, and record the choice in LEARNINGS. New IT: 5 wrong-password logins from one IP → `401 AUTH-001` each, the 6th → `429 AUTH-004` with `Retry-After`; a different client IP is still allowed; `GET /auth/me` and `POST /auth/staff-users` are not limited. Verify: `mvn -pl auth-service verify`, then `mvn -B verify` reactor-wide (the `e2e-tests` login must still work).
+
+### Checkpoint 39: Rate limit proven locally
+- [ ] `mvn -B verify` green reactor-wide, clean worktree, no `.env.local`
+- [ ] Every pre-existing `auth-service` IT assertion unchanged (any test-only accommodation from Task 77 is documented in LEARNINGS and doesn't touch `src/main` behavior)
+- [ ] `ClientIpResolver`'s header rule is explicitly marked **provisional** in code and LEARNINGS until Task 82 confirms it against Render
+
+### Phase 36: Deployment descriptors (repo side, no accounts needed)
+
+- [ ] Task 78: `render.yaml` at the repo root. Four `type: web` services (`esg-recycler-service`, `esg-collection-service`, `esg-reporting-service`, `esg-auth-service`) with `runtime: docker`, `plan: free`, `region: oregon`, `dockerfilePath`, `dockerContext: .`, `healthCheckPath: /actuator/health/liveness`, `autoDeployTrigger: checksPass`, `buildFilter.paths` (own module, `shared-kernel/**`, `pom.xml`) and `envVars: - fromGroup: esg-shared`; `ADMIN_BOOTSTRAP_EMAIL` `sync: false` on `auth-service` only. Verify: `render blueprints validate render.yaml` if the Render CLI is installed (otherwise it's checked by the dashboard's Blueprint preview in Task 81); a grep proves no value for any secret-looking key appears anywhere in the file.
+- [ ] Task 79: `docs/deployment.md`, a from-zero runbook with `<placeholder>` values only. It covers: create Neon (direct endpoint, `sslmode=require`) and CloudAMQP Little Lemur **in the same AWS US region as the Render region**, confirming the Oregon match on each provider's own region list at account creation (the user's non-blocking note on spec approval); create the `esg-shared` group in the dashboard and list its 10 keys; apply the Blueprint and set `ADMIN_BOOTSTRAP_EMAIL`; read the one-time bootstrap password from Render's logs; the 6-item smoke-check curl list; a known-limitations note (15-min spin-down, ~1 min cold start, a sleeping service's outbox/scan job doesn't run, CloudAMQP's 28-day idle-queue deletion). Verify: a grep finds no real host, user, password or connection string in it.
+- [ ] Task 80: `.github/dependabot.yml`: weekly; `maven` (root), `github-actions` (root), `docker` (the four service directories); minor+patch grouped into one PR per ecosystem. Verify locally for valid YAML; parsing by GitHub is checked in Task 84 after the push.
+
+### Checkpoint 40: Repo deploy-ready
+- [ ] `mvn -B verify` green reactor-wide, clean worktree, no `.env.local`
+- [ ] Pushed to `main` (after confirming with the user) and CI green on that commit: this is the commit Task 81 deploys
+- [ ] Repo-wide secret sweep: `render.yaml`, `docs/deployment.md`, `.env.local.example` and the Dockerfiles contain names/placeholders only; `JWT_SECRET` has no value anywhere in the repo
+
+### Phase 37: Go live (user-driven provisioning)
+
+- [ ] Task 81: **The user** creates the Neon, CloudAMQP and Render accounts (confirming the shared Oregon/US-West region operationally), connects the GitHub repo to Render, creates `esg-shared` with its values, applies the Blueprint, sets `ADMIN_BOOTSTRAP_EMAIL`, and reads the bootstrap password from Render's logs. **The agent** walks through `docs/deployment.md` alongside and fixes the runbook wherever reality differs from what it says (a follow-up docs commit). Acceptance: four services Live on the same `main` commit; Render's health check green on each; all three Liquibase-owning schemas applied on Neon. That includes `reporting-service`'s `CREATE EXTENSION IF NOT EXISTS btree_gist`, which closes the existing plan risk about `btree_gist` on hosted Postgres; confirm it on Neon, don't assume it. Evidence in LEARNINGS (commit SHA, region confirmed, deploy duration, first cold-start time), with no URLs containing credentials.
+- [ ] Task 82: Confirm the client-IP header on Render: add a temporary log of the forwarding headers on `POST /auth/login`, make one real request, and read which header/hop carries the caller's real IP (compare with the caller's actual public IP). Then finalize `ClientIpResolver`'s rule, update its unit tests to pin the confirmed rule, remove the log, and remove the "provisional" mark. The log-add and log-remove commits each go through CI → auto-deploy; this is the first real use of the CD path.
+
+### Checkpoint 41: Platform live
+- [ ] Four public `https://…onrender.com` URLs, same commit, liveness green in Render
+- [ ] `ClientIpResolver` rule confirmed against a real Render request; the temporary header log is no longer in the code or in the deployed commit
+
+### Phase 38: Production proof
+
+- [ ] Task 83: Run the `docs/deployment.md` smoke check against the public URLs and record the evidence in LEARNINGS: (1) liveness + Swagger UI 200 without a token on all four; (2) business endpoint without a token → `401 AUTH-000` on the three resource services; (3) bootstrap login → token; (4) that token works unmodified on recycler, collection and reporting; (5) a collection registered on `collection-service` raises the association's `totalKilosCollected` on `recycler-service` within the outbox polling interval (real CloudAMQP, `amqps`); (6) the 6th rapid login from one machine → `429 AUTH-004` with `Retry-After`. Cold-start latency is expected on the first call and noted, not treated as a failure.
+- [ ] Task 84: CD proof and Dependabot. (a) A trivial commit touching only one service's module redeploys only that service (`buildFilter`), shown by Render's deploy list. (b) `checksPass` negative check, **kept off `main` whenever Render allows it** (user decision at plan approval, 2026-09-26: the repo is public). Service/PR previews don't prove it: they are a different deploy path, and full preview environments need a paid workspace ([Render: Service Previews](https://render.com/docs/service-previews), [Preview Environments](https://render.com/docs/preview-environments)). The gate is tied to a service's linked branch, so the test is to relink one service to a throwaway branch.
+  - **Preferred path, off `main`:**
+    1. Create branch `cd-gate-check` and open a **draft PR** from it into `main`. This is required, not optional: `ci.yml` only runs on pushes to `main` and on PRs to `main`, so without the PR the commit gets no check at all and the test proves nothing.
+    2. In the dashboard, temporarily set one service's linked branch (e.g. `esg-reporting-service`) to `cd-gate-check`.
+    3. Push a commit with a deliberately failing test there. CI goes red on that commit, and Render shows **no** deploy for it.
+    4. Positive control: push the fix. CI goes green and Render deploys it. This proves the red case wasn't "nothing was going to deploy anyway".
+    5. Set the linked branch back to `main`, confirm the service redeploys `main`'s commit, close the PR and delete the branch.
+    6. Check that a Blueprint sync doesn't silently undo or fight the branch switch. If it does, go to the fallback.
+  - **Fallback, only if Render can't relink a Blueprint-managed service's branch (or the sync fights it):** push the failing test to `main` with a minimal window. Tell the user the exact moment the broken commit is pushed (SHA + time). Revert **as soon as** the result is confirmed (CI red plus no new Render deploy), not later. Record the push→revert window in LEARNINGS.
+  - Either way, the user is told before the first push.
+
+  (c) GitHub Insights → Dependency graph → Dependabot shows `maven`, `github-actions` and `docker` parsed without error. Whether Dependabot opens PRs that week is not pass/fail.
+
+### Checkpoint 42: Final — ready for review (M8 module close)
+- [ ] Every Success Criteria bullet in `SPEC-deployment.md` re-verified line by line with evidence, same discipline as every prior module-close checkpoint
+- [ ] `mvn -B verify` green reactor-wide in a clean worktree without `.env.local`; CI green on the final `main` commit
+- [ ] Render build-minute and instance-hour usage after the first days read from the billing page and recorded (the spec's Open Question, answered with real numbers)
+- [ ] `CAPABILITY-MAP.md` status updated to `deployment` complete (pending human approval)
+- [ ] Human review and approval — hard stop, never automatic (CLAUDE.md gate 3)
+
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
@@ -669,7 +788,12 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 | Retrofitting auth onto three already-built, fully-tested services (Tasks 66-68) could silently loosen or delete a pre-existing assertion just to make a red `*ApiIT` pass again once every endpoint requires a token | Medium — would quietly erode test coverage this project has been careful to build up through every prior module | Each retrofit task's own Definition of Done requires the *same* test count and the *same* business assertions as before, plus the two new negative-check tests — `code-reviewer` explicitly checks for a deleted or weakened pre-existing assertion, not just for the new tests passing |
 | `JWT_SECRET` not actually present/identical across all four services' `.env.local` reads at deploy time (e.g. a typo, or a value regenerated for one service but not the others) would silently break cross-service token validation | Medium — would surface as every request from a valid login getting a `401` against the *other* services, confusing to debug from a stack trace alone | Task 69's cross-service portability IT is the real end-to-end proof this can't happen unnoticed; Checkpoint 36 additionally requires a documented `.env.local`-keys list naming `JWT_SECRET` once, shared, not per-service |
 | `AdminBootstrapRunner`'s once-only logged password could be missed by the operator (log rotated/lost before it's read) with no other way to recover the bootstrap account | Low — recoverable by resetting the row directly in Postgres and re-triggering bootstrap, but not elegant | Accepted at this pilot's scale (one operator, one bootstrap event, local/self-hosted logs); revisit only if this friction is hit for real |
+| Spring Boot + Liquibase + Hibernate start too slowly on Render's 0.1 CPU (deploy health check never goes green, or cold starts far over a minute) | High — the whole module's premise | Measured locally at `--cpus=0.1` in Tasks 74–75 before anything is pushed; Checkpoint 38 is a go/no-go that stops and asks the user, not a silent fix |
+| The Avast TLS interception on this machine (memory `maven_avast_tls`) breaks the Maven download inside the local `docker build` with PKIX errors | Medium — blocks local image verification only, not Render (no Avast there) | Decide with the user at Task 74 if it happens (e.g. a local-only BuildKit secret/CA that the committed Dockerfile never requires). The Avast cert never goes into the repo or into a default build path |
+| The login rate limit (5/min per IP) trips existing `auth-service` ITs and `e2e-tests`, which all log in from 127.0.0.1 (`AuthApiIT` alone ~13 logins) | Medium — a red suite, or a tempting weakening of the production limit | Task 77 counts logins per test context before writing the filter; any accommodation is test-only and documented, never a weaker `src/main` default |
+| `ClientIpResolver` reads the wrong header/hop behind Render's edge: either every caller shares one bucket (the whole platform locked after 5 logins) or the key is caller-spoofable | Medium — the limiter is unverified until tested against a real request | Rule marked provisional through Checkpoint 39; Task 82 confirms it against a real Render request before smoke check #6 is trusted |
+| A deliberately failing test pushed to `main` for the `checksPass` negative check is visible on the public repo | Low | Avoided by default: Task 84 runs the check on a throwaway branch relinked to one service, with a draft PR so CI runs. `main` is only a fallback if Render can't relink, with the exact push moment announced to the user and an immediate revert |
 
 ## Open Questions
 
-None outstanding — all seven source specs (`shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`, `ci-pipeline`, `auth-service`) are fully resolved. `SPEC-reporting-service.md`'s own three Open Questions (real SIGERSOL integration timing, PDF template/branding, whether `TrackedCompany` should ever track more than one association) are deliberately deferred, not blocking — none of Tasks 41-57 depend on resolving them. `SPEC-ci-pipeline.md`'s own three Open Questions (README CI badge, Dependabot, branch protection) are likewise deliberately deferred, not blocking — none of Task 58/Checkpoint 29 depend on resolving them. `SPEC-auth-service.md`'s own four Open Questions (login rate limiting, CORS, RBAC, refresh tokens) are likewise deliberately deferred, not blocking — none of Tasks 59-70 depend on resolving them. Any new question that surfaces during implementation should be raised before the task it blocks, not worked around silently.
+None outstanding — all seven source specs (`shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`, `ci-pipeline`, `auth-service`) are fully resolved. `SPEC-reporting-service.md`'s own three Open Questions (real SIGERSOL integration timing, PDF template/branding, whether `TrackedCompany` should ever track more than one association) are deliberately deferred, not blocking — none of Tasks 41-57 depend on resolving them. `SPEC-ci-pipeline.md`'s own three Open Questions (README CI badge, Dependabot, branch protection) are likewise deliberately deferred, not blocking — none of Task 58/Checkpoint 29 depend on resolving them. `SPEC-auth-service.md`'s own four Open Questions (login rate limiting, CORS, RBAC, refresh tokens) are likewise deliberately deferred, not blocking — none of Tasks 59-70 depend on resolving them. Any new question that surfaces during implementation should be raised before the task it blocks, not worked around silently. `SPEC-deployment.md`'s six Open Questions are likewise not blocking planning: the Render client-IP header is answered by Task 82, Render build minutes by Checkpoint 42, and startup on 0.1 CPU by Checkpoint 38's measured go/no-go. Bootstrap password handling, CloudAMQP's 28-day idle-queue deletion and a Docker build in CI are accepted demo limitations or follow-ups documented in `docs/deployment.md`, not tasks within 71-84.

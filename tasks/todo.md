@@ -349,3 +349,66 @@
 - [x] Every pre-existing *ApiIT across all three retrofitted services still green, now sending tokens — zero lost coverage (counts: see tasks/LEARNINGS.md "### Checkpoint 36")
 - [x] Swagger UI and /actuator/health remain publicly reachable with no token on all four services — proven over real HTTP against the 4 real processes (e2e) + per-service ITs; the manual compose-backed curl was blocked by Hyper-V excluded ports, see tasks/LEARNINGS.md "### Checkpoint 36"
 - [x] Human review and approval — last module before `deployment` per the capability map's build order — approved 2026-09-26 (independent Cowork review of the real code, no findings; manual curl skipped by user decision, covered by e2e-tests)
+
+## Phase 33: Production-ready configuration (M8 deployment — full detail in tasks/plan.md)
+
+- [ ] Task 71: recycler-service liveness — probes.enabled, exact-path `/actuator/health/liveness` permit, SecurityRetrofitIT: liveness exactly 200 without Rabbit, readiness 401 without a token
+- [ ] Task 72: same liveness shape on collection-service, reporting-service, auth-service (mechanical repeat of Task 71)
+- [ ] Task 73: `server.port ${PORT:808x}` ×4; rabbitmq `virtual-host`/`ssl.enabled` with local defaults ×3 AMQP services; `.env.local.example` new optional keys; delete auth-service's unused `spring.rabbitmq` block (reason stated in the commit message)
+
+### Checkpoint 37: Configuration ready, zero regression
+- [ ] `mvn -B verify` green reactor-wide, clean worktree, no .env.local, e2e-tests included
+- [ ] Test counts = Checkpoint 36 totals + only the new liveness/readiness assertions
+- [ ] Liveness permit is the exact path in all four SecurityConfigs; no `/actuator/**` or `/actuator/health/**` anywhere
+
+## Phase 34: Container images
+
+- [ ] Task 74: recycler-service Dockerfile (maven:3.9-eclipse-temurin-21 → eclipse-temurin:21-jre, non-root, JVM flags) + root .dockerignore; boot at 512m/0.1 CPU on compose's network; startup + memory → LEARNINGS
+- [ ] Task 75: Dockerfiles for collection/reporting/auth-service, same measurement (+ one real PDF export inside reporting-service's 512m container)
+
+### Checkpoint 38: Images within Render free limits (go/no-go)
+- [ ] All four boot at 512m/0.1 CPU, liveness 200, OOMKilled=false
+- [ ] Measurements in LEARNINGS; if startup is unacceptable → stop and ask the user (AOT/CDS vs trimming)
+- [ ] No `.env.local` / host `target/` inside any image
+
+## Phase 35: Login rate limiting
+
+- [ ] Task 76: AUTH-004 + ClientIpResolver (provisional rule, unit-tested) + bounded Bucket4j per-IP store (5/min, burst 5, LRU 10k) — unit tests only
+- [ ] Task 77: LoginRateLimitFilter on POST /auth/login + IT (5×401 then 429 + Retry-After; other IP allowed; /auth/me and /auth/staff-users unaffected) — count existing ITs' and e2e logins per context first; any accommodation test-only
+
+### Checkpoint 39: Rate limit proven locally
+- [ ] `mvn -B verify` green reactor-wide, clean worktree, no .env.local
+- [ ] Pre-existing auth-service IT assertions unchanged
+- [ ] ClientIpResolver rule marked provisional until Task 82
+
+## Phase 36: Deployment descriptors
+
+- [ ] Task 78: render.yaml (4 web services, docker, free, oregon, liveness health check, checksPass, buildFilter, fromGroup esg-shared, ADMIN_BOOTSTRAP_EMAIL sync:false) — names only
+- [ ] Task 79: docs/deployment.md runbook (placeholders only; same-region confirmation at account creation; esg-shared keys; bootstrap password; smoke-check list; known limitations)
+- [ ] Task 80: .github/dependabot.yml (maven, github-actions, docker; weekly; grouped minor+patch)
+
+### Checkpoint 40: Repo deploy-ready
+- [ ] `mvn -B verify` green reactor-wide, clean worktree, no .env.local
+- [ ] Pushed to main (confirmed with user), CI green on that commit
+- [ ] Repo-wide secret sweep clean
+
+## Phase 37: Go live (user-driven)
+
+- [ ] Task 81: user provisions Neon + CloudAMQP + Render (same region confirmed), esg-shared, Blueprint, bootstrap email; agent fixes the runbook against reality; btree_gist confirmed on Neon
+- [ ] Task 82: confirm Render's client-IP header against a real request; finalize ClientIpResolver + tests; remove temporary log
+
+### Checkpoint 41: Platform live
+- [ ] Four public URLs, same commit, liveness green in Render
+- [ ] ClientIpResolver rule confirmed; temporary log gone
+
+## Phase 38: Production proof
+
+- [ ] Task 83: production smoke check (6 items incl. CloudAMQP TLS event path and real 429) → evidence in LEARNINGS
+- [ ] Task 84: CD proof: buildFilter one-service deploy; checksPass negative check **off main**: throwaway branch `cd-gate-check` + draft PR (so CI runs) + one service temporarily relinked to it, red → no deploy, fix → deploy, relink to main, delete branch. Fallback to main only if Render can't relink: announce exact SHA/time of the broken push, revert immediately once confirmed. Plus Dependabot parsed.
+
+### Checkpoint 42: Final — ready for review (M8 module close)
+- [ ] Every SPEC-deployment.md Success Criteria bullet re-verified with evidence
+- [ ] `mvn -B verify` green, clean worktree; CI green on final main commit
+- [ ] Render build-minute / instance-hour usage recorded
+- [ ] CAPABILITY-MAP.md status updated
+- [ ] Human review and approval — hard stop, never automatic

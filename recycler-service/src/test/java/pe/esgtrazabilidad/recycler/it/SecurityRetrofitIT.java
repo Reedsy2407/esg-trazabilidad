@@ -25,10 +25,11 @@ import static org.hamcrest.Matchers.notNullValue;
  * negative checks (per SPEC-auth-service.md's Testing Strategy): no token,
  * and a token signed with the wrong secret, both against a real,
  * already-existing business endpoint -- plus the public side of the
- * perimeter: Swagger UI (both URLs) and /actuator/health must answer
- * without a token. Deliberately its own small class, not folded into
- * AssociationApiIT/etc. -- unlike those classes, this one must NOT set a
- * default valid-token request spec in @BeforeEach.
+ * perimeter: Swagger UI (both URLs), /actuator/health and
+ * /actuator/health/liveness must answer without a token, while
+ * /actuator/health/readiness must not. Deliberately its own small class,
+ * not folded into AssociationApiIT/etc. -- unlike those classes, this one
+ * must NOT set a default valid-token request spec in @BeforeEach.
  */
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -91,5 +92,25 @@ class SecurityRetrofitIT {
                 .then()
                 .statusCode(anyOf(equalTo(200), equalTo(503)))
                 .body("status", notNullValue());
+    }
+
+    @Test
+    void livenessIsUpWithoutATokenEvenWithNoRabbitMq() {
+        // This is Render's health check path (SPEC-deployment.md). Liveness only
+        // contains livenessState, so a broker outage -- which this Rabbit-less
+        // context simulates -- must not fail it. Exactly 200, unlike the
+        // aggregate's "200 or 503" above (which can't pin 503: a locally
+        // running compose broker on localhost:5672 would make it UP).
+        given().when()
+                .get("/actuator/health/liveness")
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("UP"));
+    }
+
+    @Test
+    void readinessStillRequiresAToken() {
+        // The permit is the exact liveness path, not /actuator/health/**.
+        given().when().get("/actuator/health/readiness").then().statusCode(401).body("code", equalTo("AUTH-000"));
     }
 }

@@ -1,7 +1,7 @@
 # Implementation Plan: shared-kernel + recycler-service + collection-service + cross-service-events + reporting-service + ci-pipeline + auth-service
 
 > Source specs: [[SPEC-shared-kernel.md]], [[SPEC-recycler-service.md]], [[SPEC-collection-service.md]], [[SPEC-cross-service-events.md]], [[SPEC-reporting-service.md]], [[SPEC-ci-pipeline.md]], [[SPEC-auth-service.md]]. Module ids per [[CAPABILITY-MAP.md]]: `shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`, `ci-pipeline`, `auth-service`.
-> `shared-kernel` + `recycler-service` (Tasks 1-12, Checkpoints 1-6), `collection-service` (Tasks 13-23, Checkpoints 7-13), `cross-service-events` (Tasks 24-40, Checkpoints 14-20), `reporting-service` (Tasks 41-57, Checkpoints 21-28), and `ci-pipeline` (Task 58, Checkpoint 29) are complete and approved. `auth-service` (Tasks 59-70, Checkpoints 30-36) is planned below, not yet built — the last module before `deployment` per the capability map's build order.
+> `shared-kernel` + `recycler-service` (Tasks 1-12, Checkpoints 1-6), `collection-service` (Tasks 13-23, Checkpoints 7-13), `cross-service-events` (Tasks 24-40, Checkpoints 14-20), `reporting-service` (Tasks 41-57, Checkpoints 21-28), and `ci-pipeline` (Task 58, Checkpoint 29), and `auth-service` (Tasks 59-70, Checkpoints 30-36) are complete and approved. Next per the capability map's build order: `deployment`.
 
 ## Overview
 
@@ -640,7 +640,7 @@ Task 70: springdoc-openapi wiring for auth-service's own controllers
 - [x] All Success Criteria bullets in `SPEC-auth-service.md` re-verified line by line with evidence, same discipline as every prior module-close checkpoint
 - [x] Every pre-existing `*ApiIT` across all three retrofitted services still green, now sending tokens — zero lost coverage, confirmed by comparing test counts before/after this module against `tasks/LEARNINGS.md`'s own historical totals for each service
 - [x] Swagger UI and `/actuator/health` remain publicly reachable with no token on all four services — verified with a real unauthenticated `curl` against each (evidence actually used: real unauthenticated HTTP from `e2e-tests` against the four real service processes, plus each service's security IT; the manual `curl` against compose-backed services was blocked by Hyper-V excluded port ranges covering 5433/5672 — see `tasks/LEARNINGS.md` Checkpoint 36)
-- [ ] Human review and approval — last module before `deployment` per the capability map's build order
+- [x] Human review and approval — last module before `deployment` per the capability map's build order — approved 2026-09-26 (independent Cowork review of the real code, no findings; manual curl skipped by user decision, covered by e2e-tests)
 
 ## Risks and Mitigations
 

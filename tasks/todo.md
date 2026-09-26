@@ -348,4 +348,4 @@
 - [x] All Success Criteria bullets in SPEC-auth-service.md re-verified line by line with evidence — 2 were uncovered by any task and fixed here (actuator, .env.local.example); see tasks/LEARNINGS.md "### Checkpoint 36"
 - [x] Every pre-existing *ApiIT across all three retrofitted services still green, now sending tokens — zero lost coverage (counts: see tasks/LEARNINGS.md "### Checkpoint 36")
 - [x] Swagger UI and /actuator/health remain publicly reachable with no token on all four services — proven over real HTTP against the 4 real processes (e2e) + per-service ITs; the manual compose-backed curl was blocked by Hyper-V excluded ports, see tasks/LEARNINGS.md "### Checkpoint 36"
-- [ ] Human review and approval — last module before `deployment` per the capability map's build order
+- [x] Human review and approval — last module before `deployment` per the capability map's build order — approved 2026-09-26 (independent Cowork review of the real code, no findings; manual curl skipped by user decision, covered by e2e-tests)

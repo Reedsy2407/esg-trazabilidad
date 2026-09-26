@@ -353,7 +353,7 @@
 ## Phase 33: Production-ready configuration (M8 deployment — full detail in tasks/plan.md)
 
 - [x] Task 71: recycler-service liveness as Render health check — ver tasks/LEARNINGS.md#task-71
-- [ ] Task 72: same liveness shape on collection-service, reporting-service, auth-service (mechanical repeat of Task 71)
+- [x] Task 72: liveness on collection/reporting/auth-service — ver tasks/LEARNINGS.md#task-72
 - [ ] Task 73: `server.port ${PORT:808x}` ×4; rabbitmq `virtual-host`/`ssl.enabled` with local defaults ×3 AMQP services; `.env.local.example` new optional keys; delete auth-service's unused `spring.rabbitmq` block (reason stated in the commit message)
 
 ### Checkpoint 37: Configuration ready, zero regression

@@ -23,5 +23,13 @@ spring:
       pageable:
         max-page-size: 100
 
+management:
+  endpoint:
+    health:
+      probes:
+        # Auto-enabled only on Kubernetes; Render isn't, so turn it on explicitly.
+        # /actuator/health/liveness is Render's health check (SPEC-deployment.md).
+        enabled: true
+
 server:
   port: 8083

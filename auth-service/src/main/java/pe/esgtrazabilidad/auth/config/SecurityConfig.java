@@ -39,6 +39,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/actuator/health",
+                                // Render's health check. Exact path on purpose: readiness and the
+                                // rest of /actuator/** stay behind a token.
+                                "/actuator/health/liveness",
                                 // Spring Boot forwards internally to /error to render a 404/500
                                 // response when no handler matches -- that forward passes through
                                 // this same filter chain again, so /error must be permitAll too or

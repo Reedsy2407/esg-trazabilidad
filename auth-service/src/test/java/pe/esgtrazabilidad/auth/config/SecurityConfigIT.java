@@ -77,6 +77,24 @@ class SecurityConfigIT {
     }
 
     @Test
+    void livenessIsUpWithoutATokenEvenWithNoRabbitMq() {
+        // This is Render's health check path (SPEC-deployment.md). Liveness only
+        // contains livenessState, so the missing broker that can make the
+        // aggregate above 503 must not fail it. Exactly 200.
+        given().when()
+                .get("/actuator/health/liveness")
+                .then()
+                .statusCode(200)
+                .body("status", equalTo("UP"));
+    }
+
+    @Test
+    void readinessStillRequiresAToken() {
+        // The permit is the exact liveness path, not /actuator/health/**.
+        given().when().get("/actuator/health/readiness").then().statusCode(401).body("code", equalTo("AUTH-000"));
+    }
+
+    @Test
     void loginPathIsNotBlockedBySecurity() {
         // A malformed body reaching MVC's own 400 (VALIDATION_ERROR) -- not
         // security's 401 -- is what proves permitAll actually let the

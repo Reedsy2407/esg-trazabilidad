@@ -23,7 +23,7 @@ COPY e2e-tests/pom.xml e2e-tests/
 RUN mvn -B -pl reporting-service -am package -DskipTests
 
 # --- Runtime stage ------------------------------------------------------------
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:24-jre
 WORKDIR /app
 
 RUN groupadd --system app && useradd --system --gid app --no-create-home app

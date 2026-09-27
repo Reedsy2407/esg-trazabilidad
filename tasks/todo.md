@@ -368,7 +368,7 @@
 
 ### Checkpoint 38: Images within Render free limits (go/no-go)
 - [x] All four boot at 512m/0.1 CPU, liveness 200, OOMKilled=false
-- [ ] Measurements in LEARNINGS; if startup is unacceptable → stop and ask the user (AOT/CDS vs trimming)
+- [ ] Measurements in LEARNINGS; if startup is unacceptable → stop and ask the user (AOT/CDS vs trimming) — **open by user decision (2026-09-26):** local 63–86 s recorded (LEARNINGS Task 75); proceed with Tasks 76–80; decide CDS/AOT/trimming only if the real Render measurement in Task 81 is unacceptable. docs/deployment.md (Task 79) gets no cold-start figure until Task 81 measures it.
 - [x] No `.env.local` / host `target/` inside any image
 
 ## Phase 35: Login rate limiting

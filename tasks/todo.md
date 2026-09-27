@@ -364,12 +364,12 @@
 ## Phase 34: Container images
 
 - [x] Task 74: recycler-service Dockerfile + root .dockerignore, measured at 512m/0.1 CPU — ver tasks/LEARNINGS.md#task-74
-- [ ] Task 75: Dockerfiles for collection/reporting/auth-service, same measurement (+ one real PDF export inside reporting-service's 512m container)
+- [x] Task 75: collection/reporting/auth-service Dockerfiles, all four measured at 512m/0.1 CPU — ver tasks/LEARNINGS.md#task-75
 
 ### Checkpoint 38: Images within Render free limits (go/no-go)
-- [ ] All four boot at 512m/0.1 CPU, liveness 200, OOMKilled=false
+- [x] All four boot at 512m/0.1 CPU, liveness 200, OOMKilled=false
 - [ ] Measurements in LEARNINGS; if startup is unacceptable → stop and ask the user (AOT/CDS vs trimming)
-- [ ] No `.env.local` / host `target/` inside any image
+- [x] No `.env.local` / host `target/` inside any image
 
 ## Phase 35: Login rate limiting
 

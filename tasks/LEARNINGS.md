@@ -1346,3 +1346,33 @@ No Avast/TLS problem inside `docker build`: Maven Central resolved from the cont
 **Read for Checkpoint 38:** both runs are over the spec's "about 1 min" cold-start assumption: ~80–90 s on 0.1 CPU, a bit more on a first deploy. Memory is comfortable, at under half the limit. This is a local approximation: Render's 0.1 CPU and disk may behave differently.
 
 The Dockerfile's comments cite `render.yaml`'s `dockerContext: .` and `autoDeployTrigger: checksPass`, which Task 78 must actually set (as the spec requires), or those comments go stale.
+
+## Task 75: collection/reporting/auth-service images + all four measured together
+
+The three Dockerfiles are the Task 74 shape with only the service name, the sibling-pom list (every module except shared-kernel and the service itself) and `EXPOSE` (8082/8083/8084) changed. All four build from the repo root. Image sizes: 580 MB each, reporting 589 MB (PDFBox).
+
+**Measurement: closer to a first deploy than Task 74.** All four images booted **at the same time** against one **empty** database (`esg_probe4`, so every service ran its full Liquibase changelog, as on a fresh Neon), each with `--memory=512m --cpus=0.1` on `esg-trazabilidad_default`. auth-service got `ADMIN_BOOTSTRAP_EMAIL=probe-admin@example.test`. The script is a scratch file, not committed. Secrets are passed by name from `.env.local`; the bootstrap password was read from the container log into a shell variable and never echoed. Afterwards the containers were removed and the database dropped.
+
+| Service | Spring "Started … in" | Resident memory (`docker stats`, after the export) | OOMKilled |
+|---|---|---|---|
+| recycler-service | 75.1 s | 249.0 MiB / 512 MiB | false |
+| collection-service | 77.9 s | 251.4 MiB / 512 MiB | false |
+| reporting-service | 86.0 s | 263.2 MiB / 512 MiB | false |
+| auth-service | 62.9 s | 224.0 MiB / 512 MiB | false |
+
+The four JVMs took 93 s of wall clock to all report "Started". Liveness and the aggregate health returned `200 UP` on all four; auth-service's aggregate is UP with no Rabbit indicator (Task 73).
+
+**Real request path, through the images:**
+1. Bootstrap admin login on auth-service → a real JWT.
+2. With that token on reporting-service: `POST /tracked-companies` → 201, `POST /sigersol-syncs` → 201, one `traced_collection_entry` row inserted directly (the event path isn't under test here), `POST …/certificates` → 201.
+3. `GET …/certificates/{id}/pdf` → `200 application/pdf`, 1060 bytes. The first call took 1.43 s, a repeat 0.01 s.
+
+Memory after the export stayed at ~263 MiB, about half the limit. Every container runs as `app`. Each new image's `/app` holds only `app.jar`, and `find / -xdev` finds no `.env*`, `target` or `SPEC-*`.
+
+**Read for Checkpoint 38 (the user decides):** memory is comfortable everywhere. Startup is **63–86 s**, over the spec's "about 1 min" cold-start assumption, and reporting-service is the slowest. That is the whole cold start a reviewer waits through after a 15-min spin-down, plus Render's own container start and routing. Both runs are on local hardware; Render's 0.1 CPU may differ.
+
+**Options named by the plan for Checkpoint 38, bullet 2** (none chosen by the agent):
+- **(a) Accept 63–86 s** and document the cold start in `docs/deployment.md`.
+- **(b) CDS** (JVM class-data-sharing archive). This means a training run inside the image build. That run refreshes the Spring context, and with it Liquibase, which needs a database that Render's builder doesn't have. So it isn't a Dockerfile-only change.
+- **(c) Spring AOT.** It evaluates `@ConditionalOn…` at build time, which collides with the `@ConditionalOnBean`/`@ConditionalOnProperty` on shared-kernel's `OutboxDispatcher` and with auth-service's new exclusions.
+- **(d) Trimming auto-configuration / lazy init.** It trades startup time for a slower first request and later-surfacing wiring errors.

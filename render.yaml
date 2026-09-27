@@ -1,0 +1,102 @@
+# Render Blueprint: the four services on Render's free plan (SPEC-deployment.md).
+#
+# Names only, never values. Every secret and connection setting comes from the
+# dashboard-managed environment group "esg-shared" (JWT_SECRET, DB_URL,
+# DB_USERNAME, DB_PASSWORD, RABBITMQ_HOST, RABBITMQ_PORT, RABBITMQ_USER,
+# RABBITMQ_PASSWORD, RABBITMQ_VHOST, RABBITMQ_SSL_ENABLED). It is created by
+# hand in the dashboard, not here, because Render ignores sync: false inside a
+# Blueprint-declared group. See docs/deployment.md.
+#
+# Each service:
+# - builds its own Dockerfile with the repo root as context (it needs
+#   shared-kernel from the Maven reactor);
+# - deploys only after the commit's GitHub checks (ci.yml's mvn -B verify)
+#   pass: autoDeployTrigger: checksPass;
+# - rebuilds only when its own module, shared-kernel, the root pom or the
+#   shared .dockerignore changes (buildFilter), which saves the free
+#   workspace's build minutes;
+# - is health-checked on liveness, not the aggregate /actuator/health: a
+#   RabbitMQ or Postgres outage can't be fixed by a restart, so it must not
+#   trigger one.
+#
+# No `branch:` on purpose: every service follows the repo's default branch
+# (main). Leaving it unset should also let a single service be relinked to a
+# throwaway branch in the dashboard for the checksPass negative check without
+# the Blueprint pinning it back (to be confirmed when that check is run).
+
+services:
+  - type: web
+    name: esg-recycler-service
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./recycler-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health/liveness
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - recycler-service/**
+        - shared-kernel/**
+        - pom.xml
+        - .dockerignore
+    envVars:
+      - fromGroup: esg-shared
+
+  - type: web
+    name: esg-collection-service
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./collection-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health/liveness
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - collection-service/**
+        - shared-kernel/**
+        - pom.xml
+        - .dockerignore
+    envVars:
+      - fromGroup: esg-shared
+
+  - type: web
+    name: esg-reporting-service
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./reporting-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health/liveness
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - reporting-service/**
+        - shared-kernel/**
+        - pom.xml
+        - .dockerignore
+    envVars:
+      - fromGroup: esg-shared
+
+  - type: web
+    name: esg-auth-service
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./auth-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health/liveness
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - auth-service/**
+        - shared-kernel/**
+        - pom.xml
+        - .dockerignore
+    envVars:
+      - fromGroup: esg-shared
+      # The first staff account's email. Its value is typed once in the
+      # dashboard; sync: false keeps later Blueprint syncs from touching it.
+      - key: ADMIN_BOOTSTRAP_EMAIL
+        sync: false

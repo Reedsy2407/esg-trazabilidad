@@ -383,7 +383,7 @@
 
 ## Phase 36: Deployment descriptors
 
-- [ ] Task 78: render.yaml (4 web services, docker, free, oregon, liveness health check, checksPass, buildFilter, fromGroup esg-shared, ADMIN_BOOTSTRAP_EMAIL sync:false) — names only
+- [x] Task 78: render.yaml Blueprint (4 free web services, liveness health check, checksPass, buildFilter, esg-shared) — ver tasks/LEARNINGS.md#task-78
 - [ ] Task 79: docs/deployment.md runbook (placeholders only; same-region confirmation at account creation; esg-shared keys; bootstrap password; smoke-check list; known limitations)
 - [ ] Task 80: .github/dependabot.yml (maven, github-actions, docker; weekly; grouped minor+patch)
 

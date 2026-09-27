@@ -1420,3 +1420,32 @@ RED seen first: all 4 got 401 instead of 429. auth-service: unit 33, IT 29 → 3
 `code-reviewer`: `PASS`; it re-ran the clean-worktree reactor itself and got identical counts. Two low findings, recorded rather than changed:
 - **`shouldNotFilter` has no dedicated test for another method on the same path, or for a trailing slash.** Neither is a bypass: `GET /auth/login` never reaches the login handler, and Spring 6 no longer matches `/auth/login/` to `/auth/login` (trailing-slash matching is off by default), so that path is a 404, not an unlimited login.
 - **Spec drift.** `SPEC-deployment.md` (Code Style) and the plan describe the error body as `{code, message}`. The platform's real shape, from both `GlobalExceptionHandler` and shared-kernel's security errors, is ProblemDetail-style `{type, title, status, detail, code}`, and the 429 follows that.
+
+## Task 78: render.yaml Blueprint
+
+Four `type: web` services (`esg-{recycler,collection,reporting,auth}-service`), each with:
+- `runtime: docker`, `plan: free`, `region: oregon`
+- `dockerfilePath: ./<svc>/Dockerfile`, `dockerContext: .`
+- `healthCheckPath: /actuator/health/liveness`
+- `autoDeployTrigger: checksPass`
+- `buildFilter.paths` = own module, `shared-kernel/**`, `pom.xml`
+- `envVars: - fromGroup: esg-shared`
+
+auth-service additionally has `ADMIN_BOOTSTRAP_EMAIL` with `sync: false`. This fulfils the obligation noted in Task 74: the Dockerfiles' comments cite `dockerContext: .` and `checksPass`, and both are now set.
+
+**No `branch:`, on purpose.** Every service follows the repo's default branch. Leaving it unset is also what should let Task 84 relink one service to a throwaway branch in the dashboard without the Blueprint pinning it back. That is an assumption until Task 84 checks it for real.
+
+**Validation.** No Render CLI is installed. pip can't reach PyPI from this machine, even with the Avast root as `--cert`, so the real `jsonschema` package wasn't available. Instead:
+1. `render.yaml` → JSON with SnakeYAML + Jackson from `~/.m2`.
+2. That JSON checked against Render's published Blueprint schema (`https://render.com/schema/render.yaml.json`) with a small draft-07-subset validator in the scratchpad: `$ref`, type, enum, properties, required, additionalProperties, items, anyOf/oneOf/allOf. Result: **VALID**.
+3. Negative control: `plan: gratis` + `autoDeployTrigger: onGreen` were both rejected by enum.
+4. That validator skips `unevaluatedProperties`/`if`/`then`, so a separate check confirmed every key used exists in `serverService`/`buildFilter`/`envVarFromGroup`/`envVarFromKeyValue`.
+
+The dashboard's Blueprint preview in Task 81 is the real final check. Secret sweep: there is no `value:` key anywhere, and the only matches for password/secret/URL patterns are the header comment naming the `esg-shared` keys.
+
+`code-reviewer`: `PASS`, and it re-ran the schema check. Three low findings, fixed:
+- `.dockerignore` is now in every `buildFilter`, since it shapes all four build contexts.
+- The `branch:` comment was softened to "should … (to be confirmed)".
+- `render.yaml`'s pointer to `docs/deployment.md` is satisfied by Task 79, before the Checkpoint 40 push.
+
+The sibling `pom.xml` files are deliberately not in the filters: they only let the reactor resolve and don't change a service's jar.

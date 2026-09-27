@@ -1392,3 +1392,31 @@ Downloading Bucket4j hit the Avast TLS interception on the host (`PKIX path buil
 - **Low: the LRU test didn't tell LRU from FIFO.** "a" is now touched again before "c" is inserted, so an insertion-order map would fail the test.
 
 auth-service unit tests 19 → 33 (+9 `ClientIpResolverTest`, +5 `LoginRateLimiterTest`); ITs unchanged at 29.
+
+## Task 77: LoginRateLimitFilter wired on POST /auth/login + IT
+
+**Wiring.** `LoginRateLimitFilter` (`OncePerRequestFilter`; `shouldNotFilter` unless `POST` and servlet path `/auth/login`) is created in `SecurityConfig` and added with `addFilterBefore(…, UsernamePasswordAuthenticationFilter.class)`. It is deliberately not a `@Component`: Boot would also register a `Filter` bean as a plain servlet filter outside the security chain. `RateLimitConfig` provides the `LoginRateLimiter` and `ClientIpResolver` beans; the provisional header/hop constants live there. On refusal the response is `429`, `Retry-After: <seconds>`, `application/problem+json` and `{type, title, status, detail, code: AUTH-004}`. That is the same hand-written shape as shared-kernel's `JwtSecurityConfig` security errors, because this layer runs before Spring MVC. Every attempt counts, and a refused one never reaches the password check.
+
+**Test accommodation (counted first, as the plan required).** Each auth-service IT class has its own context (its own static Postgres container), and all of them log in from 127.0.0.1. `AuthApiIT` makes 6+ login calls within seconds. Proven: running `AuthApiIT` with `-DargLine=-Desg.auth.login-rate-limit.capacity=5` fails with "Expected status code <200> but was <429>". Resolution, test-only:
+- The capacity is read from `esg.auth.login-rate-limit.capacity`, whose code default is `LoginRateLimiter.DEFAULT_CAPACITY = 5`. It is not a secret and production never sets it.
+- `auth-service/src/test/resources/application.properties` raises it to 1000 for every IT.
+- `LoginRateLimitIT` pins it back to 5 via `@TestPropertySource`.
+- No existing test changed. e2e runs the real jar with no override and makes 1 login per auth process, so it is unaffected.
+
+**`LoginRateLimitIT` (4 tests, real HTTP, Testcontainers Postgres).** Each test uses its own client IP through `X-Forwarded-For` (1 trusted hop → the entry the test sends), so buckets never leak between tests in the shared context.
+- 5 wrong-password logins get `401 AUTH-001`; the 6th gets `429 AUTH-004` + `Retry-After` + the problem+json body.
+- A **correct** password is refused too once the IP is exhausted.
+- A different IP is still allowed.
+- On an exhausted IP, `GET /auth/me` (6 calls) and `POST /auth/staff-users` still answer 200/201.
+
+RED seen first: all 4 got 401 instead of 429. auth-service: unit 33, IT 29 → 33.
+
+**Environment trap found in the clean-worktree run (not a code defect).** The first run failed in recycler- and reporting-service ("Fatal exception on listener startup"). The compose RabbitMQ, which I had left running from Task 74/75's image measurements, was listening on `localhost:5672`. Without `.env.local`, the ITs that have no RabbitMQ container of their own connected to it with the wrong password, and an auth failure is fatal for a listener container, unlike "connection refused". With compose stopped the whole reactor passed. CI has no broker on localhost, so it's unaffected. Rule: **stop compose before a clean-worktree `mvn verify`**.
+
+### Checkpoint 39: rate limit proven locally
+
+`mvn -o -B verify` in a clean worktree at `ea5a30f` + the Task 77 changes (untracked files copied in), **no `.env.local`**, compose stopped: BUILD SUCCESS. shared-kernel 23; recycler 70 + 55; collection 74 + 60; reporting 47 + 56; auth 33 + 33; e2e-tests 2. Every pre-existing auth-service IT is unchanged (the accommodation is one test-resources property). `ClientIpResolver`'s rule is marked PROVISIONAL in `ClientIpResolver`'s javadoc and in `RateLimitConfig`, and here, until Task 82.
+
+`code-reviewer`: `PASS`; it re-ran the clean-worktree reactor itself and got identical counts. Two low findings, recorded rather than changed:
+- **`shouldNotFilter` has no dedicated test for another method on the same path, or for a trailing slash.** Neither is a bypass: `GET /auth/login` never reaches the login handler, and Spring 6 no longer matches `/auth/login/` to `/auth/login` (trailing-slash matching is off by default), so that path is a 404, not an unlimited login.
+- **Spec drift.** `SPEC-deployment.md` (Code Style) and the plan describe the error body as `{code, message}`. The platform's real shape, from both `GlobalExceptionHandler` and shared-kernel's security errors, is ProblemDetail-style `{type, title, status, detail, code}`, and the 429 follows that.

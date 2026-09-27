@@ -20,21 +20,31 @@ import io.github.bucket4j.TimeMeter;
  */
 public class LoginRateLimiter {
 
-    static final int CAPACITY = 5;
+    /** The production limit; tests other than the rate-limit ones raise it (see RateLimitConfig). */
+    public static final int DEFAULT_CAPACITY = 5;
     static final Duration REFILL_PERIOD = Duration.ofMinutes(1);
     public static final int DEFAULT_MAX_KEYS = 10_000;
 
     public record Decision(boolean allowed, long retryAfterSeconds) {}
 
     private final TimeMeter clock;
+    private final int capacity;
     private final Map<String, Bucket> buckets;
 
-    public LoginRateLimiter() {
-        this(TimeMeter.SYSTEM_NANOTIME, DEFAULT_MAX_KEYS);
+    public LoginRateLimiter(int capacity) {
+        this(TimeMeter.SYSTEM_NANOTIME, capacity, DEFAULT_MAX_KEYS);
     }
 
     LoginRateLimiter(TimeMeter clock, int maxKeys) {
+        this(clock, DEFAULT_CAPACITY, maxKeys);
+    }
+
+    private LoginRateLimiter(TimeMeter clock, int capacity, int maxKeys) {
+        if (capacity < 1) {
+            throw new IllegalArgumentException("capacity must be at least 1");
+        }
         this.clock = clock;
+        this.capacity = capacity;
         this.buckets = new LinkedHashMap<>(16, 0.75f, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<String, Bucket> eldest) {
@@ -67,7 +77,7 @@ public class LoginRateLimiter {
 
     private Bucket newBucket() {
         return Bucket.builder()
-                .addLimit(limit -> limit.capacity(CAPACITY).refillGreedy(CAPACITY, REFILL_PERIOD))
+                .addLimit(limit -> limit.capacity(capacity).refillGreedy(capacity, REFILL_PERIOD))
                 .withCustomTimePrecision(clock)
                 .build();
     }

@@ -374,12 +374,12 @@
 ## Phase 35: Login rate limiting
 
 - [x] Task 76: AUTH-004 + ClientIpResolver (provisional rule) + bounded Bucket4j LoginRateLimiter — ver tasks/LEARNINGS.md#task-76
-- [ ] Task 77: LoginRateLimitFilter on POST /auth/login + IT (5×401 then 429 + Retry-After; other IP allowed; /auth/me and /auth/staff-users unaffected) — count existing ITs' and e2e logins per context first; any accommodation test-only
+- [x] Task 77: LoginRateLimitFilter on POST /auth/login + LoginRateLimitIT — ver tasks/LEARNINGS.md#task-77
 
 ### Checkpoint 39: Rate limit proven locally
-- [ ] `mvn -B verify` green reactor-wide, clean worktree, no .env.local
-- [ ] Pre-existing auth-service IT assertions unchanged
-- [ ] ClientIpResolver rule marked provisional until Task 82
+- [x] `mvn -B verify` green reactor-wide, clean worktree, no .env.local
+- [x] Pre-existing auth-service IT assertions unchanged
+- [x] ClientIpResolver rule marked provisional until Task 82
 
 ## Phase 36: Deployment descriptors
 

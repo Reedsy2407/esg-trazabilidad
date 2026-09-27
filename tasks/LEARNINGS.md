@@ -1498,3 +1498,7 @@ Minor and patch updates are grouped into one PR per ecosystem. Major updates sta
 GitHub parsing it for real (Insights → Dependency graph → Dependabot) is Task 84's check, after the push.
 
 `code-reviewer`: `PASS`, and Checkpoint 40's secret-sweep bullet is verified: no secret values in `render.yaml`, `docs/`, `.env.local.example`, the Dockerfiles or `.github/`; no `${SECRET:default}` anywhere; the real local `JWT_SECRET` appears in 0 tracked files. It noted that `docker-compose.yml`'s images aren't covered by Dependabot, which matches the spec's scope ("the four Dockerfiles").
+
+### Checkpoint 40: repo deploy-ready (bullets 1 and 3; bullet 2 needs the push)
+
+Bullet 1: `mvn -o -B verify` in a clean worktree at `9de35ca` + `.github/dependabot.yml`, the only change before `179f4b8`, with no `.env.local` and compose stopped: BUILD SUCCESS. shared-kernel 23; recycler 70 + 55; collection 74 + 60; reporting 47 + 56; auth 33 + 33; e2e-tests 2. These are the Checkpoint 39 counts: Tasks 78–80 changed no code. Bullet 3, the secret sweep, was verified by `code-reviewer` in Task 80.

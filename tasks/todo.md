@@ -388,9 +388,9 @@
 - [x] Task 80: .github/dependabot.yml (maven, github-actions, docker; weekly; minor+patch grouped) — ver tasks/LEARNINGS.md#task-80
 
 ### Checkpoint 40: Repo deploy-ready
-- [ ] `mvn -B verify` green reactor-wide, clean worktree, no .env.local
+- [x] `mvn -B verify` green reactor-wide, clean worktree, no .env.local
 - [ ] Pushed to main (confirmed with user), CI green on that commit
-- [ ] Repo-wide secret sweep clean
+- [x] Repo-wide secret sweep clean
 
 ## Phase 37: Go live (user-driven)
 

@@ -1481,4 +1481,20 @@ Verified against the code:
   - The missing-secret sentence now says `RABBITMQ_PASSWORD` only matters to the three AMQP services.
   - Bootstrap-password recovery is spelled out: bootstrap only runs on an empty `staff_user`, so recovering means emptying the table and restarting, which also removes the other accounts.
 
-Tooling note: the Bash tool collapsed `\` inside a quoted heredoc, which turned a line continuation into a join and `tr -d ''` into a literal CR in the file. It was fixed with `chr(92)`/`chr(13)` in Python, and line endings were normalized to LF.
+Tooling note: the Bash tool collapsed `\` inside a quoted heredoc, which turned a line continuation into a join and `tr -d '
+'` into a literal CR in the file. It was fixed with `chr(92)`/`chr(13)` in Python, and line endings were normalized to LF.
+
+## Task 80: .github/dependabot.yml
+
+Weekly updates for three ecosystems:
+- `maven` at `/`, covering the whole reactor and the root-pom version properties;
+- `github-actions` at `/`;
+- `docker`, using `directories:` for the four service directories, which covers both base images in each Dockerfile.
+
+Minor and patch updates are grouped into one PR per ecosystem. Major updates stay separate, on purpose, since they usually need migration work.
+
+**Validation.** YAML → JSON with SnakeYAML + Jackson, then checked against the SchemaStore Dependabot v2 schema with the scratchpad validator: **VALID**. The negative control `interval: fortnightly` is rejected. The ecosystem enum sits in a top-level `if/then/else` that the validator skips, so it was checked separately: all three are in the non-beta `package-ecosystem-values` enum, and `gh-actions` is not.
+
+GitHub parsing it for real (Insights → Dependency graph → Dependabot) is Task 84's check, after the push.
+
+`code-reviewer`: `PASS`, and Checkpoint 40's secret-sweep bullet is verified: no secret values in `render.yaml`, `docs/`, `.env.local.example`, the Dockerfiles or `.github/`; no `${SECRET:default}` anywhere; the real local `JWT_SECRET` appears in 0 tracked files. It noted that `docker-compose.yml`'s images aren't covered by Dependabot, which matches the spec's scope ("the four Dockerfiles").

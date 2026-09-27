@@ -385,7 +385,7 @@
 
 - [x] Task 78: render.yaml Blueprint (4 free web services, liveness health check, checksPass, buildFilter, esg-shared) — ver tasks/LEARNINGS.md#task-78
 - [x] Task 79: docs/deployment.md runbook (placeholders only; no cold-start figure until Task 81) — ver tasks/LEARNINGS.md#task-79
-- [ ] Task 80: .github/dependabot.yml (maven, github-actions, docker; weekly; grouped minor+patch)
+- [x] Task 80: .github/dependabot.yml (maven, github-actions, docker; weekly; minor+patch grouped) — ver tasks/LEARNINGS.md#task-80
 
 ### Checkpoint 40: Repo deploy-ready
 - [ ] `mvn -B verify` green reactor-wide, clean worktree, no .env.local

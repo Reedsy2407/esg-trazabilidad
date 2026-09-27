@@ -1,0 +1,45 @@
+# Weekly dependency updates (SPEC-deployment.md). Minor and patch updates are
+# grouped into one PR per ecosystem so a single maintainer isn't flooded;
+# major updates still arrive as their own PRs, since they usually need real
+# migration work. Every PR runs ci.yml like any other, and nothing deploys
+# until it is merged to main and CI passes (render.yaml: checksPass).
+version: 2
+updates:
+  # The whole Maven reactor from the root pom (shared-kernel, the four
+  # services, e2e-tests), including the versions pinned as root properties.
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      maven-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # .github/workflows/ci.yml's actions.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # The base images of the four services' Dockerfiles (Maven build stage and
+  # JRE runtime stage).
+  - package-ecosystem: docker
+    directories:
+      - /recycler-service
+      - /collection-service
+      - /reporting-service
+      - /auth-service
+    schedule:
+      interval: weekly
+    groups:
+      docker-minor-and-patch:
+        update-types:
+          - minor
+          - patch

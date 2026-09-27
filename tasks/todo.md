@@ -363,7 +363,7 @@
 
 ## Phase 34: Container images
 
-- [ ] Task 74: recycler-service Dockerfile (maven:3.9-eclipse-temurin-21 → eclipse-temurin:21-jre, non-root, JVM flags) + root .dockerignore; boot at 512m/0.1 CPU on compose's network; startup + memory → LEARNINGS
+- [x] Task 74: recycler-service Dockerfile + root .dockerignore, measured at 512m/0.1 CPU — ver tasks/LEARNINGS.md#task-74
 - [ ] Task 75: Dockerfiles for collection/reporting/auth-service, same measurement (+ one real PDF export inside reporting-service's 512m container)
 
 ### Checkpoint 38: Images within Render free limits (go/no-go)

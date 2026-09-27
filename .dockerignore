@@ -1,0 +1,20 @@
+# Keeps local secrets and build output out of every image's build context, so a
+# local `docker build` can never bake .env.local into a layer.
+.env*
+**/target
+.git
+.idea
+.vscode
+docs/architecture/
+
+# Local planning docs: gitignored, so never in Render's clone anyway.
+SPEC-*.md
+CAPABILITY-MAP.md
+.claude
+# Tracked, but planning notes only: nothing a build needs.
+tasks
+
+# e2e-tests is test-only: no service image needs its sources. Its pom.xml stays,
+# because the root pom lists it as a module and the reactor won't resolve without it.
+e2e-tests/*
+!e2e-tests/pom.xml

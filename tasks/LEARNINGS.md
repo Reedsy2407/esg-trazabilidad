@@ -1318,3 +1318,31 @@ Found while reading auth-service's `SecurityConfigIT`, **relevant to Task 73**: 
 ### Checkpoint 37: configuration ready, zero regression
 
 `mvn -o -B verify` in a clean worktree at `5eb500e` + the Task 73 diff, **no `.env.local`**: BUILD SUCCESS. shared-kernel 23; recycler 70 unit + 55 IT; collection 74 + 60; reporting 47 + 56; auth 19 + 29; e2e-tests 2 (ran, not skipped). Against Checkpoint 36 (53/58/54/27 IT) the only increase is +2 IT per service (Tasks 71-72 liveness/readiness); unit counts unchanged. The liveness permit is the exact path in all four `SecurityConfig`s; `/actuator/**` and `/actuator/health/**` appear only in comments. The reviewer's own run in the same worktree first failed in collection-service on the environment, not the code: Testcontainers' Ryuk on `localhost:33060` fell inside a Hyper-V excluded port range (memory `hyperv_excluded_port_range`). The run resumed with `-rf :collection-service` and passed.
+
+## Task 74: recycler-service image + root .dockerignore
+
+**Deviations, all forced by the real repo:**
+- **Build stage is `maven:3.9-eclipse-temurin-21`.** There is no `mvnw` (plan decision).
+- **The build stage copies only what it needs:** the root pom, `shared-kernel/`, the service, and just the `pom.xml` of every other module. The reactor refuses to resolve if any module listed in `<modules>` is missing its pom.
+- **`.dockerignore` uses `e2e-tests/*` + `!e2e-tests/pom.xml`,** not the spec's `e2e-tests/`, for the same reason.
+- **The runtime stage copies `recycler-service-exec.jar`.** Each service's repackage uses `<classifier>exec</classifier>`, which keeps the plain jar for failsafe's classpath. The plain `recycler-service.jar` isn't executable: the first real run died with "no main manifest attribute". All four poms use the same classifier, so Task 75 copies `<service>-exec.jar` too.
+
+No Avast/TLS problem inside `docker build`: Maven Central resolved from the container.
+
+**Measurements** (Rancher Desktop / WSL2 on the author's machine; `docker run --memory=512m --cpus=0.1 --network esg-trazabilidad_default -e DB_URL=jdbc:postgresql://postgres:5432/<db> -e RABBITMQ_HOST=rabbitmq -e DB_PASSWORD -e RABBITMQ_PASSWORD -e JWT_SECRET`; secrets passed by name from the shell, never on the command line):
+
+| Run | Spring "Started … in" | Wall clock to "Started" | Resident memory (`docker stats`, ~20 s after start) |
+|---|---|---|---|
+| Existing schema (`esg_trazabilidad`) | 75.9 s | 83 s | 250.6 MiB / 512 MiB |
+| Empty database (`esg_fresh_probe`, full Liquibase run, dropped afterwards) | 83.5 s | 93 s | 237.6 MiB / 512 MiB |
+
+- `OOMKilled=false` on both runs.
+- Liveness `200 {"status":"UP"}` over the published host port `18081` and from inside compose's network. The aggregate `/actuator/health` was also `200 UP`, with a live broker.
+- The process runs as `uid=999(app)`.
+- Image size is 580 MB.
+- `/app` holds only `app.jar`. `find / -xdev` finds no `.env*`, `target` or `SPEC-*`.
+- `docker history` shows the only COPY into the runtime stage is the exec jar (plus the base image's own entrypoint).
+
+**Read for Checkpoint 38:** both runs are over the spec's "about 1 min" cold-start assumption: ~80–90 s on 0.1 CPU, a bit more on a first deploy. Memory is comfortable, at under half the limit. This is a local approximation: Render's 0.1 CPU and disk may behave differently.
+
+The Dockerfile's comments cite `render.yaml`'s `dockerContext: .` and `autoDeployTrigger: checksPass`, which Task 78 must actually set (as the spec requires), or those comments go stale.

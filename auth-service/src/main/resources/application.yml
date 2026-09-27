@@ -3,15 +3,23 @@ spring:
     name: auth-service
   config:
     import: "optional:file:../.env.local[.properties]"
+  autoconfigure:
+    # auth-service publishes and consumes nothing. shared-kernel's
+    # spring-boot-starter-amqp would still switch on Spring's Rabbit
+    # auto-configuration (plus a Rabbit health indicator that fails the
+    # aggregate /actuator/health without a broker) and shared-kernel's
+    # topology/listener AMQP config, so all three are excluded here.
+    # shared-kernel's OutboxDispatcher needs no exclusion: it only exists
+    # with an OutboxRepository bean, and auth-service has none. That is also
+    # why this file has no spring.rabbitmq block.
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      - pe.esgtrazabilidad.kernel.amqp.RabbitTopologyConfig
+      - pe.esgtrazabilidad.kernel.amqp.RabbitListenerConfig
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5433/esg_trazabilidad}
     username: ${DB_USERNAME:esg}
     password: ${DB_PASSWORD}
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:esg}
-    password: ${RABBITMQ_PASSWORD}
   jpa:
     open-in-view: false
     hibernate:
@@ -32,4 +40,5 @@ management:
         enabled: true
 
 server:
-  port: 8084
+  # Render injects PORT; locally the fixed default applies. e2e-tests' SERVER_PORT still wins.
+  port: ${PORT:8084}

@@ -354,12 +354,12 @@
 
 - [x] Task 71: recycler-service liveness as Render health check — ver tasks/LEARNINGS.md#task-71
 - [x] Task 72: liveness on collection/reporting/auth-service — ver tasks/LEARNINGS.md#task-72
-- [ ] Task 73: `server.port ${PORT:808x}` ×4; rabbitmq `virtual-host`/`ssl.enabled` with local defaults ×3 AMQP services; `.env.local.example` new optional keys; delete auth-service's unused `spring.rabbitmq` block (reason stated in the commit message)
+- [x] Task 73: PORT + rabbitmq vhost/ssl + auth-service AMQP excluded + .env.local.example — ver tasks/LEARNINGS.md#task-73
 
 ### Checkpoint 37: Configuration ready, zero regression
-- [ ] `mvn -B verify` green reactor-wide, clean worktree, no .env.local, e2e-tests included
-- [ ] Test counts = Checkpoint 36 totals + only the new liveness/readiness assertions
-- [ ] Liveness permit is the exact path in all four SecurityConfigs; no `/actuator/**` or `/actuator/health/**` anywhere
+- [x] `mvn -B verify` green reactor-wide, clean worktree, no .env.local, e2e-tests included
+- [x] Test counts = Checkpoint 36 totals + only the new liveness/readiness assertions
+- [x] Liveness permit is the exact path in all four SecurityConfigs; no `/actuator/**` or `/actuator/health/**` anywhere
 
 ## Phase 34: Container images
 

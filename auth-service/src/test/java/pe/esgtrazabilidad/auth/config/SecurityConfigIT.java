@@ -23,9 +23,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
 
 /**
  * Proves the security perimeter itself, end to end over real HTTP -- not
@@ -64,23 +62,23 @@ class SecurityConfigIT {
     }
 
     @Test
-    void actuatorHealthIsReachableWithoutAToken() {
-        // Security must let it through and the actuator must answer. The
-        // aggregate status itself can be DOWN (503) here: shared-kernel puts
-        // spring-rabbit on the classpath and this IT has no RabbitMQ container.
-        // The real UP check runs in e2e-tests with a live broker.
+    void actuatorHealthIsUpWithoutATokenAndWithoutAnyBroker() {
+        // Security must let it through, and the aggregate must be exactly UP:
+        // auth-service uses no AMQP, so its application.yml excludes the Rabbit
+        // auto-configuration that shared-kernel's spring-boot-starter-amqp would
+        // otherwise switch on. No Rabbit health indicator exists here, so a
+        // missing broker (this IT has none) cannot turn the aggregate into 503.
         given().when()
                 .get("/actuator/health")
                 .then()
-                .statusCode(anyOf(equalTo(200), equalTo(503)))
-                .body("status", notNullValue());
+                .statusCode(200)
+                .body("status", equalTo("UP"));
     }
 
     @Test
     void livenessIsUpWithoutATokenEvenWithNoRabbitMq() {
         // This is Render's health check path (SPEC-deployment.md). Liveness only
-        // contains livenessState, so the missing broker that can make the
-        // aggregate above 503 must not fail it. Exactly 200.
+        // contains livenessState. Exactly 200.
         given().when()
                 .get("/actuator/health/liveness")
                 .then()

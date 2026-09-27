@@ -12,6 +12,10 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:esg}
     password: ${RABBITMQ_PASSWORD}
+    # CloudAMQP: vhost = the instance's user, amqps on 5671. Local compose: "/" and plaintext 5672.
+    virtual-host: ${RABBITMQ_VHOST:/}
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED:false}
   jpa:
     open-in-view: false
     hibernate:
@@ -32,4 +36,5 @@ management:
         enabled: true
 
 server:
-  port: 8082
+  # Render injects PORT; locally the fixed default applies. e2e-tests' SERVER_PORT still wins.
+  port: ${PORT:8082}

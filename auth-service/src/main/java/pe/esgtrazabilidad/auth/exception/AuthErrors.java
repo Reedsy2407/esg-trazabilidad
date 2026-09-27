@@ -19,7 +19,10 @@ public enum AuthErrors implements ApplicationError {
     // time, and there's no delete/deactivation endpoint in this MVP, so this
     // path is expected to be effectively unreachable in practice -- kept for
     // the same reason every other *NotFoundUseCase in this codebase has one.
-    STAFF_USER_NOT_FOUND("AUTH-003", "Cuenta de staff no encontrada", HttpStatus.NOT_FOUND);
+    STAFF_USER_NOT_FOUND("AUTH-003", "Cuenta de staff no encontrada", HttpStatus.NOT_FOUND),
+    // POST /auth/login's per-client-IP rate limit (SPEC-deployment.md).
+    TOO_MANY_LOGIN_ATTEMPTS(
+            "AUTH-004", "Demasiados intentos de inicio de sesión, intenta más tarde", HttpStatus.TOO_MANY_REQUESTS);
 
     private final String code;
     private final String message;

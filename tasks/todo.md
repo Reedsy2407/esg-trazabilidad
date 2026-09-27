@@ -373,7 +373,7 @@
 
 ## Phase 35: Login rate limiting
 
-- [ ] Task 76: AUTH-004 + ClientIpResolver (provisional rule, unit-tested) + bounded Bucket4j per-IP store (5/min, burst 5, LRU 10k) — unit tests only
+- [x] Task 76: AUTH-004 + ClientIpResolver (provisional rule) + bounded Bucket4j LoginRateLimiter — ver tasks/LEARNINGS.md#task-76
 - [ ] Task 77: LoginRateLimitFilter on POST /auth/login + IT (5×401 then 429 + Retry-After; other IP allowed; /auth/me and /auth/staff-users unaffected) — count existing ITs' and e2e logins per context first; any accommodation test-only
 
 ### Checkpoint 39: Rate limit proven locally

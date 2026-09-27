@@ -1376,3 +1376,19 @@ Memory after the export stayed at ~263 MiB, about half the limit. Every containe
 - **(b) CDS** (JVM class-data-sharing archive). This means a training run inside the image build. That run refreshes the Spring context, and with it Liquibase, which needs a database that Render's builder doesn't have. So it isn't a Dockerfile-only change.
 - **(c) Spring AOT.** It evaluates `@ConditionalOn…` at build time, which collides with the `@ConditionalOnBean`/`@ConditionalOnProperty` on shared-kernel's `OutboxDispatcher` and with auth-service's new exclusions.
 - **(d) Trimming auto-configuration / lazy init.** It trades startup time for a slower first request and later-surfacing wiring errors.
+
+## Task 76: AUTH-004, ClientIpResolver, LoginRateLimiter (unit tests only, no wiring)
+
+- `AuthErrors.TOO_MANY_LOGIN_ATTEMPTS("AUTH-004", …, 429)`.
+- **`LoginRateLimiter`: 5 tokens, greedy refill of 5 per minute** (one token every 12 s, burst 5). The key store is a `LinkedHashMap` in access order with `removeEldestEntry`, capped at 10,000 keys. Every access is `synchronized`, because access-order `get` mutates the map. `retryAfterSeconds` is rounded up, with a minimum of 1. The clock is injected (`TimeMeter`), so the refill test advances a fake clock instead of sleeping.
+- **`ClientIpResolver(headerName, trustedProxyHops)`** takes the entry `trustedProxyHops` from the **right** of the forwarding header. Proxies append on the right, so the leftmost entries are caller-controlled. It falls back to `remoteAddr` when the header is missing or blank, when there are fewer entries than hops, or when the entry is malformed. Validation is syntax-only: an IPv4 octet regex (0–255) and an RFC 4291 IPv6 text-form check (see the fix below). It never uses `InetAddress.getByName`, which would DNS-resolve arbitrary input. All header lines are joined before parsing. The production header and hop count stay **provisional** until Task 82.
+- **Bucket4j `com.bucket4j:bucket4j_jdk17-core` 8.20.0** is managed in the root pom (the spec named the artifact without a version; 8.20.0 is the latest release on Maven Central).
+
+Downloading Bucket4j hit the Avast TLS interception on the host (`PKIX path building failed`), as described in memory `maven_avast_tls`. It was fixed per session with a copied `cacerts` plus the Avast root in the scratchpad, via `MAVEN_OPTS`; the system JDK wasn't touched. The Task 74 `docker build`, by contrast, resolved fine inside the container.
+
+**`code-reviewer` FAIL, first pass (fixed):**
+- **High: a spoofable key through repeated header lines.** `getHeader()` returns only the *first* line of a repeated header. RFC 9110 lets a proxy append its own `X-Forwarded-For` line instead of concatenating, so the caller's own first line would have won with 1 trusted hop. The resolver now joins every line (`getHeaders()`), and a test sends two lines and asserts the proxy's entry wins. Task 82's header check alone would not have caught this.
+- **Low: IPv6 validation too lax.** It accepted `::::::` or `1:`. It is now an RFC 4291 text-form check: 8 hex groups, at most one `::`, an optional trailing IPv4. Tests pin both the valid and the malformed forms.
+- **Low: the LRU test didn't tell LRU from FIFO.** "a" is now touched again before "c" is inserted, so an insertion-order map would fail the test.
+
+auth-service unit tests 19 → 33 (+9 `ClientIpResolverTest`, +5 `LoginRateLimiterTest`); ITs unchanged at 29.

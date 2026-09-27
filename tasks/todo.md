@@ -384,7 +384,7 @@
 ## Phase 36: Deployment descriptors
 
 - [x] Task 78: render.yaml Blueprint (4 free web services, liveness health check, checksPass, buildFilter, esg-shared) — ver tasks/LEARNINGS.md#task-78
-- [ ] Task 79: docs/deployment.md runbook (placeholders only; same-region confirmation at account creation; esg-shared keys; bootstrap password; smoke-check list; known limitations)
+- [x] Task 79: docs/deployment.md runbook (placeholders only; no cold-start figure until Task 81) — ver tasks/LEARNINGS.md#task-79
 - [ ] Task 80: .github/dependabot.yml (maven, github-actions, docker; weekly; grouped minor+patch)
 
 ### Checkpoint 40: Repo deploy-ready

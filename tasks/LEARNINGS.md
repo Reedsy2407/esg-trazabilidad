@@ -1449,3 +1449,36 @@ The dashboard's Blueprint preview in Task 81 is the real final check. Secret swe
 - `render.yaml`'s pointer to `docs/deployment.md` is satisfied by Task 79, before the Checkpoint 40 push.
 
 The sibling `pom.xml` files are deliberately not in the filters: they only let the reactor resolve and don't change a service's jar.
+
+## Task 79: docs/deployment.md runbook
+
+A from-zero runbook with placeholders only:
+- **0. Region:** one region for everything. Oregon on Render ↔ AWS `us-west-2` on Neon and CloudAMQP, **confirmed on each provider's own region list at account creation**, per the user's non-blocking note on spec approval.
+- **1. Neon:** the direct endpoint, not `-pooler`; `sslmode=require`.
+- **2. CloudAMQP:** Little Lemur; `amqps` on 5671; vhost.
+- **3. Render:** the dashboard-managed `esg-shared` group with its 10 keys, and why it lives outside `render.yaml`. `PORT` is not set.
+- **4. Blueprint:** applying it, plus `ADMIN_BOOTSTRAP_EMAIL`, plus why the health check is liveness.
+- **5. Bootstrap password:** where it appears in Render's logs.
+- **6. Smoke check:** the 6-item list; the password is read with `read -rs` so it stays out of shell history.
+- **Known limitations:** spin-down, sleeping background jobs, 750 instance hours, CloudAMQP's 28-day idle-queue deletion, the in-memory rate limit, public Swagger.
+
+**No cold-start figure, by user decision (Checkpoint 38).** The limitation says the measured Render value "goes here once it has been measured" (Task 81).
+
+**Found while writing smoke check #5: `totalKilosCollected` is not exposed over HTTP.** `AssociationResponse` has no such field; it only exists on `AssociationEntity`, with column `total_kilos_collected`, and in the repository. So the spec's success criterion "a collection registered on public collection-service shows up in recycler-service's association kilos" **can't be checked through the public API**. The runbook checks it in Neon's SQL editor instead (`select total_kilos_collected from association where id = …`). Exposing the field in `AssociationResponse` would be an API change outside this module's scope; the user decides whether to do it.
+
+Verified against the code:
+- The bootstrap log line format, from `AdminBootstrapRunner`.
+- The outbox interval, from `OutboxDispatcher`'s `fixedDelayString` default of 5000 ms.
+- The request DTOs used in the smoke check (`CreateAssociationRequest`, `CreateNeighborRequest`, `CreateCollectionRecordRequest`, where `scheduleId` is optional).
+- `docs/deployment.md` is not gitignored; only `docs/architecture/` is.
+- A grep for real Neon/CloudAMQP/onrender hosts, amqps/postgres URLs or `password=` values finds nothing.
+
+**`code-reviewer` FAIL, first pass (fixed):**
+- **Medium: smoke check #6 could not show its own evidence.** The loop sent the body to `/dev/null`, so `AUTH-001`/`AUTH-004` never appeared. It now saves headers and body per attempt and prints status line, `code` and `Retry-After`.
+- **Medium: "the 6th gets 429" wasn't reliable.** The refill is greedy (one token back about every 12 s), and the limit counts the successful login of item 3 too. The runbook now says to wait a minute after item 3, runs 7 attempts, and expects the 429 "from about the sixth".
+- **Low:**
+  - The blocks are labelled `bash`, since `read -s` isn't POSIX `sh`.
+  - The missing-secret sentence now says `RABBITMQ_PASSWORD` only matters to the three AMQP services.
+  - Bootstrap-password recovery is spelled out: bootstrap only runs on an empty `staff_user`, so recovering means emptying the table and restarting, which also removes the other accounts.
+
+Tooling note: the Bash tool collapsed `\` inside a quoted heredoc, which turned a line continuation into a join and `tr -d ''` into a literal CR in the file. It was fixed with `chr(92)`/`chr(13)` in Python, and line endings were normalized to LF.

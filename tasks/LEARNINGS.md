@@ -1502,3 +1502,13 @@ GitHub parsing it for real (Insights → Dependency graph → Dependabot) is Tas
 ### Checkpoint 40: repo deploy-ready (bullets 1 and 3; bullet 2 needs the push)
 
 Bullet 1: `mvn -o -B verify` in a clean worktree at `9de35ca` + `.github/dependabot.yml`, the only change before `179f4b8`, with no `.env.local` and compose stopped: BUILD SUCCESS. shared-kernel 23; recycler 70 + 55; collection 74 + 60; reporting 47 + 56; auth 33 + 33; e2e-tests 2. These are the Checkpoint 39 counts: Tasks 78–80 changed no code. Bullet 3, the secret sweep, was verified by `code-reviewer` in Task 80.
+
+Checkpoint 40, bullet 2: pushed `e25badb..ac9f54e` to `origin/main`, with the user's approval. Before the push, a sweep of the added lines across all 14 commits found:
+- no value from `.env.local` in any added line (compared without printing);
+- no `${SECRET:default}` in `application.yml`, the Dockerfiles, `.env.local.example` or `render.yaml`;
+- no URL with embedded credentials and no real Neon, CloudAMQP or onrender host;
+- one new test-only secret string, in `LoginRateLimitIT`.
+
+CI (`ci.yml`, push) on `ac9f54e`: **success** — https://github.com/Reedsy2407/esg-trazabilidad/actions/runs/36293979934.
+
+**Early Dependabot evidence (part of Task 84c):** on the same commit GitHub ran three Dependabot update jobs, all `success`: "maven in /.", "github_actions in /." and "docker in /auth-service, /collection-service, /recycler-service, /reporting-service". So GitHub parsed all three ecosystems and the four `directories`. The Insights page is still to be confirmed in Task 84.

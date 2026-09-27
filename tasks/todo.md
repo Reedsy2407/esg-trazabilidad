@@ -389,7 +389,7 @@
 
 ### Checkpoint 40: Repo deploy-ready
 - [x] `mvn -B verify` green reactor-wide, clean worktree, no .env.local
-- [ ] Pushed to main (confirmed with user), CI green on that commit
+- [x] Pushed to main (confirmed with user), CI green on that commit — ac9f54e, see tasks/LEARNINGS.md "### Checkpoint 40"
 - [x] Repo-wide secret sweep clean
 
 ## Phase 37: Go live (user-driven)

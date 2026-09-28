@@ -13,10 +13,9 @@ import jakarta.servlet.http.HttpServletRequest;
  * Only the entry added by the outermost proxy we trust is reliable: counted
  * {@code trustedProxyHops} from the right.
  *
- * <p>PROVISIONAL: the header name and hop count used in production are
- * unconfirmed until they are read from a real request on Render (SPEC-deployment.md
- * Open Questions; Task 82). Anything missing or malformed falls back to the
- * socket address, never to a caller-supplied value.
+ * <p>Anything missing or malformed falls back to the socket address, never to
+ * a caller-supplied value. The production header and hop count live in
+ * RateLimitConfig.
  */
 public class ClientIpResolver {
 

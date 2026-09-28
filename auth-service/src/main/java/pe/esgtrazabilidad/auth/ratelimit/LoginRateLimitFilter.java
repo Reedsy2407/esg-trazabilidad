@@ -2,9 +2,7 @@ package pe.esgtrazabilidad.auth.ratelimit;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,9 +11,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -39,13 +34,6 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
 
     static final String LOGIN_PATH = "/auth/login";
 
-    // TEMPORARY (Task 82): logs every forwarding header Render's edge sets, to
-    // read which one and which hop carry the caller's real IP. Removed in the
-    // same task once ClientIpResolver's rule is confirmed.
-    private static final Logger log = LoggerFactory.getLogger(LoginRateLimitFilter.class);
-    private static final List<String> FORWARDING_HEADERS = List.of(
-            "X-Forwarded-For", "Forwarded", "X-Real-IP", "True-Client-IP", "CF-Connecting-IP", "X-Envoy-External-Address");
-
     private final LoginRateLimiter limiter;
     private final ClientIpResolver clientIpResolver;
     private final ObjectMapper objectMapper;
@@ -64,7 +52,6 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        logForwardingHeaders(request);
         LoginRateLimiter.Decision decision = limiter.tryConsume(clientIpResolver.resolve(request));
         if (decision.allowed()) {
             chain.doFilter(request, response);
@@ -83,17 +70,5 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
         body.put("detail", error.getMessage());
         body.put("code", error.getCode());
         objectMapper.writeValue(response.getWriter(), body);
-    }
-
-    // TEMPORARY (Task 82). CR/LF stripped: header values are caller-controlled.
-    private void logForwardingHeaders(HttpServletRequest request) {
-        StringBuilder line = new StringBuilder("task82 remoteAddr=").append(request.getRemoteAddr());
-        for (String name : FORWARDING_HEADERS) {
-            List<String> values = Collections.list(request.getHeaders(name));
-            if (!values.isEmpty()) {
-                line.append(' ').append(name).append('=').append(values);
-            }
-        }
-        log.info(line.toString().replaceAll("[\r\n]", "_"));
     }
 }

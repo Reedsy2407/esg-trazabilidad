@@ -1543,3 +1543,27 @@ The user provisioned Neon, CloudAMQP and Render, created `esg-shared` and applie
 - Neon's Connect panel has "Connection pooling" on by default; it must be switched off to get the direct host.
 - Neon's default `neondb` database is used as is; the `esg_trazabilidad` example is gone.
 - Region labels from each provider, and the measured cold start, replacing the placeholder sentence.
+
+## Task 82: Render's client-IP header confirmed, ClientIpResolver finalized
+
+**First CD use.** `3aa17f6` (temporary log on POST /auth/login) went through CI (green 01:52:59 UTC) and then `checksPass`, and was deployed to esg-auth-service only. Earlier, the `docs/`+`tasks/`-only push `03b97db` triggered **no deploy on any of the four services** (checked by the user in each service's Events tab). That is the negative `buildFilter` check.
+
+**Two real requests, 2026-09-28 ~02:09 UTC, from one machine** (wrong password on a non-existent email, both `401`). `<caller-ip>` is that machine's public IP, checked with ipify:
+
+| Request | remoteAddr | X-Forwarded-For | True-Client-IP / CF-Connecting-IP |
+|---|---|---|---|
+| normal | `172.68.174.x` | `[<caller-ip>]` | `<caller-ip>` |
+| caller sent `X-Forwarded-For: 1.2.3.4` | `172.68.175.x` | `[1.2.3.4,<caller-ip>]` | `<caller-ip>` |
+
+- Render's Cloudflare edge **appends** its observed address to the right of the caller's X-Forwarded-For. It doesn't overwrite, and it uses one comma-joined line. So a caller can only add entries on the left, and **`X-Forwarded-For` with 1 trusted hop (rightmost entry) is confirmed spoof-safe**. The constants didn't change.
+- `remoteAddr` is a Cloudflare edge node and differs per request. So it's never usable as the key, which is why it's only the fallback when the header is missing.
+- **`CF-Connecting-IP` as the primary source was evaluated and rejected** (the user asked for this evaluation):
+  - Its resistance to a caller-sent value was never tested.
+  - It is specific to Render's current CDN vendor, while X-Forwarded-For is the standard every proxy appends to. If Render's edge changes, an extra hop degrades the XFF rule to keying on the edge node's address, so all callers share the few buckets of those edge nodes. That is too strict, but not a bypass. (Both rules would be caller-controlled with no proxy in front at all; that isn't a difference between them.)
+  - A second source with a fallback is one more path to verify, for no present need.
+
+**Final change:**
+- The temporary log is removed; `LoginRateLimitFilter` is byte-identical to its state before `3aa17f6`.
+- The PROVISIONAL marks are gone from `ClientIpResolver` and `RateLimitConfig`. The config comment now records the confirmed layout and why CF-Connecting-IP isn't read.
+- New `ClientIpResolverTest` case built from **the production constants** with the observed layout: a spoofed left entry, the edge's appended entry, an edge `remoteAddr`, and caller-sent `CF-Connecting-IP`/`True-Client-IP`. It must resolve to the appended entry. Documentation addresses (RFC 5737) stand in for the real ones.
+- auth-service: unit 33 → 34, IT unchanged at 33, clean worktree without `.env.local`.

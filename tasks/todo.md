@@ -395,7 +395,7 @@
 ## Phase 37: Go live (user-driven)
 
 - [x] Task 81: go-live provisioning + runbook fixed against reality — ver tasks/LEARNINGS.md#task-81
-- [ ] Task 82: confirm Render's client-IP header against a real request; finalize ClientIpResolver + tests; remove temporary log
+- [x] Task 82: Render client-IP header confirmed (XFF, 1 trusted hop); ClientIpResolver finalized, temp log removed — ver tasks/LEARNINGS.md#task-82
 
 ### Checkpoint 41: Platform live
 - [ ] Four public URLs, same commit, liveness green in Render

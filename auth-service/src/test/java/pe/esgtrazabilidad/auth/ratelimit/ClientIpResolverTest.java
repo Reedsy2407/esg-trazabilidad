@@ -6,9 +6,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Pins the parsing rule, not Render's real header layout: that is confirmed
- * against a real deployed request in Task 82, which then updates the
- * production constants and these tests together.
+ * Pins the parsing rule, plus Render's real header layout as observed in
+ * Task 82 (documentation addresses stand in for the real ones).
  */
 class ClientIpResolverTest {
 
@@ -23,6 +22,23 @@ class ClientIpResolverTest {
             request.addHeader("X-Forwarded-For", headerValue);
         }
         return request;
+    }
+
+    @Test
+    void theProductionRuleKeysOnTheAddressRendersEdgeAppendedNotOnCallerSentHeaders() {
+        // The layout Render's Cloudflare edge produced for a caller that sent
+        // its own X-Forwarded-For: the caller's value stays on the left, the
+        // edge appends the real address on the right, and remoteAddr is an
+        // edge node. Caller-sent CF-Connecting-IP / True-Client-IP are ignored.
+        ClientIpResolver production =
+                new ClientIpResolver(RateLimitConfig.CLIENT_IP_HEADER, RateLimitConfig.TRUSTED_PROXY_HOPS);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("198.51.100.87");
+        request.addHeader("X-Forwarded-For", "192.0.2.4,203.0.113.27");
+        request.addHeader("CF-Connecting-IP", "192.0.2.8");
+        request.addHeader("True-Client-IP", "192.0.2.8");
+
+        assertThat(production.resolve(request)).isEqualTo("203.0.113.27");
     }
 
     @Test

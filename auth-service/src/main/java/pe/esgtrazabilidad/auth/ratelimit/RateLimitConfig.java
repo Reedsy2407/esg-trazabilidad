@@ -7,9 +7,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RateLimitConfig {
 
-    // PROVISIONAL (SPEC-deployment.md Open Questions): which header carries the
-    // caller's IP on Render, and how many proxy hops append to it, is confirmed
-    // against a real deployed request in Task 82 before the limiter is trusted.
+    // Confirmed against real requests on Render (Task 82): its Cloudflare edge
+    // appends the caller's address to the right of X-Forwarded-For and keeps
+    // any caller-sent entries to its left, so exactly one hop is trusted.
+    // remoteAddr is a Cloudflare edge address that varies per request.
+    // CF-Connecting-IP / True-Client-IP are deliberately not read: nothing
+    // verified that the edge overwrites a caller-sent one, and they are
+    // specific to Render's current CDN, while every proxy appends to XFF.
     static final String CLIENT_IP_HEADER = "X-Forwarded-For";
     static final int TRUSTED_PROXY_HOPS = 1;
 

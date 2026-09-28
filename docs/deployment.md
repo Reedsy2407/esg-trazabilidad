@@ -14,24 +14,26 @@ Once it is set up, deploying is automatic. Every push to `main` whose CI (`.gith
 
 The free Render region closest to Lima is in the US either way. The Blueprint uses **`oregon`**. Create Neon and CloudAMQP in the **same AWS US region** so that every database and broker round trip stays inside one region: for Oregon, that's AWS `us-west-2`.
 
-The three providers name regions differently. At account creation, **confirm on each provider's own region list** that the one you pick is really the same AWS region. If Render's region changes, change `region:` in `render.yaml` for all four services, and pick Neon and CloudAMQP to match.
+The three providers name regions differently. At account creation, **confirm on each provider's own region list** that the one you pick is really the same AWS region. For Oregon, Neon lists it as "AWS US West 2 (Oregon)" and CloudAMQP as "Amazon Web Services US-West-2 (Oregon)". If Render's region changes, change `region:` in `render.yaml` for all four services, and pick Neon and CloudAMQP to match.
 
 ## 1. Postgres on Neon
 
 1. Create a Neon project (free plan) in the region from step 0.
-2. Create a database, e.g. `esg_trazabilidad`, and note its role (user) and password.
-3. Copy the **direct** connection host, **not** the pooled one (whose host contains `-pooler`). Liquibase's lock and the services' session-level JDBC use don't belong behind a transaction-mode pooler.
+2. Use the database Neon creates by default, `neondb`. No need to create another one. Note its role (user) and password.
+3. Copy the **direct** connection host, **not** the pooled one (whose host contains `-pooler`). In Neon's **Connect** panel, the **Connection pooling** toggle is **on by default**. Switch it off to see the direct host. Liquibase's lock and the services' session-level JDBC use don't belong behind a transaction-mode pooler.
 4. Build the JDBC URL. Neon requires TLS:
 
    ```
    jdbc:postgresql://<neon-direct-host>/<database>?sslmode=require
    ```
 
+   `<database>` is `neondb` unless you created another one.
+
 No manual SQL is needed. Each service's Liquibase changelog creates its own tables on first start, including `reporting-service`'s `CREATE EXTENSION IF NOT EXISTS btree_gist`.
 
 ## 2. RabbitMQ on CloudAMQP
 
-1. Create a CloudAMQP instance on the free **Little Lemur** plan, in the region from step 0.
+1. A new CloudAMQP account must create a **Team** first: a name, accepting the terms of service, and a GDPR question. Only then can it create an instance. Create one on the free **Little Lemur** plan, in the region from step 0.
 2. From the instance details, note the host, user, password and **vhost**. On the shared plans the vhost is usually the same string as the user.
 3. The services connect over TLS (`amqps`) on port **5671**.
 
@@ -55,15 +57,19 @@ Only `recycler-service`, `collection-service` and `reporting-service` use the br
 | `RABBITMQ_VHOST` | `<cloudamqp-vhost>` |
 | `RABBITMQ_SSL_ENABLED` | `true` |
 
+Tip: the group's creation screen has an **Add from .env** button. It accepts all ten keys pasted at once as `KEY=VALUE` lines, which is faster than typing them one by one. Paste straight from a password manager, and don't save that text in a file inside the repo.
+
 `PORT` is **not** set: Render injects it, and each service reads `server.port: ${PORT:808x}`.
 
 A missing `JWT_SECRET` or `DB_PASSWORD` makes any service fail at startup on purpose, because neither has a default anywhere. A missing `RABBITMQ_PASSWORD` does the same to the three AMQP services; auth-service doesn't read it.
 
 ## 4. Apply the Blueprint
 
-1. In Render, go to **New → Blueprint**, pick the repository and branch `main`. Render reads `render.yaml` and previews four web services: `esg-recycler-service`, `esg-collection-service`, `esg-reporting-service` and `esg-auth-service`. The preview is also the final validation of `render.yaml`.
+1. In Render, go to **New → Blueprint**, pick the repository and branch `main`, and give the Blueprint a **Blueprint Name**. That's any label for the Blueprint itself, not a service name, e.g. `esg-trazabilidad`. Render reads `render.yaml` and previews four web services: `esg-recycler-service`, `esg-collection-service`, `esg-reporting-service` and `esg-auth-service`. The preview is also the final validation of `render.yaml`.
 2. When prompted for **`ADMIN_BOOTSTRAP_EMAIL`** (auth-service only, `sync: false`), enter the email of the first staff account. It is typed once here; later Blueprint syncs leave it alone.
 3. Apply. Each service builds its image from the repo root (`dockerContext: .`) and starts. Render marks it live once `GET /actuator/health/liveness` answers 200.
+
+**On the very first deploy, one service may fail its Liquibase step.** All four services share Neon's `public` schema, and with it Liquibase's `databasechangelog` and `databasechangeloglock` tables. The lock table itself (and its single row) has to be created **before** any service can take the lock. So when several services start at the same moment against an empty schema, they can race on creating it, and the loser fails to start. The fix is a **Manual Deploy** of just that service: the tables exist by then, so it waits on the lock like the others. This can only happen while the schema is empty, so it comes back only with a new or reset Neon database.
 
 Why liveness and not `/actuator/health`: when RabbitMQ or Postgres is down, the aggregate health returns 503, and a restart can't fix a provider-side outage. Liveness only asks whether the JVM itself is healthy. The aggregate `/actuator/health` stays public for diagnosis.
 
@@ -154,7 +160,7 @@ The first call to a service that is asleep waits for its cold start (see Known l
 
 ## Known limitations of the free tiers
 
-- **Spin-down and cold start.** A free Render service sleeps after 15 minutes without inbound HTTP. The next request waits for a full container and Spring Boot start on 0.1 CPU. The measured cold start on Render goes here once it has been measured.
+- **Spin-down and cold start.** A free Render service sleeps after 15 minutes without inbound HTTP. The next request waits for a full container and Spring Boot start on 0.1 CPU. **Measured on Render (2026-09-28): 103–126 s** for that first request. Render's proxy holds the connection open for that whole time and then answers 200; it does not time out. Once a service is awake, `/actuator/health` answers in 0.27–0.57 s. Class Data Sharing (CDS) or AOT could shorten the cold start, but probably not below a minute; that's an unprioritized follow-up.
 - **While a service sleeps, its background jobs don't run.** That means the outbox dispatcher, and recycler-service's certification-expiry scan. Events already published wait in CloudAMQP's durable queues until the consumer wakes. An outbox row written just before a service slept is dispatched when it next wakes. This is eventual consistency, not data loss.
 - **750 free instance hours per workspace per month**, shared by all four services. A sleeping service uses none.
 - **CloudAMQP deletes a queue that nobody has consumed from for 28 days.** The services redeclare their queues on the next start, but messages that were sitting in a deleted queue are lost. Acceptable for a demo; revisit before carrying real data.

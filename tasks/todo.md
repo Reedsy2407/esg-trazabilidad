@@ -368,7 +368,7 @@
 
 ### Checkpoint 38: Images within Render free limits (go/no-go)
 - [x] All four boot at 512m/0.1 CPU, liveness 200, OOMKilled=false
-- [ ] Measurements in LEARNINGS; if startup is unacceptable → stop and ask the user (AOT/CDS vs trimming) — **open by user decision (2026-09-26):** local 63–86 s recorded (LEARNINGS Task 75); proceed with Tasks 76–80; decide CDS/AOT/trimming only if the real Render measurement in Task 81 is unacceptable. docs/deployment.md (Task 79) gets no cold-start figure until Task 81 measures it.
+- [x] Measurements in LEARNINGS; startup accepted by user decision (2026-09-28): 103–126 s cold on Render, CDS/AOT unprioritized follow-up — see tasks/LEARNINGS.md#task-81
 - [x] No `.env.local` / host `target/` inside any image
 
 ## Phase 35: Login rate limiting
@@ -394,7 +394,7 @@
 
 ## Phase 37: Go live (user-driven)
 
-- [ ] Task 81: user provisions Neon + CloudAMQP + Render (same region confirmed), esg-shared, Blueprint, bootstrap email; agent fixes the runbook against reality; btree_gist confirmed on Neon
+- [x] Task 81: go-live provisioning + runbook fixed against reality — ver tasks/LEARNINGS.md#task-81
 - [ ] Task 82: confirm Render's client-IP header against a real request; finalize ClientIpResolver + tests; remove temporary log
 
 ### Checkpoint 41: Platform live

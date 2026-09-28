@@ -1512,3 +1512,34 @@ Checkpoint 40, bullet 2: pushed `e25badb..ac9f54e` to `origin/main`, with the us
 CI (`ci.yml`, push) on `ac9f54e`: **success** — https://github.com/Reedsy2407/esg-trazabilidad/actions/runs/36293979934.
 
 **Early Dependabot evidence (part of Task 84c):** on the same commit GitHub ran three Dependabot update jobs, all `success`: "maven in /.", "github_actions in /." and "docker in /auth-service, /collection-service, /recycler-service, /reporting-service". So GitHub parsed all three ecosystems and the four `directories`. The Insights page is still to be confirmed in Task 84.
+
+## Task 81: go-live provisioning (user-driven) + runbook fixed against reality
+
+The user provisioned Neon, CloudAMQP and Render, created `esg-shared` and applied the Blueprint. The agent measured the result and corrected the runbook.
+
+**Evidence:**
+- **Commit:** all four services Live on `ac9f54e2f4e8802a2646365b368cf4671f607413` (Checkpoint 40's commit), per the Render dashboard.
+- **Region (the spec's non-blocking note, now closed):** Neon "AWS US West 2 (Oregon)", CloudAMQP "Amazon Web Services US-West-2 (Oregon)", Render `oregon`. All three are `us-west-2`.
+- **`btree_gist` on Neon (closes the plan risk):** `select extname, extversion from pg_extension;` → `plpgsql 1.0`, `btree_gist 1.8`. reporting-service's changelog created it on hosted Postgres with no manual step.
+- **Health:** `/actuator/health` → `200 {"status":"UP"}` on all four once warm, so the DB and broker connections are up (CloudAMQP over TLS on the three AMQP services).
+- **Liquibase applied on Neon for all four schema owners** (recycler, collection, reporting, auth; plan.md says "three", but auth owns `staff_user` too). Spring Boot runs Liquibase during context startup, so a failed changelog stops the service, and all four are Live with health UP.
+- **Cold start (Checkpoint 38's go/no-go):** measured with curl on `/actuator/health/liveness`.
+  - 2026-09-28 00:53 UTC, parallel: collection 106 s, recycler 117 s, auth 126 s. Reporting was already awake from its redeploy (1.1 s).
+  - 01:16 UTC, alone, after sleeping: reporting 103 s.
+  - So **103–126 s** cold, and 0.27–0.57 s warm. Render held every connection open and answered 200, with no timeout. Local at 512m/0.1 CPU had been 63–86 s (Task 75).
+  - **User decision (2026-09-28): accepted.** CDS/AOT is an unprioritized follow-up: CDS's roughly 30–40 % saving wouldn't go below a minute, and it isn't worth the risk to Liquibase/conditional config for a cold start that already works.
+- **Deploy duration: not recorded.** The dashboard view doesn't show it. It can be read from each service's Events tab, from deploy started to live, if Checkpoint 42 needs it.
+
+**Startup incident: a Liquibase race on the empty schema.** On the first deploy, esg-reporting-service failed its Liquibase step. A manual redeploy fixed it, with no code change.
+- **Cause, inferred (the Render error text wasn't kept):** the config confirms that all four services use default Liquibase settings in one Neon database, so they share `public.databasechangelog` and `databasechangeloglock`. The lock table and its row must exist before any service can take the lock, so services starting at the same time on an empty schema race on creating it. `databasechangelog` is created under the lock, so it isn't part of the race.
+- **It won't repeat on redeploys, since the tables exist now.** It can come back only with an empty schema, i.e. a new or reset database.
+- **Also checked:** changeset ids are unique across services (all authored `esg-trazabilidad`), and the outbox tables have per-service names (`outbox_event_recycler` / `outbox_event_collection`), so sharing the changelog table causes no collisions.
+- Documented in runbook §4 as a first-deploy symptom, with the remedy. A per-service `database-change-log-table` or schema would remove the race, but it isn't needed for the demo and it would change the local/e2e topology.
+
+**Runbook corrections (seen live by the user):**
+- CloudAMQP asks for a Team first (name, terms of service, GDPR question).
+- Applying the Blueprint asks for a free-form "Blueprint Name".
+- The Environment Group screen has "Add from .env" for pasting all ten keys at once. Added as a tip, with a warning never to save that text in the repo.
+- Neon's Connect panel has "Connection pooling" on by default; it must be switched off to get the direct host.
+- Neon's default `neondb` database is used as is; the `esg_trazabilidad` example is gone.
+- Region labels from each provider, and the measured cold start, replacing the placeholder sentence.

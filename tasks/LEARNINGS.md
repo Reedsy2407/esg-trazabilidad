@@ -1528,7 +1528,7 @@ The user provisioned Neon, CloudAMQP and Render, created `esg-shared` and applie
   - 01:16 UTC, alone, after sleeping: reporting 103 s.
   - So **103–126 s** cold, and 0.27–0.57 s warm. Render held every connection open and answered 200, with no timeout. Local at 512m/0.1 CPU had been 63–86 s (Task 75).
   - **User decision (2026-09-28): accepted.** CDS/AOT is an unprioritized follow-up: CDS's roughly 30–40 % saving wouldn't go below a minute, and it isn't worth the risk to Liquibase/conditional config for a cold start that already works.
-- **Deploy duration: not recorded.** The dashboard view doesn't show it. It can be read from each service's Events tab, from deploy started to live, if Checkpoint 42 needs it.
+- **Deploy duration: waived by the user (2026-09-28)**, since no decision depends on it. The dashboard view doesn't show it; each service's Events tab would (deploy started → live).
 
 **Startup incident: a Liquibase race on the empty schema.** On the first deploy, esg-reporting-service failed its Liquibase step. A manual redeploy fixed it, with no code change.
 - **Cause, inferred (the Render error text wasn't kept):** the config confirms that all four services use default Liquibase settings in one Neon database, so they share `public.databasechangelog` and `databasechangeloglock`. The lock table and its row must exist before any service can take the lock, so services starting at the same time on an empty schema race on creating it. `databasechangelog` is created under the lock, so it isn't part of the race.

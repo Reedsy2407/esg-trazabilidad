@@ -75,7 +75,7 @@ Why liveness and not `/actuator/health`: when RabbitMQ or Postgres is down, the 
 
 ## 5. The bootstrap password
 
-On its first start against an empty `staff_user` table, auth-service creates the `ADMIN_BOOTSTRAP_EMAIL` account with a **random password, logged once at WARN level**, in a line of the form `email=<email> password=<password>`. Read it in **esg-auth-service → Logs** right after the first deploy, and store it in a password manager.
+On its first start against an empty `staff_user` table, auth-service creates the `ADMIN_BOOTSTRAP_EMAIL` account with a **random password, logged once at WARN level**, in a line of the form `email=<email> password=<password>`. Read it in **esg-auth-service → Logs** right after the first deploy, and store it in a password manager **immediately**. The window is narrow: in the real go-live, the line was no longer in the logs after a few restarts and redeploys, and the account had to be reset (below).
 
 It is never logged again, and there is no change-password endpoint yet. The bootstrap only runs when `staff_user` is completely empty. So if the password is lost, recovering it means deleting every row of `staff_user` in Neon's SQL editor and restarting esg-auth-service, which logs a new password once. That also removes every other staff account created since.
 
@@ -160,7 +160,7 @@ The first call to a service that is asleep waits for its cold start (see Known l
 
 ## Known limitations of the free tiers
 
-- **Spin-down and cold start.** A free Render service sleeps after 15 minutes without inbound HTTP. The next request waits for a full container and Spring Boot start on 0.1 CPU. **Measured on Render (2026-09-28): 103–126 s** for that first request. Render's proxy holds the connection open for that whole time and then answers 200; it does not time out. Once a service is awake, `/actuator/health` answers in 0.27–0.57 s. Class Data Sharing (CDS) or AOT could shorten the cold start, but probably not below a minute; that's an unprioritized follow-up.
+- **Spin-down and cold start.** A free Render service sleeps after 15 minutes without inbound HTTP. The next request waits for a full container and Spring Boot start on 0.1 CPU. **Measured on Render (2026-09-28): 95–126 s** for that first request. Render's proxy holds the connection open for that whole time and then answers 200; it does not time out. Once a service is awake, `/actuator/health` answers in 0.27–0.57 s. Class Data Sharing (CDS) or AOT could shorten the cold start, but probably not below a minute; that's an unprioritized follow-up.
 - **While a service sleeps, its background jobs don't run.** That means the outbox dispatcher, and recycler-service's certification-expiry scan. Events already published wait in CloudAMQP's durable queues until the consumer wakes. An outbox row written just before a service slept is dispatched when it next wakes. This is eventual consistency, not data loss.
 - **750 free instance hours per workspace per month**, shared by all four services. A sleeping service uses none.
 - **CloudAMQP deletes a queue that nobody has consumed from for 28 days.** The services redeclare their queues on the next start, but messages that were sitting in a deleted queue are lost. Acceptable for a demo; revisit before carrying real data.

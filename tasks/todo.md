@@ -403,7 +403,7 @@
 
 ## Phase 38: Production proof
 
-- [ ] Task 83: production smoke check (6 items incl. CloudAMQP TLS event path and real 429) → evidence in LEARNINGS
+- [x] Task 83: production smoke check, 6/6 green (incl. CloudAMQP event path and real 429) — ver tasks/LEARNINGS.md#task-83
 - [ ] Task 84: CD proof: buildFilter one-service deploy; checksPass negative check **off main**: throwaway branch `cd-gate-check` + draft PR (so CI runs) + one service temporarily relinked to it, red → no deploy, fix → deploy, relink to main, delete branch. Fallback to main only if Render can't relink: announce exact SHA/time of the broken push, revert immediately once confirmed. Plus Dependabot parsed.
 
 ### Checkpoint 42: Final — ready for review (M8 module close)

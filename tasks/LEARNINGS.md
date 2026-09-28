@@ -1586,3 +1586,21 @@ State after Task 82's final push (the user checked each service's Events tab; al
 **Bullet 2, "ClientIpResolver rule confirmed; temporary log gone".** The rule is confirmed in Task 82. After `0a549dd` went Live, a wrong-password login at 04:34:49 UTC (`401`) produced **no `task82` line** in esg-auth-service's logs for 04:34–04:37 UTC. That same window has the cold-start lines, so the right window was searched.
 
 **CD path, both directions:** `03b97db` (docs/tasks only) deployed nothing. `3aa17f6` and `0a549dd` (auth-service) each deployed esg-auth-service alone, after green CI. This is early evidence for Task 84's `buildFilter` check; Task 84's `checksPass` negative check is still to do.
+
+## Task 83: production smoke check (docs/deployment.md §6)
+
+Against the public URLs on 2026-09-28. Items 1 and 2 were run by the agent. Items 3–6 were run by the user (item 6 more than a minute after item 3's login) with a scratchpad script that prompts for the bootstrap password and prints only codes and ids, never the password or the token.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Liveness + Swagger UI, no token, all four (04:53 UTC) | 200 / 200 on all four. All four were asleep, so these were cold starts: auth 95 s, reporting 103 s, collection 116 s, recycler 123 s |
+| 2 | Business endpoint, no token | `401` `"code":"AUTH-000"` on recycler `/associations`, collection `/companies`, reporting `/tracked-companies` |
+| 3 | Bootstrap login | 200, token received |
+| 4 | Same token, unmodified, on the three resource services | 200 on recycler `/associations`, collection `/companies`, reporting `/tracked-companies` |
+| 5 | Event through CloudAMQP (`amqps`) | association 201, neighbor 201, collection record 201 (12.5 kg) at 05:22:56 UTC → Neon `total_kilos_collected` = **12.50** for that association. The delay from registration to the updated total wasn't measured: the query ran shortly after the record and already showed the final value |
+| 6 | 7 rapid wrong-password logins for `<bootstrap-email>`, one machine, warm instance | 1–5: `401 AUTH-001`; 6–7: `429 AUTH-004` with `Retry-After: 8`. That is exactly 5 allowed, and there was no refill shift since the instance was warm. `Retry-After: 8` is consistent with a greedy refill of one token every 12 s. This also shows the confirmed XFF rule (Task 82) keys one caller to one bucket in production |
+
+**Operational finding: the bootstrap password was lost and reset.** The one-time WARN line with the password was no longer in esg-auth-service's logs after several restarts and redeploys. The user deleted every row of `staff_user` in Neon's SQL editor and restarted esg-auth-service, which bootstrapped a new password; it is stored safely.
+- This proves the recovery procedure in runbook §5 in practice.
+- It also shows the window for capturing the line is narrow. §5 now says to store the password **immediately** after the first deploy.
+- It is further evidence for the known limitation that there is no change-password endpoint.

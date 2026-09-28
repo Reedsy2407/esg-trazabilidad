@@ -398,8 +398,8 @@
 - [x] Task 82: Render client-IP header confirmed (XFF, 1 trusted hop); ClientIpResolver finalized, temp log removed — ver tasks/LEARNINGS.md#task-82
 
 ### Checkpoint 41: Platform live
-- [ ] Four public URLs, same commit, liveness green in Render
-- [ ] ClientIpResolver rule confirmed; temporary log gone
+- [x] Four public URLs, same commit (read as: each service's buildFilter paths identical to main HEAD), liveness green in Render — see tasks/LEARNINGS.md "### Checkpoint 41"
+- [x] ClientIpResolver rule confirmed; temporary log gone — see tasks/LEARNINGS.md "### Checkpoint 41"
 
 ## Phase 38: Production proof
 

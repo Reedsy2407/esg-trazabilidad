@@ -1567,3 +1567,22 @@ The user provisioned Neon, CloudAMQP and Render, created `esg-shared` and applie
 - The PROVISIONAL marks are gone from `ClientIpResolver` and `RateLimitConfig`. The config comment now records the confirmed layout and why CF-Connecting-IP isn't read.
 - New `ClientIpResolverTest` case built from **the production constants** with the observed layout: a spoofed left entry, the edge's appended entry, an edge `remoteAddr`, and caller-sent `CF-Connecting-IP`/`True-Client-IP`. It must resolve to the appended entry. Documentation addresses (RFC 5737) stand in for the real ones.
 - auth-service: unit 33 → 34, IT unchanged at 33, clean worktree without `.env.local`.
+
+### Checkpoint 41: platform live
+
+**Bullet 1, "four public URLs, same commit, liveness green".** "Same commit" is read as: **each service runs a commit whose `buildFilter` paths are identical to `main` HEAD**, i.e. nothing under those paths changed between its Live commit and HEAD, so its image is what HEAD would build. That's the correct reading of the criterion, not an exception to it. `buildFilter` in `render.yaml` exists so that a service is *not* rebuilt for commits that can't change its image; Task 78 chose that on purpose to save build minutes and instance hours. Redeploying the other three by hand just to match SHAs would rebuild identical images, spend free-tier hours and defeat that design (user decision, 2026-09-28).
+
+State after Task 82's final push (the user checked each service's Events tab; all four Live):
+
+| Service | Commit Live | Changes to its `buildFilter` paths between the Live commit and `0a549dd` (HEAD) |
+|---|---|---|
+| esg-auth-service | `0a549dd` | none (it *is* HEAD) |
+| esg-recycler-service | `ac9f54e` | none |
+| esg-collection-service | `ac9f54e` | none |
+| esg-reporting-service | `ac9f54e` | none |
+
+`git diff --name-only ac9f54e 0a549dd` lists only `auth-service/…/ratelimit/*`, `docs/deployment.md` and `tasks/*`: nothing under the other three modules, `shared-kernel/`, the root `pom.xml` or `.dockerignore`. The last commit that touched the other three services' paths is `ea5a30f` (the root `pom.xml`, Task 76). They run `ac9f54e` only because that was HEAD when the Blueprint first synced; `ac9f54e` itself changed only `tasks/`. Liveness answered `{"status":"UP"}` on all four during this session. Most recently on auth-service at 04:36 UTC on `0a549dd`, after a cold start: its log reads `Started AuthServiceApplication in 78.591 seconds`, and the first request took 108 s end to end.
+
+**Bullet 2, "ClientIpResolver rule confirmed; temporary log gone".** The rule is confirmed in Task 82. After `0a549dd` went Live, a wrong-password login at 04:34:49 UTC (`401`) produced **no `task82` line** in esg-auth-service's logs for 04:34–04:37 UTC. That same window has the cold-start lines, so the right window was searched.
+
+**CD path, both directions:** `03b97db` (docs/tasks only) deployed nothing. `3aa17f6` and `0a549dd` (auth-service) each deployed esg-auth-service alone, after green CI. This is early evidence for Task 84's `buildFilter` check; Task 84's `checksPass` negative check is still to do.

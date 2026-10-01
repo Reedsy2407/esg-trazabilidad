@@ -408,7 +408,7 @@
 
 ### Checkpoint 42: Final — ready for review (M8 module close)
 - [ ] Every SPEC-deployment.md Success Criteria bullet re-verified with evidence
-- [ ] `mvn -B verify` green, clean worktree; CI green on final main commit
+- [x] `mvn -B verify` green, clean worktree; CI green on final main commit — 8b51a52, see tasks/LEARNINGS.md "### Checkpoint 42"
 - [ ] Render build-minute / instance-hour usage recorded
-- [ ] CAPABILITY-MAP.md status updated
+- [x] CAPABILITY-MAP.md status updated
 - [ ] Human review and approval — hard stop, never automatic

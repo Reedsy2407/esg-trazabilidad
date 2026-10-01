@@ -1653,3 +1653,37 @@ Set up on 2026-09-30 so the agent can open and close PRs and read CI without the
 - **`gh` is not the git credential helper.** Pushes and branch deletion still go through Git Credential Manager and still need the user's authorization; the PAT can't write repository contents.
 - **Expires 2026-10-30: rotate or revoke then.** Revoking it once M8 is closed is also fine.
 - Reuse in another project: same steps, with a new PAT scoped to that repository only.
+
+### Checkpoint 42: final — SPEC-deployment.md Success Criteria re-verified
+
+`SPEC-deployment.md` is user-owned and gitignored, so its checkboxes aren't ticked by the agent. This is the line-by-line re-verification.
+
+| # | Criterion (short) | Verdict | Evidence |
+|---|---|---|---|
+| 1 | Four free web services from `render.yaml`, public HTTPS, same `main` commit | ✅ with the agreed reading | Four `.onrender.com` services Live (Task 81). "Same commit" read as "each service's `buildFilter` paths identical to `main` HEAD" (user decision, "### Checkpoint 41"). Still true at `8b51a52`: Tasks 83–84 changed only `docs/`+`tasks/`, and collection's `70c6aa3` has paths identical to `main` |
+| 2 | Swagger + liveness 200 without token on all four; `401 AUTH-000` on the three resource services | ✅ by reading, pending user acceptance | Task 83 items 1–2. `/swagger-ui.html` answers `302` → `/swagger-ui/index.html` `200` on all four (production, 2026-10-01 02:06 UTC). The ITs pin the `302` on purpose, so the spec's "200" is met after the redirect |
+| 3 | Bootstrap token works unmodified on the other three | ✅ | Task 83 items 3–4 |
+| 4 | `CollectionRegisteredEvent` through CloudAMQP TLS in production | ✅ | Task 83 item 5: Neon `total_kilos_collected` = 12.50 after a 12.5 kg collection |
+| 5 | Health check is liveness; per-service IT: liveness 200 with Rabbit absent **while `/actuator/health` still reports the outage**; readiness `401` | ❌ not met, pending user decision | Health check is liveness (`render.yaml`, Render health green). The ITs pin liveness `200 UP` with no Rabbit container, and readiness `401 AUTH-000`. **The aggregate is asserted as "200 or 503", not 503**: a local compose broker on `localhost:5672` would make it UP (see Task 71). That reason holds only because the IT doesn't override the broker address: pointing `spring.rabbitmq.host`/`port` at a closed port would pin `503 DOWN` deterministically. So the gap can be closed (three test-only files, but it redeploys three services) or explicitly accepted. auth-service has no AMQP, so the clause doesn't apply there; its aggregate is pinned to `200 UP` |
+| 6 | Login `429 AUTH-004` + `Retry-After` on the 6th attempt per IP per minute (IT + real); other auth endpoints unaffected | ✅ | `LoginRateLimitIT` (6th → 429 + `Retry-After`; a correct password also refused once exhausted; another IP still allowed; other endpoints 200/201) + Task 83 item 6 |
+| 7 | No secret in `render.yaml`; `JWT_SECRET` once (`esg-shared`); `.dockerignore` keeps `.env*` out, checked on a local image | ✅ | Task 78 grep + Checkpoint 40 sweep; `JWT_SECRET` appears in `render.yaml` only in a comment; `.dockerignore` has `.env*`; Tasks 74–75's image inspection (`find / -xdev` finds no `.env*` and no host `target/`) |
+| 8 | Each image boots within free limits at `--memory=512m --cpus=0.1`, startup + memory recorded | ✅ | Tasks 74–75 (63–86 s locally, OOMKilled=false). Real Render cold start 95–126 s (Tasks 81, 83), accepted by the user |
+| 9 | Failing-CI commit not deployed; one-service commit redeploys only that service | ✅ | Task 84 (b) red `4fa2084` → no deploy, green `70c6aa3` → deploy; (a) `3aa17f6`/`0a549dd` auth-only, `03b97db` none |
+| 10 | Dependabot covers maven, github-actions, docker; parsed by GitHub | ✅ | Task 80 schema check; Checkpoint 40's three update jobs; Task 84 (c), 11 open PRs across the three ecosystems |
+| 11 | `docs/deployment.md` lets someone provision from zero, placeholders only; `.env.local.example` lists the new keys | ✅ by reading, pending user acceptance | The user (the project's author) provisioned the real platform from it (Task 81); no fresh reader has re-run it since and its five real-world gaps were fixed; placeholders only (secret sweeps); `.env.local.example` has `RABBITMQ_VHOST`, `RABBITMQ_SSL_ENABLED`, `PORT` (Task 73) |
+| 12 | `mvn -B verify` green, clean worktree, no `.env.local`; CI green on `main` | ✅ | See below |
+
+**Criterion 12.** `mvn -o -B verify` in a clean worktree at `8b51a52`, with no `.env.local` anywhere up the tree and compose stopped (Docker up, 0 containers): **BUILD SUCCESS**, 5:47 min.
+
+| Module | Unit | IT |
+|---|---|---|
+| shared-kernel | 23 | — |
+| recycler | 70 | 55 |
+| collection | 74 | 60 |
+| reporting | 47 | 56 |
+| auth | 34 | 33 |
+| e2e-tests | — | 2 |
+
+These are Checkpoint 40's counts plus Task 82's one unit test. CI on `8b51a52` (push): **success**, [run 36804181493](https://github.com/Reedsy2407/esg-trazabilidad/actions/runs/36804181493).
+
+**Recorded as reasoning, not evidence (user's note for the final report):** nobody confirmed that esg-collection-service redeployed `main`'s commit after it was relinked from `cd-gate-check` back to `main` (Task 84, step 5). That it runs code identical to `main` is inferred from `70c6aa3` and `main` having identical collection paths.

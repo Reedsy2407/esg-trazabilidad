@@ -1604,3 +1604,52 @@ Against the public URLs on 2026-09-28. Items 1 and 2 were run by the agent. Item
 - This proves the recovery procedure in runbook §5 in practice.
 - It also shows the window for capturing the line is narrow. §5 now says to store the password **immediately** after the first deploy.
 - It is further evidence for the known limitation that there is no change-password endpoint.
+
+## Task 84: CD proof (buildFilter, checksPass off main) + Dependabot
+
+**(a) `buildFilter`: accepted without a dedicated commit (user decision, 2026-09-28).** The existing evidence already covers both directions:
+- Positive: `3aa17f6` and `0a549dd` touched only `auth-service/`, and each redeployed esg-auth-service alone.
+- Negative: `03b97db` touched only `docs/`+`tasks/` and redeployed nothing (see "### Checkpoint 41").
+- A trivial extra commit would add no new evidence and would spend free-tier build minutes.
+
+**(b) `checksPass` negative check, setup:**
+- Throwaway branch `cd-gate-check`, starting from `21720d7` (the `main` HEAD at the time).
+- First commit `877aece` adds only the root `CD-GATE-CHECK.md`, which is outside every `buildFilter`. It is needed because GitHub won't open a PR between identical branches. It also means that when the failing commit is pushed, the PR already exists, so CI starts on that same push. Without a PR, the commit would have no checks at all, which Render could treat as passing.
+- Draft PR #13 `cd-gate-check → main`, marked "do not merge".
+- **Relinking esg-collection-service to `cd-gate-check` triggered a deploy by itself:** "Deploy started for 877aece … Branch updated", Live after 2m03s (2026-09-30, 7:50→7:52 PM Lima). Render deploys the new branch's tip when the branch changes, with no CI gate. So that deploy proves nothing about `checksPass`, and **`877aece` is the baseline**: pushing the failing commit must add no deploy after it. It carried the same code as `main` plus the marker, so there was no risk. Lesson for next time: relink *before* pushing anything to the throwaway branch if the relink deploy should match `main` exactly.
+
+**(b) Red CI → no deploy (the gate holds).**
+- Pushed `4fa2084` (adds `collection-service/.../cdgate/CdGateCheckTest`, which always fails, inside collection's `buildFilter`) at 2026-10-01 01:19:12 UTC.
+- CI run [36800531005](https://github.com/Reedsy2407/esg-trazabilidad/actions/runs/36800531005), triggered by the PR's `synchronize` event: **failure** at 01:21:57 UTC. Step 4 (`mvn -B verify`) failed with exactly the planted test: `CdGateCheckTest.deliberatelyFailsSoCiIsRed:16 Deliberate failure for the checksPass negative check (Task 84)`, collection-service `Tests run: 75, Failures: 1`, `BUILD FAILURE`. shared-kernel and recycler-service passed before it.
+- **No deploy of `4fa2084`.** The user checked esg-collection-service's Events at 8:25 PM Lima, four minutes after the red CI (8:21 PM). The last event was still `877aece`'s deploy at 7:52 PM.
+- Why four minutes is enough: with `0a549dd`, Render started the deploy in the same minute CI went green. If the gate had let `4fa2084` through, its deploy would already have appeared.
+
+**(b) Green CI → deploy (the gate opens).**
+- Pushed `70c6aa3` (reverts `4fa2084`, i.e. deletes `CdGateCheckTest`) at 01:27:01 UTC.
+- CI run [36801151436](https://github.com/Reedsy2407/esg-trazabilidad/actions/runs/36801151436): **success** at 01:33:52 UTC.
+- The user confirmed in Events that Render deployed `70c6aa3` from `cd-gate-check` after the green CI, and that it went Live. The exact start and Live times weren't recorded.
+- **So `checksPass` is proven in both directions on the same service and branch:** red `4fa2084` → no deploy; green `70c6aa3` → deploy. This was done off `main`, as the user decided at plan approval.
+
+**(b) Cleanup.**
+- The user relinked esg-collection-service to `main` (the header shows `main`). Whether the relink deployed anything wasn't recorded, and neither were the `70c6aa3` deploy times above. Either way the code is the same: `70c6aa3` and `main` have identical collection paths.
+- PR #13 was closed unmerged with `gh pr close` (02:01:08 UTC, `mergedAt: null`). `cd-gate-check` was then deleted locally and on `origin`, with the user's authorization, after the relink so Render never pointed at a missing branch.
+- Neither `CD-GATE-CHECK.md` nor `CdGateCheckTest` ever reached `main`.
+- **Plan step 6 and the fallback.** Render let the Blueprint-managed service be relinked from the dashboard. No Blueprint sync undid or fought the branch switch: the service stayed on `cd-gate-check` throughout and deployed `70c6aa3` from it. So the fallback (the check on `main`) wasn't needed, and nothing broken was ever pushed to `main`.
+- Plan step 5's "confirm the service redeploys main's commit" was **not confirmed**, since the relink's outcome wasn't recorded. The argument above, that the paths are identical, is reasoning, not evidence.
+
+**(c) Dependabot is parsed by GitHub:** 11 open Dependabot PRs across all three configured ecosystems (`maven`, `docker`, `github_actions`), listed with `gh pr list`. Together with the three successful update jobs seen at Checkpoint 40, that shows `.github/dependabot.yml` is live.
+
+### Tooling: GitHub CLI with a minimal fine-grained PAT (reusable setup)
+
+Set up on 2026-09-30 so the agent can open and close PRs and read CI without the unauthenticated public API (limited to 60 req/h) and without manual confirmations.
+- **`gh` 2.102.0** (`winget install GitHub.cli`), at `C:\Program Files\GitHub CLI\gh.exe`. A Claude Code session started before the install doesn't have it on its PATH, so call it by absolute path or restart the session.
+- **Fine-grained PAT**, resource owner `Reedsy2407`, *only* the `esg-trazabilidad` repository:
+  - Actions: Read-only
+  - Pull requests: Read and write
+  - Metadata: Read-only (mandatory)
+  - Everything else: No access, Contents included.
+  - "Checks" doesn't exist for personal fine-grained PATs, and Actions read is enough to see CI runs.
+- **Stored in the Windows Credential Manager**, via `gh auth login --with-token`, run by the user in their own terminal (keyring method). It is never in a file, `.env.local`, Claude Code settings or an environment variable, and never pasted in chat. The agent never runs `gh auth token`.
+- **`gh` is not the git credential helper.** Pushes and branch deletion still go through Git Credential Manager and still need the user's authorization; the PAT can't write repository contents.
+- **Expires 2026-10-30: rotate or revoke then.** Revoking it once M8 is closed is also fine.
+- Reuse in another project: same steps, with a new PAT scoped to that repository only.

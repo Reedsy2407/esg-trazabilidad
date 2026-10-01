@@ -407,8 +407,8 @@
 - [x] Task 84: CD proof — buildFilter both ways, checksPass red→no deploy / green→deploy off main (PR #13, throwaway branch deleted), Dependabot parsed — ver tasks/LEARNINGS.md#task-84
 
 ### Checkpoint 42: Final — ready for review (M8 module close)
-- [ ] Every SPEC-deployment.md Success Criteria bullet re-verified with evidence — 10 met, #5 accepted gap, #11 pending third-party validation; see tasks/LEARNINGS.md "### Checkpoint 42"
+- [x] Every SPEC-deployment.md Success Criteria bullet re-verified with evidence — 10 met, #5 accepted gap, #11 waived by user; see tasks/LEARNINGS.md "### Checkpoint 42"
 - [x] `mvn -B verify` green, clean worktree; CI green on final main commit — 8b51a52, see tasks/LEARNINGS.md "### Checkpoint 42"
 - [x] Render build-minute / instance-hour usage recorded — 1.65/750 h, 0/500 min, $0.00 (2026-09-30)
 - [x] CAPABILITY-MAP.md status updated
-- [ ] Human review and approval — hard stop, never automatic
+- [x] Human review and approval — hard stop, never automatic — M8 closed 2026-10-01. Final main: ccb05cb, CI green (run 36812617933). #5 accepted gap (503 DOWN not pinned; liveness 200 + Render health check proven). #11 waived by the user: personal project whose goal is to become a template; no third-party validation planned.

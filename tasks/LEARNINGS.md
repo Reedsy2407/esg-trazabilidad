@@ -1670,12 +1670,12 @@ Set up on 2026-09-30 so the agent can open and close PRs and read CI without the
 | 8 | Each image boots within free limits at `--memory=512m --cpus=0.1`, startup + memory recorded | ✅ | Tasks 74–75 (63–86 s locally, OOMKilled=false). Real Render cold start 95–126 s (Tasks 81, 83), accepted by the user |
 | 9 | Failing-CI commit not deployed; one-service commit redeploys only that service | ✅ | Task 84 (b) red `4fa2084` → no deploy, green `70c6aa3` → deploy; (a) `3aa17f6`/`0a549dd` auth-only, `03b97db` none |
 | 10 | Dependabot covers maven, github-actions, docker; parsed by GitHub | ✅ | Task 80 schema check; Checkpoint 40's three update jobs; Task 84 (c), 11 open PRs across the three ecosystems |
-| 11 | `docs/deployment.md` lets someone provision from zero, placeholders only; `.env.local.example` lists the new keys | ⏳ **pending validation by a third party** (user decision 2026-09-30; not counted as met) | The user (the project's author) provisioned the real platform from it (Task 81), and its five real-world gaps were fixed; no fresh reader has re-run it since; placeholders only (secret sweeps); `.env.local.example` has `RABBITMQ_VHOST`, `RABBITMQ_SSL_ENABLED`, `PORT` (Task 73) |
+| 11 | `docs/deployment.md` lets someone provision from zero, placeholders only; `.env.local.example` lists the new keys | ➖ waived by the user (2026-10-01): personal project, goal is a template | The user (the project's author) provisioned the real platform from it (Task 81), and its five real-world gaps were fixed; no fresh reader has re-run it since; placeholders only (secret sweeps); `.env.local.example` has `RABBITMQ_VHOST`, `RABBITMQ_SSL_ENABLED`, `PORT` (Task 73) |
 | 12 | `mvn -B verify` green, clean worktree, no `.env.local`; CI green on `main` | ✅ | See below |
 
 **Spec wording corrected (user request, 2026-09-30).** `SPEC-deployment.md` (gitignored, user-owned) criterion 2 now reads: "Without a token on all four public URLs, `/actuator/health/liveness` answers 200 and the Swagger UI entry point `/swagger-ui.html` redirects (302) to `/swagger-ui/index.html`, which answers 200; …". That is exactly what the ITs pin and what production returned.
 
-**Tally:** 10 met, 1 accepted gap (#5), 1 pending third-party validation (#11).
+**Tally:** 10 met, 1 accepted gap (#5), 1 waived (#11).
 
 **Render usage**, read by the user in Billing → Monthly Included Usage on **2026-09-30** (not estimated):
 
@@ -1704,3 +1704,11 @@ So the whole M8 go-live, including every deploy, the smoke check and the CD proo
 These are Checkpoint 40's counts plus Task 82's one unit test. CI on `8b51a52` (push): **success**, [run 36804181493](https://github.com/Reedsy2407/esg-trazabilidad/actions/runs/36804181493). Re-run after the user's decisions, at `c7a2b64` (the last pushed commit; the final checkpoint commit changes only `tasks/`): clean worktree, no `.env.local`, compose stopped → **BUILD SUCCESS**, 5:47 min, identical counts. CI on `c7a2b64`: **success**, [run 36811699089](https://github.com/Reedsy2407/esg-trazabilidad/actions/runs/36811699089).
 
 **Recorded as reasoning, not evidence (user's note for the final report):** nobody confirmed that esg-collection-service redeployed `main`'s commit after it was relinked from `cd-gate-check` back to `main` (Task 84, step 5). That it runs code identical to `main` is inferred from `70c6aa3` and `main` having identical collection paths.
+
+#### Post-M8 follow-ups
+
+- Add a README to the repo.
+- Pin 503 DOWN in the SecurityRetrofitIT tests when those services are next touched (#5).
+- Test Dependabot PR #6 (spring-boot 4.1.1) on a branch before merging.
+- Lesson for the template: the backend took ~200 commits; next template should be lighter (fewer services, fewer checkpoints, shorter specs).
+- PAT expires 2026-10-30; renew only if the frontend module keeps using gh.

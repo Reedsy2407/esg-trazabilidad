@@ -20,6 +20,7 @@ import pe.esgtrazabilidad.auth.staffuser.domain.StaffUser;
 import pe.esgtrazabilidad.auth.staffuser.port.out.StaffUserRepository;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -35,7 +36,8 @@ import static org.hamcrest.Matchers.notNullValue;
 @TestPropertySource(
         properties = {
             "JWT_SECRET=login-rate-limit-it-test-secret-32-bytes-min!!",
-            "esg.auth.login-rate-limit.capacity=5"
+            "esg.auth.login-rate-limit.capacity=5",
+            "CORS_ALLOWED_ORIGINS=http://localhost:4200"
         })
 class LoginRateLimitIT {
 
@@ -103,6 +105,26 @@ class LoginRateLimitIT {
                 .body("code", equalTo("AUTH-004"))
                 .body("detail", equalTo("Demasiados intentos de inicio de sesión, intenta más tarde"))
                 .body("status", equalTo(429));
+    }
+
+    @Test
+    void a429FromAnAllowedOriginCarriesTheCorsHeadersSoTheBrowserCanReadRetryAfter() {
+        // CORS runs before the rate limiter, so even its 429 is readable cross-origin.
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            wrongPasswordLoginFrom("203.0.113.60", 401);
+        }
+
+        from("203.0.113.60").header("Origin", "http://localhost:4200")
+                .contentType("application/json")
+                .body("{\"email\": \"limite@esgtrazabilidad.pe\", \"password\": \"wrong-password\"}")
+                .when()
+                .post("/auth/login")
+                .then()
+                .statusCode(429)
+                .body("code", equalTo("AUTH-004"))
+                .header("Retry-After", notNullValue())
+                .header("Access-Control-Allow-Origin", "http://localhost:4200")
+                .header("Access-Control-Expose-Headers", containsString("Retry-After"));
     }
 
     @Test

@@ -2,3 +2,4 @@ pe.esgtrazabilidad.kernel.error.GlobalExceptionHandler
 pe.esgtrazabilidad.kernel.amqp.RabbitTopologyConfig
 pe.esgtrazabilidad.kernel.amqp.RabbitListenerConfig
 pe.esgtrazabilidad.kernel.amqp.OutboxDispatcher
+pe.esgtrazabilidad.kernel.info.DeployedCommitInfoAutoConfiguration

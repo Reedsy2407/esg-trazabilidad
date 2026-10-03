@@ -34,6 +34,17 @@ management:
         # Auto-enabled only on Kubernetes; Render isn't, so turn it on explicitly.
         # /actuator/health/liveness is Render's health check (SPEC-deployment.md).
         enabled: true
+  endpoints:
+    web:
+      exposure:
+        # health is the default; info carries only the deployed commit
+        # (shared-kernel's DeployedCommitInfoContributor, for scripts/verify-deploy.sh).
+        include: health,info
+  info:
+    defaults:
+      # Every built-in info contributor (env, java, os, process, git, build) off,
+      # so the deployed commit is the whole public /actuator/info body.
+      enabled: false
 
 server:
   # Render injects PORT; locally the fixed default applies. e2e-tests' SERVER_PORT still wins.

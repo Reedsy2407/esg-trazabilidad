@@ -412,3 +412,7 @@
 - [x] Render build-minute / instance-hour usage recorded — 1.65/750 h, 0/500 min, $0.00 (2026-09-30)
 - [x] CAPABILITY-MAP.md status updated
 - [x] Human review and approval — hard stop, never automatic — M8 closed 2026-10-01. Final main: ccb05cb, CI green (run 36812617933). #5 accepted gap (503 DOWN not pinned; liveness 200 + Render health check proven). #11 waived by the user: personal project whose goal is to become a template; no third-party validation planned.
+
+## Post-M8: CORS (PASO 0) + deployed-commit check
+
+- [ ] Task 85: CORS in shared-kernel + `/actuator/info` deployed commit + `scripts/verify-deploy.sh` checking it per service (detail: tasks/plan.md "Post-M8")

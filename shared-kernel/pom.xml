@@ -82,6 +82,16 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- InfoContributor for DeployedCommitInfoContributor. provided, like the
+             security starter above: every service already brings
+             spring-boot-starter-actuator itself, and the auto-configuration is
+             @ConditionalOnClass, so a consumer without the actuator is unaffected. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-actuator</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- @SchedulerLock annotation + LockProvider interface only: the
              concrete JDBC-backed provider (shedlock-provider-jdbc-template)
              is added per-service in Tasks 27/29, wired to that service's own

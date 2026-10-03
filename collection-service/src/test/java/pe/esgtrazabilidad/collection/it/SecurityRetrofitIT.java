@@ -17,6 +17,7 @@ import pe.esgtrazabilidad.collection.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -33,8 +34,16 @@ import static org.hamcrest.Matchers.notNullValue;
  */
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@TestPropertySource(properties = "JWT_SECRET=" + TestJwtTokens.TEST_SECRET)
+@TestPropertySource(
+        properties = {
+            "JWT_SECRET=" + TestJwtTokens.TEST_SECRET,
+            "RENDER_GIT_COMMIT=" + SecurityRetrofitIT.DEPLOYED_COMMIT,
+            "CORS_ALLOWED_ORIGINS=" + SecurityRetrofitIT.ALLOWED_ORIGIN
+        })
 class SecurityRetrofitIT {
+
+    static final String DEPLOYED_COMMIT = "0123456789abcdef0123456789abcdef01234567";
+    static final String ALLOWED_ORIGIN = "http://localhost:4200";
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
@@ -112,5 +121,50 @@ class SecurityRetrofitIT {
     void readinessStillRequiresAToken() {
         // The permit is the exact liveness path, not /actuator/health/**.
         given().when().get("/actuator/health/readiness").then().statusCode(401).body("code", equalTo("AUTH-000"));
+    }
+
+    @Test
+    void actuatorInfoExposesOnlyTheDeployedCommitWithoutAToken() {
+        // scripts/verify-deploy.sh compares this to the commit CI passed. Every
+        // built-in info contributor is off, so nothing else may appear here.
+        given().when()
+                .get("/actuator/info")
+                .then()
+                .statusCode(200)
+                .body("size()", equalTo(1))
+                .body("commit", equalTo(DEPLOYED_COMMIT));
+    }
+
+    @Test
+    void theRestOfTheActuatorStaysBehindAToken() {
+        // The info permit is the exact path: exposing info must not open /actuator/**.
+        given().when().get("/actuator/env").then().statusCode(401).body("code", equalTo("AUTH-000"));
+    }
+
+    @Test
+    void aPreflightFromAnAllowedOriginGetsTheCorsHeadersAndNoAuthChallenge() {
+        given().header("Origin", ALLOWED_ORIGIN)
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "authorization,content-type")
+                .when()
+                .options("/companies")
+                .then()
+                .statusCode(200)
+                .header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+                .header("Access-Control-Allow-Methods", containsString("POST"))
+                .header("Access-Control-Max-Age", "3600");
+    }
+
+    @Test
+    void a401FromAnAllowedOriginStillCarriesTheCorsHeaders() {
+        // Without them the browser hides the 401 from the frontend entirely.
+        given().header("Origin", ALLOWED_ORIGIN)
+                .when()
+                .get("/companies")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("AUTH-000"))
+                .header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+                .header("Access-Control-Expose-Headers", containsString("Retry-After"));
     }
 }

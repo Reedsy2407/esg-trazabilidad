@@ -761,6 +761,9 @@ Task numbering continues from M7 (last was 70); phases from 33, checkpoints from
 - [ ] `CAPABILITY-MAP.md` status updated to `deployment` complete (pending human approval)
 - [ ] Human review and approval — hard stop, never automatic (CLAUDE.md gate 3)
 
+### Post-M8: CORS (PASO 0) + deployed-commit check (one backend slice)
+- [ ] Task 85: shared-kernel `CorsConfig` (`CORS_ALLOWED_ORIGINS`, default empty = none, `*` fails startup, same-host exemption for Render's own Swagger UI) wired with `http.cors()` in the four SecurityConfigs; `DeployedCommitInfoContributor` (`RENDER_GIT_COMMIT`) behind a GET-only `/actuator/info` permit with every default info contributor off; `scripts/verify-deploy.sh` checks CI, then the deployed commit per service by `buildFilter`. Verify: `mvn -B verify` reactor-wide, clean worktree; after deploy, the script against the pushed commit.
+
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |

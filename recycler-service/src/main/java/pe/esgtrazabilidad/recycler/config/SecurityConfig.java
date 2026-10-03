@@ -5,6 +5,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
@@ -30,6 +31,9 @@ public class SecurityConfig {
             HttpSecurity http, AuthenticationEntryPoint jwtAuthenticationEntryPoint, AccessDeniedHandler jwtAccessDeniedHandler)
             throws Exception {
         return http.csrf(CsrfConfigurer::disable) // stateless JWT API, no cookies/session -- CSRF doesn't apply
+                // shared-kernel's CorsConfig: runs before authentication, so preflights
+                // never get a 401 and error responses still carry the CORS headers.
+                .cors(withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.requestMatchers(
                                 // springdoc's documented entry point; it 302s into /swagger-ui/index.html.
@@ -47,6 +51,10 @@ public class SecurityConfig {
                                 // status (see auth-service's own SecurityConfig, where this was
                                 // first found and fixed).
                                 "/error")
+                        .permitAll()
+                        // The deployed commit only (scripts/verify-deploy.sh). Exact path and
+                        // GET only, like liveness: the rest of /actuator/** stays behind a token.
+                        .requestMatchers(HttpMethod.GET, "/actuator/info")
                         .permitAll()
                         .anyRequest()
                         .authenticated())

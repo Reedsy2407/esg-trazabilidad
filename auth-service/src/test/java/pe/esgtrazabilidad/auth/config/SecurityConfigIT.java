@@ -23,6 +23,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 
 /**
@@ -33,8 +34,16 @@ import static org.hamcrest.Matchers.equalTo;
  */
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@TestPropertySource(properties = "JWT_SECRET=security-config-it-test-secret-32-bytes-min!!")
+@TestPropertySource(
+        properties = {
+            "JWT_SECRET=security-config-it-test-secret-32-bytes-min!!",
+            "RENDER_GIT_COMMIT=" + SecurityConfigIT.DEPLOYED_COMMIT,
+            "CORS_ALLOWED_ORIGINS=" + SecurityConfigIT.ALLOWED_ORIGIN
+        })
 class SecurityConfigIT {
+
+    static final String DEPLOYED_COMMIT = "0123456789abcdef0123456789abcdef01234567";
+    static final String ALLOWED_ORIGIN = "http://localhost:4200";
 
     private static final String SECRET = "security-config-it-test-secret-32-bytes-min!!";
 
@@ -139,6 +148,51 @@ class SecurityConfigIT {
                 .then()
                 .statusCode(200)
                 .body(equalTo("pong"));
+    }
+
+    @Test
+    void actuatorInfoExposesOnlyTheDeployedCommitWithoutAToken() {
+        // scripts/verify-deploy.sh compares this to the commit CI passed. Every
+        // built-in info contributor is off, so nothing else may appear here.
+        given().when()
+                .get("/actuator/info")
+                .then()
+                .statusCode(200)
+                .body("size()", equalTo(1))
+                .body("commit", equalTo(DEPLOYED_COMMIT));
+    }
+
+    @Test
+    void theRestOfTheActuatorStaysBehindAToken() {
+        // The info permit is the exact path: exposing info must not open /actuator/**.
+        given().when().get("/actuator/env").then().statusCode(401).body("code", equalTo("AUTH-000"));
+    }
+
+    @Test
+    void aPreflightFromAnAllowedOriginGetsTheCorsHeadersAndNoAuthChallenge() {
+        given().header("Origin", ALLOWED_ORIGIN)
+                .header("Access-Control-Request-Method", "GET")
+                .header("Access-Control-Request-Headers", "authorization,content-type")
+                .when()
+                .options("/test/ping")
+                .then()
+                .statusCode(200)
+                .header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+                .header("Access-Control-Allow-Methods", containsString("GET"))
+                .header("Access-Control-Max-Age", "3600");
+    }
+
+    @Test
+    void a401FromAnAllowedOriginStillCarriesTheCorsHeaders() {
+        // Without them the browser hides the 401 from the frontend entirely.
+        given().header("Origin", ALLOWED_ORIGIN)
+                .when()
+                .get("/test/ping")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("AUTH-000"))
+                .header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+                .header("Access-Control-Expose-Headers", containsString("Retry-After"));
     }
 
     private String signToken(String secret, String subject) throws Exception {

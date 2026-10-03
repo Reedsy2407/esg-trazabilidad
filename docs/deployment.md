@@ -59,6 +59,8 @@ Only `recycler-service`, `collection-service` and `reporting-service` use the br
 
 Tip: the group's creation screen has an **Add from .env** button. It accepts all ten keys pasted at once as `KEY=VALUE` lines, which is faster than typing them one by one. Paste straight from a password manager, and don't save that text in a file inside the repo.
 
+`CORS_ALLOWED_ORIGINS` is optional and can be added later. It lists the browser origins allowed to call the APIs, comma separated, e.g. the frontend's `https://<frontend-host>`. Left unset, no origin is allowed. `*` makes every service fail at startup on purpose.
+
 `PORT` is **not** set: Render injects it, and each service reads `server.port: ${PORT:808x}`.
 
 A missing `JWT_SECRET` or `DB_PASSWORD` makes any service fail at startup on purpose, because neither has a default anywhere. A missing `RABBITMQ_PASSWORD` does the same to the three AMQP services; auth-service doesn't read it.
@@ -78,6 +80,10 @@ Why liveness and not `/actuator/health`: when RabbitMQ or Postgres is down, the 
 On its first start against an empty `staff_user` table, auth-service creates the `ADMIN_BOOTSTRAP_EMAIL` account with a **random password, logged once at WARN level**, in a line of the form `email=<email> password=<password>`. Read it in **esg-auth-service → Logs** right after the first deploy, and store it in a password manager **immediately**. The window is narrow: in the real go-live, the line was no longer in the logs after a few restarts and redeploys, and the account had to be reset (below).
 
 It is never logged again, and there is no change-password endpoint yet. The bootstrap only runs when `staff_user` is completely empty. So if the password is lost, recovering it means deleting every row of `staff_user` in Neon's SQL editor and restarting esg-auth-service, which logs a new password once. That also removes every other staff account created since.
+
+## 5b. Verify a deploy
+
+`scripts/verify-deploy.sh [sha]` (bash, needs `gh` logged in with read access to Actions) waits for CI on the commit, then for each service to serve the commit it should. It reads the deployed commit from the public `GET /actuator/info` (`{"commit": "<sha>"}`, from Render's `RENDER_GIT_COMMIT`). The expected commit per service is the newest one that touched its `buildFilter` paths, so a service a commit didn't touch isn't expected to redeploy. It allows up to 10 minutes for CI and up to 10 minutes per service, which covers the build and a cold start.
 
 ## 6. Smoke check
 

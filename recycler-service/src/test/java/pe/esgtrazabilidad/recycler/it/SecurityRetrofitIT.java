@@ -17,8 +17,10 @@ import pe.esgtrazabilidad.recycler.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 /**
  * This service's security perimeter over real HTTP. The two required
@@ -33,8 +35,16 @@ import static org.hamcrest.Matchers.notNullValue;
  */
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@TestPropertySource(properties = "JWT_SECRET=" + TestJwtTokens.TEST_SECRET)
+@TestPropertySource(
+        properties = {
+            "JWT_SECRET=" + TestJwtTokens.TEST_SECRET,
+            "RENDER_GIT_COMMIT=" + SecurityRetrofitIT.DEPLOYED_COMMIT,
+            "CORS_ALLOWED_ORIGINS=" + SecurityRetrofitIT.ALLOWED_ORIGIN
+        })
 class SecurityRetrofitIT {
+
+    static final String DEPLOYED_COMMIT = "0123456789abcdef0123456789abcdef01234567";
+    static final String ALLOWED_ORIGIN = "http://localhost:4200";
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
@@ -112,5 +122,74 @@ class SecurityRetrofitIT {
     void readinessStillRequiresAToken() {
         // The permit is the exact liveness path, not /actuator/health/**.
         given().when().get("/actuator/health/readiness").then().statusCode(401).body("code", equalTo("AUTH-000"));
+    }
+
+    @Test
+    void actuatorInfoExposesOnlyTheDeployedCommitWithoutAToken() {
+        // scripts/verify-deploy.sh compares this to the commit CI passed. Every
+        // built-in info contributor is off, so nothing else may appear here.
+        given().when()
+                .get("/actuator/info")
+                .then()
+                .statusCode(200)
+                .body("size()", equalTo(1))
+                .body("commit", equalTo(DEPLOYED_COMMIT));
+    }
+
+    @Test
+    void theRestOfTheActuatorStaysBehindAToken() {
+        // The info permit is the exact path: exposing info must not open /actuator/**.
+        given().when().get("/actuator/env").then().statusCode(401).body("code", equalTo("AUTH-000"));
+    }
+
+    @Test
+    void aPreflightFromAnAllowedOriginGetsTheCorsHeadersAndNoAuthChallenge() {
+        given().header("Origin", ALLOWED_ORIGIN)
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "authorization,content-type")
+                .when()
+                .options("/associations")
+                .then()
+                .statusCode(200)
+                .header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+                .header("Access-Control-Allow-Methods", containsString("POST"))
+                .header("Access-Control-Max-Age", "3600");
+    }
+
+    @Test
+    void a401FromAnAllowedOriginStillCarriesTheCorsHeaders() {
+        // Without them the browser hides the 401 from the frontend entirely.
+        given().header("Origin", ALLOWED_ORIGIN)
+                .when()
+                .get("/associations")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("AUTH-000"))
+                .header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+                .header("Access-Control-Expose-Headers", containsString("Retry-After"));
+    }
+
+    @Test
+    void aDisallowedOriginGetsNoAllowOriginHeader() {
+        given().header("Origin", "https://evil.example")
+                .header("Access-Control-Request-Method", "GET")
+                .when()
+                .options("/associations")
+                .then()
+                .header("Access-Control-Allow-Origin", nullValue());
+    }
+
+    @Test
+    void anOriginNamingThisVeryHostIsNotTreatedAsCrossOrigin() {
+        // Render's TLS proxy: the browser's Origin is https, but the service is
+        // reached over http. Spring alone would call that cross-origin and refuse
+        // it (403); Origin and Host agree, so CorsConfig exempts it and the
+        // request reaches security as before CORS existed (401 AUTH-000).
+        given().header("Origin", "https://localhost:" + port)
+                .when()
+                .get("/associations")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("AUTH-000"));
     }
 }

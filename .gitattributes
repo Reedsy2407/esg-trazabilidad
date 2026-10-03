@@ -1,0 +1,4 @@
+# Shell scripts must keep LF even on a Windows checkout (core.autocrlf=true),
+# or bash fails on the CR. Covers scripts/verify-deploy.sh and the file it reads.
+*.sh text eol=lf
+scripts/services.txt text eol=lf

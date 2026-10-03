@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -53,8 +54,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * here isn't guaranteed to carry the same ProblemDetail Jackson mixin
  * Spring MVC's own message converter registers internally, so hand-building
  * the same field names is the more predictable choice at this filter layer.
+ *
+ * <p>Also brings in CorsConfig, the shared CORS policy each service applies
+ * with http.cors().
  */
 @Configuration
+@Import(CorsConfig.class)
 public class JwtSecurityConfig {
 
     @Bean

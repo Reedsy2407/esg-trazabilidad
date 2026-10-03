@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
@@ -46,6 +47,10 @@ public class SecurityConfig {
                 .addFilterBefore(
                         new LoginRateLimitFilter(loginRateLimiter, clientIpResolver, objectMapper),
                         UsernamePasswordAuthenticationFilter.class)
+                // shared-kernel's CorsConfig: runs before authentication (and before
+                // auth-service's login rate limiter), so preflights never get a 401 and
+                // error responses still carry the CORS headers.
+                .cors(withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.requestMatchers(
                                 "/auth/login",
@@ -63,6 +68,10 @@ public class SecurityConfig {
                                 // the error page's own rendering gets blocked, masking the real
                                 // status (e.g. an intended 404 turning into a 401).
                                 "/error")
+                        .permitAll()
+                        // The deployed commit only (scripts/verify-deploy.sh). Exact path and
+                        // GET only, like liveness: the rest of /actuator/** stays behind a token.
+                        .requestMatchers(HttpMethod.GET, "/actuator/info")
                         .permitAll()
                         .anyRequest()
                         .authenticated())

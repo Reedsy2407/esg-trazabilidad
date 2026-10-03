@@ -1712,3 +1712,7 @@ These are Checkpoint 40's counts plus Task 82's one unit test. CI on `8b51a52` (
 - Test Dependabot PR #6 (spring-boot 4.1.1) on a branch before merging.
 - Lesson for the template: the backend took ~200 commits; next template should be lighter (fewer services, fewer checkpoints, shorter specs).
 - PAT expires 2026-10-30; renew only if the frontend module keeps using gh.
+
+## Task 85: CORS (PASO 0) + deployed-commit check
+
+- Environment, not code: a Testcontainers IT hung 30 min in docker-java's npipe read with 0 containers created (Rancher Desktop answered `docker info`). Fix: kill only that mvn and its fork with `taskkill`, check `docker run --rm hello-world`, then rerun with `-Dfailsafe.timeout=900` so a future hang fails instead of waiting forever.

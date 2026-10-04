@@ -1,0 +1,36 @@
+import { Routes } from '@angular/router';
+
+import { authGuard, guestGuard } from './core/auth/guards';
+
+export const routes: Routes = [
+  {
+    path: '',
+    pathMatch: 'full',
+    title: 'Preparando el sistema · Trazabilidad ESG',
+    loadComponent: () => import('./features/warmup/warmup.page').then((m) => m.WarmupPage),
+  },
+  {
+    path: 'login',
+    title: 'Iniciar sesión · Trazabilidad ESG',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/login/login.page').then((m) => m.LoginPage),
+  },
+  {
+    path: '',
+    canActivate: [authGuard],
+    loadComponent: () => import('./shell/shell').then((m) => m.Shell),
+    children: [
+      {
+        path: 'empresas',
+        title: 'Empresas · Trazabilidad ESG',
+        loadComponent: () => import('./features/companies/companies.page').then((m) => m.CompaniesPage),
+      },
+      {
+        path: 'empresas/:id',
+        title: 'Empresa · Trazabilidad ESG',
+        loadComponent: () => import('./features/companies/company.page').then((m) => m.CompanyPage),
+      },
+    ],
+  },
+  { path: '**', redirectTo: '' },
+];

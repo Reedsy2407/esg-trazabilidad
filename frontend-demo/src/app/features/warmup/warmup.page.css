@@ -1,0 +1,137 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+}
+/* Fast path: nothing shows if every service answers within SHOW_AFTER_MS. */
+.page.hidden {
+  visibility: hidden;
+}
+.sheet {
+  width: 100%;
+  max-width: 560px;
+  padding: var(--space-8);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-frame);
+}
+h1 {
+  font-size: 22px;
+}
+.sub {
+  margin: var(--space-2) 0 var(--space-5);
+  color: var(--muted);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 1px solid var(--line);
+}
+th,
+td {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: baseline;
+}
+th {
+  text-align: left;
+  font-weight: 500;
+}
+.service {
+  display: block;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+.status {
+  padding-left: var(--space-4);
+  white-space: nowrap;
+}
+.mark {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--space-2);
+  border: 1px solid currentColor;
+}
+.time {
+  width: 64px;
+  text-align: right;
+  color: var(--muted);
+}
+/* Status colors from DESIGN-BRIEF.md's palette (user decision after the F1
+   screenshot review): ready #1A7A48, waking #9A5B00, no answer #B3261E, all
+   >= 4.5:1 on the white sheet. The word always carries the meaning too. */
+tr[data-status='waking'] .status {
+  color: var(--por-vencer);
+}
+/* The one motion the brief allows besides focus and loading: the warm-up cue. */
+tr[data-status='waking'] .mark {
+  animation: breathe 1.4s ease-in-out infinite alternate;
+}
+tr[data-status='ready'] .status {
+  color: var(--vigente);
+}
+tr[data-status='ready'] .mark {
+  background: currentColor;
+}
+tr[data-status='unresponsive'] .status {
+  color: var(--vencido);
+  font-weight: 500;
+}
+@keyframes breathe {
+  from {
+    background: transparent;
+  }
+  to {
+    background: currentColor;
+  }
+}
+.retry {
+  margin-top: var(--space-5);
+}
+.retry p {
+  margin: 0 0 var(--space-3);
+}
+@media (max-width: 400px) {
+  .sheet {
+    padding: var(--space-5);
+  }
+}
+/* Phones: three columns don't fit. Each service becomes a block: name and
+   service id on their own line, then state and (while waking) the timer on
+   one wrapping line with an 8 px gap, all inside the sheet's padding. */
+@media (max-width: 639.98px) {
+  table,
+  tbody {
+    display: block;
+    position: relative; /* keeps the visually hidden header inside the sheet */
+  }
+  tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--space-2);
+    row-gap: var(--space-1);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  th,
+  td {
+    padding: 0;
+    border-bottom: 0;
+  }
+  th {
+    flex: 1 0 100%;
+  }
+  .status {
+    padding-left: 0;
+  }
+  .time {
+    width: auto;
+    text-align: left;
+  }
+}

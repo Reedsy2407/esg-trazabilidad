@@ -1,0 +1,83 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+}
+.card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-8);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-frame);
+}
+h1 {
+  color: var(--petrol);
+  font-size: 22px;
+}
+.lead {
+  margin: var(--space-1) 0 var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.notice {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--petrol);
+  border-radius: var(--radius-data);
+}
+.field {
+  margin-bottom: var(--space-4);
+}
+label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: 14px;
+  font-weight: 500;
+}
+input {
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-input);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+input[aria-invalid='true'] {
+  border-color: var(--vencido);
+}
+.field-error,
+.form-error {
+  margin: var(--space-2) 0 0;
+  color: var(--vencido);
+  font-size: 14px;
+}
+.form-error {
+  margin: 0 0 var(--space-4);
+}
+/* Always in the DOM (a live region that appears with its text isn't reliably announced). */
+.lock-live:empty {
+  margin: 0;
+}
+.lock-live {
+  margin: 0 0 var(--space-1);
+  color: var(--por-vencer);
+  font-weight: 500;
+}
+.lock {
+  margin: 0 0 var(--space-4);
+  color: var(--muted);
+  font-size: 14px;
+}
+.submit {
+  width: 100%;
+  margin-top: var(--space-2);
+}
+@media (max-width: 400px) {
+  .card {
+    padding: var(--space-5);
+  }
+}

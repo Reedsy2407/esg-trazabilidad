@@ -18,3 +18,10 @@ target/
 .idea/
 *.iml
 .vscode/
+
+# Impeccable design skill artifacts (see frontend-demo/design/TOOLING.md)
+.impeccable/
+/PRODUCT.md
+/DESIGN.md
+# Stitch prompt drafts stay local (user decision)
+frontend-demo/design/STITCH-PROMPTS.md

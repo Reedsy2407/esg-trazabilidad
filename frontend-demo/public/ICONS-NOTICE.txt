@@ -1,0 +1,8 @@
+Icons: "chevron_right" from Material Symbols (outlined), by Google.
+https://github.com/google/material-design-icons
+Licensed under the Apache License, Version 2.0:
+https://www.apache.org/licenses/LICENSE-2.0
+The SVG path is inlined in src/app/shared/chevron-icon.ts.
+
+Fonts: IBM Plex Sans and IBM Plex Mono, by IBM. Licensed under the SIL Open
+Font License 1.1 (see fonts/OFL-IBM-Plex-LICENSE.txt).

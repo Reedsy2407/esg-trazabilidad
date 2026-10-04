@@ -415,4 +415,13 @@
 
 ## Post-M8: CORS (PASO 0) + deployed-commit check
 
-- [ ] Task 85: CORS in shared-kernel + `/actuator/info` deployed commit + `scripts/verify-deploy.sh` checking it per service (detail: tasks/plan.md "Post-M8")
+- [x] Task 85: CORS + `/actuator/info` deployed commit + `scripts/verify-deploy.sh` (d21cdc3, verified live on all four) — ver tasks/LEARNINGS.md#task-85
+
+## Frontend
+
+- [x] F1: Angular 21 skeleton — Preparando el sistema, Login, Empresas, interceptors/guard, proxy, Vitest + Playwright — ver tasks/LEARNINGS.md#frontend
+- [ ] F2: Ficha de empresa — resumen del período, gráfica de 12 períodos, tabla de certificados
+- [ ] F3: Detalle del certificado (elemento firma) + descargas PDF/CSV
+- [ ] F4: Alta de recojo (vecino, asociación, fecha, kg, cronograma opcional)
+- [ ] F5: Asociaciones (lista con estado ACTIVE/SUSPENDED)
+- [ ] F6: Despliegue del frontend + `CORS_ALLOWED_ORIGINS` en esg-shared + CI del frontend

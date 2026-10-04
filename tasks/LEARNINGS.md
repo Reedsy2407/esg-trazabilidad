@@ -1716,3 +1716,56 @@ These are Checkpoint 40's counts plus Task 82's one unit test. CI on `8b51a52` (
 ## Task 85: CORS (PASO 0) + deployed-commit check
 
 - Environment, not code: a Testcontainers IT hung 30 min in docker-java's npipe read with 0 containers created (Rancher Desktop answered `docker info`). Fix: kill only that mvn and its fork with `taskkill`, check `docker run --rm hello-world`, then rerun with `-Dfailsafe.timeout=900` so a future hang fails instead of waiting forever.
+
+## Frontend
+
+### F1: Angular skeleton (warm-up, login, companies)
+
+**Versions are pinned exactly** (`package.json` + lockfile, installed with `npm ci`):
+- Angular 21.2.25: framework packages; `@angular/cli`/`build` are 21.2.24 because tooling and framework release on different patch numbers.
+- TypeScript 5.9.3, RxJS 7.8.2, Vitest 4.0.18 + jsdom 28.1.0, angular-eslint 21.4.0 (ESLint 10.12.0, typescript-eslint 8.59.2), Playwright 1.63.0.
+- **No zone.js:** Angular 21 creates apps zoneless by default.
+
+**Decisions and traps:**
+- **Angular 22 needs Node ≥ 22.22.3.** This machine has 22.19.0, so the user chose 21 LTS and Node stays as it is.
+- **npm 10.9 crashes** (`Cannot read properties of null (reading 'edgesOut')`) resolving `vitest@4.1.x`'s optional peer `@vitest/browser-playwright@5`. Pinning `vitest@4.0.18`, the latest 4.0.x, avoids it without `--legacy-peer-deps`.
+- **Brief vs API:** the brief said login errors are `AUTH-000`, but wrong credentials return `AUTH-001` (`AuthErrors.java`). The brief was corrected at the user's request. The frontend treats AUTH-001 as a form message, AUTH-004 as a `Retry-After` countdown announced once, and AUTH-000 or any other 401 outside the login as "clear the session and go to the login".
+- **Port 4200 is in this Windows host's Hyper-V/WSL2 reserved range** (3339–4438, `listen EACCES`; see memory `hyperv_excluded_port_range`). `ng serve` uses 5200 and Playwright 5201. `CORS_ALLOWED_ORIGINS=http://localhost:4200` in `.env.local.example` is only an example; local dev uses the proxy anyway.
+- **The dev proxy must drop the `Origin` header.** Otherwise the backend sees `http://localhost:5200` as a foreign origin and refuses it with 403, since its allow-list is empty. That's why `proxy.conf.mjs` is JS (`configure` hook), not JSON.
+- **Production calls the services cross-origin.** Each needs the frontend origin in `CORS_ALLOWED_ORIGINS`, and `Retry-After` is readable only because the backend exposes it (Task 85).
+- **Warm-up as the entry screen:** a `forkJoin` of the four public liveness calls.
+  - It only shows if they take more than 1.5 s, then routes to `/login` (or `/empresas` with a session).
+  - Any failure, network/CORS included, counts as "Despertando" until 180 s; only then "Sin respuesta" and "Reintentar", which retries only the failed services.
+  - The live region text changes per state change, never per second.
+- **JWT** in `sessionStorage` (never `localStorage`). The email in the top bar is the token's real `email` claim (`JwtIssuer`).
+- **Company row target:** `GET /tracked-companies/{id}` exists, so the page shows only the brief's ficha header plus an explicit "next version" line. The period summary, chart and certificates are F2. The back link keeps the list page via router state.
+- **Fonts:** IBM Plex Sans 400/500/600 + Mono 400/500, official `@ibm/plex-*` Latin-1 woff2 subsets (`npm pack`, not installed). The subset covers á é í ó ú ñ ¿ ¡ – ’ …, about 100 KB in total. OFL license next to the fonts. One Material Symbols icon inlined as SVG (Apache-2.0, `public/ICONS-NOTICE.txt`).
+- **Form-field border token `--line-input: #7A847F`:** 3.86:1 on surface and 3.56:1 on paper (WCAG ≥ 3:1). The rest of the palette was checked for AA with the same formula.
+- **es-PE** from Angular's own locale data, verified: `12,480.50`; dates `dd/MM/yyyy` at `-0500` (Lima has no DST).
+- **Companies under 640 px are stacked cards** (name + status, RUC below; the whole card is the link, ≥ 44 px). That came from the user's screenshot review: the brief forbids sideways scrolling on a phone, which the earlier table-in-a-scroll-box still did. An e2e test pins `scrollWidth <= innerWidth` at 360 px; a negative control (table back, unclipped) made it fail at 592.
+- **Warm-up rows stack under 640 px** (name + id, then state and timer on one wrapping line, 8 px gap): at 360 px the three columns had glued "Despertando00:03" against the sheet edge. An e2e test checks the timer's right edge stays inside the sheet's padding; a negative control with the old CSS failed it (341 > 323).
+- **Trap: a `visually-hidden` (absolute) span inside a horizontally scrolling table escaped the scroll box** and widened the whole page. The wrapper is `position: relative`.
+- **Trap: a live region with `display: none` while empty** isn't reliably announced when its text appears. It stays in the DOM, just collapsed.
+- **Test traps:**
+  - `HttpTestingController.match()` also returns requests already cancelled by `timeout`; filter `!request.cancelled`.
+  - A cold `ng serve` makes Playwright's first loads slow (Vite pre-bundling plus a reload), so `expect.timeout` is 15 s and there are 2 workers.
+
+**Tests:**
+- Vitest, 23 tests: error mapping and `Retry-After` parsing; interceptors (token only to our services, never to login/actuator/foreign hosts; 401 AUTH-000 → clear + login; login 401 left to the form; 429); guards; login (validation, success, AUTH-001, AUTH-004 countdown announced once, network failure); warm-up (fast path hidden, 180 s → Retry → recovers, network failure counts as waking).
+- Playwright, 6 flows + 5 AXE checks (companies cards and warm-up also at 360 px), with the backend faked by `page.route` using the real DTO shapes and error codes (`e2e/backend.ts`).
+- AXE: `@axe-core/playwright` 4.13.0 (user-approved), WCAG 2.1 A/AA on warm-up, login (empty and with errors) and companies. Serious/critical fail the test, minor ones are annotated; the result is 0 violations. A throwaway negative control (unlabelled input + low contrast) proved AXE reports `label`/`color-contrast`.
+- **The token check is by exact base + `/` or `?`** (`matchesServiceBase`), not `startsWith(base)`, so `https://esg-auth-service.onrender.com.otro.com/x` never gets the token; unit-tested with the literal production URLs (user request).
+
+**Impeccable review (degraded):** the `impeccable` launcher would download its native engine, which TOOLING.md forbids. So the detector (Assessment B) didn't run, and the review used only its written playbooks.
+- Assessment A, an isolated sub-agent: 27/40.
+- Fixed in one batch:
+  - colored `border-left` callouts → 1px frames;
+  - the kicker above the login heading;
+  - selection, caret and scrollbar colors;
+  - a hover color token;
+  - a focusable, labelled table scroll region;
+  - the chevron hidden under 640 px;
+  - the company page's empty canvas, retry and back-to-page;
+  - focus moves to `<main>` on navigation.
+- Left on purpose: the service ids in the warm-up rows (the reference shows them); no search (the API has no filter).
+- **Warm-up status colors follow the brief, overruling the review** (user decision after the screenshots): Listo `--vigente`, Despertando `--por-vencer`, Sin respuesta `--vencido` (5.36 / 5.43 / 6.54 : 1 on white). A ready service shows no timer.

@@ -1,0 +1,39 @@
+<main class="page" [class.hidden]="!visible()">
+  <section class="sheet" aria-labelledby="warmup-title">
+    <h1 id="warmup-title">Preparando el sistema</h1>
+    <p class="sub">Los servicios se suspenden cuando nadie los usa. El primer arranque puede tardar hasta 2 minutos.</p>
+
+    <p class="visually-hidden" role="status" aria-live="polite">{{ visible() ? summary() : '' }}</p>
+
+    <table>
+      <caption class="visually-hidden">Estado de cada servicio</caption>
+      <thead class="visually-hidden">
+        <tr>
+          <th scope="col">Servicio</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Tiempo</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.key) {
+          <tr [attr.data-status]="row.status">
+            <th scope="row">
+              {{ row.label }}
+              <span class="service mono">{{ row.service }}</span>
+            </th>
+            <td class="status"><span class="mark" aria-hidden="true"></span>{{ statusText(row.status) }}</td>
+            <!-- A ready service shows only its state: its elapsed time is no longer news. -->
+            <td class="time mono">{{ row.status === 'ready' ? '' : elapsed(row) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    @if (anyUnresponsive()) {
+      <div class="retry">
+        <p>Un servicio no respondió en 3 minutos. Puede seguir arrancando: vuelve a intentarlo.</p>
+        <button type="button" class="btn btn-primary" (click)="retry()">Reintentar</button>
+      </div>
+    }
+  </section>
+</main>

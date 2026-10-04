@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { Page, expect, test } from '@playwright/test';
 
-import { EMAIL, PASSWORD, fakeBackend } from './backend';
+import { COMPANIES, EMAIL, PASSWORD, fakeBackend } from './backend';
 
 /**
  * AXE (WCAG 2.1 A/AA) on the three screens of this slice. Serious and
@@ -77,7 +77,24 @@ test('a11y: "Preparando el sistema" on a 360 px phone while a service wakes up',
     await page.route(`**/svc/${service}/actuator/health/liveness`, (r) => r.fulfill({ status: 200, body: '{"status":"UP"}' }));
   }
   await page.goto('/');
-  await expect(page.locator('tr[data-status="waking"]')).toContainText('Despertando');
+  // Only collection-service is slow; the others may still be in flight for a moment, so target its row.
+  await expect(page.locator('tr[data-status="waking"]').filter({ hasText: 'collection-service' })).toContainText('Despertando');
 
   await checkA11y(page, 'warm-up (360 px)');
 });
+
+for (const width of [1280, 360]) {
+  test(`a11y: company page at ${width} px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await fakeBackend(page);
+    await page.goto('/login');
+    await page.getByLabel('Correo electrónico').fill(EMAIL);
+    await page.getByLabel('Contraseña').fill(PASSWORD);
+    await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+    await expect(page).toHaveURL(/\/empresas$/);
+    await page.goto(`/empresas/${COMPANIES[0].id}`);
+    await expect(page.locator('app-kilos-chart rect.bar')).toHaveCount(12);
+
+    await checkA11y(page, `company (${width} px)`);
+  });
+}

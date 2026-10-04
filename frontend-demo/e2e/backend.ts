@@ -40,11 +40,36 @@ const problem = (route: Route, status: number, code: string, detail: string, hea
     body: JSON.stringify({ type: 'about:blank', title: '', status, detail, code }),
   });
 
+/** 14 whole-month certificates for COMPANIES[0] (Nov 2023 - Dec 2024), shaped like EsgCertificateResponse. */
+export const CERTIFICATES = Array.from({ length: 14 }, (_, i) => {
+  const year = 2023 + Math.floor((10 + i) / 12);
+  const month = ((10 + i) % 12) + 1;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const mm = String(month).padStart(2, '0');
+  const issued = new Date(Date.UTC(year, month, 5, 15, 0, 0)); // the 5th of the next month
+  return {
+    id: `0192f3a8-c000-7000-8000-${String(i).padStart(12, '0')}`,
+    trackedCompanyId: COMPANIES[0].id,
+    associationId: COMPANIES[0].associationId,
+    companyName: COMPANIES[0].name,
+    companyRuc: COMPANIES[0].ruc,
+    periodStart: `${year}-${mm}-01`,
+    periodEnd: `${year}-${mm}-${lastDay}`,
+    kilosTrazados: [8420.25, 9105.5, 7988, 10230.75, 11002.4, 9876.1, 12480.5, 13050, 11870.3, 12210.8, 14105.6, 12990.45, 13420.1, 12480.5][i],
+    hierarchyCompliancePercent: [82.5, 84, 79.5, 86.2, 88, 85.5, 87.5, 90.1, 89.3, 91, 92.4, 90.8, 93.2, 87.5][i],
+    issuedAt: issued.toISOString(),
+  };
+}).reverse(); // the API lists newest issued first
+
 export interface BackendOptions {
   /** Answer the login with 429 AUTH-004 and this Retry-After. */
   lockedFor?: number;
   /** Reject every token on protected endpoints (expired session). */
   rejectTokens?: boolean;
+  /** GET .../certificates fails with this status (partial failure of the company page). */
+  certificatesStatus?: number;
+  /** The summary answers hierarchyCompliancePercent: null (no SIGERSOL sync covers the period). */
+  summaryComplianceNull?: boolean;
 }
 
 export async function fakeBackend(page: Page, options: BackendOptions = {}): Promise<void> {
@@ -71,18 +96,39 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     if (options.rejectTokens || authorization === undefined || !authorization.startsWith('Bearer ')) {
       return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
     }
+    const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     const url = new URL(route.request().url());
-    const id = url.pathname.split('/tracked-companies/')[1];
-    if (id !== undefined) {
-      const company = COMPANIES.find((c) => c.id === id);
-      return company === undefined
-        ? problem(route, 404, 'RPT-001', 'Empresa no encontrada en reporting-service')
-        : route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(company) });
+    const [, id, sub] = /\/tracked-companies(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(url.pathname) ?? [];
+    if (id === undefined) {
+      return json({ content: COMPANIES, page: 0, size: 20, totalElements: COMPANIES.length, totalPages: 1 });
     }
-    return route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ content: COMPANIES, page: 0, size: 20, totalElements: COMPANIES.length, totalPages: 1 }),
-    });
+    const company = COMPANIES.find((c) => c.id === id);
+    if (company === undefined) {
+      return problem(route, 404, 'RPT-001', 'Empresa no encontrada en reporting-service');
+    }
+    if (sub === undefined) {
+      return json(company);
+    }
+    if (sub === 'certificates') {
+      if (options.certificatesStatus !== undefined) {
+        return problem(route, options.certificatesStatus, 'X-500', 'Error interno');
+      }
+      const content = company.id === COMPANIES[0].id ? CERTIFICATES : [];
+      return json({ content, page: 0, size: 20, totalElements: content.length, totalPages: content.length === 0 ? 0 : 1 });
+    }
+    if (sub === 'certificate-summary') {
+      // A live recomputation of that period: here, the certificate's own figures.
+      const periodStart = url.searchParams.get('periodStart');
+      const periodEnd = url.searchParams.get('periodEnd');
+      const certified = CERTIFICATES.find((c) => c.periodStart === periodStart && c.periodEnd === periodEnd);
+      return json({
+        trackedCompanyId: company.id,
+        periodStart,
+        periodEnd,
+        kilosTrazados: certified?.kilosTrazados ?? 0,
+        hierarchyCompliancePercent: options.summaryComplianceNull ? null : (certified?.hierarchyCompliancePercent ?? null),
+      });
+    }
+    return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');
   });
 }

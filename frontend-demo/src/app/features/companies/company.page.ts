@@ -1,9 +1,13 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
+import { loadErrorMessage } from '../../shared/error-message';
+import { formatInstantDate, formatKg, formatPercent, periodLabel } from '../../shared/format';
+import { buildKilosChart, latestCertificate } from './kilos-chart';
+import { KilosChart } from './kilos-chart.component';
 import { StatusLabel } from './status-label';
 
 /** The list page the row was opened from (router state), so "Volver" returns to it. */
@@ -17,60 +21,21 @@ function originPage(): number | null {
 }
 
 /**
- * Where a company row leads. This slice only has the ficha's header (brief:
- * back link, name, RUC in mono, status) from GET /tracked-companies/{id};
- * the period summary, chart and certificates table come in the next slice,
- * and the page says so instead of ending in a blank canvas.
+ * Ficha de empresa (DESIGN-BRIEF.md, round-3 rules): header, period summary,
+ * one 12-period chart, certificates table. Each block loads on its own, so a
+ * failing certificates call never takes the header or the summary down.
+ *
+ * - Header: GET /tracked-companies/{id}.
+ * - Chart and table: GET .../certificates, first page (20, newest issued first).
+ * - Resumen del período: GET .../certificate-summary for the latest certified
+ *   period (the chart's highlighted bar). Without certificates it isn't
+ *   called at all: the block says there are none yet.
  */
 @Component({
   selector: 'app-company-page',
-  imports: [RouterLink, StatusLabel],
-  template: `
-    <a class="back" routerLink="/empresas" [queryParams]="backParams">Volver a empresas</a>
-    <div aria-live="polite" [attr.aria-busy]="company.isLoading()">
-      @if (company.hasValue()) {
-        @let c = company.value();
-        <header class="head">
-          <h1>{{ c.name }}</h1>
-          <p class="meta">
-            <span>RUC <span class="mono">{{ c.ruc }}</span></span>
-            <app-status-label [status]="c.status" />
-          </p>
-        </header>
-        <p class="next">El resumen del período y los certificados de esta empresa se mostrarán aquí en la próxima versión.</p>
-      } @else if (company.error(); as error) {
-        <div class="problem" role="alert">
-          @if (isNotFound(error)) {
-            <p>Esta empresa no existe o ya no está registrada.</p>
-            <a routerLink="/empresas">Ver todas las empresas</a>
-          } @else {
-            <p>No se pudo cargar la empresa.</p>
-            <button type="button" class="btn" (click)="company.reload()">Volver a intentar</button>
-          }
-        </div>
-      } @else {
-        <div class="head" aria-hidden="true">
-          <span class="bone title"></span>
-          <span class="bone"></span>
-        </div>
-        <p class="visually-hidden">Cargando empresa</p>
-      }
-    </div>
-  `,
-  styles: `
-    .back { display: inline-block; margin-bottom: var(--space-5); }
-    .head { padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); }
-    h1 { font-size: 26px; }
-    .meta { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: var(--space-2) 0 0; color: var(--muted); }
-    .next { margin: var(--space-5) 0 0; color: var(--muted); max-width: 64ch; }
-    .bone {
-      display: block; width: 160px; height: 12px; margin-top: var(--space-3);
-      background: var(--line); border-radius: var(--radius-data);
-      animation: pulse 1.2s ease-in-out infinite alternate;
-    }
-    .bone.title { width: 320px; max-width: 100%; height: 22px; margin-top: 0; }
-    @keyframes pulse { from { opacity: 0.45; } to { opacity: 1; } }
-  `,
+  imports: [RouterLink, StatusLabel, KilosChart],
+  templateUrl: './company.page.html',
+  styleUrl: './company.page.css',
 })
 export class CompanyPage {
   private readonly api = inject(BackendApi);
@@ -83,7 +48,65 @@ export class CompanyPage {
     stream: ({ params: id }) => this.api.trackedCompany(id),
   });
 
-  protected isNotFound(error: unknown): boolean {
+  protected readonly certificates = rxResource({
+    params: () => this.id(),
+    stream: ({ params: id }) => this.api.certificates(id),
+  });
+
+  /** The latest certified period; null while loading, on error or without certificates. */
+  protected readonly latest = computed(() =>
+    this.certificates.hasValue() ? latestCertificate(this.certificates.value().content) : null,
+  );
+
+  /** Idle (never requested) until there is a latest certificate to summarise. */
+  protected readonly summary = rxResource({
+    params: () => {
+      const latest = this.latest();
+      return latest === null
+        ? undefined
+        : { id: this.id(), periodStart: latest.periodStart, periodEnd: latest.periodEnd };
+    },
+    stream: ({ params: p }) => this.api.certificateSummary(p.id, p.periodStart, p.periodEnd),
+  });
+
+  protected readonly summaryLines = computed(() => {
+    if (!this.summary.hasValue()) {
+      return null;
+    }
+    const s = this.summary.value();
+    return {
+      period: periodLabel(s.periodStart, s.periodEnd),
+      kilos: formatKg(s.kilosTrazados),
+      compliance: formatPercent(s.hierarchyCompliancePercent),
+    };
+  });
+
+  protected readonly rows = computed(() => {
+    if (!this.certificates.hasValue()) {
+      return null;
+    }
+    const page = this.certificates.value();
+    return {
+      total: page.totalElements,
+      items: page.content.map((c) => ({
+        id: c.id,
+        period: periodLabel(c.periodStart, c.periodEnd),
+        kilos: formatKg(c.kilosTrazados),
+        compliance: formatPercent(c.hierarchyCompliancePercent),
+        issued: formatInstantDate(c.issuedAt),
+      })),
+    };
+  });
+
+  protected readonly chart = computed(() =>
+    this.certificates.hasValue() ? buildKilosChart(this.certificates.value().content) : null,
+  );
+
+  protected companyNotFound(error: unknown): boolean {
     return error instanceof ApiError && error.status === 404;
+  }
+
+  protected errorText(error: unknown, what: string): string {
+    return loadErrorMessage(error, what);
   }
 }

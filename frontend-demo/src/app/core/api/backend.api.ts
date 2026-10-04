@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { LoginRequest, LoginResponse, Page, TrackedCompany } from './api.types';
+import { CertificateSummary, EsgCertificate, LoginRequest, LoginResponse, Page, TrackedCompany } from './api.types';
 
 const { auth, reporting } = environment.services;
 
@@ -24,6 +24,24 @@ export class BackendApi {
 
   trackedCompany(id: string): Observable<TrackedCompany> {
     return this.http.get<TrackedCompany>(`${reporting}/tracked-companies/${encodeURIComponent(id)}`);
+  }
+
+  /** Most recently issued first, 20 per page (backend default). */
+  certificates(companyId: string, page = 0): Observable<Page<EsgCertificate>> {
+    const params = new HttpParams().set('page', page).set('size', 20);
+    return this.http.get<Page<EsgCertificate>>(
+      `${reporting}/tracked-companies/${encodeURIComponent(companyId)}/certificates`,
+      { params },
+    );
+  }
+
+  /** Dates as "yyyy-MM-dd" (LocalDate). */
+  certificateSummary(companyId: string, periodStart: string, periodEnd: string): Observable<CertificateSummary> {
+    const params = new HttpParams().set('periodStart', periodStart).set('periodEnd', periodEnd);
+    return this.http.get<CertificateSummary>(
+      `${reporting}/tracked-companies/${encodeURIComponent(companyId)}/certificate-summary`,
+      { params },
+    );
   }
 
   liveness(base: string): Observable<unknown> {

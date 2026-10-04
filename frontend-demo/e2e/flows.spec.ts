@@ -112,7 +112,8 @@ test('on a 360 px phone the warm-up rows stack: state and timer stay inside the 
     );
   }
   await page.goto('/');
-  const waking = page.locator('tr[data-status="waking"]');
+  // Target the slow service's row: the other three may still be in flight for a moment.
+  const waking = page.locator('tr[data-status="waking"]').filter({ hasText: 'collection-service' });
   await expect(waking).toContainText('Despertando');
   await expect(waking.locator('.time')).toHaveText(/^\d\d:\d\d$/);
 
@@ -120,8 +121,11 @@ test('on a 360 px phone the warm-up rows stack: state and timer stay inside the 
     const sheet = document.querySelector('.sheet') as HTMLElement;
     const style = getComputedStyle(sheet);
     const sheetBox = sheet.getBoundingClientRect();
-    const status = document.querySelector('tr[data-status="waking"] .status') as HTMLElement;
-    const time = document.querySelector('tr[data-status="waking"] .time') as HTMLElement;
+    const row = Array.from(document.querySelectorAll('tr[data-status="waking"]')).find((tr) =>
+      tr.textContent?.includes('collection-service'),
+    ) as HTMLElement;
+    const status = row.querySelector('.status') as HTMLElement;
+    const time = row.querySelector('.time') as HTMLElement;
     return {
       scrollWidth: document.documentElement.scrollWidth,
       innerWidth: window.innerWidth,

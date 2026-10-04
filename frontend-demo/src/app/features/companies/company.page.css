@@ -1,0 +1,199 @@
+.back {
+  display: inline-block;
+  margin-bottom: var(--space-5);
+}
+.head {
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--line);
+}
+h1 {
+  font-size: 26px;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+}
+h2 {
+  font-size: 16px;
+  margin-bottom: var(--space-3);
+}
+.sec {
+  margin-top: var(--space-8);
+}
+
+/* Chart and summary side by side, stacked on narrow screens. */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+  gap: var(--space-6);
+}
+@media (max-width: 819.98px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.panel {
+  min-width: 0;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-frame);
+}
+
+/* Resumen del período: exactly three lines, values in mono. */
+.lines {
+  margin: 0;
+}
+.lines > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+}
+.lines > div:last-child {
+  border-bottom: 0;
+}
+.lines dt {
+  color: var(--muted);
+}
+.lines dd {
+  margin: 0;
+  text-align: right;
+}
+
+/* Certificates: a table from 640 px, stacked cards below (no sideways scrolling). */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+th {
+  height: 44px;
+  padding: 0 var(--space-4);
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+td {
+  height: 48px;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+.num {
+  text-align: right;
+}
+.table-wide {
+  position: relative;
+  overflow-x: auto;
+}
+.cards {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.card {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-data);
+}
+.card + .card {
+  margin-top: var(--space-2);
+}
+.card-title {
+  display: block;
+  font-weight: 500;
+  margin-bottom: var(--space-2);
+}
+.card dl {
+  margin: 0;
+}
+.card dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-1) 0;
+}
+.card dt {
+  color: var(--muted);
+  font-size: 14px;
+}
+.card dd {
+  margin: 0;
+}
+@media (max-width: 639.98px) {
+  .table-wide {
+    display: none;
+  }
+  .cards {
+    display: block;
+  }
+}
+.foot {
+  margin: var(--space-3) 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.empty {
+  margin: 0;
+  color: var(--muted);
+}
+.empty.boxed {
+  padding: var(--space-6) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-data);
+}
+.block-error {
+  margin: 0;
+  color: var(--vencido);
+}
+
+.bone {
+  display: block;
+  width: 160px;
+  max-width: 100%;
+  height: 12px;
+  margin-top: var(--space-3);
+  background: var(--line);
+  border-radius: var(--radius-data);
+  animation: pulse 1.2s ease-in-out infinite alternate;
+}
+.bone.title {
+  width: 320px;
+  height: 22px;
+  margin-top: 0;
+}
+.bone.wide {
+  width: 100%;
+  height: 40px;
+}
+.bone.chart {
+  width: 100%;
+  height: 200px;
+}
+@keyframes pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}

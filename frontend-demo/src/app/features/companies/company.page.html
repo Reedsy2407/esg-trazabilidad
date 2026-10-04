@@ -1,0 +1,130 @@
+<a class="back" routerLink="/empresas" [queryParams]="backParams">Volver a empresas</a>
+
+<!-- Header: the only block that decides whether the page exists at all. -->
+<div aria-live="polite" [attr.aria-busy]="company.isLoading()">
+  @if (company.hasValue()) {
+    @let c = company.value();
+    <header class="head">
+      <h1>{{ c.name }}</h1>
+      <p class="meta">
+        <span>RUC <span class="mono">{{ c.ruc }}</span></span>
+        <app-status-label [status]="c.status" />
+      </p>
+    </header>
+  } @else if (company.error(); as error) {
+    <div class="problem" role="alert">
+      @if (companyNotFound(error)) {
+        <p>Esta empresa no existe o ya no está registrada.</p>
+        <a routerLink="/empresas">Ver todas las empresas</a>
+      } @else {
+        <p>{{ errorText(error, 'los datos de la empresa') }}</p>
+        <button type="button" class="btn" (click)="company.reload()">Volver a intentar</button>
+      }
+    </div>
+  } @else {
+    <div class="head" aria-hidden="true">
+      <span class="bone title"></span>
+      <span class="bone"></span>
+    </div>
+    <p class="visually-hidden">Cargando empresa</p>
+  }
+</div>
+
+@if (!company.error()) {
+  <div class="grid">
+    <section class="panel" aria-labelledby="chart-title">
+      <h2 id="chart-title">Kilos trazados por período</h2>
+      @if (chart(); as model) {
+        @if (model.bars.length > 0) {
+          <app-kilos-chart [model]="model" />
+        } @else {
+          <p class="empty">Aún no hay certificados emitidos, así que no hay períodos que graficar.</p>
+        }
+      } @else if (certificates.error()) {
+        <p class="block-error">La gráfica no está disponible porque no se pudieron cargar los certificados.</p>
+      } @else {
+        <div class="bone chart" aria-hidden="true"></div>
+      }
+    </section>
+
+    <section class="panel" aria-labelledby="summary-title">
+      <h2 id="summary-title">Resumen del período</h2>
+      @if (summaryLines(); as s) {
+        <dl class="lines">
+          <div><dt>Último período certificado</dt><dd>{{ s.period }}</dd></div>
+          <div><dt>Kilos trazados</dt><dd class="mono">{{ s.kilos }}</dd></div>
+          <div><dt>Cumplimiento de jerarquía</dt><dd class="mono">{{ s.compliance }}</dd></div>
+        </dl>
+      } @else if (summary.error(); as error) {
+        <div class="problem" role="alert">
+          <p>{{ errorText(error, 'el resumen del período') }}</p>
+          <button type="button" class="btn" (click)="summary.reload()">Volver a intentar</button>
+        </div>
+      } @else if (certificates.hasValue() && latest() === null) {
+        <p class="empty">Aún no hay certificados.</p>
+      } @else if (certificates.error()) {
+        <p class="block-error">El resumen no está disponible porque no se pudieron cargar los certificados.</p>
+      } @else {
+        <div aria-hidden="true">
+          <span class="bone"></span><span class="bone"></span><span class="bone"></span>
+        </div>
+      }
+    </section>
+  </div>
+
+  <section aria-labelledby="certs-title">
+    <h2 id="certs-title" class="sec">Certificados</h2>
+    @if (rows(); as r) {
+      @if (r.items.length === 0) {
+        <p class="empty boxed">Esta empresa todavía no tiene certificados emitidos.</p>
+      } @else {
+        <div class="table-wide">
+          <table>
+            <caption class="visually-hidden">Certificados emitidos, los más recientes primero</caption>
+            <thead>
+              <tr>
+                <th scope="col">Período</th>
+                <th scope="col" class="num">Kilos trazados</th>
+                <th scope="col" class="num">Cumplimiento de jerarquía</th>
+                <th scope="col" class="num">Emitido</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of r.items; track row.id) {
+                <tr>
+                  <td>{{ row.period }}</td>
+                  <td class="num mono">{{ row.kilos }}</td>
+                  <td class="num mono">{{ row.compliance }}</td>
+                  <td class="num mono">{{ row.issued }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <ul class="cards" aria-label="Certificados emitidos">
+          @for (row of r.items; track row.id) {
+            <li class="card">
+              <span class="card-title">{{ row.period }}</span>
+              <dl>
+                <div><dt>Kilos trazados</dt><dd class="mono">{{ row.kilos }}</dd></div>
+                <div><dt>Cumplimiento</dt><dd class="mono">{{ row.compliance }}</dd></div>
+                <div><dt>Emitido</dt><dd class="mono">{{ row.issued }}</dd></div>
+              </dl>
+            </li>
+          }
+        </ul>
+        <p class="foot">Mostrando {{ r.items.length }} de {{ r.total }} {{ r.total === 1 ? 'certificado' : 'certificados' }}</p>
+      }
+    } @else if (certificates.error(); as error) {
+      <div class="problem" role="alert">
+        <p>{{ errorText(error, 'los certificados') }}</p>
+        <button type="button" class="btn" (click)="certificates.reload()">Volver a intentar</button>
+      </div>
+    } @else {
+      <div aria-hidden="true">
+        <span class="bone wide"></span><span class="bone wide"></span><span class="bone wide"></span>
+      </div>
+      <p class="visually-hidden">Cargando certificados</p>
+    }
+  </section>
+}

@@ -1759,6 +1759,16 @@ These are Checkpoint 40's counts plus Task 82's one unit test. CI on `8b51a52` (
 **CI (F1b):** `ci.yml` gained a `changes` job: native `git diff` against `github.event.before` (push) or the PR base, no third-party action, and an unknown base counts as changed. A `frontend` job runs only when `frontend-demo/**` or `ci.yml` itself changes (so the job's own commit exercises it): `npm ci`, lint, Vitest on jsdom, build. The backend `build` job is untouched. Workflow-level `permissions: contents: read`.
 - Playwright stays out of CI for now (it needs browsers); it moves there with F6. Trap: Render's `checksPass` looks at every check on a commit, so a red `frontend` job would also hold back a commit that touches the backend too.
 
+### F2: company page (ficha)
+- **Summary = latest certified period** (user decision after the screenshots), asked to `/certificate-summary` with that certificate's dates; without certificates it isn't called ("Aún no hay certificados"). The first version used the month in progress, dropped because it describes a period nobody has certified yet and lines up with nothing else on the page (not the chart's highlighted bar, not the table's first row).
+- Summary compliance can be `null` (no SIGERSOL sync) → "Sin registro SIGERSOL", never 0 %. Periods may be any non-overlapping range: "Octubre 2024" only for a whole month, else "01/10/2024 – 15/10/2024".
+- **Chart = the certificates list** (12 most recent by period, oldest first, no invented zero bars); axis 0–15,000 kg, extended in 5,000 steps only if exceeded. Plain SVG, no library; its numbers sit in a visually hidden table for screen readers.
+- **Rows have no link or chevron yet**: the certificate detail is F3, a link now would land on nothing.
+- Each block (header, summary, chart, table) loads and fails on its own; a failing `/certificates` keeps header and summary.
+- **LocalDates are formatted by hand**, never through `DatePipe` with a time zone, which could shift "2024-10-01" a day; `issuedAt` (Instant) does go through Lima `-0500`. Test trap: in zoneless TestBed, a resource that depends on another needs `TestBed.tick()` after each flush; `whenStable()` hangs while HTTP requests are open.
+- **Trap: a `<table class="visually-hidden">` ignores `width: 1px`** and stretched the page to 503 px at 360. The hidden class goes on a wrapping `div`.
+- **Trap: SVG text at 2x on phones clipped the axis ("5,000") and glued labels ("Feb 24Abr 24").** Compact margins + one label in three; the e2e checks text inside the SVG box and ≥ 4 px between labels. Its first version (`left < right`) passed with glued labels, so it was tightened after a negative control.
+
 **Impeccable review (degraded):** the `impeccable` launcher would download its native engine, which TOOLING.md forbids. So the detector (Assessment B) didn't run, and the review used only its written playbooks.
 - Assessment A, an isolated sub-agent: 27/40.
 - Fixed in one batch:

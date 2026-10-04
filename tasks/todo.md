@@ -421,7 +421,7 @@
 
 - [x] F1: Angular 21 skeleton — Preparando el sistema, Login, Empresas, interceptors/guard, proxy, Vitest + Playwright (31a9c47) — ver tasks/LEARNINGS.md#frontend
 - [x] F1b: CI job for frontend-demo (path-gated: npm ci, lint, unit tests, build; Playwright deferred) — ver tasks/LEARNINGS.md#frontend
-- [ ] F2: Ficha de empresa — resumen del período, gráfica de 12 períodos, tabla de certificados
+- [x] F2: Ficha de empresa — resumen del mes en curso, gráfica SVG de 12 períodos, tabla/tarjetas de certificados — ver tasks/LEARNINGS.md#frontend
 - [ ] F3: Detalle del certificado (elemento firma) + descargas PDF/CSV
 - [ ] F4: Alta de recojo (vecino, asociación, fecha, kg, cronograma opcional)
 - [ ] F5: Asociaciones (lista con estado ACTIVE/SUSPENDED)

@@ -1756,6 +1756,9 @@ These are Checkpoint 40's counts plus Task 82's one unit test. CI on `8b51a52` (
 - AXE: `@axe-core/playwright` 4.13.0 (user-approved), WCAG 2.1 A/AA on warm-up, login (empty and with errors) and companies. Serious/critical fail the test, minor ones are annotated; the result is 0 violations. A throwaway negative control (unlabelled input + low contrast) proved AXE reports `label`/`color-contrast`.
 - **The token check is by exact base + `/` or `?`** (`matchesServiceBase`), not `startsWith(base)`, so `https://esg-auth-service.onrender.com.otro.com/x` never gets the token; unit-tested with the literal production URLs (user request).
 
+**CI (F1b):** `ci.yml` gained a `changes` job: native `git diff` against `github.event.before` (push) or the PR base, no third-party action, and an unknown base counts as changed. A `frontend` job runs only when `frontend-demo/**` or `ci.yml` itself changes (so the job's own commit exercises it): `npm ci`, lint, Vitest on jsdom, build. The backend `build` job is untouched. Workflow-level `permissions: contents: read`.
+- Playwright stays out of CI for now (it needs browsers); it moves there with F6. Trap: Render's `checksPass` looks at every check on a commit, so a red `frontend` job would also hold back a commit that touches the backend too.
+
 **Impeccable review (degraded):** the `impeccable` launcher would download its native engine, which TOOLING.md forbids. So the detector (Assessment B) didn't run, and the review used only its written playbooks.
 - Assessment A, an isolated sub-agent: 27/40.
 - Fixed in one batch:

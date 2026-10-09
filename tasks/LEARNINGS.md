@@ -1790,6 +1790,15 @@ These are Checkpoint 40's counts plus Task 82's one unit test. CI on `8b51a52` (
 - After a 201 the form is replaced by a confirmation that takes the focus (the submit button left the DOM); "Registrar otro recojo" keeps neighbor, association and date (a round usually logs several) and focuses the weight. A failed validation focuses the first invalid field; a backend rejection clears as soon as the user edits; only the confirmation summary is a live region (the button is outside it).
 - Shell gained a 2-link nav (Empresas, Registrar recojo) with `aria-current="page"`.
 
+### F6: frontend deploy (prepared; site creation and CORS are manual)
+- **Static site in `render.yaml`** (`esg-frontend`, `runtime: static`, `checksPass`, `buildFilter: frontend-demo/**`, SPA rewrite `/*` → `/index.html`, `NODE_VERSION=22`). The build writes `version.json` from `RENDER_GIT_COMMIT`; `verify-deploy.sh` reads it instead of `/actuator/info` and treats `/` as liveness.
+- **Trap: the `verify-deploy.sh` awk parser** only reset its service name on `esg-*-service` lines, so a fifth resource's `paths:` would have been attached to the previous service. It now resets on every `- type:`/`name:` line.
+- **CSP checked against the real production build** served with the same headers (temporary Node server + Chromium): `base-uri 'none'` broke every deep link (Angular's `<base href="/">` was blocked, the bundles resolved under `/recojos/` and the app never booted), so it is `'self'`. Critical-CSS inlining (`onload="this.media='all'"`) is off. Logged-in pass (component styles, cross-origin API calls, Blob PDF download): zero violations. Negative control with `connect-src 'self'`: violations reported and the login shows "No se pudo conectar".
+- **Trap (third time): a Python heredoc turned `\n` into a real newline inside the `printf` of `buildCommand`**, ending the YAML block scalar and corrupting the Blueprint (caught by the independent review, not by a parser: none was installed). Fixed without any backslash, and `render.yaml` is now parsed with SnakeYAML from `~/.m2` before trusting it. Lesson: edit files with backslashes through the Edit tool, never a heredoc.
+- One `Cache-Control: no-cache` rule for `/*` (two rules for the same path would be ambiguous on Render); hashed bundles revalidate as 304s.
+- **Blueprint sync creates resources:** pushing `render.yaml` with `esg-frontend` makes the Blueprint create the site on its next sync, so the push itself is the manual gate (docs/deployment.md §7).
+- **CI:** the frontend job now installs Chromium and runs Playwright (AXE + 360/768/1280 included), keeping traces as an artifact on failure.
+
 **Impeccable review (degraded):** the `impeccable` launcher would download its native engine, which TOOLING.md forbids. So the detector (Assessment B) didn't run, and the review used only its written playbooks.
 - Assessment A, an isolated sub-agent: 27/40.
 - Fixed in one batch:

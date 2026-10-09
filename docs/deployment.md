@@ -83,7 +83,7 @@ It is never logged again, and there is no change-password endpoint yet. The boot
 
 ## 5b. Verify a deploy
 
-`scripts/verify-deploy.sh [sha]` (bash, needs `gh` logged in with read access to Actions) waits for CI on the commit, then for each service to serve the commit it should. It reads the deployed commit from the public `GET /actuator/info` (`{"commit": "<sha>"}`, from Render's `RENDER_GIT_COMMIT`). The expected commit per service is the newest one that touched its `buildFilter` paths, so a service a commit didn't touch isn't expected to redeploy. It allows up to 10 minutes for CI and up to 10 minutes per service, which covers the build and a cold start.
+`scripts/verify-deploy.sh [sha]` (bash, needs `gh` logged in with read access to Actions) waits for CI on the commit, then for each service to serve the commit it should. It reads the deployed commit from the public `GET /actuator/info` (the static frontend: `GET /version.json`) (`{"commit": "<sha>"}`, from Render's `RENDER_GIT_COMMIT`). The expected commit per service is the newest one that touched its `buildFilter` paths, so a service a commit didn't touch isn't expected to redeploy. It allows up to 10 minutes for CI and up to 10 minutes per service, which covers the build and a cold start.
 
 ## 6. Smoke check
 
@@ -163,6 +163,36 @@ The first call to a service that is asleep waits for its cold start (see Known l
      echo "$i: $(head -1 /tmp/h | tr -d '\r') $(grep -o '"code":"[^"]*"' /tmp/b) $(grep -i '^retry-after' /tmp/h | tr -d '\r')"
    done
    ```
+
+## 7. The frontend (static site) and CORS
+
+`render.yaml` declares a fifth resource, **`esg-frontend`**, a static site built from `frontend-demo/` (`npm ci && npm run build`, published from `frontend-demo/dist/esg-frontend/browser`). It has no secrets and no environment group. It deploys only after CI passes (`autoDeployTrigger: checksPass`), and only when `frontend-demo/**` changes. Its build writes `/version.json` (`{"commit": "<sha>"}`) so that `scripts/verify-deploy.sh` checks it like the APIs.
+
+The browser calls the four APIs directly, cross-origin, so they must allow the site's origin:
+
+1. **Create the site.** The Blueprint creates it on its next sync after `render.yaml` reaches `main`: automatically if the Blueprint's Auto Sync is on, otherwise **Blueprints → esg-trazabilidad → Manual Sync**. The preview should show exactly one new resource, `esg-frontend` (static site), and no change to the four services.
+2. **Read its URL** in **esg-frontend → Settings**. It is `https://esg-frontend.onrender.com` unless that name was taken, in which case Render adds a suffix. If it differs, update the `frontend` line in `scripts/services.txt` and the origin below.
+3. **Allow that origin.** In **Environment Groups → esg-shared**, add `CORS_ALLOWED_ORIGINS` = `https://esg-frontend.onrender.com` (scheme and host only: no path, no trailing slash, never `*`, which fails startup on purpose). Saving the group redeploys the four services once.
+4. **Verify.** Saving the group redeploys the services *at the same commit*, so `scripts/verify-deploy.sh` alone can't tell old instances from new ones. First wait until all four show **Deploy live** for that redeploy, then:
+   - CORS, one preflight per service (each must print `access-control-allow-origin: https://esg-frontend.onrender.com`):
+     ```bash
+     for s in auth recycler collection reporting; do
+       echo "$s: $(curl -si -X OPTIONS https://esg-$s-service.onrender.com/actuator/health \
+         -H 'Origin: https://esg-frontend.onrender.com' -H 'Access-Control-Request-Method: GET' \
+         -H 'Access-Control-Request-Headers: authorization' | grep -i '^access-control-allow-origin' | tr -d '\r')"
+     done
+     ```
+   - The site's headers on the root, a deep link and a bundle (each must show the `content-security-policy` and `cache-control: no-cache`):
+     ```bash
+     F=https://esg-frontend.onrender.com
+     for p in / /recojos/nuevo "/$(curl -s $F/ | grep -o 'main-[A-Z0-9]*\.js' | head -1)"; do
+       echo "== $p"; curl -sI "$F$p" | grep -iE '^(HTTP|content-security-policy|cache-control|content-type)'
+     done
+     ```
+   - `scripts/verify-deploy.sh`: five lines, all OK.
+   - In the browser: open the site, wait for "Preparando el sistema" to finish, sign in, open a company and a certificate, download its PDF, and register a collection.
+
+The site's response headers (in `render.yaml`) include a Content-Security-Policy: scripts only from the site itself, API calls only to the four services, no framing. Critical-CSS inlining is off in `angular.json` because its `onload=` handler would need inline scripts. A new API host has to be added to `connect-src` before the frontend can call it.
 
 ## Known limitations of the free tiers
 

@@ -424,5 +424,5 @@
 - [x] F2: Ficha de empresa — resumen del mes en curso, gráfica SVG de 12 períodos, tabla/tarjetas de certificados — ver tasks/LEARNINGS.md#frontend
 - [x] F3: Detalle del certificado (elemento firma) + descargas PDF/CSV con nombre sanitizado — ver tasks/LEARNINGS.md#frontend
 - [x] F4: Alta de recojo (vecino, asociación, fecha, kg, cronograma opcional) — ver tasks/LEARNINGS.md#frontend
-- [ ] F5: Asociaciones (lista con estado ACTIVE/SUSPENDED)
+- [ ] F5: Asociaciones (lista con estado ACTIVE/SUSPENDED) — recortada de la tanda F3–F6 (2026-10-08): queda pendiente tras F6; `GET /associations` ya se usa en F4
 - [ ] F6: Despliegue del frontend + `CORS_ALLOWED_ORIGINS` en esg-shared + Playwright en CI

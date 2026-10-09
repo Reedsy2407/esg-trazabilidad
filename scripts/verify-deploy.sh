@@ -41,10 +41,11 @@ filters_from_services() {
 }
 filters_from_render_yaml() {
   awk '
-    /^[[:space:]]*name:[[:space:]]*esg-.*-service[[:space:]]*$/ {
-      name = $2; sub(/^esg-/, "", name); sub(/-service$/, "", name); inpaths = 0; next }
+    /^[[:space:]]*(- type:|name:)/ { name = ""; inpaths = 0 }
+    /^[[:space:]]*name:[[:space:]]*esg-[a-z-]*[[:space:]]*$/ {
+      name = $2; sub(/^esg-/, "", name); sub(/-service$/, "", name); next }
     /^[[:space:]]*paths:[[:space:]]*$/ { inpaths = 1; next }
-    inpaths && /^[[:space:]]*-[[:space:]]/ { p = $0; sub(/^[[:space:]]*-[[:space:]]*/, "", p); print name, p; next }
+    inpaths && name != "" && /^[[:space:]]*-[[:space:]]/ { p = $0; sub(/^[[:space:]]*-[[:space:]]*/, "", p); print name, p; next }
     { inpaths = 0 }
   ' "$root/render.yaml" | sort -k1,1 -k2,2 | awk '
     $1 != cur { if (cur != "") print cur, line; cur = $1; line = "" }
@@ -115,12 +116,15 @@ same_image() { # served pathspecs...
 
 probe() { # name url expected outfile pathspecs...
   local name="$1" url="$2" expected="$3" out="$4" t0=$SECONDS served="" live=""
+  # The static frontend has no actuator: its build writes /version.json, and "alive" is its index.
+  local info_path="/actuator/info" live_path="/actuator/health/liveness"
+  if [ "$name" = frontend ]; then info_path="/version.json"; live_path="/"; fi
   shift 4
   while :; do
-    served="$(curl -s -m 30 "$url/actuator/info" 2>/dev/null | sed -n 's/.*"commit":"\([0-9a-f]*\)".*/\1/p')"
+    served="$(curl -s -m 30 "$url$info_path" 2>/dev/null | sed -n 's/.*"commit":"\([0-9a-f]*\)".*/\1/p')"
     served="${served:-nothing}"
     if same_commit "$served" "$expected" || same_image "$served" "$@"; then
-      live="$(curl -s -o /dev/null -m 30 -w '%{http_code}' "$url/actuator/health/liveness" 2>/dev/null)"
+      live="$(curl -s -o /dev/null -m 30 -w '%{http_code}' "$url$live_path" 2>/dev/null)"
       if [ "$live" = "200" ]; then
         printf '%-10s OK   %4ss  serving %s\n' "$name" "$((SECONDS - t0))" "${served:0:7}" >"$out"
         return

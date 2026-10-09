@@ -1,4 +1,5 @@
-# Render Blueprint: the four services on Render's free plan (SPEC-deployment.md).
+# Render Blueprint: the four API services on Render's free plan
+# (SPEC-deployment.md), plus the static frontend at the end of the file.
 #
 # Names only, never values. Every secret and connection setting comes from the
 # dashboard-managed environment group "esg-shared" (JWT_SECRET, DB_URL,
@@ -7,7 +8,7 @@
 # hand in the dashboard, not here, because Render ignores sync: false inside a
 # Blueprint-declared group. See docs/deployment.md.
 #
-# Each service:
+# Each API service:
 # - builds its own Dockerfile with the repo root as context (it needs
 #   shared-kernel from the Maven reactor);
 # - deploys only after the commit's GitHub checks (ci.yml's mvn -B verify)
@@ -100,3 +101,52 @@ services:
       # dashboard; sync: false keeps later Blueprint syncs from touching it.
       - key: ADMIN_BOOTSTRAP_EMAIL
         sync: false
+
+  # The Angular demo (frontend-demo/), a static site: no server, no secrets.
+  # It calls the four services above straight from the browser, so each needs
+  # this site's origin in CORS_ALLOWED_ORIGINS (esg-shared). The build writes
+  # version.json with the deployed commit, which scripts/verify-deploy.sh
+  # checks like /actuator/info. CSP: scripts only from this origin; inline
+  # styles are allowed because Angular injects component styles at runtime
+  # (critical-CSS inlining is off in angular.json, since its onload= handler
+  # would need 'unsafe-inline' scripts); the API calls may go only to the
+  # four services.
+  - type: web
+    name: esg-frontend
+    runtime: static
+    buildCommand: >-
+      cd frontend-demo && npm ci && npm run build &&
+      printf '{"commit":"%s"}' "$RENDER_GIT_COMMIT" > dist/esg-frontend/browser/version.json
+    staticPublishPath: frontend-demo/dist/esg-frontend/browser
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - frontend-demo/**
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+    # Client-side routes (/empresas/..., /recojos/nuevo) all load index.html.
+    # Render applies a rewrite only when no file matches the path.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://esg-auth-service.onrender.com https://esg-recycler-service.onrender.com https://esg-collection-service.onrender.com https://esg-reporting-service.onrender.com; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'"
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: Permissions-Policy
+        value: "camera=(), microphone=(), geolocation=(), payment=()"
+      # One Cache-Control rule only (two rules matching the same path would be
+      # ambiguous): everything is revalidated, so index.html and version.json
+      # are never stale. The hashed bundles still come back as cheap 304s.
+      - path: /*
+        name: Cache-Control
+        value: no-cache

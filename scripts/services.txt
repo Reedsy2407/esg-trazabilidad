@@ -1,6 +1,8 @@
-# The four Render services, one per line:
+# The Render services, one per line: the four APIs and the static frontend.
 #   <name> <public base URL> <buildFilter paths...>
-# The paths must match render.yaml's buildFilter for esg-<name>-service exactly
+# The paths must match render.yaml's buildFilter for esg-<name>-service (or
+# esg-frontend) exactly. The frontend's commit is read from /version.json
+# instead of /actuator/info
 # (scripts/verify-deploy.sh refuses to run if they drift). They decide which
 # commit each service is expected to serve: the newest one that touched them.
 # Not secrets.
@@ -8,3 +10,4 @@ auth        https://esg-auth-service.onrender.com        auth-service/**        
 recycler    https://esg-recycler-service.onrender.com    recycler-service/**    shared-kernel/** pom.xml .dockerignore
 collection  https://esg-collection-service.onrender.com  collection-service/**  shared-kernel/** pom.xml .dockerignore
 reporting   https://esg-reporting-service.onrender.com   reporting-service/**   shared-kernel/** pom.xml .dockerignore
+frontend    https://esg-frontend.onrender.com            frontend-demo/**

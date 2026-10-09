@@ -57,7 +57,7 @@ jobs:
           fi
 
   # frontend-demo/ only: lint, unit tests (Vitest on jsdom, no browser) and the
-  # production build. Playwright flows are not run here yet.
+  # production build, then the Playwright browser flows.
   frontend:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
@@ -85,3 +85,20 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+      # Browser flows against `ng serve` with the backend faked per test
+      # (e2e/backend.ts): no network, no secrets. Includes AXE and the
+      # 360/768/1280 px layout checks.
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser flows (Playwright)
+        run: npx playwright test
+
+      - name: Keep Playwright traces of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: frontend-demo/test-results/
+          retention-days: 7

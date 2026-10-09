@@ -10,4 +10,4 @@ auth        https://esg-auth-service.onrender.com        auth-service/**        
 recycler    https://esg-recycler-service.onrender.com    recycler-service/**    shared-kernel/** pom.xml .dockerignore
 collection  https://esg-collection-service.onrender.com  collection-service/**  shared-kernel/** pom.xml .dockerignore
 reporting   https://esg-reporting-service.onrender.com   reporting-service/**   shared-kernel/** pom.xml .dockerignore
-frontend    https://esg-frontend.onrender.com            frontend-demo/**
+frontend    https://esg-frontend-egcf.onrender.com       frontend-demo/**

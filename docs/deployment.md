@@ -171,20 +171,20 @@ The first call to a service that is asleep waits for its cold start (see Known l
 The browser calls the four APIs directly, cross-origin, so they must allow the site's origin:
 
 1. **Create the site.** The Blueprint creates it on its next sync after `render.yaml` reaches `main`: automatically if the Blueprint's Auto Sync is on, otherwise **Blueprints → esg-trazabilidad → Manual Sync**. The preview should show exactly one new resource, `esg-frontend` (static site), and no change to the four services.
-2. **Read its URL** in **esg-frontend → Settings**. It is `https://esg-frontend.onrender.com` unless that name was taken, in which case Render adds a suffix. If it differs, update the `frontend` line in `scripts/services.txt` and the origin below.
-3. **Allow that origin.** In **Environment Groups → esg-shared**, add `CORS_ALLOWED_ORIGINS` = `https://esg-frontend.onrender.com` (scheme and host only: no path, no trailing slash, never `*`, which fails startup on purpose). Saving the group redeploys the four services once.
+2. **Read its URL** in **esg-frontend → Settings**. It is `https://esg-frontend-egcf.onrender.com`: the bare name was taken, so Render added the `-egcf` suffix. If the site is ever recreated with another suffix, update the `frontend` line in `scripts/services.txt` and the origin below.
+3. **Allow that origin.** In **Environment Groups → esg-shared**, add `CORS_ALLOWED_ORIGINS` = `https://esg-frontend-egcf.onrender.com` (scheme and host only: no path, no trailing slash, never `*`, which fails startup on purpose). Saving the group redeploys the four services once.
 4. **Verify.** Saving the group redeploys the services *at the same commit*, so `scripts/verify-deploy.sh` alone can't tell old instances from new ones. First wait until all four show **Deploy live** for that redeploy, then:
-   - CORS, one preflight per service (each must print `access-control-allow-origin: https://esg-frontend.onrender.com`):
+   - CORS, one preflight per service (each must print `access-control-allow-origin: https://esg-frontend-egcf.onrender.com`):
      ```bash
      for s in auth recycler collection reporting; do
        echo "$s: $(curl -si -X OPTIONS https://esg-$s-service.onrender.com/actuator/health \
-         -H 'Origin: https://esg-frontend.onrender.com' -H 'Access-Control-Request-Method: GET' \
+         -H 'Origin: https://esg-frontend-egcf.onrender.com' -H 'Access-Control-Request-Method: GET' \
          -H 'Access-Control-Request-Headers: authorization' | grep -i '^access-control-allow-origin' | tr -d '\r')"
      done
      ```
    - The site's headers on the root, a deep link and a bundle (each must show the `content-security-policy` and `cache-control: no-cache`):
      ```bash
-     F=https://esg-frontend.onrender.com
+     F=https://esg-frontend-egcf.onrender.com
      for p in / /recojos/nuevo "/$(curl -s $F/ | grep -o 'main-[A-Z0-9]*\.js' | head -1)"; do
        echo "== $p"; curl -sI "$F$p" | grep -iE '^(HTTP|content-security-policy|cache-control|content-type)'
      done

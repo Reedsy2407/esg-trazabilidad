@@ -57,6 +57,66 @@ export interface CertificateSummary {
   readonly hierarchyCompliancePercent: number | null;
 }
 
+/** collection-service NeighborResponse. */
+export type NeighborStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface Neighbor {
+  readonly id: string;
+  readonly fullName: string;
+  readonly phone: string;
+  readonly address: string;
+  readonly district: string;
+  readonly status: NeighborStatus;
+}
+
+/** recycler-service AssociationResponse. */
+export type AssociationStatus = 'ACTIVE' | 'SUSPENDED';
+
+export interface Association {
+  readonly id: string;
+  readonly name: string;
+  readonly ruc: string;
+  readonly registrationNumber: string;
+  readonly address: string;
+  readonly contactEmail: string;
+  readonly contactPhone: string;
+  readonly status: AssociationStatus;
+}
+
+/** collection-service CollectionScheduleResponse: java.time.DayOfWeek and LocalTime ("HH:mm:ss" or "HH:mm"). */
+export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+export type CollectionScheduleStatus = 'ACTIVE' | 'PAUSED' | 'CANCELLED';
+
+export interface CollectionSchedule {
+  readonly id: string;
+  readonly neighborId: string;
+  readonly dayOfWeek: DayOfWeek;
+  readonly time: string;
+  readonly status: CollectionScheduleStatus;
+}
+
+/**
+ * CreateCollectionRecordRequest: associationId, collectionDate (LocalDate) and
+ * weightKg (@Positive BigDecimal, stored as numeric(10,2)) are required;
+ * scheduleId is optional and must belong to the neighbor (else COL-006).
+ */
+export interface CreateCollectionRecordRequest {
+  readonly scheduleId: string | null;
+  readonly associationId: string;
+  readonly collectionDate: string;
+  readonly weightKg: number;
+}
+
+/** CollectionRecordResponse. */
+export interface CollectionRecord {
+  readonly id: string;
+  readonly neighborId: string;
+  readonly scheduleId: string | null;
+  readonly associationId: string;
+  readonly collectionDate: string;
+  readonly weightKg: number;
+}
+
 /** shared-kernel PageResponse<T>. `page` is zero-based. */
 export interface Page<T> {
   readonly content: readonly T[];

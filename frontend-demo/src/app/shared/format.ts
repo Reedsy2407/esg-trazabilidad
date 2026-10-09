@@ -42,6 +42,11 @@ export function formatInstantDate(value: string): string {
   return formatDate(value, 'dd/MM/yyyy', LOCALE, LIMA_OFFSET);
 }
 
+/** Today's calendar date in Lima, as a LocalDate ("yyyy-MM-dd"). */
+export function todayInLima(now: Date = new Date()): string {
+  return formatDate(now, 'yyyy-MM-dd', LOCALE, LIMA_OFFSET);
+}
+
 /** 12480.5 -> "12,480.50 kg". */
 export function formatKg(value: number): string {
   return `${formatNumber(value, LOCALE, '1.2-2')} kg`;

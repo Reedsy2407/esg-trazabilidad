@@ -31,6 +31,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/companies/company.page').then((m) => m.CompanyPage),
       },
       {
+        path: 'recojos/nuevo',
+        title: 'Registrar recojo · Trazabilidad ESG',
+        loadComponent: () =>
+          import('./features/collection-record/collection-record.page').then((m) => m.CollectionRecordPage),
+      },
+      {
         path: 'empresas/:companyId/certificados/:certificateId',
         title: 'Certificado · Trazabilidad ESG',
         loadComponent: () => import('./features/certificate/certificate.page').then((m) => m.CertificatePage),

@@ -1,0 +1,117 @@
+.head {
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--line);
+}
+h1 {
+  font-size: 26px;
+}
+.lead {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+}
+
+.sheet {
+  max-width: 640px;
+  padding: var(--space-6);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-frame);
+}
+
+.field {
+  margin-bottom: var(--space-5);
+  min-width: 0;
+}
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-5);
+}
+label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: 14px;
+  font-weight: 500;
+}
+.optional {
+  color: var(--muted);
+  font-weight: 400;
+}
+input,
+select {
+  display: block;
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-input);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+input.num {
+  text-align: right;
+}
+[aria-invalid='true'] {
+  border-color: var(--vencido);
+}
+.hint {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.field-error,
+.form-error {
+  margin: var(--space-2) 0 0;
+  color: var(--vencido);
+  font-size: 14px;
+}
+.form-error {
+  margin: 0 0 var(--space-4);
+}
+.load-error {
+  margin-bottom: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--vencido);
+  border-radius: var(--radius-data);
+}
+.load-error p {
+  margin: 0 0 var(--space-2);
+}
+
+/* Petrol, not --vigente: that green belongs to certification states (brief). */
+.saved {
+  padding: var(--space-4);
+  border: 1px solid var(--petrol);
+  border-radius: var(--radius-data);
+}
+.saved p {
+  margin: 0 0 var(--space-2);
+  overflow-wrap: anywhere;
+}
+.saved-title {
+  color: var(--petrol);
+  font-weight: 600;
+}
+.saved-code {
+  color: var(--muted);
+  font-size: 14px;
+}
+.saved-code code {
+  color: var(--ink);
+  word-break: break-all;
+}
+.saved .btn {
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 639.98px) {
+  .sheet {
+    padding: var(--space-5) var(--space-4);
+  }
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .submit {
+    width: 100%;
+  }
+}

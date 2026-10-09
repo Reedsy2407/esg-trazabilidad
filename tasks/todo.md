@@ -423,6 +423,6 @@
 - [x] F1b: CI job for frontend-demo (path-gated: npm ci, lint, unit tests, build; Playwright deferred) — ver tasks/LEARNINGS.md#frontend
 - [x] F2: Ficha de empresa — resumen del mes en curso, gráfica SVG de 12 períodos, tabla/tarjetas de certificados — ver tasks/LEARNINGS.md#frontend
 - [x] F3: Detalle del certificado (elemento firma) + descargas PDF/CSV con nombre sanitizado — ver tasks/LEARNINGS.md#frontend
-- [ ] F4: Alta de recojo (vecino, asociación, fecha, kg, cronograma opcional)
+- [x] F4: Alta de recojo (vecino, asociación, fecha, kg, cronograma opcional) — ver tasks/LEARNINGS.md#frontend
 - [ ] F5: Asociaciones (lista con estado ACTIVE/SUSPENDED)
 - [ ] F6: Despliegue del frontend + `CORS_ALLOWED_ORIGINS` en esg-shared + Playwright en CI

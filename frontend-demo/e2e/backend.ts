@@ -86,7 +86,38 @@ export interface BackendOptions {
   downloadFailure?: number | 'network';
   /** A 200 download answered as the SPA's HTML page (a proxy fallback), not the file. */
   downloadAsHtml?: boolean;
+  /** POST .../collection-records answers this problem instead of 201. */
+  collectionFailure?: { status: number; code: string };
+  /** GET /associations fails with this status. */
+  associationsStatus?: number;
+  /** Every POST body received by collection-records, for the test to inspect. */
+  collectionPosts?: { neighborId: string; body: unknown }[];
 }
+
+/** collection-service neighbors (NeighborResponse), sorted by name as the API does. */
+export const NEIGHBORS = [
+  { id: '0192f3a8-a000-7000-8000-000000000002', fullName: 'Luis Ramos Huamán', phone: '912345678', address: 'Av. Perú 455', district: 'San Martín de Porres', status: 'INACTIVE' },
+  { id: '0192f3a8-a000-7000-8000-000000000001', fullName: 'Rosa Quispe Mamani', phone: '987654321', address: 'Jr. Huallaga 120', district: 'Cercado de Lima', status: 'ACTIVE' },
+] as const;
+
+/** recycler-service associations (AssociationResponse). */
+export const ASSOCIATIONS = [
+  { id: COMPANIES[0].associationId, name: 'Asociación Recicla Rímac', ruc: '20601234567', registrationNumber: 'REG-2021-0145', address: 'Av. Amancaes 300, Rímac', contactEmail: 'contacto@reciclarimac.pe', contactPhone: '014567890', status: 'ACTIVE' },
+  { id: COMPANIES[1].associationId, name: 'Recicladores Unidos de Comas', ruc: '20609876543', registrationNumber: 'REG-2019-0087', address: 'Av. Túpac Amaru 1200, Comas', contactEmail: 'info@recicladorescomas.pe', contactPhone: '015551234', status: 'SUSPENDED' },
+] as const;
+
+/**
+ * collection-service schedules (CollectionScheduleResponse) per neighbor, in
+ * the API's real order: dayOfWeek is stored as text and sorted
+ * alphabetically (MONDAY, THURSDAY, WEDNESDAY). The page re-sorts by weekday.
+ */
+export const SCHEDULES: Record<string, { id: string; neighborId: string; dayOfWeek: string; time: string; status: string }[]> = {
+  [NEIGHBORS[1].id]: [
+    { id: '0192f3a8-b000-7000-8000-000000000001', neighborId: NEIGHBORS[1].id, dayOfWeek: 'MONDAY', time: '08:00:00', status: 'ACTIVE' },
+    { id: '0192f3a8-b000-7000-8000-000000000002', neighborId: NEIGHBORS[1].id, dayOfWeek: 'THURSDAY', time: '15:30:00', status: 'PAUSED' },
+    { id: '0192f3a8-b000-7000-8000-000000000003', neighborId: NEIGHBORS[1].id, dayOfWeek: 'WEDNESDAY', time: '07:00:00', status: 'ACTIVE' },
+  ],
+};
 
 export async function fakeBackend(page: Page, options: BackendOptions = {}): Promise<void> {
   await page.route('**/svc/*/actuator/health/liveness', (route) =>
@@ -105,6 +136,66 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
       return problem(route, 401, 'AUTH-001', 'Credenciales inválidas');
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ accessToken: jwtFor(email) }) });
+  });
+
+  const authorized = (route: Route) => {
+    const authorization = route.request().headers()['authorization'];
+    return !options.rejectTokens && authorization !== undefined && authorization.startsWith('Bearer ');
+  };
+  const pageOf = <T,>(content: readonly T[]) => ({
+    content,
+    page: 0,
+    size: 100, // the services' max-page-size
+    totalElements: content.length,
+    totalPages: content.length === 0 ? 0 : 1,
+  });
+
+  await page.route('**/svc/recycler/associations**', (route) => {
+    if (!authorized(route)) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    if (options.associationsStatus !== undefined) {
+      return problem(route, options.associationsStatus, 'X-500', 'Error interno');
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pageOf(ASSOCIATIONS)) });
+  });
+
+  await page.route('**/svc/collection/neighbors**', (route) => {
+    if (!authorized(route)) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    const json = (status: number, body: unknown) =>
+      route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    const { pathname } = new URL(route.request().url());
+    const [, neighborId, sub] = /\/neighbors(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(pathname) ?? [];
+    if (neighborId === undefined) {
+      // The API sorts by fullName.
+      return json(200, pageOf([...NEIGHBORS].sort((a, b) => a.fullName.localeCompare(b.fullName))));
+    }
+    const neighbor = NEIGHBORS.find((n) => n.id === neighborId);
+    if (neighbor === undefined) {
+      return problem(route, 404, 'COL-001', 'Vecino no encontrado');
+    }
+    if (sub === 'schedules') {
+      return json(200, pageOf(SCHEDULES[neighbor.id] ?? []));
+    }
+    if (sub === 'collection-records' && route.request().method() === 'POST') {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      options.collectionPosts?.push({ neighborId, body });
+      if (options.collectionFailure !== undefined) {
+        const { status, code } = options.collectionFailure;
+        return problem(route, status, code, 'Rechazado');
+      }
+      return json(201, {
+        id: '0192f3a8-d000-7000-8000-000000000001',
+        neighborId,
+        scheduleId: body['scheduleId'] ?? null,
+        associationId: body['associationId'],
+        collectionDate: body['collectionDate'],
+        weightKg: body['weightKg'],
+      });
+    }
+    return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');
   });
 
   await page.route('**/svc/reporting/tracked-companies**', (route) => {

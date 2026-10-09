@@ -1,6 +1,6 @@
 import { Component, ElementRef, inject, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 
 import { SessionService } from '../core/auth/session.service';
@@ -8,11 +8,15 @@ import { SessionService } from '../core/auth/session.service';
 /** Chrome level 1 of 3 (brief): the top bar. Pages bring their own title and content. */
 @Component({
   selector: 'app-shell',
-  imports: [RouterLink, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet],
   template: `
     <a class="skip" href="#contenido">Saltar al contenido</a>
     <header class="bar">
       <a class="brand" routerLink="/empresas">Trazabilidad ESG</a>
+      <nav aria-label="Secciones">
+        <a routerLink="/empresas" routerLinkActive="current" ariaCurrentWhenActive="page">Empresas</a>
+        <a routerLink="/recojos/nuevo" routerLinkActive="current" ariaCurrentWhenActive="page">Registrar recojo</a>
+      </nav>
       <div class="user">
         <span class="email">{{ session.email() }}</span>
         <button type="button" class="btn-link" (click)="signOut()">Cerrar sesión</button>
@@ -48,6 +52,27 @@ import { SessionService } from '../core/auth/session.service';
       font-size: 16px;
       text-decoration: none;
     }
+    nav {
+      display: flex;
+      gap: var(--space-5);
+      margin-right: auto;
+      margin-left: var(--space-4);
+      font-size: 14px;
+    }
+    nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+    }
+    nav a:hover { color: var(--ink); }
+    nav a.current {
+      color: var(--ink);
+      font-weight: 500;
+      border-bottom-color: var(--petrol);
+    }
     .user {
       display: flex;
       align-items: center;
@@ -64,6 +89,7 @@ import { SessionService } from '../core/auth/session.service';
     main:focus { outline: none; }
     @media (max-width: 480px) {
       .bar, main { padding-left: var(--space-4); padding-right: var(--space-4); }
+      nav { order: 3; width: 100%; margin-left: 0; }
     }
   `,
 })

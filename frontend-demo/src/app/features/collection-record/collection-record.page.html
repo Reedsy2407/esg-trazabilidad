@@ -1,0 +1,154 @@
+<header class="head">
+  <h1>Registrar recojo</h1>
+  <p class="lead">Un registro por cada recojo en casa de un vecino.</p>
+</header>
+
+<section class="sheet" aria-labelledby="form-title">
+  <h2 id="form-title" class="visually-hidden">Datos del recojo</h2>
+
+  <!-- Always in the DOM: a live region that appears together with its text isn't reliably announced. -->
+  <!-- Only the summary is live (and focused); the button stays out so it isn't read as part of it. -->
+  @if (saved(); as s) {
+    <div class="saved">
+      <div role="status">
+        <p class="saved-title" tabindex="-1" #savedTitle>Recojo registrado</p>
+        <p>
+          <span class="mono">{{ s.kilos }}</span> el <span class="mono">{{ s.date }}</span>
+          @if (s.neighbor) {
+            · {{ s.neighbor }}
+          }
+        </p>
+        <p class="saved-code">Código del registro <code class="mono">{{ s.record.id }}</code></p>
+      </div>
+      <button type="button" class="btn" (click)="another()">Registrar otro recojo</button>
+    </div>
+  }
+
+  @if (!saved()) {
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate #formElement>
+      <div class="field">
+        <label for="neighbor">Vecino</label>
+        @if (neighbors.error(); as e) {
+          <div class="load-error" role="alert">
+            <p>{{ loadError(e, 'los vecinos') }}</p>
+            <button type="button" class="btn" (click)="neighbors.reload()">Volver a intentar</button>
+          </div>
+        }
+        <select
+          id="neighbor"
+          formControlName="neighborId"
+          [attr.aria-invalid]="fieldInvalid('neighborId')"
+          [attr.aria-describedby]="describedBy(fieldInvalid('neighborId') ? 'neighbor-error' : null, neighborsTruncated() ? 'neighbor-more' : null)"
+          [attr.aria-busy]="neighbors.isLoading()"
+        >
+          <option value="">{{ neighbors.isLoading() ? 'Cargando vecinos…' : 'Elige un vecino' }}</option>
+          @for (n of neighborOptions(); track n.id) {
+            <option [value]="n.id">{{ n.label }}</option>
+          }
+        </select>
+        @if (neighborsTruncated()) {
+          <p class="hint" id="neighbor-more">Se muestran los primeros {{ neighborOptions().length }} vecinos por nombre.</p>
+        }
+        @if (fieldInvalid('neighborId')) {
+          <p class="field-error" id="neighbor-error">Elige el vecino del recojo.</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="association">Asociación</label>
+        @if (associations.error(); as e) {
+          <div class="load-error" role="alert">
+            <p>{{ loadError(e, 'las asociaciones') }}</p>
+            <button type="button" class="btn" (click)="associations.reload()">Volver a intentar</button>
+          </div>
+        }
+        <select
+          id="association"
+          formControlName="associationId"
+          [attr.aria-invalid]="fieldInvalid('associationId')"
+          [attr.aria-describedby]="describedBy(fieldInvalid('associationId') ? 'association-error' : null, associationsTruncated() ? 'association-more' : null)"
+          [attr.aria-busy]="associations.isLoading()"
+        >
+          <option value="">{{ associations.isLoading() ? 'Cargando asociaciones…' : 'Elige una asociación' }}</option>
+          @for (a of associationOptions(); track a.id) {
+            <option [value]="a.id">{{ a.label }}</option>
+          }
+        </select>
+        @if (associationsTruncated()) {
+          <p class="hint" id="association-more">Se muestran las primeras {{ associationOptions().length }} asociaciones por nombre.</p>
+        }
+        @if (fieldInvalid('associationId')) {
+          <p class="field-error" id="association-error">Elige la asociación que hizo el recojo.</p>
+        }
+      </div>
+
+      <div class="pair">
+        <div class="field">
+          <label for="date">Fecha del recojo</label>
+          <input
+            id="date"
+            type="date"
+            formControlName="collectionDate"
+            [attr.aria-invalid]="fieldInvalid('collectionDate')"
+            [attr.aria-describedby]="fieldInvalid('collectionDate') ? 'date-error' : null"
+          />
+          @if (fieldInvalid('collectionDate')) {
+            <p class="field-error" id="date-error">Escribe la fecha del recojo.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="weight">Peso recolectado (kg)</label>
+          <input
+            id="weight"
+            #weightInput
+            class="mono num"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            formControlName="weightKg"
+            [attr.aria-invalid]="fieldInvalid('weightKg')"
+            [attr.aria-describedby]="fieldInvalid('weightKg') ? 'weight-hint weight-error' : 'weight-hint'"
+          />
+          <p class="hint" id="weight-hint">Con punto para decimales, hasta 2: por ejemplo 12.50</p>
+          @if (fieldInvalid('weightKg')) {
+            <p class="field-error" id="weight-error">
+              @if (form.controls.weightKg.hasError('required')) {
+                Escribe el peso en kilos.
+              } @else if (form.controls.weightKg.hasError('positive')) {
+                El peso debe ser mayor que cero.
+              } @else {
+                Escribe solo números, con punto y hasta 2 decimales (máximo 99999999.99).
+              }
+            </p>
+          }
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="schedule">Cronograma <span class="optional">(opcional)</span></label>
+        <select id="schedule" formControlName="scheduleId" [attr.aria-busy]="schedules.isLoading()">
+          <option value="">
+            {{ !form.controls.neighborId.value ? 'Elige primero un vecino' : schedules.isLoading() ? 'Cargando cronogramas…' : 'Sin cronograma' }}
+          </option>
+          @for (s of scheduleOptions(); track s.id) {
+            <option [value]="s.id">{{ s.label }}</option>
+          }
+        </select>
+        @if (schedules.error(); as e) {
+          <p class="hint">{{ loadError(e, 'los cronogramas') }} Puedes registrar el recojo sin cronograma.</p>
+        } @else if (schedules.hasValue() && scheduleOptions().length === 0) {
+          <p class="hint">Este vecino no tiene cronogramas.</p>
+        }
+      </div>
+
+      @if (error(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
+      }
+
+      <button class="btn btn-primary submit" type="submit" [disabled]="submitting()">
+        {{ submitting() ? 'Registrando…' : 'Registrar recojo' }}
+      </button>
+    </form>
+  }
+</section>

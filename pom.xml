@@ -92,4 +92,50 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <!-- Mockito's inline mock maker needs a Java agent. Left to itself it
+         attaches Byte Buddy's agent at runtime (dynamic attach), which JDK 21
+         already warns about and which broke on a GitHub runner image
+         (Attach Listener NPE, "Could not initialize plugin: MockMaker").
+         Loading the agent with -javaagent from the start is what Mockito
+         documents for JDK 21+. Mockito 5.11 (managed by Spring Boot 3.3.5)
+         has no Premain-Class yet, so the agent is byte-buddy-agent, the same
+         one it would self-attach. dependency:properties exposes that jar's
+         path as ${net.bytebuddy:byte-buddy-agent:jar}; e2e-tests has no
+         Mockito and turns the argLine off in its own pom. -->
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <argLine>-javaagent:${net.bytebuddy:byte-buddy-agent:jar} -Xshare:off</argLine>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <configuration>
+                        <argLine>-javaagent:${net.bytebuddy:byte-buddy-agent:jar} -Xshare:off</argLine>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <id>mockito-agent-path</id>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

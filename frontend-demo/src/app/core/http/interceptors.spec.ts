@@ -97,6 +97,83 @@ describe('HTTP interceptors', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it('reads the problem detail out of a Blob error body (downloads), so the code survives', async () => {
+    const received = new Promise<unknown>((resolve) =>
+      http
+        .get(`${reporting}/tracked-companies/c-1/certificates/x/pdf`, { responseType: 'blob' })
+        .subscribe({ error: resolve }),
+    );
+    // As reporting-service answers it: application/problem+json, but the client asked for a Blob.
+    const problem = { type: 'about:blank', title: 'Not Found', status: 404, detail: 'Certificado no encontrado', code: 'RPT-003' };
+    backend
+      .expectOne(`${reporting}/tracked-companies/c-1/certificates/x/pdf`)
+      .flush(new Blob([JSON.stringify(problem)], { type: 'application/problem+json' }), {
+        status: 404,
+        statusText: 'Not Found',
+        headers: { 'Content-Type': 'application/problem+json' },
+      });
+
+    const error = (await received) as ApiError;
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(404);
+    expect(error.code).toBe('RPT-003');
+    expect(error.detail).toBe('Certificado no encontrado');
+  });
+
+  it('a Blob 429 keeps Retry-After and its code', async () => {
+    const received = new Promise<unknown>((resolve) =>
+      http.get(`${reporting}/x/csv`, { responseType: 'blob' }).subscribe({ error: resolve }),
+    );
+    backend.expectOne(`${reporting}/x/csv`).flush(
+      new Blob([JSON.stringify({ status: 429, code: 'RATE-001' })], { type: 'application/problem+json' }),
+      { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '12' } },
+    );
+
+    const error = (await received) as ApiError;
+    expect(error.code).toBe('RATE-001');
+    expect(error.retryAfterSeconds).toBe(12);
+  });
+
+  it('if the Blob cannot be read, the error still arrives, without a code', async () => {
+    const unreadable = new Blob(['{"code":"RPT-003"}'], { type: 'application/problem+json' });
+    vi.spyOn(unreadable, 'text').mockRejectedValue(new Error('read failed'));
+    const received = new Promise<unknown>((resolve) =>
+      http.get(`${reporting}/x/pdf`, { responseType: 'blob' }).subscribe({ error: resolve }),
+    );
+    backend.expectOne(`${reporting}/x/pdf`).flush(unreadable, { status: 404, statusText: 'Not Found' });
+
+    const error = (await received) as ApiError;
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(404);
+    expect(error.code).toBeNull();
+  });
+
+  it('a 401 Blob ends the session at once, even if the caller leaves before the body is read', () => {
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const subscription = http.get(`${reporting}/x/pdf`, { responseType: 'blob' }).subscribe({ error: () => undefined });
+    backend.expectOne(`${reporting}/x/pdf`).flush(
+      new Blob(['{"code":"AUTH-000"}'], { type: 'application/problem+json' }),
+      { status: 401, statusText: 'Unauthorized' },
+    );
+    subscription.unsubscribe();
+
+    expect(session.token()).toBeNull();
+    expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { motivo: 'sesion' } });
+  });
+
+  it('a Blob error body that is not JSON still becomes an ApiError, without a code', async () => {
+    const received = new Promise<unknown>((resolve) =>
+      http.get(`${reporting}/x/pdf`, { responseType: 'blob' }).subscribe({ error: resolve }),
+    );
+    backend
+      .expectOne(`${reporting}/x/pdf`)
+      .flush(new Blob(['<html>Bad gateway</html>']), { status: 502, statusText: 'Bad Gateway' });
+
+    const error = (await received) as ApiError;
+    expect(error.status).toBe(502);
+    expect(error.code).toBeNull();
+  });
+
   it('turns a 429 into an ApiError carrying Retry-After', () => {
     let received: unknown;
     http.post(`${auth}/auth/login`, {}).subscribe({ error: (e: unknown) => (received = e) });

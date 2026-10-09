@@ -61,6 +61,16 @@ export const CERTIFICATES = Array.from({ length: 14 }, (_, i) => {
   };
 }).reverse(); // the API lists newest issued first
 
+/** A certificate that exists, but under COMPANIES[1]: asking for it under COMPANIES[0] is a 404. */
+export const FOREIGN_CERTIFICATE = {
+  ...CERTIFICATES[0],
+  id: '0192f3a8-c000-7000-8000-0000000000ff',
+  trackedCompanyId: COMPANIES[1].id,
+  associationId: COMPANIES[1].associationId,
+  companyName: COMPANIES[1].name,
+  companyRuc: COMPANIES[1].ruc,
+};
+
 export interface BackendOptions {
   /** Answer the login with 429 AUTH-004 and this Retry-After. */
   lockedFor?: number;
@@ -70,6 +80,12 @@ export interface BackendOptions {
   certificatesStatus?: number;
   /** The summary answers hierarchyCompliancePercent: null (no SIGERSOL sync covers the period). */
   summaryComplianceNull?: boolean;
+  /** Content-Disposition sent with PDF/CSV downloads (default: the backend's own form). */
+  downloadDisposition?: string | null;
+  /** PDF/CSV downloads fail with this HTTP status, or 'network' to drop the connection. */
+  downloadFailure?: number | 'network';
+  /** A 200 download answered as the SPA's HTML page (a proxy fallback), not the file. */
+  downloadAsHtml?: boolean;
 }
 
 export async function fakeBackend(page: Page, options: BackendOptions = {}): Promise<void> {
@@ -98,7 +114,8 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     }
     const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     const url = new URL(route.request().url());
-    const [, id, sub] = /\/tracked-companies(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(url.pathname) ?? [];
+    const [, id, sub, certId, file] =
+      /\/tracked-companies(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(url.pathname) ?? [];
     if (id === undefined) {
       return json({ content: COMPANIES, page: 0, size: 20, totalElements: COMPANIES.length, totalPages: 1 });
     }
@@ -108,6 +125,39 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     }
     if (sub === undefined) {
       return json(company);
+    }
+    if (sub === 'certificates' && certId !== undefined) {
+      const certificate = [...CERTIFICATES, FOREIGN_CERTIFICATE].find(
+        (c) => c.id === certId && c.trackedCompanyId === company.id,
+      );
+      if (certificate === undefined) {
+        return problem(route, 404, 'RPT-003', 'Certificado no encontrado');
+      }
+      if (file === undefined) {
+        return json(certificate);
+      }
+      if (options.downloadFailure === 'network') {
+        return route.abort('failed');
+      }
+      if (options.downloadFailure === 401) {
+        return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+      }
+      if (options.downloadFailure !== undefined) {
+        return problem(route, options.downloadFailure, 'X', 'Fallo de descarga');
+      }
+      if (options.downloadAsHtml) {
+        return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>app</title>' });
+      }
+      const disposition =
+        options.downloadDisposition === undefined
+          ? `attachment; filename="certificado-${certificate.id}.${file}"`
+          : options.downloadDisposition;
+      return route.fulfill({
+        status: 200,
+        contentType: file === 'pdf' ? 'application/pdf' : 'text/csv',
+        headers: disposition === null ? {} : { 'Content-Disposition': disposition },
+        body: file === 'pdf' ? '%PDF-1.7 test' : 'Empresa,x\nFecha de recoleccion,Peso (kg)\n',
+      });
     }
     if (sub === 'certificates') {
       if (options.certificatesStatus !== undefined) {

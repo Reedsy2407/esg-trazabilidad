@@ -112,8 +112,50 @@ tbody tr:last-child td {
   border: 1px solid var(--line);
   border-radius: var(--radius-data);
 }
-.card + .card {
+li + li {
   margin-top: var(--space-2);
+}
+a.card {
+  display: block;
+  min-height: 44px;
+  color: var(--ink);
+  text-decoration: none;
+}
+a.card:hover {
+  background: var(--row-hover);
+}
+a.card:focus-visible {
+  outline: 2px solid var(--petrol);
+  outline-offset: 2px;
+}
+/* Table rows: the period's link stretches over the whole row. */
+tbody tr {
+  position: relative;
+}
+tbody tr:has(.row-link):hover {
+  background: var(--row-hover);
+}
+.row-link {
+  color: var(--ink);
+  text-decoration: none;
+}
+.row-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.row-link:focus-visible {
+  outline: none;
+}
+tbody tr:has(.row-link:focus-visible) {
+  outline: 2px solid var(--petrol);
+  outline-offset: -2px;
+}
+.chev {
+  width: 48px;
+  text-align: right;
+  vertical-align: middle;
+  color: var(--muted);
 }
 .card-title {
   display: block;

@@ -1,0 +1,79 @@
+<a class="back" [routerLink]="['/empresas', companyId()]">
+  {{ view() ? 'Volver a ' + view()!.company : 'Volver a la empresa' }}
+</a>
+
+@if (view(); as v) {
+  <article class="sheet" aria-labelledby="doc-title">
+    <header>
+      <h1 id="doc-title">
+        <span class="doc-type">Certificado de trazabilidad ESG</span>
+        <span class="company">{{ v.company }}</span>
+      </h1>
+      <p class="ruc">RUC <span class="mono">{{ v.ruc }}</span></p>
+    </header>
+
+    <hr class="rule" />
+
+    <dl class="figures">
+      <div>
+        <dt>Kilos trazados</dt>
+        <dd class="mono">{{ v.kilos }}</dd>
+      </div>
+      <div>
+        <dt>Cumplimiento de jerarquía</dt>
+        <dd class="mono">{{ v.compliance }}</dd>
+      </div>
+    </dl>
+
+    <dl class="meta">
+      <div>
+        <dt>Período</dt>
+        <dd class="mono">{{ v.period }}</dd>
+      </div>
+      <div>
+        <dt>Emitido</dt>
+        <dd class="mono">{{ v.issued }}</dd>
+      </div>
+    </dl>
+
+    <div class="code">
+      <div>
+        <span class="code-label">Código del certificado</span>
+        <code class="mono">{{ v.id }}</code>
+      </div>
+      <button type="button" class="btn" (click)="copy(v.id)" aria-label="Copiar código del certificado">Copiar</button>
+    </div>
+    <p class="copy-status" role="status" aria-live="polite">{{ copyStatus() }}</p>
+
+    <div class="actions">
+      <button type="button" class="btn btn-primary" [disabled]="downloading() !== null" (click)="download('pdf')">
+        {{ downloading() === 'pdf' ? 'Descargando PDF…' : 'Descargar PDF' }}
+      </button>
+      <button type="button" class="btn" [disabled]="downloading() !== null" (click)="download('csv')">
+        {{ downloading() === 'csv' ? 'Descargando CSV…' : 'Descargar CSV' }}
+      </button>
+    </div>
+    <p class="hint">El CSV incluye las pesadas que respaldan este certificado.</p>
+    @if (downloadError(); as message) {
+      <p class="problem" role="alert">{{ message }}</p>
+    }
+  </article>
+} @else if (certificate.error(); as error) {
+  <div class="problem" role="alert">
+    @if (isNotFound(error)) {
+      <p>Este certificado no existe o no pertenece a esta empresa.</p>
+      <a [routerLink]="['/empresas', companyId()]">Volver a la empresa</a>
+    } @else {
+      <p>{{ errorText(error) }}</p>
+      <button type="button" class="btn" (click)="certificate.reload()">Volver a intentar</button>
+    }
+  </div>
+} @else {
+  <div class="sheet" aria-hidden="true">
+    <span class="bone title"></span>
+    <span class="bone"></span>
+    <span class="bone big"></span>
+  </div>
+}
+<!-- Only the loading line is live: the certificate itself is not read out when it arrives. -->
+<p class="visually-hidden" role="status">{{ certificate.isLoading() ? 'Cargando certificado' : '' }}</p>

@@ -1,7 +1,7 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
+import { Observable, catchError, from, of, switchMap, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { SessionService } from '../auth/session.service';
@@ -37,6 +37,42 @@ export const jwtInterceptor: HttpInterceptorFn = (request, next) => {
 };
 
 /**
+ * A failed request made with responseType 'blob' (the PDF/CSV downloads)
+ * gets its problem detail as a Blob too: read it back as JSON so the `code`
+ * (RPT-003...) is not lost. Only a small JSON Blob is read (a problem detail
+ * is a few hundred bytes; a big HTML error page is not worth holding in
+ * memory). Any other body passes through untouched, at once.
+ */
+export const MAX_ERROR_BLOB_BYTES = 64 * 1024;
+
+function withReadableBody(error: HttpErrorResponse): Observable<HttpErrorResponse> {
+  const blob: unknown = error.error;
+  if (!(blob instanceof Blob) || !blob.type.includes('json') || blob.size > MAX_ERROR_BLOB_BYTES) {
+    return of(error);
+  }
+  return from(
+    blob.text().then(
+      (text) => {
+        let body: unknown = null;
+        try {
+          body = JSON.parse(text);
+        } catch {
+          // Not JSON (an HTML error page, an empty body): no code to keep.
+        }
+        return new HttpErrorResponse({
+          error: body,
+          headers: error.headers,
+          status: error.status,
+          statusText: error.statusText,
+          url: error.url ?? undefined,
+        });
+      },
+      () => error,
+    ),
+  );
+}
+
+/**
  * Maps every HTTP failure to an ApiError (RFC 7807 `code`, Retry-After).
  * A 401 outside the login form means the session is gone (AUTH-000: missing,
  * invalid or expired token): clear it and go back to the login. The login's
@@ -50,12 +86,13 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) => {
       if (!(error instanceof HttpErrorResponse)) {
         return throwError(() => error);
       }
-      const apiError = toApiError(error);
-      if (apiError.status === 401 && isBackendCall(request.url) && !isPublic(request.url)) {
+      // Decided on the status alone, before any body is read: the session
+      // ends even if the caller unsubscribes while a Blob body is being read.
+      if (error.status === 401 && isBackendCall(request.url) && !isPublic(request.url)) {
         session.clear();
         void router.navigate(['/login'], { queryParams: { motivo: 'sesion' } });
       }
-      return throwError(() => apiError);
+      return withReadableBody(error).pipe(switchMap((readable) => throwError(() => toApiError(readable))));
     }),
   );
 };

@@ -84,12 +84,17 @@ test('company page at 360 px: certificates become stacked cards, no sideways scr
   });
   expect(overlaps).toBe(0);
   await expect(certificates(page).locator('table')).toBeHidden();
-  const cards = certificates(page).locator('li.card');
+  const cards = certificates(page).locator('a.card');
   await expect(cards).toHaveCount(CERTIFICATES.length);
   await expect(cards.first()).toContainText('Diciembre 2024');
   await expect(cards.first()).toContainText('12,480.50 kg');
+  expect((await cards.first().boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
 
   await expectNoSidewaysScroll(page);
+
+  // Each card opens its certificate.
+  await cards.first().click();
+  await expect(page).toHaveURL(new RegExp(`/certificados/${CERTIFICATES[0].id}$`));
 });
 
 test('a company without certificates says so in every block and never asks for a summary', async ({ page }) => {

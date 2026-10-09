@@ -30,6 +30,11 @@ export const routes: Routes = [
         title: 'Empresa · Trazabilidad ESG',
         loadComponent: () => import('./features/companies/company.page').then((m) => m.CompanyPage),
       },
+      {
+        path: 'empresas/:companyId/certificados/:certificateId',
+        title: 'Certificado · Trazabilidad ESG',
+        loadComponent: () => import('./features/certificate/certificate.page').then((m) => m.CertificatePage),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

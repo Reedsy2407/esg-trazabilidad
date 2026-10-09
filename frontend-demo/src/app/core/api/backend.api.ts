@@ -35,6 +35,13 @@ export class BackendApi {
     );
   }
 
+  /** RPT-003 (404) when the id doesn't exist or belongs to another company. */
+  certificate(companyId: string, certificateId: string): Observable<EsgCertificate> {
+    return this.http.get<EsgCertificate>(
+      `${reporting}/tracked-companies/${encodeURIComponent(companyId)}/certificates/${encodeURIComponent(certificateId)}`,
+    );
+  }
+
   /** Dates as "yyyy-MM-dd" (LocalDate). */
   certificateSummary(companyId: string, periodStart: string, periodEnd: string): Observable<CertificateSummary> {
     const params = new HttpParams().set('periodStart', periodStart).set('periodEnd', periodEnd);

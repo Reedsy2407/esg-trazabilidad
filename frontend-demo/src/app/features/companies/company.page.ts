@@ -8,6 +8,7 @@ import { loadErrorMessage } from '../../shared/error-message';
 import { formatInstantDate, formatKg, formatPercent, periodLabel } from '../../shared/format';
 import { buildKilosChart, latestCertificate } from './kilos-chart';
 import { KilosChart } from './kilos-chart.component';
+import { ChevronIcon } from '../../shared/chevron-icon';
 import { StatusLabel } from './status-label';
 
 /** The list page the row was opened from (router state), so "Volver" returns to it. */
@@ -33,7 +34,7 @@ function originPage(): number | null {
  */
 @Component({
   selector: 'app-company-page',
-  imports: [RouterLink, StatusLabel, KilosChart],
+  imports: [RouterLink, StatusLabel, KilosChart, ChevronIcon],
   templateUrl: './company.page.html',
   styleUrl: './company.page.css',
 })

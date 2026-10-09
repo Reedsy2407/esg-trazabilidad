@@ -5,7 +5,7 @@
 - **Audiencia:** operadores y personal de asociaciones de recicladores en Lima; uso diario, pantalla de escritorio.
 - **Tres adjetivos:** preciso, sobrio, legible.
 - **Personalidad:** herramienta de trabajo seria, densa y calmada, con aire de registro de balanza / libro de campo. No es una web de marketing.
-- **Elemento firma:** la pantalla del certificado, como documento impreso verificable (código de verificación en mono, tabla de pesadas, sello de estado). El resto de la app es sobrio para que el certificado destaque.
+- **Elemento firma:** la pantalla del certificado, con aire de documento impreso: encabezado (empresa y RUC), cifras principales, período, fecha de emisión y código del certificado (UUID completo en mono, con botón Copiar). No lleva sello de estado (el certificado no tiene estado) ni tabla de pesadas (las pesadas van en el CSV). No existe verificación pública por terceros: nada en la pantalla debe sugerirla. El resto de la app es sobrio para que el certificado destaque.
 
 ## Paleta (contraste AA calculado sobre `paper`)
 
@@ -52,7 +52,7 @@ Las maquetas solo pueden usar estas entidades y campos. Nada más: sin balanzas,
 | Login | `POST /auth/login` | correo electrónico, contraseña. Errores: `AUTH-001` (credenciales), `AUTH-004` (bloqueo temporal con `Retry-After`) |
 | Empresas | `GET /tracked-companies` (paginado, 20, orden por nombre) | nombre, RUC, estado (ACTIVE/INACTIVE). No hay filtros todavía |
 | Certificados de una empresa | `GET /tracked-companies/{id}/certificates` (paginado, 20, más recientes primero) | empresa, RUC, período (inicio-fin), kilos trazados, % de cumplimiento de jerarquía, fecha de emisión |
-| Detalle de certificado | `GET /certificates/{id}`, `/pdf`, `/csv` | los mismos campos + id (código de verificación) + descargas PDF y CSV. No hay estado ni tabla de pesadas |
+| Detalle de certificado | `GET /tracked-companies/{companyId}/certificates/{id}`, `/pdf`, `/csv` | los mismos campos + id (código del certificado, UUID completo) + descargas PDF y CSV. No hay estado ni tabla de pesadas (las pesadas salen en el CSV) |
 | Alta de recojo | `POST /neighbors/{id}/collection-records` | asociación (obligatoria), fecha (obligatoria), peso en kg (obligatorio, positivo), cronograma (opcional) |
 | Asociaciones | `GET /associations` | nombre, RUC, N.º de registro, dirección, correo, teléfono, estado (ACTIVE/SUSPENDED) |
 

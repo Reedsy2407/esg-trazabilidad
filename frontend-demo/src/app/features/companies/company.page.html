@@ -87,15 +87,19 @@
                 <th scope="col" class="num">Kilos trazados</th>
                 <th scope="col" class="num">Cumplimiento de jerarquía</th>
                 <th scope="col" class="num">Emitido</th>
+                <th scope="col" class="chev"><span class="visually-hidden">Abrir</span></th>
               </tr>
             </thead>
             <tbody>
               @for (row of r.items; track row.id) {
                 <tr>
-                  <td>{{ row.period }}</td>
+                  <td>
+                    <a class="row-link" [routerLink]="['/empresas', id(), 'certificados', row.id]">{{ row.period }}</a>
+                  </td>
                   <td class="num mono">{{ row.kilos }}</td>
                   <td class="num mono">{{ row.compliance }}</td>
                   <td class="num mono">{{ row.issued }}</td>
+                  <td class="chev"><app-chevron-icon /></td>
                 </tr>
               }
             </tbody>
@@ -103,13 +107,16 @@
         </div>
         <ul class="cards" aria-label="Certificados emitidos">
           @for (row of r.items; track row.id) {
-            <li class="card">
-              <span class="card-title">{{ row.period }}</span>
-              <dl>
-                <div><dt>Kilos trazados</dt><dd class="mono">{{ row.kilos }}</dd></div>
-                <div><dt>Cumplimiento</dt><dd class="mono">{{ row.compliance }}</dd></div>
-                <div><dt>Emitido</dt><dd class="mono">{{ row.issued }}</dd></div>
-              </dl>
+            <li>
+              <!-- Named by its period alone, not by the whole card's text -->
+              <a class="card" [routerLink]="['/empresas', id(), 'certificados', row.id]" [attr.aria-labelledby]="'card-' + row.id">
+                <span class="card-title" [id]="'card-' + row.id">{{ row.period }}</span>
+                <dl>
+                  <div><dt>Kilos trazados</dt><dd class="mono">{{ row.kilos }}</dd></div>
+                  <div><dt>Cumplimiento</dt><dd class="mono">{{ row.compliance }}</dd></div>
+                  <div><dt>Emitido</dt><dd class="mono">{{ row.issued }}</dd></div>
+                </dl>
+              </a>
             </li>
           }
         </ul>

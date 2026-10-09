@@ -425,4 +425,9 @@
 - [x] F3: Detalle del certificado (elemento firma) + descargas PDF/CSV con nombre sanitizado — ver tasks/LEARNINGS.md#frontend
 - [x] F4: Alta de recojo (vecino, asociación, fecha, kg, cronograma opcional) — ver tasks/LEARNINGS.md#frontend
 - [ ] F5: Asociaciones (lista con estado ACTIVE/SUSPENDED) — recortada de la tanda F3–F6 (2026-10-08): queda pendiente tras F6; `GET /associations` ya se usa en F4
-- [ ] F6: Despliegue del frontend + `CORS_ALLOWED_ORIGINS` en esg-shared + Playwright en CI
+- [x] F6: Despliegue del frontend (https://esg-frontend-egcf.onrender.com) + `CORS_ALLOWED_ORIGINS` en esg-shared + Playwright en CI — ver tasks/LEARNINGS.md#frontend. Límite: ficha, certificado y descargas no se pudieron probar en vivo porque producción no tiene empresas; cubiertas por 40 Playwright en CI y la comprobación local de la build de producción bajo la misma CSP
+
+### Pendientes (tareas aparte)
+
+- [ ] Datos de demo en producción (empresa + sincronización SIGERSOL + recojos + certificado emitido), con script reproducible, cada escritura aprobada por Angel; tarea aparte
+- [ ] F5: Asociaciones (ver arriba)

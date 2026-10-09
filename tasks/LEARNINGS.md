@@ -1798,6 +1798,7 @@ These are Checkpoint 40's counts plus Task 82's one unit test. CI on `8b51a52` (
 - One `Cache-Control: no-cache` rule for `/*` (two rules for the same path would be ambiguous on Render); hashed bundles revalidate as 304s.
 - **Blueprint sync creates resources:** pushing `render.yaml` with `esg-frontend` makes the Blueprint create the site on its next sync, so the push itself is the manual gate (docs/deployment.md §7).
 - **CI:** the frontend job now installs Chromium and runs Playwright (AXE + 360/768/1280 included), keeping traces as an artifact on failure.
+- **Live limit (2026-10-09, user decision A):** in production the login, CORS on all four services, CSP and headers, deep links, the companies empty state and the collection form were verified; company page, certificate and downloads could not be, because production has no tracked companies. They are covered by the 40 Playwright tests in CI and the local check of the production build under the same CSP. Demo data in production is a separate task.
 
 **Impeccable review (degraded):** the `impeccable` launcher would download its native engine, which TOOLING.md forbids. So the detector (Assessment B) didn't run, and the review used only its written playbooks.
 - Assessment A, an isolated sub-agent: 27/40.

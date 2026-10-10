@@ -146,7 +146,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>3.6.0</version>
                 <configuration>
                     <!-- Every @SpringBootTest IT now boots a real
                          CollectionRegisteredEventListener (Task 48): Spring AMQP's

@@ -25,12 +25,28 @@ public class CertificateCsvExporter {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
 
+    /**
+     * CSV formula injection (OWASP): a spreadsheet reads a cell starting with
+     * one of these as a formula. Text fields typed by a user get a leading
+     * single quote so they open as plain text. Never applied to numbers
+     * (kilos, percentages), where a leading "-" is a real negative.
+     */
+    static String text(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        return switch (value.charAt(0)) {
+            case '=', '+', '-', '@', '\t', '\r' -> "'" + value;
+            default -> value;
+        };
+    }
+
     public byte[] export(EsgCertificate certificate, List<EsgCertificateLineItem> lineItems) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
                 CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
-            printer.printRecord("Empresa", certificate.getCompanyName());
-            printer.printRecord("RUC", certificate.getCompanyRuc());
+            printer.printRecord("Empresa", text(certificate.getCompanyName()));
+            printer.printRecord("RUC", text(certificate.getCompanyRuc()));
             printer.printRecord("Periodo inicio", certificate.getPeriodStart().format(DATE_FORMAT));
             printer.printRecord("Periodo fin", certificate.getPeriodEnd().format(DATE_FORMAT));
             printer.printRecord("Kilos trazados", certificate.getKilosTrazados().toPlainString());

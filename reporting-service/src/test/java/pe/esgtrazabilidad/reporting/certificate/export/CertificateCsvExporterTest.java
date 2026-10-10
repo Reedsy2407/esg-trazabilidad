@@ -11,6 +11,8 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
@@ -55,6 +57,38 @@ class CertificateCsvExporterTest {
         // Line items table: every frozen entry must appear as its own row.
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("2026-01-05", "50.00"));
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("2026-01-20", "70.50"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"=1+1", "+cmd", "-2", "@SUM(A1)", "\tEmpresa", "\rEmpresa"})
+    void prefixesACompanyNameStartingWithAFormulaCharacterSoASpreadsheetReadsItAsText(String name)
+            throws IOException {
+        List<CSVRecord> records = export(name);
+
+        assertThat(records.get(0)).containsExactly("Empresa", "'" + name);
+        // Numbers are never prefixed: a leading "-" there is a real negative.
+        assertThat(records.get(4)).containsExactly("Kilos trazados", "120.50");
+        assertThat(records.get(5)).containsExactly("Cumplimiento de jerarquia (%)", "85.00");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Empresa SAC", "Empresa - Lima", "Empresa=1", "'ya citada"})
+    void leavesACompanyNameThatDoesNotStartWithAFormulaCharacterAsTyped(String name) throws IOException {
+        assertThat(export(name).get(0)).containsExactly("Empresa", name);
+    }
+
+    private List<CSVRecord> export(String companyName) throws IOException {
+        TrackedCompany trackedCompany = TrackedCompany.create(companyName, "20123456789", UUID.randomUUID());
+        EsgCertificate certificate = EsgCertificate.issue(
+                trackedCompany,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 1, 31),
+                new BigDecimal("120.50"),
+                new BigDecimal("85.00"));
+        byte[] csvBytes = exporter.export(certificate, List.of());
+        try (CSVParser parser = CSVParser.parse(new String(csvBytes, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+            return parser.getRecords();
+        }
     }
 
     @Test

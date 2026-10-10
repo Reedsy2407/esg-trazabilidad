@@ -1,6 +1,6 @@
 <header class="head">
   <h1>Empresas</h1>
-  <p class="sub">Empresas registradas para trazabilidad ESG, por orden alfabético.</p>
+  <p class="sub">Abre una empresa para ver sus kilos trazados y sus certificados.</p>
 </header>
 
 @if (loadError(); as message) {
@@ -9,55 +9,11 @@
     <button type="button" class="btn" (click)="companies.reload()">Volver a intentar</button>
   </div>
 } @else {
-  <div class="table-scroll" role="region" aria-label="Lista de empresas" tabindex="0">
-  <table [attr.aria-busy]="companies.isLoading()">
-    <caption class="visually-hidden">Empresas, página {{ pagina() }}</caption>
-    <thead>
-      <tr>
-        <th scope="col">Empresa</th>
-        <th scope="col">RUC</th>
-        <th scope="col">Estado</th>
-        <th scope="col" class="chev"><span class="visually-hidden">Abrir</span></th>
-      </tr>
-    </thead>
-    <tbody>
-      @if (companies.isLoading() && page() === null) {
-        @for (row of [1, 2, 3, 4, 5]; track row) {
-          <tr class="skeleton" aria-hidden="true">
-            <td><span class="bone wide"></span></td>
-            <td><span class="bone"></span></td>
-            <td><span class="bone short"></span></td>
-            <td></td>
-          </tr>
-        }
-      } @else {
-        @for (company of page()?.content ?? []; track company.id) {
-          <tr>
-            <td>
-              <a class="row-link" [routerLink]="['/empresas', company.id]" [state]="{ pagina: pagina() }">{{ company.name }}</a>
-            </td>
-            <td class="mono">{{ company.ruc }}</td>
-            <td><app-status-label [status]="company.status" /></td>
-            <td class="chev"><app-chevron-icon /></td>
-          </tr>
-        } @empty {
-          <tr>
-            <td colspan="4" class="empty">
-              Todavía no hay empresas registradas para trazabilidad.
-              <button type="button" class="btn-link" (click)="companies.reload()">Actualizar la lista</button>
-            </td>
-          </tr>
-        }
-      }
-    </tbody>
-  </table>
-  </div>
-
-  <!-- Below 640 px the same companies as stacked cards: no sideways scrolling on a phone. -->
-  <ul class="cards" [attr.aria-busy]="companies.isLoading()" aria-label="Empresas, página {{ pagina() }}">
+  <!-- Each company is a stub torn from the scale's roll: one link per company, at every width. -->
+  <ul class="stubs" [attr.aria-busy]="companies.isLoading()" aria-label="Empresas, página {{ pagina() }}">
     @if (companies.isLoading() && page() === null) {
-      @for (row of [1, 2, 3]; track row) {
-        <li class="card skeleton" aria-hidden="true">
+      @for (row of [1, 2, 3, 4]; track row) {
+        <li class="card ticket skeleton" aria-hidden="true">
           <span class="bone wide"></span>
           <span class="bone"></span>
         </li>
@@ -65,16 +21,15 @@
     } @else {
       @for (company of page()?.content ?? []; track company.id) {
         <li>
-          <a class="card" [routerLink]="['/empresas', company.id]" [state]="{ pagina: pagina() }">
-            <span class="card-top">
-              <span class="card-name">{{ company.name }}</span>
-              <app-status-label [status]="company.status" />
-            </span>
+          <a class="card ticket" [routerLink]="['/empresas', company.id]" [state]="{ pagina: pagina() }">
+            <span class="card-name">{{ company.name }}</span>
             <span class="card-ruc">RUC <span class="mono">{{ company.ruc }}</span></span>
+            <app-status-label class="card-status" [status]="company.status" />
+            <app-chevron-icon class="card-chev" />
           </a>
         </li>
       } @empty {
-        <li class="empty">
+        <li class="empty sheet-flat">
           Todavía no hay empresas registradas para trazabilidad.
           <button type="button" class="btn-link" (click)="companies.reload()">Actualizar la lista</button>
         </li>
@@ -86,14 +41,14 @@
     <nav class="pager" aria-label="Paginación de empresas">
       <p class="count">
         @if (range(); as r) {
-          Mostrando <span class="mono">{{ r.first | number }}–{{ r.last | number }}</span> de
-          <span class="mono">{{ r.total | number }}</span> {{ r.total === 1 ? 'empresa' : 'empresas' }}
+          Mostrando {{ r.first | number }}–{{ r.last | number }} de {{ r.total | number }}
+          {{ r.total === 1 ? 'empresa' : 'empresas' }}
         }
       </p>
       @if (current.totalPages > 1) {
         <div class="pages">
           <button type="button" class="btn" [disabled]="pagina() <= 1" (click)="goTo(pagina() - 1)">Anterior</button>
-          <span class="where">Página <span class="mono">{{ pagina() }}</span> de <span class="mono">{{ current.totalPages }}</span></span>
+          <span class="where">Página {{ pagina() }} de {{ current.totalPages }}</span>
           <button type="button" class="btn" [disabled]="pagina() >= current.totalPages" (click)="goTo(pagina() + 1)">Siguiente</button>
         </div>
       }

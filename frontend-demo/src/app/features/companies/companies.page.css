@@ -1,92 +1,84 @@
 .head {
-  padding-bottom: var(--space-4);
   margin-bottom: var(--space-6);
-  border-bottom: 1px solid var(--line);
 }
 h1 {
-  font-size: 26px;
+  font-size: 44px;
+  line-height: 1.02;
 }
 .sub {
-  margin: var(--space-1) 0 0;
+  margin: var(--space-2) 0 0;
   color: var(--ink-soft);
 }
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--paper);
-  border: 1px solid var(--line);
+
+/* The list: ticket stubs stacked on the concrete, each one a link to its company. */
+.stubs {
+  display: grid;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-th {
-  height: 44px;
-  padding: 0 var(--space-4);
-  background: var(--ground);
-  border-bottom: 1px solid var(--line);
-  color: var(--ink-soft);
-  font-size: 13px;
-  font-weight: 600;
-  text-align: left;
-}
-td {
-  height: 48px;
-  padding: 0 var(--space-4);
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
-tbody tr:last-child td {
-  border-bottom: 0;
-}
-/* The whole row is the company's link: the name's link stretches over it. */
-tbody tr {
-  position: relative;
-}
-tbody tr:has(.row-link):hover {
-  background: var(--row-hover);
-}
-.row-link {
+.card {
+  display: grid;
+  /* Fixed tracks so RUC and state line up from one stub to the next. */
+  grid-template-columns: minmax(0, 1fr) 190px 96px 20px;
+  align-items: center;
+  gap: var(--space-2) var(--space-8);
+  min-height: 44px;
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+  padding-top: calc(var(--tear) + var(--space-4));
+  padding-bottom: calc(var(--tear) + var(--space-4));
   color: var(--ink);
-  font-weight: 600;
   text-decoration: none;
 }
-.row-link::after {
-  content: '';
-  position: absolute;
-  inset: 0;
+a.card:hover .card-name {
+  color: var(--accent);
 }
-.row-link:focus-visible {
-  outline: none;
-}
-tbody tr:has(.row-link:focus-visible) {
+/* The mask would clip an outline drawn outside the stub: draw focus inside it. */
+a.card:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  outline-offset: calc(-1 * var(--tear) - 4px);
 }
-.chev {
-  width: 48px;
-  text-align: right;
-  vertical-align: middle;
+.card-name {
+  font-weight: 600;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.card-ruc {
   color: var(--ink-soft);
+  font-size: 14px;
+  white-space: nowrap;
 }
-.chev app-chevron-icon {
-  vertical-align: middle;
+.card-ruc .mono {
+  color: var(--ink);
+  font-size: 14px;
+}
+.card-status {
+  font-size: 14px;
+}
+.card-chev {
+  color: var(--ink-soft);
+  justify-self: end;
 }
 .empty {
-  height: auto;
-  padding: var(--space-8) var(--space-4);
-  white-space: normal;
+  padding: var(--space-6);
   color: var(--ink-soft);
 }
+
 .bone {
   display: block;
   width: 96px;
   height: 12px;
   background: var(--line);
-  border-radius: var(--radius-data);
   animation: pulse 1.2s ease-in-out infinite alternate;
 }
 .bone.wide {
   width: 240px;
 }
-.bone.short {
-  width: 64px;
+.card.skeleton {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 @keyframes pulse {
   from {
@@ -96,13 +88,14 @@ tbody tr:has(.row-link:focus-visible) {
     opacity: 1;
   }
 }
+
 .pager {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin-top: var(--space-3);
+  margin-top: var(--space-4);
 }
 .count {
   margin: 0;
@@ -118,78 +111,28 @@ tbody tr:has(.row-link:focus-visible) {
   color: var(--ink-soft);
   font-size: 14px;
 }
-/* Wide screens: the table. Its own scroll box is only a safety net for very
-   long names; position: relative keeps absolutely positioned children (the
-   visually hidden header text) inside it instead of widening the page. */
-.table-scroll {
-  position: relative;
-  overflow-x: auto;
-}
 
-/* Narrow screens: stacked cards instead of the table (brief: no horizontal
-   scrolling on a phone). Same data, same link target, one tap per company. */
-.cards {
-  display: none;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.card {
-  display: block;
-  min-height: 44px;
-  padding: var(--space-3) var(--space-4);
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-data);
-  color: var(--ink);
-  text-decoration: none;
-}
-li + li {
-  margin-top: var(--space-2);
-}
-a.card:hover {
-  background: var(--row-hover);
-}
-a.card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.card-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.card-name {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-.card-top app-status-label {
-  flex: none;
-  font-size: 14px;
-}
-.card-ruc {
-  display: block;
-  margin-top: var(--space-1);
-  color: var(--ink-soft);
-  font-size: 14px;
-}
-.card.skeleton .bone + .bone {
-  margin-top: var(--space-2);
-}
-.cards .empty {
-  padding: var(--space-6) var(--space-4);
-  background: var(--paper);
-  border: 1px solid var(--line);
-  color: var(--ink-soft);
-}
-
+/* Phones: name on top, RUC and state below it, chevron at the side. */
 @media (max-width: 639.98px) {
-  .table-scroll {
-    display: none;
+  h1 {
+    font-size: 34px;
   }
-  .cards {
-    display: block;
+  .card {
+    grid-template-columns: minmax(0, 1fr) 20px;
+    gap: var(--space-1) var(--space-3);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+  .card-name {
+    font-size: 17px;
+  }
+  .card-ruc,
+  .card-status {
+    grid-column: 1;
+  }
+  .card-chev {
+    grid-column: 2;
+    grid-row: 1 / span 3;
   }
   .bone.wide {
     width: 70%;

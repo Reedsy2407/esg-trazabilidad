@@ -25,7 +25,7 @@ test('warm services, wrong password, then sign in and open a company', async ({ 
   await expect(page).toHaveURL(/\/empresas$/);
   await expect(page.getByRole('heading', { name: 'Empresas', level: 1 })).toBeVisible();
   await expect(page.getByText(EMAIL)).toBeVisible();
-  const rows = page.locator('tbody tr');
+  const rows = page.locator('a.card');
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText(COMPANIES[0].name);
   await expect(rows.first()).toContainText(COMPANIES[0].ruc);
@@ -33,8 +33,8 @@ test('warm services, wrong password, then sign in and open a company', async ({ 
   await expect(rows.nth(1)).toContainText('Inactiva');
   await expect(page.getByText('Mostrando 1–2 de 2 empresas')).toBeVisible();
 
-  // The whole row opens the company, by mouse or keyboard.
-  await rows.nth(1).click({ position: { x: 600, y: 20 } });
+  // The whole stub opens the company, by mouse or keyboard.
+  await rows.nth(1).click({ position: { x: 600, y: 30 } });
   await expect(page).toHaveURL(new RegExp(`/empresas/${COMPANIES[1].id}$`));
   await expect(page.getByRole('heading', { name: COMPANIES[1].name })).toBeVisible();
   await expect(page.getByText(COMPANIES[1].ruc)).toBeVisible();
@@ -96,8 +96,7 @@ test('on a 360 px phone the companies are stacked cards and the page never scrol
   }));
   expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
 
-  // The table is replaced, not squeezed: each card shows name, state and RUC and opens the company.
-  await expect(page.locator('table')).toBeHidden();
+  // The same stubs as on a desktop, stacked: each shows name, state and RUC and opens the company.
   const card = page.locator('a.card').filter({ hasText: COMPANIES[1].name });
   await expect(card).toContainText('Inactiva');
   await expect(card).toContainText(COMPANIES[1].ruc);
@@ -145,4 +144,25 @@ test('on a 360 px phone the warm-up rows stack: state and timer stay inside the 
   if (layout.sameLine) {
     expect(layout.gap).toBeGreaterThanOrEqual(8);
   }
+});
+
+test('each company stub is a 44 px+ target with a visible focus ring drawn inside it', async ({ page }) => {
+  await fakeBackend(page);
+  await page.goto('/login');
+  await page.getByLabel('Correo electrónico').fill(EMAIL);
+  await page.getByLabel('Contraseña').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+  const stub = page.locator('a.card').first();
+  await expect(stub).toBeVisible();
+  await stub.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  const ring = await stub.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { style: s.outlineStyle, width: parseFloat(s.outlineWidth), offset: parseFloat(s.outlineOffset), height: el.getBoundingClientRect().height };
+  });
+  expect(ring.style).toBe('solid');
+  expect(ring.width).toBeGreaterThanOrEqual(2);
+  expect(ring.offset).toBeLessThan(0); // inside the stub, where the serrated mask can't clip it
+  expect(ring.height).toBeGreaterThanOrEqual(44);
 });

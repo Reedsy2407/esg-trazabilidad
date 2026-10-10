@@ -6,17 +6,19 @@ import { ChartModel } from './kilos-chart';
 const W = 640;
 const H = 260;
 const BOTTOM = 32;
-const TOP = 12;
+const TOP = 20;
 const PLOT_H = H - TOP - BOTTOM;
 /** Phones draw text at 2x (see styles), so the axis needs more room on both sides. */
 const COMPACT_QUERY = '(max-width: 639.98px)';
 const MARGINS = { wide: { left: 64, right: 8 }, compact: { left: 112, right: 44 } };
 
+let nextChartId = 0;
+
 /**
  * Kilos per certified period as plain SVG bars, no chart library. The SVG is
  * decorative to assistive tech; the same numbers sit in a visually hidden
  * table right after it, so a screen reader reads exact values instead of
- * guessing them from bar heights. Bars are petrol on white (9.2:1 > 3:1);
+ * guessing them from bar heights. Bars are ink-soft on paper (6.9:1 > 3:1);
  * no meaning depends on color.
  */
 @Component({
@@ -24,6 +26,13 @@ const MARGINS = { wide: { left: 64, right: 8 }, compact: { left: 112, right: 44 
   imports: [DecimalPipe],
   template: `
     <svg [attr.viewBox]="'0 0 ' + width + ' ' + height" width="100%" aria-hidden="true" focusable="false">
+      <!-- Thermal-print stripes, only on the highlighted period: on every bar they aliased at
+           phone widths and blurred the bars' top edges (see LEARNINGS). -->
+      <defs>
+        <pattern [attr.id]="patternId" patternUnits="userSpaceOnUse" [attr.width]="stripe() * 2" [attr.height]="stripe() * 2">
+          <rect [attr.width]="stripe() * 2" [attr.height]="stripe()" class="stripe" />
+        </pattern>
+      </defs>
       @for (tick of model().ticks; track tick) {
         <line class="grid" [attr.x1]="left()" [attr.x2]="width - right()" [attr.y1]="y(tick)" [attr.y2]="y(tick)" />
         <text class="tick" [attr.x]="left() - 8" [attr.y]="y(tick) + 4" text-anchor="end">{{ tick | number }}</text>
@@ -31,6 +40,8 @@ const MARGINS = { wide: { left: 64, right: 8 }, compact: { left: 112, right: 44 
       @for (bar of model().bars; track bar.key; let i = $index, last = $last) {
         <rect
           class="bar"
+          [class.now]="last"
+          [style.fill]="last ? 'url(#' + patternId + ')' : null"
           [attr.x]="barX(i)"
           [attr.y]="y(bar.kg)"
           [attr.width]="barWidth()"
@@ -68,19 +79,27 @@ const MARGINS = { wide: { left: 64, right: 8 }, compact: { left: 112, right: 44 
     :host { display: block; position: relative; }
     svg { display: block; }
     .grid { stroke: var(--line); stroke-width: 1; }
-    .bar { fill: var(--accent); }
-    text { font-family: var(--font-mono); font-size: 11px; fill: var(--ink-soft); }
+    /* Solid bars keep heights comparable; the latest period is printed (striped) and
+       outlined in ink, so its top edge stays exact. ink-soft is 6.9:1 on paper. */
+    .bar { fill: var(--ink-soft); }
+    .bar.now { stroke: var(--ink); stroke-width: 1.5; }
+    .stripe { fill: var(--ink); }
+    text { font-family: var(--font-sans); font-size: 11px; fill: var(--ink-soft); }
+    .tick { font-family: var(--font-mono); font-size: 10px; }
     .label.current { fill: var(--ink); font-weight: 600; }
     /* Phones: the 640-unit drawing shrinks about 2x, so its text doubles to stay
        legible; skipLabel() then keeps one period label in three. */
     @media (max-width: 639.98px) {
       text { font-size: 22px; }
+      .tick { font-size: 20px; }
     }
     .label.skip { display: none; }
   `,
 })
 export class KilosChart {
   readonly model = input.required<ChartModel>();
+  /** Unique per chart, so two charts on one page never share a pattern. */
+  protected readonly patternId = `kilos-print-${nextChartId++}`;
 
   protected readonly width = W;
   protected readonly height = H;
@@ -104,6 +123,8 @@ export class KilosChart {
       inject(DestroyRef).onDestroy(() => query.removeEventListener('change', onChange));
     }
   }
+  /** Stripe thickness in drawing units: thicker on phones, where the drawing shrinks about 2x. */
+  protected readonly stripe = computed(() => (this.compact() ? 4 : 2));
   protected readonly barWidth = computed(() => Math.min(28, this.slot() * 0.55));
 
   /** On phones, one label in three, counted back from the latest period so it always shows. */

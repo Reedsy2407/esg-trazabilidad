@@ -32,28 +32,14 @@
 
 @if (!company.error()) {
   <div class="grid">
-    <section class="panel" aria-labelledby="chart-title">
-      <h2 id="chart-title">Kilos trazados por período</h2>
-      @if (chart(); as model) {
-        @if (model.bars.length > 0) {
-          <app-kilos-chart [model]="model" />
-        } @else {
-          <p class="empty">Aún no hay certificados emitidos, así que no hay períodos que graficar.</p>
-        }
-      } @else if (certificates.error()) {
-        <p class="problem">La gráfica no está disponible porque no se pudieron cargar los certificados.</p>
-      } @else {
-        <div class="bone chart" aria-hidden="true"></div>
-      }
-    </section>
-
-    <section class="panel" aria-labelledby="summary-title">
+    <!-- The period summary is the month's ticket: serrated, printed in one ink. -->
+    <section class="panel ticket summary" aria-labelledby="summary-title">
       <h2 id="summary-title">Resumen del período</h2>
       @if (summaryLines(); as s) {
         <dl class="lines">
-          <div><dt>Último período certificado</dt><dd>{{ s.period }}</dd></div>
-          <div><dt>Kilos trazados</dt><dd class="mono">{{ s.kilos }}</dd></div>
-          <div><dt>Cumplimiento de jerarquía</dt><dd class="mono">{{ s.compliance }}</dd></div>
+          <div class="period"><dt>Último período certificado</dt><dd>{{ s.period }}</dd></div>
+          <div class="figure"><dt>Kilos trazados</dt><dd class="mono">{{ s.kilos }}</dd></div>
+          <div class="figure"><dt>Cumplimiento de jerarquía</dt><dd class="mono">{{ s.compliance }}</dd></div>
         </dl>
       } @else if (summary.error(); as error) {
         <div class="problem" role="alert">
@@ -68,6 +54,20 @@
         <div aria-hidden="true">
           <span class="bone"></span><span class="bone"></span><span class="bone"></span>
         </div>
+      }
+    </section>
+    <section class="panel" aria-labelledby="chart-title">
+      <h2 id="chart-title">Kilos trazados por período</h2>
+      @if (chart(); as model) {
+        @if (model.bars.length > 0) {
+          <app-kilos-chart [model]="model" />
+        } @else {
+          <p class="empty">Aún no hay certificados emitidos, así que no hay períodos que graficar.</p>
+        }
+      } @else if (certificates.error()) {
+        <p class="problem">La gráfica no está disponible porque no se pudieron cargar los certificados.</p>
+      } @else {
+        <div class="bone chart" aria-hidden="true"></div>
       }
     </section>
   </div>

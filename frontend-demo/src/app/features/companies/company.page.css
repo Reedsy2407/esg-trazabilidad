@@ -3,12 +3,11 @@
   margin-bottom: var(--space-5);
 }
 .head {
-  padding-bottom: var(--space-4);
   margin-bottom: var(--space-6);
-  border-bottom: 1px solid var(--line);
 }
 h1 {
-  font-size: 26px;
+  font-size: 44px;
+  line-height: 1.02;
 }
 .meta {
   display: flex;
@@ -18,18 +17,19 @@ h1 {
   color: var(--ink-soft);
 }
 h2 {
-  font-size: 16px;
+  font-size: 15px;
   margin-bottom: var(--space-3);
 }
 .sec {
   margin-top: var(--space-8);
 }
 
-/* Chart and summary side by side, stacked on narrow screens. */
+/* The period's ticket on the left, the chart on flat paper beside it; stacked when narrow. */
 .grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
-  gap: var(--space-6);
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-5);
 }
 @media (max-width: 819.98px) {
   .grid {
@@ -38,33 +38,49 @@ h2 {
 }
 .panel {
   min-width: 0;
-  padding: var(--space-4);
+  padding: var(--space-5) var(--space-6);
   background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-frame);
+}
+.panel.ticket {
+  padding-top: calc(var(--tear) + var(--space-5));
+  padding-bottom: calc(var(--tear) + var(--space-5));
 }
 
-/* Resumen del período: exactly three lines, values in mono. */
+/* Resumen del período: three lines, label above value, separated by dotted rules as a
+   ticket prints them; the two figures large. (A dotted leader beside the period didn't fit:
+   its label wraps on a 340 px ticket.) */
 .lines {
   margin: 0;
 }
-.lines > div {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-1) var(--space-3);
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--line);
-}
-.lines > div:last-child {
-  border-bottom: 0;
-}
-.lines dt {
-  color: var(--ink-soft);
-}
 .lines dd {
   margin: 0;
-  text-align: right;
+}
+.period dt {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.period dd {
+  margin-top: var(--space-1);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.figure {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 2px dotted var(--rule-dots);
+}
+.figure dt {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.figure dd {
+  margin-top: var(--space-1);
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
 }
 
 /* Certificates: a table from 640 px, stacked cards below (no sideways scrolling). */
@@ -72,13 +88,12 @@ table {
   width: 100%;
   border-collapse: collapse;
   background: var(--paper);
-  border: 1px solid var(--line);
 }
 th {
   height: 44px;
   padding: 0 var(--space-4);
-  background: var(--ground);
-  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+  border-bottom: 2px solid var(--ink);
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 600;
@@ -109,8 +124,6 @@ tbody tr:last-child td {
 .card {
   padding: var(--space-3) var(--space-4);
   background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-data);
 }
 li + li {
   margin-top: var(--space-2);
@@ -157,6 +170,10 @@ tbody tr:has(.row-link:focus-visible) {
   vertical-align: middle;
   color: var(--ink-soft);
 }
+.chev app-chevron-icon {
+  display: inline-flex;
+  vertical-align: middle;
+}
 .card-title {
   display: block;
   font-weight: 600;
@@ -180,6 +197,16 @@ tbody tr:has(.row-link:focus-visible) {
   margin: 0;
 }
 @media (max-width: 639.98px) {
+  h1 {
+    font-size: 32px;
+  }
+  .panel {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+  .figure dd {
+    font-size: 30px;
+  }
   .table-wide {
     display: none;
   }
@@ -200,8 +227,6 @@ tbody tr:has(.row-link:focus-visible) {
 .empty.boxed {
   padding: var(--space-6) var(--space-4);
   background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-data);
 }
 
 .bone {

@@ -456,3 +456,60 @@
 - [ ] Human review del módulo y aprobación (Angel)
 - [ ] Pregunta abierta a Angel: ¿emitir certificados a empresas INACTIVE? (hoy se permite, como el backend)
 - [ ] Datos de demo ficticios en producción: lista propuesta en el reporte final, cada escritura aprobada por Angel (tarea aparte)
+
+## Handoff v2 (2026-10-10)
+
+### Estado de V1–V6 (todo pusheado, CI verde y verify-deploy 5/5; detalle en tasks/LEARNINGS.md#frontend-v2-cobertura-completa)
+
+- V1 Asociaciones: `9639af6`, más la regla "por vencer" en `67169a8`
+- V2 Vecinos, cronogramas, recojos, buscador, asociación recordada, bitácora: `b9a8d89`
+- V3 Registrar empresa: `23ead4e`
+- V4 SIGERSOL "ingreso manual": `b846bd1`
+- Arreglo del test de alto contraste (reduced-motion, transiciones a 0s): `a1098a0`
+- V5 Emitir certificado: `62f5987`
+- V6 Mi sesión y crear cuentas del personal: `f50ba20`
+- Docs de cierre (docs/frontend.md, matriz 27/44): `d9af954`
+- Revisión de seguridad posterior: `bf88db8` (gitleaks, npm audit, dependabot npm), `c419934` (AUTH-005), `171b399` (RPT-009), `87b1853` (frontend AUTH-005/RPT-009), `e941463` (checklist de seguridad), `7d261b6`, `f907739` (CSV formula injection), `c00d66f`
+
+### Decisiones de Angel (no volver a preguntar)
+
+- La empresa real es la tracked company de reporting-service; `/companies` de collection-service no se usa (solapamiento documentado).
+- Sin rol admin: cualquier persona del personal emite certificados y crea personal; confirmación explícita antes de lo irreversible o sensible.
+- SIGERSOL se rotula siempre como "ingreso manual".
+- Huecos del backend: solo se documentan (docs/frontend.md).
+- "Por vencer": regla del frontend, menos de 30 días en hora de Lima, constante `EXPIRING_SOON_DAYS`, rotulada en pantalla; no es estado del backend.
+- V5: mes completo por defecto y rango libre como opción secundaria; BLOQUEAR períodos que no terminaron (fin >= hoy en Lima), diciendo desde qué fecha se podrá emitir; BLOQUEAR 0 kg; confirmación = casilla + botón que nombra el período.
+- V6: contraseña inicial generada SIEMPRE por el navegador (crypto.getRandomValues, 16 caracteres, sin ambiguos), sin campo ni política; entrada desde Mi sesión, sin sexta sección en la nav; "vence a las HH:MM (dura X y no se renueva)" derivado de exp/iat del token; contraseña solo en memoria (nunca storage/URL/history.state/consola/bitácora/atributos), sin oferta de guardarla.
+- Datos de demo: no en el módulo v2; después, desde las pantallas, ficticios y con aprobación de Angel por lista.
+
+### Pendientes
+
+- [ ] Regla empresa inactiva: ¿se puede emitir certificado a una empresa INACTIVE? Hoy se permite, igual que el backend; decide Angel.
+- [ ] scripts/demo-seed: no existe todavía en el repo; detalle por definir con Angel (cómo cargar la lista de abajo, cada escritura aprobada).
+- [ ] 2 reservas: anotadas por pedido del usuario; su contenido no quedó registrado en el repo, completar aquí.
+- [ ] Human review del módulo v2 y aprobación (Angel).
+
+### Datos de demo ficticios propuestos (tal cual se reportaron; nada escrito en producción)
+
+Son 15 escrituras, una por una, cada una con aprobación.
+
+0. Lo que no tiene pantalla, para decidir cómo hacerlo:
+   - Asociación: "Asociación de Recicladores Demo Norte (ficticia)", RUC 20999000011. Si ya existe una asociación en producción, se puede usar esa.
+   - Certificación: "Registro municipal (demo)", del 15/01/2026 al 15/01/2027, para que salga como vigente.
+
+Desde las pantallas:
+
+1. Vecinos:
+   - Carmen Flores (demo), Jr. Demo 101, Comas
+   - Jorge Salas (demo), Av. Demo 202, Comas
+   - Lucía Paz (demo), Calle Demo 303, Independencia
+2. Cronogramas: Carmen el lunes a las 08:00, Jorge el miércoles a las 09:30 y Lucía el viernes a las 07:00.
+3. Recojos de setiembre de 2026 (66.95 kg en total):
+   - Carmen: 07/09 con 12.50 kg, 14/09 con 10.75 kg y 21/09 con 11.20 kg
+   - Jorge: 09/09 con 8.40 kg y 23/09 con 9.10 kg
+   - Lucía: 18/09 con 15.00 kg
+4. Empresa: "Empresa Demo Envases S.A.C. (ficticia)", RUC 20999000029, de la asociación demo.
+5. SIGERSOL (ingreso manual): del 01/09/2026 al 30/09/2026, cumplimiento de 85.50 %, 70.00 kg declarados, con la nota "Dato de demostración, no oficial".
+6. Certificado de Setiembre 2026: saldría con 66.95 kg y 85.5 %. Es irreversible, así que pide aprobación aparte.
+
+No se propone crear cuentas del personal de demo: la contraseña sería permanente en producción.

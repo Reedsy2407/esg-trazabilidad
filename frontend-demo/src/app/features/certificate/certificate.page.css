@@ -28,9 +28,11 @@ article.sheet {
   }
 }
 
+/* The title is the largest line on the ticket after the total; the company comes below it. */
 h1 {
-  font-size: 22px;
+  font-size: 30px;
   font-weight: 800;
+  line-height: 1.1;
   text-align: center;
 }
 .label,
@@ -41,7 +43,7 @@ dt {
 }
 .company {
   margin: var(--space-1) 0 0;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1.08;
   letter-spacing: -0.03em;
@@ -173,8 +175,11 @@ code {
     padding-left: var(--space-4);
     padding-right: var(--space-4);
   }
-  .company {
+  h1 {
     font-size: 24px;
+  }
+  .company {
+    font-size: 21px;
   }
   .total dd {
     font-size: 38px;

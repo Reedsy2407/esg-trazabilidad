@@ -16,7 +16,7 @@ const LABELS: Record<TrackedCompanyStatus, string> = { ACTIVE: 'Activa', INACTIV
   styles: `
     :host { display: inline-flex; align-items: center; gap: var(--space-2); }
     :host(.inactive) { color: var(--ink-soft); }
-    .mark { width: 8px; height: 8px; background: var(--accent); }
+    .mark { width: 8px; height: 8px; background: var(--ink); }
     .mark.off { background: transparent; border: 1px solid var(--ink-soft); }
   `,
 })

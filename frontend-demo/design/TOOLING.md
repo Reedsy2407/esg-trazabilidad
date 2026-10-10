@@ -6,7 +6,7 @@ Skills de Claude Code instaladas en ámbito de proyecto (`.claude/skills/`, giti
 
 - **La fuente de verdad del diseño es `frontend-demo/design/DESIGN-BRIEF.md`.** Ninguna skill la sustituye ni la contradice. Si una skill sugiere otra dirección, gana el brief.
 - **frontend-design genera**: es la skill que se usa para construir pantallas.
-- **Impeccable solo revisa**: crítica y auditoría sobre lo ya construido. No genera ni rediseña.
+- **Impeccable revisa y orienta**: crítica, auditoría y, desde el rediseño de 2026-10-10, dirección visual (en modo degradado, ver abajo). No genera código.
 - **enhance-prompt** solo prepara prompts para Stitch (`STITCH-PROMPTS.md`), tomando el sistema de diseño del brief.
 
 ## Instalado
@@ -27,6 +27,19 @@ Las tres tienen licencia Apache-2.0.
 - **`allowed-tools` de enhance-prompt** (`Read`, `Write`). Mientras la skill está activa le daría permiso de escritura sin preguntar. Sin el bloque, cada escritura pide confirmación.
 - **design-md** (`stitch-skills`). Todo su procedimiento depende del MCP de Stitch, que no se configura en este proyecto, y su `allowed-tools` preautoriza `web_fetch` y cualquier herramienta `stitch*:*`.
 - **MCP de Stitch.** No se configura. Stitch se usa desde su web, pegando los prompts.
+
+## Impeccable en modo degradado (decisión del dueño, 2026-10-10)
+
+El binario nativo sigue excluido y **no se descarga**. Para el rediseño visual (dirección A "Ticket de balanza") Impeccable se usó también para dirección y crítica, no solo revisión, siguiendo sus guías escritas:
+
+- **Crítica:** dos sub-agentes aislados (agentes genéricos de Claude Code, no los `impeccable-*` excluidos), como exige su método: A, la revisión de diseño, y B, la detección de patrones genéricos **hecha a mano** a partir de sus reglas (`craft-floor.md`, `new-work.md` §4, `operate.md`), porque el detector `impeccable detect` es parte del binario.
+- **Direcciones:** sin `concept-seed` (también del binario). Se siguió su método a mano: mundos del público, tres direcciones comprometidas y un detector manual por cada una.
+- **Generación:** las maquetas y el código se hicieron con `frontend-design`, que es la skill que genera.
+- **Pruebas en lugar del detector automático:** AXE, contraste calculado, sin scroll lateral a 360/768/1280, foco medido sobre la barra oscura y `prefers-reduced-motion` probado en e2e.
+
+## Fuentes de la interfaz
+
+Archivo y Martian Mono vienen de `@fontsource/archivo@5.3.0` y `@fontsource/martian-mono@5.3.0` (jsDelivr, versión fijada). Son woff2, solo del subconjunto latin, y van con sus licencias OFL en `public/fonts/`. Se descargaron como archivos estáticos, sin instalar paquetes ni ejecutar scripts. Las maquetas de `design/refs/direcciones/` usaron copias locales (gitignored) de Big Shoulders Stencil, Hanken Grotesk y Overpass del mismo origen.
 
 ## Archivos que Impeccable podría crear
 

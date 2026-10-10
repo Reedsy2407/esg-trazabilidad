@@ -66,6 +66,7 @@
   --paper: #fcfdfd; /* thermal paper: tickets, tables, forms */
   --accent: #2347c5; /* cobalt: current place, links, focus. 7.4:1 on paper, 5.4:1 on ground */
   --accent-on-ink: #8ea3f0; /* cobalt lifted for the dark bar: 6.5:1 on ink */
+  --ink-soft-on-ink: #b8c2bf; /* secondary text on the dark bar: 8.7:1 */
   --action: #1b2422; /* the primary action is printed in ink */
   --action-hover: #33403d;
   --disabled-bg: #e4e8e6;

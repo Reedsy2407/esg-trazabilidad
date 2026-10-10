@@ -13,7 +13,8 @@ h1 {
 /* The list: ticket stubs stacked on the concrete, each one a link to its company. */
 .stubs {
   display: grid;
-  gap: var(--space-5);
+  /* Wide enough that two stubs' serrated edges read as two tickets, not one band. */
+  gap: var(--space-8);
   margin: 0;
   padding: 0;
   list-style: none;

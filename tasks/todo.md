@@ -435,7 +435,7 @@
 - [x] R4: Empresas y ficha con el gráfico (talones dentados, resumen dentado, tabla plana, barras legibles)
 - [x] R5: Certificado (ticket dentado, h1 sin rótulo encima, impresión una vez)
 - [x] R6: Registrar recojo (formulario plano)
-- [ ] R7: Movimiento, bundle, CSP en build de producción, docs de diseño y TOOLING.md
+- [x] R7: Movimiento, bundle, CSP en build de producción, docs de diseño y TOOLING.md
 
 ### Pendientes (tareas aparte)
 

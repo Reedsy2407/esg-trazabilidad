@@ -4,32 +4,33 @@
 
 - **Audiencia:** operadores y personal de asociaciones de recicladores en Lima; uso diario, pantalla de escritorio.
 - **Tres adjetivos:** preciso, sobrio, legible.
-- **Personalidad:** herramienta de trabajo seria, densa y calmada, con aire de registro de balanza / libro de campo. No es una web de marketing.
-- **Elemento firma:** la pantalla del certificado, con aire de documento impreso: encabezado (empresa y RUC), cifras principales, período, fecha de emisión y código del certificado (UUID completo en mono, con botón Copiar). No lleva sello de estado (el certificado no tiene estado) ni tabla de pesadas (las pesadas van en el CSV). No existe verificación pública por terceros: nada en la pantalla debe sugerirla. El resto de la app es sobrio para que el certificado destaque.
+- **Personalidad:** herramienta de trabajo seria y calmada con el mundo del **ticket de balanza**: el ticket térmico que imprime la balanza del centro de acopio (dirección A, elegida el 2026-10-10 tras la crítica de Impeccable y tres maquetas; ver `refs/direcciones/`, local, no versionado). No es una web de marketing.
+- **Elemento firma:** la pantalla del certificado como el ticket del mes: papel térmico con borde dentado, una sola tinta. El título del documento es el h1 ("Certificado de trazabilidad ESG"); debajo, como líneas impresas: empresa, RUC, kilos trazados en grande, cumplimiento, período y emisión con guías punteadas, y el código (UUID completo en mono, con botón Copiar). No lleva sello de estado (el certificado no tiene estado) ni tabla de pesadas (van en el CSV). No existe verificación pública por terceros: nada en la pantalla debe sugerirla.
 
-## Paleta (contraste AA calculado sobre `paper`)
+## Paleta (contraste AA calculado; tokens en `src/styles.css`)
 
 | Token | Hex | Uso |
 |---|---|---|
-| ink | #16211F | texto |
-| muted | #56635F | texto secundario |
-| paper | #F5F6F4 | fondo (gris neutro, no crema) |
-| surface | #FFFFFF | tarjetas y tablas |
-| petrol | #0D4F5C | marca, cabecera, enlaces |
-| signal | #C2410C | SOLO acción primaria |
-| vigente | #1A7A48 | certificado vigente |
-| por-vencer | #9A5B00 | por vencer |
-| vencido | #B3261E | vencido o suspendido |
+| ink | #1B2422 | la única tinta del ticket: texto, acción primaria, barra superior (15.6:1 sobre paper) |
+| ink-soft | #4F5B58 | texto secundario y barras del gráfico (6.9:1 sobre paper, 5.05:1 sobre ground) |
+| ground | #D6DBD9 | fondo de página: el piso de concreto del acopio |
+| paper | #FCFDFD | papel térmico: tickets, tablas y formularios |
+| accent | #2347C5 | cobalto: dónde estás, enlaces y foco (7.4:1 sobre paper) |
+| accent-on-ink | #8EA3F0 | cobalto aclarado para la barra oscura: foco y subrayado activo (6.5:1 sobre ink) |
+| vigente / por-vencer / vencido | #1A7A48 / #9A5B00 / #B3261E | **solo** estados de certificación de asociaciones; nunca errores ni interfaz |
 
-Borde decorativo: #D5DAD6. Los bordes de campos de formulario necesitan >= 3:1 sobre el fondo: definir un token de borde de input más oscuro y comprobarlo con un verificador de contraste.
+Bordes de campos: #6F7A77 (4.4:1 sobre paper). Guías punteadas: #A9B2AF. Los errores van en tinta, con un signo dibujado y borde más grueso, no en rojo. Excepción vigente por decisión anterior del dueño: la pantalla "Preparando el sistema" usa verde/ámbar/rojo para el estado de cada servicio.
 
 ## Tipografía
-IBM Plex Sans (interfaz) + IBM Plex Mono (IDs, kg, RUC, códigos), cifras tabulares alineadas a la derecha. Nunca Inter, Roboto, Arial ni la fuente del sistema.
+Archivo (interfaz, 400/600/800) + Martian Mono (kilos, RUC, fechas, códigos: medición, no disfraz). Autoalojadas en woff2, solo subconjunto latin (`public/fonts`, @fontsource 5.3.0, OFL), con caras de respaldo locales ajustadas (`size-adjust`, `ascent/descent-override`) para que el cambio de fuente no mueva la maquetación. Cifras tabulares en toda la app. Nunca Inter, Roboto, Arial ni la fuente del sistema como voz.
 
 ## Forma, iconos y movimiento
-- Radio pequeño y único (2-4 px) en datos. Sin sombras de elevación: estructura con bordes de 1 px. Espaciado base 4 px.
-- Un solo juego de iconos (Material Symbols outlined), solo donde aporten significado.
-- Movimiento solo en: transición de ruta corta, anillo de foco, esqueleto de carga y aviso de calentamiento. Respetar `prefers-reduced-motion`.
+- Esquinas rectas: el papel se corta o se rasga, no se redondea. Sin sombras de elevación. Espaciado base 4 px.
+- **Borde dentado solo donde la metáfora es literal:** el ticket del login, cada empresa de la lista (talón), el resumen del período y el certificado. Tablas, gráfico y formularios son papel plano. Nunca dos bandas dentadas seguidas.
+- Gráfico: barras sólidas en ink-soft; solo el período destacado lleva rayas de impresión y contorno en tinta (las rayas en todas las barras producían aliasing a 360 px y restaban precisión a la altura).
+- Controles propios: chevron y calendario dibujados, mismo vocabulario en input, select y fecha; deshabilitado con aspecto de deshabilitado.
+- Iconos: un solo juego (Material Symbols outlined) más signos dibujados en SVG, solo donde aportan significado.
+- Movimiento: la "impresión" del ticket (revelado por pasos) **una vez** al abrir el login y el certificado; esqueleto de carga y aviso de calentamiento. Nada en tablas. Con `prefers-reduced-motion` todo se reduce a un instante (regla global); la impresión del login y del certificado está probada en e2e.
 
 ## Contenido
 Español de Perú. Datos plausibles de Lima (distritos, asociaciones inventadas, kilos con 2 decimales). Fechas dd/MM/yyyy en hora de Lima. Estados vacíos con una acción concreta. Nunca "Lorem ipsum", "John Doe" ni saludos tipo "Bienvenido de nuevo".
@@ -57,7 +58,7 @@ Las maquetas solo pueden usar estas entidades y campos. Nada más: sin balanzas,
 | Asociaciones | `GET /associations` | nombre, RUC, N.º de registro, dirección, correo, teléfono, estado (ACTIVE/SUSPENDED) |
 
 Reglas añadidas tras la primera ronda de Stitch:
-- Fondo exacto `#F5F6F4` (gris neutro, NO verdoso ni menta).
+- Fondo: el concreto `ground` #D6DBD9 de la dirección A (antes #F5F6F4, gris neutro; nunca verdoso, menta ni crema).
 - Máximo 6 columnas por tabla y UNA línea por fila (sin texto secundario dentro de la celda).
 - Máximo 3 niveles de cromo: barra superior, título con su acción, contenido. Sin pestañas, sin franja de resumen, sin pie de estado de hardware.
 - Los chips VIGENTE / POR VENCER / VENCIDO solo aplican a certificaciones de asociaciones, no a certificados ESG.
@@ -67,7 +68,7 @@ Reglas añadidas tras la primera ronda de Stitch:
 La captura de Stitch es solo guía de distribución. En la implementación mandan estas reglas:
 
 - Encabezado: marca "Trazabilidad ESG" a la izquierda, correo y "Cerrar sesión" a la derecha, enlace "Volver a empresas", nombre, RUC en mono y estado. SIN sector, SIN ubicación y SIN botones de acción (no existen "Emitir certificado" ni "Descargar historial"; el PDF y el CSV son por certificado, en el detalle).
-- Resumen del período: exactamente tres líneas (Período, Kilos trazados, Cumplimiento de jerarquía), valores en mono. Sin "Lotes", "Puntos de acopio" ni "Estado de auditoría".
+- Resumen del período: exactamente tres líneas (Período, Kilos trazados, Cumplimiento de jerarquía), como ticket dentado a la izquierda del gráfico; kilos y cumplimiento en mono grande. Sin "Lotes", "Puntos de acopio" ni "Estado de auditoría".
 - Gráfica: una sola, 12 períodos, eje Y en 0 / 5,000 / 10,000 / 15,000 kg, sin leyenda, sin sombras, sin animación. Debe tener alternativa accesible (tabla o texto).
 - Tabla: columna Período como "Octubre 2024" (no "2024-10 (Octubre 2024)"); kilos y cumplimiento alineados a la derecha en mono; filas de 48 px, clicables, con chevron; pie "Mostrando N de N certificados".
 - Prohibido: textos de sello oficial ("histórico formal auditado") y líneas de sincronización inventadas.

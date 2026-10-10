@@ -74,7 +74,7 @@ import { SessionService } from '../core/auth/session.service';
       align-items: center;
       min-height: 44px;
       padding-top: 3px;
-      color: #b8c2bf; /* 8.7:1 on the bar */
+      color: var(--ink-soft-on-ink);
       text-decoration: none;
       border-bottom: 3px solid transparent;
     }
@@ -89,7 +89,7 @@ import { SessionService } from '../core/auth/session.service';
       align-items: center;
       gap: var(--space-4);
       font-size: 13.5px;
-      color: #b8c2bf;
+      color: var(--ink-soft-on-ink);
     }
     .user .btn-link { color: var(--paper); min-height: 44px; }
     .email { overflow-wrap: anywhere; }

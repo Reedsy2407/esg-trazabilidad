@@ -169,3 +169,32 @@ for (const width of [360, 768, 1280]) {
     await checkA11y(page, `login ${width}`);
   });
 }
+
+test('with prefers-reduced-motion the tickets are already printed: no feed animation runs', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await fakeBackend(page);
+  // Fully printed: no clip, or an inset whose every side is zero (e.g. "inset(0px 0px 0%)").
+  const unclipped = /^(none|inset\((0(px|%)?\s*)+\))$/;
+  const printed = (selector: string) =>
+    page.locator(selector).evaluate((el) => {
+      const running = el.getAnimations().filter((a) => a.playState === 'running');
+      return { running: running.length, clip: getComputedStyle(el).clipPath };
+    });
+
+  await page.goto('/login');
+  await expect(page.locator('section.ticket')).toBeVisible();
+  const login = await printed('section.ticket');
+  expect(login.running).toBe(0);
+  expect(login.clip).toMatch(unclipped);
+
+  await page.getByLabel('Correo electrónico').fill(EMAIL);
+  await page.getByLabel('Contraseña').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+  await expect(page).toHaveURL(/\/empresas$/);
+  await page.goto(`/empresas/${COMPANIES[0].id}`);
+  await page.getByRole('link', { name: 'Diciembre 2024' }).click();
+  await expect(page.locator('article.sheet')).toBeVisible();
+  const certificate = await printed('article.sheet');
+  expect(certificate.running).toBe(0);
+  expect(certificate.clip).toMatch(unclipped);
+});

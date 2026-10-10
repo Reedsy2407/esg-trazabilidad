@@ -31,65 +31,80 @@ import { SessionService } from '../core/auth/session.service';
       position: absolute;
       left: var(--space-4);
       top: -100px;
+      z-index: 1;
       padding: var(--space-2) var(--space-3);
       background: var(--paper);
-      border: 1px solid var(--line-input);
+      border: 2px solid var(--ink);
     }
     .skip:focus { top: var(--space-2); }
+    .skip:focus-visible { outline-color: var(--accent-on-ink); }
+    /* The bar is the printer's head: one band of ink above the paper. */
     .bar {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-3);
-      padding: var(--space-3) var(--space-6);
-      background: var(--paper);
-      border-bottom: 1px solid var(--line);
+      align-items: stretch;
+      gap: 0 var(--space-6);
+      min-height: 60px;
+      padding: 0 var(--space-8);
+      background: var(--ink);
+      color: var(--paper);
     }
+    /* On the ink band, focus is the lifted cobalt: 6.5:1 against the bar. */
+    .bar :focus-visible { outline-color: var(--accent-on-ink); }
+    /* Brand and nav links fill the bar's height: draw the ring inside them, or its top and
+       bottom edges fall outside the band. */
+    .bar a:focus-visible { outline-offset: -4px; }
     .brand {
-      color: var(--accent);
-      font-weight: 600;
-      font-size: 16px;
+      display: flex;
+      align-items: center;
+      color: var(--paper);
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: -0.01em;
       text-decoration: none;
     }
     nav {
       display: flex;
       gap: var(--space-5);
       margin-right: auto;
-      margin-left: var(--space-4);
       font-size: 14px;
     }
     nav a {
       display: inline-flex;
       align-items: center;
       min-height: 44px;
-      color: var(--ink-soft);
+      padding-top: 3px;
+      color: #b8c2bf; /* 8.7:1 on the bar */
       text-decoration: none;
-      border-bottom: 2px solid transparent;
+      border-bottom: 3px solid transparent;
     }
-    nav a:hover { color: var(--ink); }
+    nav a:hover { color: var(--paper); }
     nav a.current {
-      color: var(--ink);
+      color: var(--paper);
       font-weight: 600;
-      border-bottom-color: var(--accent);
+      border-bottom-color: var(--accent-on-ink);
     }
     .user {
       display: flex;
       align-items: center;
       gap: var(--space-4);
-      font-size: 14px;
-      color: var(--ink-soft);
+      font-size: 13.5px;
+      color: #b8c2bf;
     }
+    .user .btn-link { color: var(--paper); min-height: 44px; }
     .email { overflow-wrap: anywhere; }
     main {
       max-width: 1120px;
       margin: 0 auto;
-      padding: var(--space-6);
+      padding: var(--space-8) var(--space-8) var(--space-12);
     }
     main:focus { outline: none; }
-    @media (max-width: 480px) {
-      .bar, main { padding-left: var(--space-4); padding-right: var(--space-4); }
-      nav { order: 3; width: 100%; margin-left: 0; }
+    @media (max-width: 640px) {
+      .bar { padding: var(--space-2) var(--space-4) 0; gap: 0 var(--space-4); }
+      .brand { min-height: 44px; }
+      .user { margin-left: auto; }
+      nav { order: 3; width: 100%; }
+      main { padding: var(--space-6) var(--space-4) var(--space-8); }
     }
   `,
 })

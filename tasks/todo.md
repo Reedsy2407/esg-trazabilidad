@@ -430,7 +430,7 @@
 ## Rediseño visual: dirección A "Ticket de balanza" (elegida 2026-10-10)
 
 - [x] R1: Tokens y tipografía (Archivo + Martian Mono autoalojadas, controles propios, un bloque de error, deshabilitado, cifras tabulares)
-- [ ] R2: Shell y navegación (foco ≥ 3:1 sobre la barra oscura)
+- [x] R2: Shell y navegación (foco ≥ 3:1 sobre la barra oscura)
 - [ ] R3: Login (ticket + titular centrados como conjunto; impresión una vez)
 - [ ] R4: Empresas y ficha con el gráfico (talones dentados, resumen dentado, tabla plana, barras legibles)
 - [ ] R5: Certificado (ticket dentado, h1 sin rótulo encima, impresión una vez)

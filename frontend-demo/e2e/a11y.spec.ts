@@ -98,3 +98,52 @@ for (const width of [1280, 360]) {
     await checkA11y(page, `company (${width} px)`);
   });
 }
+
+/** WCAG relative luminance contrast of two "rgb(r, g, b)" strings. */
+function contrast(a: string, b: string): number {
+  const lum = (rgb: string) => {
+    const [r, g, bl] = (rgb.match(/\d+/g) ?? []).slice(0, 3).map((v) => {
+      const c = Number(v) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+test('a11y: keyboard focus on the dark bar is visible (outline at least 3:1 against the bar)', async ({ page }) => {
+  await fakeBackend(page);
+  await page.goto('/login');
+  await page.getByLabel('Correo electrónico').fill(EMAIL);
+  await page.getByLabel('Contraseña').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+  await expect(page).toHaveURL(/\/empresas$/);
+
+  for (const name of ['Trazabilidad ESG', 'Empresas', 'Registrar recojo', 'Cerrar sesión']) {
+    const target = name === 'Cerrar sesión' ? page.getByRole('button', { name }) : page.getByRole('link', { name, exact: true });
+    await target.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab'); // keyboard modality, so :focus-visible applies
+    const { outline, width, style, bar, ring, band } = await target.evaluate((el) => {
+      const s = getComputedStyle(el);
+      const header = el.closest('header')!;
+      const r = el.getBoundingClientRect();
+      const grow = parseFloat(s.outlineOffset) + parseFloat(s.outlineWidth);
+      return {
+        outline: s.outlineColor,
+        width: s.outlineWidth,
+        style: s.outlineStyle,
+        bar: getComputedStyle(header).backgroundColor,
+        ring: { top: r.top - grow, bottom: r.bottom + grow },
+        band: { top: header.getBoundingClientRect().top, bottom: header.getBoundingClientRect().bottom },
+      };
+    });
+    expect(style, name).toBe('solid');
+    expect(parseFloat(width), name).toBeGreaterThanOrEqual(2);
+    expect(contrast(outline, bar), `${name}: ${outline} on ${bar}`).toBeGreaterThanOrEqual(3);
+    // The whole ring is drawn on the bar: none of it falls off-screen or onto the page.
+    expect(ring.top, `${name}: ring top`).toBeGreaterThanOrEqual(band.top);
+    expect(ring.bottom, `${name}: ring bottom`).toBeLessThanOrEqual(band.bottom);
+  }
+});

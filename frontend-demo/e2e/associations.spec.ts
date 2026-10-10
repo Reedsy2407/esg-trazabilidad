@@ -63,7 +63,7 @@ test('detail: optional data and certifications with vigente / por vencer / venci
   await expect(rows.locator('app-certification-chip')).toHaveText(['Vencido', 'Por vencer', 'Vigente']);
   await expect(rows.nth(0)).toContainText('Venció hace 35 días');
   await expect(rows.nth(1)).toContainText('Vence en 12 días');
-  await expect(page.getByText('quiere decir que vence en los próximos 30 días')).toBeVisible();
+  await expect(page.getByText('vence en menos de 30 días (regla de esta aplicación')).toBeVisible();
 
   // The colours are the reserved state tokens, and only on the chips.
   const colors = await rows.locator('app-certification-chip').evaluateAll((chips) =>

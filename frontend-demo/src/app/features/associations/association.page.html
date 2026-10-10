@@ -101,7 +101,8 @@
           } @else {
             {{ r.total }} {{ r.total === 1 ? 'certificación' : 'certificaciones' }}.
           }
-          «Por vencer» quiere decir que vence en los próximos {{ soonDays }} días. Una certificación vencida
+          «Por vencer»: vence en menos de {{ soonDays }} días (regla de esta aplicación, con la fecha de Lima; el servicio solo marca
+          las vencidas). Una certificación vencida
           impide registrar recojos de la asociación.
         </p>
       }

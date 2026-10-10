@@ -85,7 +85,7 @@ describe('AssociationPage', () => {
     ]);
     expect(rows[0].textContent).toContain('Venció hace 3 días');
     expect(rows[1].textContent).toContain('Vence en 12 días');
-    expect(page.querySelector('.foot')?.textContent).toContain('próximos 30 días');
+    expect(page.querySelector('.foot')?.textContent).toContain('vence en menos de 30 días');
   });
 
   it('an unknown association says so, and its certifications are not shown', async () => {

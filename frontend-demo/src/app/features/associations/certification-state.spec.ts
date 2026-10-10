@@ -12,11 +12,11 @@ describe('certificationState', () => {
     expect(certificationState(cert('2026-10-09', false), TODAY)).toBe('vencido');
   });
 
-  it('por vencer from today up to the window, inclusive; vigente after it', () => {
+  it('por vencer: expires in less than 30 days (Lima calendar); 30 or more is vigente', () => {
     expect(certificationState(cert('2026-10-10'), TODAY)).toBe('por-vencer');
-    expect(certificationState(cert('2026-11-09'), TODAY)).toBe('por-vencer'); // 30 days
+    expect(certificationState(cert('2026-11-08'), TODAY)).toBe('por-vencer'); // 29 days
     expect(EXPIRING_SOON_DAYS).toBe(30);
-    expect(certificationState(cert('2026-11-10'), TODAY)).toBe('vigente'); // 31 days
+    expect(certificationState(cert('2026-11-09'), TODAY)).toBe('vigente'); // 30 days
     expect(certificationState(cert('2027-10-10'), TODAY)).toBe('vigente');
   });
 

@@ -4,8 +4,9 @@ import { parseLocalDate } from '../../shared/format';
 export type CertificationState = 'vigente' | 'por-vencer' | 'vencido';
 
 /**
- * How many days ahead an unexpired certification counts as "por vencer". The backend has no
- * such state (only `expired`); this window is the screen's, pending Angel's confirmation.
+ * "Por vencer" is a rule of this frontend, not a backend state (the backend only says `expired`):
+ * an unexpired certification that expires in less than this many days, counted on Lima's
+ * calendar. Confirmed by the product owner on 2026-10-10; see docs/frontend.md.
  */
 export const EXPIRING_SOON_DAYS = 30;
 
@@ -21,8 +22,8 @@ export function daysUntilExpiration(certification: Pick<Certification, 'expirati
 
 /**
  * Vencido is the backend's own `expired` (the same flag that makes collection-service block the
- * association, COL-009), plus any date already past in Lima. Of the rest, those expiring within
- * EXPIRING_SOON_DAYS of Lima's today are por vencer.
+ * association, COL-009), plus any date already past in Lima. Of the rest, those expiring in less
+ * than EXPIRING_SOON_DAYS days from Lima's today are por vencer.
  */
 export function certificationState(
   certification: Pick<Certification, 'expirationDate' | 'expired'>,
@@ -34,7 +35,7 @@ export function certificationState(
   if (certification.expired || days < 0) {
     return 'vencido';
   }
-  return days <= EXPIRING_SOON_DAYS ? 'por-vencer' : 'vigente';
+  return days < EXPIRING_SOON_DAYS ? 'por-vencer' : 'vigente';
 }
 
 /** "Vence hoy", "Vence en 1 día", "Vence en 12 días"; for an expired one, how long ago. */

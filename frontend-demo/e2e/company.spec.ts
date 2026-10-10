@@ -126,7 +126,7 @@ test('if only the certificates fail, the header stays, the blocks that need them
 
   await expect(page.getByRole('heading', { name: COMPANIES[0].name, level: 1 })).toBeVisible();
   await expect(summary(page)).toContainText('El resumen no está disponible porque no se pudieron cargar los certificados.');
-  await expect(certificates(page).getByRole('alert')).toContainText('No se pudo cargar los certificados (X-500).');
+  await expect(certificates(page).getByRole('alert')).toContainText('No se pudieron cargar los certificados: el servicio de reportes no respondió (HTTP 500).');
   await expect(certificates(page).getByRole('button', { name: 'Volver a intentar' })).toBeVisible();
   await expect(page.getByText('La gráfica no está disponible porque no se pudieron cargar los certificados.')).toBeVisible();
 });

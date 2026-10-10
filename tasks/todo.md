@@ -439,7 +439,19 @@
 
 ### Pendientes (tareas aparte)
 
-- [ ] Módulo de cobertura completa, ideas de comportamiento de la crítica de Impeccable (fuera del rediseño visual): buscador de vecino (combobox), recordar la última asociación, bitácora de recojos de la sesión
+- [ ] Módulo de cobertura completa → ver "Frontend v2" abajo
 
 - [ ] Datos de demo en producción (empresa + sincronización SIGERSOL + recojos + certificado emitido), con script reproducible, cada escritura aprobada por Angel; tarea aparte
-- [ ] F5: Asociaciones (ver arriba)
+- [ ] F5: Asociaciones → absorbida por Frontend v2 / V1
+
+## Frontend v2: cobertura completa (brief 2026-10-10, dirección A, sin cambios de backend)
+
+Decisiones de Angel: empresa = tracked company de reporting (no `/companies` de collection); sin rol admin (confirmación explícita antes de acciones irreversibles/sensibles); SIGERSOL siempre "ingreso manual"; datos de demo fuera de este módulo; huecos de backend solo se documentan. Ninguna escritura contra producción: todo con el backend falso.
+
+- [x] V1: Asociaciones — lista (filtro por estado, páginas de 20) + detalle con certificaciones (chips vigente / por vencer / vencido; "por vencer" = 30 días, PENDIENTE de confirmar por Angel)
+- [ ] V2: Vecinos + cronogramas + recojos (buscador en el selector, recordar asociación, bitácora de sesión)
+- [ ] V3: Registrar empresa (POST /tracked-companies, RUC 11 dígitos, RPT-002)
+- [ ] V4: SIGERSOL como "ingreso manual" (POST /sigersol-syncs, RPT-005)
+- [ ] V5: Emitir certificado — PARADA: diseño de la confirmación antes del envío real (RPT-004)
+- [ ] V6: Personal / mi sesión — PARADA: diseño de seguridad antes de implementar
+- [ ] Cierre: docs (limitaciones, pendientes de backend), reporte final, lista de datos de demo ficticios para aprobar

@@ -6,6 +6,7 @@ import { finalize, map } from 'rxjs';
 import { CollectionRecord, CollectionSchedule, CollectionScheduleStatus, DayOfWeek, Neighbor } from '../../core/api/api.types';
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
+import { loadErrorMessage } from '../../shared/error-message';
 import { formatKg, formatLocalDate, todayInLima } from '../../shared/format';
 
 /**
@@ -99,13 +100,6 @@ export function submitErrorText(error: unknown): string {
     default:
       return `No se pudo registrar el recojo (${error.code ?? `HTTP ${error.status}`}). Inténtalo de nuevo.`;
   }
-}
-
-function loadErrorText(error: unknown, what: string): string {
-  if (error instanceof ApiError && error.status === 0) {
-    return `No se pudo conectar para cargar ${what}.`;
-  }
-  return `No se pudo cargar ${what}${error instanceof ApiError ? ` (${error.code ?? `HTTP ${error.status}`})` : ''}.`;
 }
 
 /**
@@ -226,8 +220,10 @@ export class CollectionRecordPage {
     return present.length === 0 ? null : present.join(' ');
   }
 
+  /** Neighbours and schedules come from collection-service, associations from recycler-service. */
   protected loadError(error: unknown, what: string): string {
-    return loadErrorText(error, what);
+    const service = what === 'las asociaciones' ? 'el servicio de recicladores' : 'el servicio de recojos';
+    return loadErrorMessage(error, what, service);
   }
 
   protected submit(): void {

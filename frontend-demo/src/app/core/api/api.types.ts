@@ -89,6 +89,21 @@ export interface Association {
   readonly status: AssociationStatus;
 }
 
+/**
+ * recycler-service CertificationResponse. `expired` is the backend's only state: the
+ * expiration date is before the service's today (a certification expiring today is not
+ * expired yet). "Por vencer" is not a backend state; the screen derives it (see
+ * certification-state.ts).
+ */
+export interface Certification {
+  readonly id: string;
+  readonly associationId: string;
+  readonly certificationType: string;
+  readonly issuedDate: string;
+  readonly expirationDate: string;
+  readonly expired: boolean;
+}
+
 /** collection-service CollectionScheduleResponse: java.time.DayOfWeek and LocalTime ("HH:mm:ss" or "HH:mm"). */
 export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
 export type CollectionScheduleStatus = 'ACTIVE' | 'PAUSED' | 'CANCELLED';

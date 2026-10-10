@@ -15,6 +15,7 @@ import { SessionService } from '../core/auth/session.service';
       <a class="brand" routerLink="/empresas">Trazabilidad ESG</a>
       <nav aria-label="Secciones">
         <a routerLink="/empresas" routerLinkActive="current" ariaCurrentWhenActive="page">Empresas</a>
+        <a routerLink="/asociaciones" routerLinkActive="current" ariaCurrentWhenActive="page">Asociaciones</a>
         <a routerLink="/recojos/nuevo" routerLinkActive="current" ariaCurrentWhenActive="page">Registrar recojo</a>
       </nav>
       <div class="user">
@@ -65,7 +66,8 @@ import { SessionService } from '../core/auth/session.service';
     }
     nav {
       display: flex;
-      gap: var(--space-5);
+      flex-wrap: wrap;
+      gap: 0 var(--space-5);
       margin-right: auto;
       font-size: 14px;
     }

@@ -1,0 +1,96 @@
+<header class="page-head">
+  <h1>Asociaciones</h1>
+  <p class="sub">Las asociaciones de recicladores y el estado de sus certificaciones.</p>
+</header>
+
+<nav class="filter" aria-label="Filtrar por estado">
+  @for (f of filters; track f.label) {
+    <a
+      [routerLink]="[]"
+      [queryParams]="{ estado: f.estado, pagina: null }"
+      [attr.aria-current]="f === filter() ? 'page' : null"
+      [class.current]="f === filter()"
+      >{{ f.label }}</a
+    >
+  }
+</nav>
+
+<!-- Always in the DOM (a live region that appears with its text isn't reliably announced). -->
+<p class="visually-hidden" role="status">{{ associations.isLoading() ? 'Cargando asociaciones' : announcement() }}</p>
+
+@if (loadError(); as message) {
+  <div class="problem" role="alert">
+    <p>{{ message }}</p>
+    <button type="button" class="btn" (click)="associations.reload()">Volver a intentar</button>
+  </div>
+} @else if (page(); as current) {
+  @if (current.content.length === 0 && current.totalElements > 0) {
+    <p class="empty-note">
+      Esta página ya no tiene asociaciones. <a [routerLink]="[]" [queryParams]="{ pagina: null }" queryParamsHandling="merge">Ir a la primera página</a>
+    </p>
+  } @else if (current.content.length === 0) {
+    <p class="empty-note">
+      @switch (filter().status) {
+        @case ('ACTIVE') { No hay asociaciones activas. }
+        @case ('SUSPENDED') { No hay asociaciones suspendidas. }
+        @default { Todavía no hay asociaciones registradas. }
+      }
+    </p>
+  } @else {
+    <div class="ledger-wide" [attr.aria-busy]="associations.isLoading()">
+      <table class="ledger">
+        <caption class="visually-hidden">Asociaciones por nombre, filtro: {{ filter().label }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Asociación</th>
+            <th scope="col">RUC</th>
+            <th scope="col">N.º de registro</th>
+            <th scope="col">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of current.content; track a.id) {
+            <tr>
+              <td><a class="row-link" [routerLink]="['/asociaciones', a.id]">{{ a.name }}</a></td>
+              <td class="mono nowrap">{{ a.ruc }}</td>
+              <td class="mono nowrap">{{ a.registrationNumber ?? '—' }}</td>
+              <td class="nowrap"><app-status-label [status]="a.status" /></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <ul class="entries" aria-label="Asociaciones">
+      @for (a of current.content; track a.id) {
+        <li>
+          <a class="entry" [routerLink]="['/asociaciones', a.id]" [attr.aria-labelledby]="'aso-' + a.id">
+            <span class="entry-title" [id]="'aso-' + a.id">{{ a.name }}</span>
+            <dl>
+              <div><dt>RUC</dt><dd class="mono">{{ a.ruc }}</dd></div>
+              <div><dt>Estado</dt><dd><app-status-label [status]="a.status" /></dd></div>
+            </dl>
+          </a>
+        </li>
+      }
+    </ul>
+  }
+  <nav class="list-foot" aria-label="Paginación de asociaciones">
+    <p class="count">
+      @if (range(); as r) {
+        Mostrando {{ r.first | number }}–{{ r.last | number }} de {{ r.total | number }}
+        {{ r.total === 1 ? 'asociación' : 'asociaciones' }}
+      }
+    </p>
+    @if (current.totalPages > 1) {
+      <div class="pages">
+        <button type="button" class="btn" [disabled]="pagina() <= 1" (click)="goTo(pagina() - 1)">Anterior</button>
+        <span class="where">Página {{ pagina() }} de {{ current.totalPages }}</span>
+        <button type="button" class="btn" [disabled]="pagina() >= current.totalPages" (click)="goTo(pagina() + 1)">Siguiente</button>
+      </div>
+    }
+  </nav>
+} @else {
+  <div aria-hidden="true">
+    <span class="skel wide"></span><span class="skel wide"></span><span class="skel wide"></span>
+  </div>
+}

@@ -387,3 +387,178 @@ select.control:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---- Frontend v2 shared blocks: page head, ledger tables, stacked cards, pager, skeleton (.skel;
+   the older pages keep their own page-local .bone) ---- */
+.page-head {
+  margin-bottom: var(--space-6);
+}
+.page-head h1 {
+  font-size: 44px;
+  line-height: 1.02;
+}
+.page-head .sub {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-soft);
+}
+.back-link {
+  display: inline-block;
+  margin-bottom: var(--space-5);
+}
+/* A ledger: flat paper, ink rule under the head, thin rules between rows. Table from 640 px,
+   stacked entries below (no sideways scrolling). */
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--paper);
+}
+.ledger th {
+  height: 44px;
+  padding: 0 var(--space-4);
+  border-bottom: 2px solid var(--ink);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.ledger td {
+  height: 48px;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.ledger tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ledger .num {
+  text-align: right;
+}
+.ledger .nowrap {
+  white-space: nowrap;
+}
+/* A row whose first link opens it: the link stretches over the whole row. */
+.ledger tbody tr:has(.row-link) {
+  position: relative;
+}
+.ledger tbody tr:has(.row-link):hover {
+  background: var(--row-hover);
+}
+.ledger .row-link {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.ledger .row-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.ledger .row-link:focus-visible {
+  outline: none;
+}
+.ledger tbody tr:has(.row-link:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.entries {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.entries > li + li {
+  margin-top: var(--space-2);
+}
+.entry {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+}
+a.entry {
+  min-height: 44px;
+}
+a.entry:hover {
+  background: var(--row-hover);
+}
+.entry-title {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.entry dl {
+  margin: 0;
+}
+.entry dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-1) 0;
+}
+.entry dt {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.entry dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.empty-note {
+  margin: 0;
+  padding: var(--space-6) var(--space-4);
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+.list-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.list-foot .count,
+.list-foot .where {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.list-foot .pages {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.skel {
+  display: block;
+  width: 160px;
+  max-width: 100%;
+  height: 12px;
+  margin-top: var(--space-3);
+  background: var(--line);
+  animation: skel-pulse 1.2s ease-in-out infinite alternate;
+}
+.skel.wide {
+  width: 100%;
+  height: 40px;
+}
+@keyframes skel-pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (max-width: 639.98px) {
+  .page-head h1 {
+    font-size: 32px;
+  }
+  .ledger-wide {
+    display: none;
+  }
+  .entries {
+    display: block;
+  }
+}

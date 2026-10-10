@@ -40,6 +40,13 @@ const problem = (route: Route, status: number, code: string, detail: string, hea
     body: JSON.stringify({ type: 'about:blank', title: '', status, detail, code }),
   });
 
+/**
+ * A 5xx as the real platform sends it: GlobalExceptionHandler puts no `code` on an unhandled
+ * 500, and Render's proxy answers a waking service with a bare 502/503/504.
+ */
+const gatewayError = (route: Route, status: number) =>
+  route.fulfill({ status, contentType: 'text/plain', body: 'Service Unavailable' });
+
 /** 14 whole-month certificates for COMPANIES[0] (Nov 2023 - Dec 2024), shaped like EsgCertificateResponse. */
 export const CERTIFICATES = Array.from({ length: 14 }, (_, i) => {
   const year = 2023 + Math.floor((10 + i) / 12);
@@ -90,6 +97,12 @@ export interface BackendOptions {
   collectionFailure?: { status: number; code: string | null };
   /** GET /associations fails with this status. */
   associationsStatus?: number;
+  /** GET /associations/{id}/certifications fails with this status. */
+  certificationsStatus?: number;
+  /** How many associations GET /associations lists (default ASSOCIATIONS; more are generated, for paging). */
+  associationCount?: number;
+  /** Every request that reached the catch-all (no fake route): the test asserts it stays empty. */
+  unmocked?: string[];
   /**
    * Answers to successive GET /tracked-companies calls, in order: 'empty' (no companies yet),
    * 'full' (COMPANIES) or 'fail' (503); after the list runs out, 'full'.
@@ -113,6 +126,39 @@ export const ASSOCIATIONS = [
   { id: COMPANIES[1].associationId, name: 'Recicladores Unidos de Comas', ruc: '20609876543', registrationNumber: 'REG-2019-0087', address: 'Av. Túpac Amaru 1200, Comas', contactEmail: 'info@recicladorescomas.pe', contactPhone: '015551234', status: 'SUSPENDED' },
 ] as const;
 
+/** ASSOCIATIONS, plus generated ones up to `count` (for paging), sorted by name as the API does. */
+export function allAssociations(count: number = ASSOCIATIONS.length) {
+  const extra = Array.from({ length: Math.max(0, count - ASSOCIATIONS.length) }, (_, i) => ({
+    id: `0192f3a8-0000-7000-8000-${String(100 + i).padStart(12, '0')}`,
+    name: `Asociación de Recicladores Lima ${String(i + 1).padStart(2, '0')}`,
+    ruc: `206${String(10000000 + i).padStart(8, '0')}`,
+    registrationNumber: null,
+    address: null,
+    contactEmail: null,
+    contactPhone: null,
+    status: 'ACTIVE',
+  }));
+  return [...ASSOCIATIONS, ...extra].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** A LocalDate `days` from today in Lima (the browser runs with timezoneId America/Lima). */
+export function limaDate(days: number): string {
+  const now = new Date(Date.now() - 5 * 3_600_000); // Lima is UTC-5, no DST
+  now.setUTCDate(now.getUTCDate() + days);
+  return now.toISOString().slice(0, 10);
+}
+
+/**
+ * recycler-service certifications (CertificationResponse) of ASSOCIATIONS[0], soonest expiration
+ * first as the API sorts them: one expired (the backend's `expired`), one expiring in 12 days,
+ * one valid for a year.
+ */
+export const CERTIFICATIONS = [
+  { id: '0192f3a8-e000-7000-8000-000000000001', associationId: ASSOCIATIONS[0].id, certificationType: 'Registro municipal de recicladores', issuedDate: limaDate(-400), expirationDate: limaDate(-35), expired: true },
+  { id: '0192f3a8-e000-7000-8000-000000000002', associationId: ASSOCIATIONS[0].id, certificationType: 'Autorización de segregación en fuente', issuedDate: limaDate(-353), expirationDate: limaDate(12), expired: false },
+  { id: '0192f3a8-e000-7000-8000-000000000003', associationId: ASSOCIATIONS[0].id, certificationType: 'Formalización MINAM', issuedDate: limaDate(-30), expirationDate: limaDate(335), expired: false },
+];
+
 /**
  * collection-service schedules (CollectionScheduleResponse) per neighbor, in
  * the API's real order: dayOfWeek is stored as text and sorted
@@ -127,6 +173,12 @@ export const SCHEDULES: Record<string, { id: string; neighborId: string; dayOfWe
 };
 
 export async function fakeBackend(page: Page, options: BackendOptions = {}): Promise<void> {
+  // Registered first, so it only answers what no route below handles. ng serve proxies /svc/* to
+  // the real services: an unmocked call must never reach production, least of all a write.
+  await page.route('**/svc/**', (route) => {
+    options.unmocked?.push(`${route.request().method()} ${route.request().url()}`);
+    return route.fulfill({ status: 599, contentType: 'text/plain', body: 'Ruta no simulada en el backend falso' });
+  });
   await page.route('**/svc/*/actuator/health/liveness', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"UP"}' }),
   );
@@ -161,10 +213,47 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     if (!authorized(route)) {
       return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
     }
-    if (options.associationsStatus !== undefined) {
-      return problem(route, options.associationsStatus, 'X-500', 'Error interno');
+    const json = (status: number, body: unknown) =>
+      route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    const url = new URL(route.request().url());
+    const [, id, sub] = /\/associations(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(url.pathname) ?? [];
+    if (id === undefined) {
+      if (options.associationsStatus !== undefined) {
+        return gatewayError(route, options.associationsStatus);
+      }
+      const status = url.searchParams.get('status');
+      if (status !== null && status !== 'ACTIVE' && status !== 'SUSPENDED') {
+        return problem(route, 400, 'VALIDATION_ERROR', `status: valor inválido '${status}' para el tipo AssociationStatus`);
+      }
+      const all = allAssociations(options.associationCount).filter((a) => status === null || a.status === status);
+      const size = Math.min(Number(url.searchParams.get('size') ?? 20), 100);
+      const number = Number(url.searchParams.get('page') ?? 0);
+      return json(200, {
+        content: all.slice(number * size, number * size + size),
+        page: number,
+        size,
+        totalElements: all.length,
+        totalPages: Math.ceil(all.length / size),
+      });
     }
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pageOf(ASSOCIATIONS)) });
+    if (!/^[0-9a-f-]{36}$/.test(id)) {
+      return problem(route, 400, 'VALIDATION_ERROR', `id: valor inválido '${id}' para el tipo UUID`);
+    }
+    const association = allAssociations(options.associationCount).find((a) => a.id === id);
+    if (sub === 'certifications') {
+      // The backend doesn't check the association here: an unknown one lists nothing.
+      if (options.certificationsStatus !== undefined) {
+        return gatewayError(route, options.certificationsStatus);
+      }
+      return json(200, pageOf(CERTIFICATIONS.filter((c) => c.associationId === id)));
+    }
+    if (association === undefined) {
+      return problem(route, 404, 'ASO-001', 'Asociación no encontrada');
+    }
+    if (sub === undefined) {
+      return json(200, association);
+    }
+    return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');
   });
 
   await page.route('**/svc/collection/neighbors**', (route) => {
@@ -271,7 +360,7 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     }
     if (sub === 'certificates') {
       if (options.certificatesStatus !== undefined) {
-        return problem(route, options.certificatesStatus, 'X-500', 'Error interno');
+        return gatewayError(route, options.certificatesStatus);
       }
       const content = company.id === COMPANIES[0].id ? CERTIFICATES : [];
       return json({ content, page: 0, size: 20, totalElements: content.length, totalPages: content.length === 0 ? 0 : 1 });

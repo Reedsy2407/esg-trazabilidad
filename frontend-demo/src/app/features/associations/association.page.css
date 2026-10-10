@@ -1,0 +1,86 @@
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: var(--space-2) 0 0;
+  color: var(--ink-soft);
+}
+h2 {
+  font-size: 15px;
+  margin-bottom: var(--space-3);
+}
+.sec {
+  margin-top: var(--space-8);
+}
+
+/* The association's record: flat paper, label and value on dotted leaders' rhythm. */
+.details {
+  padding: var(--space-5) var(--space-6);
+}
+.details dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-8);
+  margin: 0;
+}
+.details dt {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.details dd {
+  margin: var(--space-1) 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.details dd.missing {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+.type {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+.note {
+  color: var(--ink-soft);
+  font-size: 13px;
+  white-space: nowrap;
+}
+/* An expired certification blocks collections: its row carries a heavier ink rule at the left,
+   so it is found without relying on the chip's red. */
+.ledger tr[data-state='vencido'] td:first-child {
+  box-shadow: inset 4px 0 0 var(--ink);
+}
+.entry[data-state='vencido'] {
+  box-shadow: inset 4px 0 0 var(--ink);
+}
+.foot {
+  max-width: 72ch;
+  margin: var(--space-3) 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.skel.title {
+  width: 320px;
+  height: 22px;
+  margin-top: 0;
+}
+
+@media (max-width: 639.98px) {
+  .details {
+    padding: var(--space-4);
+  }
+  .details dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .entry dd.state {
+    justify-content: flex-end;
+  }
+}

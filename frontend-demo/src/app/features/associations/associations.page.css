@@ -1,0 +1,26 @@
+/* State filter: three printed tabs on the concrete; the current one is underlined in cobalt,
+   the same "where you are" mark as the top bar. */
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin-bottom: var(--space-4);
+  font-size: 14px;
+}
+.filter a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-top: 3px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+}
+.filter a:hover {
+  color: var(--ink);
+}
+.filter a.current {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}

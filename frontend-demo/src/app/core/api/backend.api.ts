@@ -5,6 +5,8 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   Association,
+  AssociationStatus,
+  Certification,
   CertificateSummary,
   CollectionRecord,
   CollectionSchedule,
@@ -80,6 +82,29 @@ export class BackendApi {
   associations(): Observable<Page<Association>> {
     const params = new HttpParams().set('size', PICKER_PAGE_SIZE);
     return this.http.get<Page<Association>>(`${recycler}/associations`, { params });
+  }
+
+  /** The associations list screen: 20 per page by name; `status` filters exactly (ACTIVE / SUSPENDED). */
+  associationsPage(page: number, status: AssociationStatus | null): Observable<Page<Association>> {
+    let params = new HttpParams().set('page', page).set('size', 20);
+    if (status !== null) {
+      params = params.set('status', status);
+    }
+    return this.http.get<Page<Association>>(`${recycler}/associations`, { params });
+  }
+
+  /** ASO-001 (404) when it doesn't exist; VALIDATION_ERROR (400) when the id isn't a UUID. */
+  association(id: string): Observable<Association> {
+    return this.http.get<Association>(`${recycler}/associations/${encodeURIComponent(id)}`);
+  }
+
+  /** An association's certifications, soonest expiration first (backend sort). */
+  certifications(associationId: string): Observable<Page<Certification>> {
+    const params = new HttpParams().set('size', PICKER_PAGE_SIZE);
+    return this.http.get<Page<Certification>>(
+      `${recycler}/associations/${encodeURIComponent(associationId)}/certifications`,
+      { params },
+    );
   }
 
   /**

@@ -1,0 +1,119 @@
+<a class="back-link" routerLink="/asociaciones">Volver a asociaciones</a>
+
+<div [attr.aria-busy]="association.isLoading()">
+  @if (association.hasValue()) {
+    @let a = association.value();
+    <header class="page-head">
+      <h1>{{ a.name }}</h1>
+      <p class="meta">
+        <span>RUC <span class="mono">{{ a.ruc }}</span></span>
+        <app-status-label [status]="a.status" />
+      </p>
+    </header>
+    <section class="sheet-flat details" aria-labelledby="details-title">
+      <h2 id="details-title">Datos de la asociación</h2>
+      <dl>
+        @for (d of details(); track d.label) {
+          <div>
+            <dt>{{ d.label }}</dt>
+            @if (d.value; as value) {
+              <dd [class.mono]="d.mono">{{ value }}</dd>
+            } @else {
+              <dd class="missing">No registrado</dd>
+            }
+          </div>
+        }
+      </dl>
+    </section>
+  } @else if (association.error(); as error) {
+    <div class="problem" role="alert">
+      @if (notFound(error)) {
+        <p>Esta asociación no existe.</p>
+        <a routerLink="/asociaciones">Ver todas las asociaciones</a>
+      } @else {
+        <p>{{ errorText(error, 'los datos de la asociación') }}</p>
+        <button type="button" class="btn" (click)="association.reload()">Volver a intentar</button>
+      }
+    </div>
+  } @else {
+    <div class="page-head" aria-hidden="true">
+      <span class="skel title"></span>
+      <span class="skel"></span>
+    </div>
+    <p class="visually-hidden">Cargando asociación</p>
+  }
+</div>
+
+@if (!association.error()) {
+  <section aria-labelledby="certs-title">
+    <h2 id="certs-title" class="sec">Certificaciones</h2>
+    @if (rows(); as r) {
+      @if (r.items.length === 0) {
+        <p class="empty-note">Esta asociación todavía no tiene certificaciones registradas.</p>
+      } @else {
+        <div class="ledger-wide">
+          <table class="ledger">
+            <caption class="visually-hidden">Certificaciones, la que vence antes primero</caption>
+            <thead>
+              <tr>
+                <th scope="col">Tipo</th>
+                <th scope="col">Emitida</th>
+                <th scope="col">Vence</th>
+                <th scope="col">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of r.items; track c.id) {
+                <tr [attr.data-state]="c.state">
+                  <td class="type">{{ c.type }}</td>
+                  <td class="mono nowrap">{{ c.issued }}</td>
+                  <td class="mono nowrap">{{ c.expires }}</td>
+                  <td>
+                    <span class="state">
+                      <app-certification-chip [state]="c.state" />
+                      <span class="note">{{ c.note }}</span>
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <ul class="entries" aria-label="Certificaciones">
+          @for (c of r.items; track c.id) {
+            <li class="entry" [attr.data-state]="c.state">
+              <span class="entry-title">{{ c.type }}</span>
+              <dl>
+                <div><dt>Emitida</dt><dd class="mono">{{ c.issued }}</dd></div>
+                <div><dt>Vence</dt><dd class="mono">{{ c.expires }}</dd></div>
+                <div>
+                  <dt>Estado</dt>
+                  <dd class="state"><app-certification-chip [state]="c.state" /><span class="note">{{ c.note }}</span></dd>
+                </div>
+              </dl>
+            </li>
+          }
+        </ul>
+        <p class="foot">
+          @if (r.total > r.items.length) {
+            Se muestran {{ r.items.length }} de {{ r.total }} certificaciones, las que vencen antes.
+          } @else {
+            {{ r.total }} {{ r.total === 1 ? 'certificación' : 'certificaciones' }}.
+          }
+          «Por vencer» quiere decir que vence en los próximos {{ soonDays }} días. Una certificación vencida
+          impide registrar recojos de la asociación.
+        </p>
+      }
+    } @else if (certifications.error(); as error) {
+      <div class="problem" role="alert">
+        <p>{{ errorText(error, 'las certificaciones') }}</p>
+        <button type="button" class="btn" (click)="certifications.reload()">Volver a intentar</button>
+      </div>
+    } @else {
+      <div aria-hidden="true">
+        <span class="skel wide"></span><span class="skel wide"></span>
+      </div>
+      <p class="visually-hidden">Cargando certificaciones</p>
+    }
+  </section>
+}

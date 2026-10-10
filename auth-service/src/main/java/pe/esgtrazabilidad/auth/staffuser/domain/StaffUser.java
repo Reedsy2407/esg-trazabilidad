@@ -31,8 +31,13 @@ public class StaffUser {
         this.createdAt = createdAt;
     }
 
+    /** Stricter than Bean Validation's @Email, which accepts a domain with no dot ("ana@empresa"). */
+    public static boolean isValidEmail(String email) {
+        return email != null && email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+    }
+
     public static StaffUser create(String email, String passwordHash, String fullName) {
-        if (email == null || !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+        if (!isValidEmail(email)) {
             throw new IllegalArgumentException("El email no es válido");
         }
         if (passwordHash == null || passwordHash.isBlank()) {

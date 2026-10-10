@@ -36,6 +36,13 @@ class StaffUserTest {
     }
 
     @Test
+    void rejectsAnEmailWhoseDomainHasNoDot() {
+        assertThat(StaffUser.isValidEmail("ana@esgtrazabilidad")).isFalse();
+        assertThatThrownBy(() -> StaffUser.create("ana@esgtrazabilidad", "hashed-password", "Ana Pérez"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void rejectsABlankPasswordHash() {
         assertThatThrownBy(() -> StaffUser.create("ana@esgtrazabilidad.pe", " ", "Ana Pérez"))
                 .isInstanceOf(IllegalArgumentException.class);

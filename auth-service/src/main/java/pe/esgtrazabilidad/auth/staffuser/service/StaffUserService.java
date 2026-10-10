@@ -42,6 +42,10 @@ class StaffUserService implements LoginUseCase, CreateStaffUserUseCase, GetCurre
     @Override
     @Transactional
     public StaffUser createStaffUser(CreateStaffUserCommand command) {
+        // Checked here, not left to StaffUser.create()'s IllegalArgumentException, which would be a 500.
+        if (!StaffUser.isValidEmail(command.email())) {
+            throw new ApplicationException(AuthErrors.INVALID_STAFF_EMAIL);
+        }
         staffUserRepository.findByEmail(command.email().toLowerCase()).ifPresent(existing -> {
             throw new ApplicationException(AuthErrors.DUPLICATE_STAFF_EMAIL);
         });

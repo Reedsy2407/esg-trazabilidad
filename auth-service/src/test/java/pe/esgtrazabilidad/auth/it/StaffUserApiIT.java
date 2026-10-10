@@ -19,6 +19,7 @@ import pe.esgtrazabilidad.auth.staffuser.domain.StaffUser;
 import pe.esgtrazabilidad.auth.staffuser.port.out.StaffUserRepository;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -93,6 +94,23 @@ class StaffUserApiIT {
                 .body("fullName", equalTo("Persona Onboardeada"))
                 .body("active", equalTo(true))
                 .body("id", notNullValue());
+    }
+
+    @Test
+    void creatingAStaffUserWithNoDotInTheEmailDomainReturnsAuth005() {
+        String token = loginAndGetToken("autora3@esgtrazabilidad.pe", "password-autora3-123");
+
+        given().header("Authorization", "Bearer " + token)
+                .contentType("application/json")
+                .body("""
+                        {"email": "sinpunto@esgtrazabilidad", "password": "otra-password", "fullName": "Otra Persona"}
+                        """)
+                .when()
+                .post("/auth/staff-users")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("AUTH-005"));
+        assertThat(staffUserRepository.findByEmail("sinpunto@esgtrazabilidad")).isEmpty();
     }
 
     @Test

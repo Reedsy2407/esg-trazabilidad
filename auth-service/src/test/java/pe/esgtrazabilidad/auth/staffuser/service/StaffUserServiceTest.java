@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import pe.esgtrazabilidad.auth.exception.AuthErrors;
 import pe.esgtrazabilidad.auth.staffuser.domain.StaffUser;
 import pe.esgtrazabilidad.auth.staffuser.port.in.CreateStaffUserCommand;
 import pe.esgtrazabilidad.auth.staffuser.port.out.StaffUserRepository;
@@ -113,6 +114,17 @@ class StaffUserServiceTest {
         assertThat(created.getEmail()).isEqualTo("nueva@esgtrazabilidad.pe");
         assertThat(created.getPasswordHash()).isEqualTo("hashed-password");
         assertThat(created.getFullName()).isEqualTo("Nueva Persona");
+    }
+
+    @Test
+    void createStaffUserRejectsAnEmailWithNoDotInTheDomainBeforeHashingOrSaving() {
+        assertThatThrownBy(() -> service.createStaffUser(
+                        new CreateStaffUserCommand("nueva@esgtrazabilidad", "raw-password", "Nueva Persona")))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(AuthErrors.INVALID_STAFF_EMAIL));
+        verify(passwordEncoder, never()).encode(any());
+        verify(staffUserRepository, never()).save(any());
     }
 
     @Test

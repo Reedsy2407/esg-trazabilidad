@@ -22,7 +22,10 @@ public enum AuthErrors implements ApplicationError {
     STAFF_USER_NOT_FOUND("AUTH-003", "Cuenta de staff no encontrada", HttpStatus.NOT_FOUND),
     // POST /auth/login's per-client-IP rate limit (SPEC-deployment.md).
     TOO_MANY_LOGIN_ATTEMPTS(
-            "AUTH-004", "Demasiados intentos de inicio de sesión, intenta más tarde", HttpStatus.TOO_MANY_REQUESTS);
+            "AUTH-004", "Demasiados intentos de inicio de sesión, intenta más tarde", HttpStatus.TOO_MANY_REQUESTS),
+    // POST /auth/staff-users: an email @Email accepts but StaffUser.isValidEmail
+    // doesn't (no dot in the domain, e.g. "ana@empresa").
+    INVALID_STAFF_EMAIL("AUTH-005", "El email no es válido", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;

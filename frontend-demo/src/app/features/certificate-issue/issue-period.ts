@@ -42,9 +42,9 @@ export type PeriodProblem =
   | { readonly kind: 'not-ended'; readonly availableFrom: string };
 
 /**
- * Checks the backend doesn't make (it would issue them): an end before the start (it has no code
- * for that, RPT-005 or a 500 at best), and a period still running in Lima, which would freeze its
- * kilos and leave the rest of its collections out for good.
+ * Checked before asking for the draft: an end before the start (the backend refuses it too, with
+ * RPT-009, both for the draft and for the issue), and a period still running in Lima, which the
+ * backend would issue: it would freeze its kilos and leave the rest of its collections out for good.
  */
 export function periodProblem(period: Period, today: string): PeriodProblem | null {
   if (period.end < period.start) {

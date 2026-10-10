@@ -9,7 +9,10 @@ import { ApiError } from '../../core/http/api-error';
 import { writeErrorText } from '../../shared/error-message';
 import { generateInitialPassword } from './initial-password';
 
-/** auth-service's domain rule for an email: stricter than @Email (it needs a dot in the domain). */
+/**
+ * auth-service's domain rule for an email: stricter than @Email (it needs a dot in the domain).
+ * Checked here first; the service answers AUTH-005 (400) if one gets through anyway.
+ */
 export const STAFF_EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 type Outcome =
@@ -140,6 +143,7 @@ export class StaffNewPage {
           this.error.set(
             writeErrorText(error, '', {
               'AUTH-002': `Ya existe una cuenta del personal con el correo ${email}.`,
+              'AUTH-005': `El servicio rechazó el correo ${email}: le falta un punto en el dominio (por ejemplo, @asociacion.pe).`,
               VALIDATION_ERROR: 'El servicio rechazó los datos. Revisa el nombre y el correo.',
             }),
           );

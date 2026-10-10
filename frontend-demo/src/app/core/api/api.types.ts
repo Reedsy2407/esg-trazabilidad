@@ -25,8 +25,9 @@ export interface StaffUser {
 /**
  * auth-service CreateStaffUserRequest: all three @NotBlank, email @Email. The domain model also
  * requires a dot in the domain (^[^@\s]+@[^@\s]+\.[^@\s]+$), stricter than @Email: "a@b" passes
- * the annotation and then fails as a 500, so the form checks it first. AUTH-002 (409) for an email
- * already registered. No password rule in the backend; the browser generates it (16 characters).
+ * the annotation and the service answers AUTH-005 (400); the form checks it first. AUTH-002 (409)
+ * for an email already registered. No password rule in the backend; the browser generates it
+ * (16 characters).
  */
 export interface CreateStaffUserRequest {
   readonly email: string;
@@ -108,9 +109,10 @@ export interface EsgCertificate {
 
 /**
  * IssueCertificateRequest: both @NotNull LocalDates, nothing else checked by annotations. The
- * service answers RPT-001, then RPT-004 (overlap with this company's certificates, a shared day
- * counts), then RPT-005 (no single SIGERSOL record of the association covers the whole period).
- * It does NOT refuse a period that hasn't ended, 0 kg or end before start: the screen does.
+ * service answers RPT-009 (400, end before start; the draft's GET certificate-summary too), then
+ * RPT-001, then RPT-004 (overlap with this company's certificates, a shared day counts), then
+ * RPT-005 (no single SIGERSOL record of the association covers the whole period). It does NOT
+ * refuse a period that hasn't ended or 0 kg: the screen does.
  */
 export interface IssueCertificateRequest {
   readonly periodStart: string;

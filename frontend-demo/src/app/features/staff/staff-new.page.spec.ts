@@ -84,6 +84,17 @@ describe('StaffNewPage', () => {
     expect(sent).toEqual([]);
   });
 
+  it("AUTH-005 (the service's own email rule) says what is wrong and drops the unused password", async () => {
+    fill();
+    await submit();
+    answer.error(new ApiError(400, 'AUTH-005', null, null));
+    await settle();
+    expect(el.querySelector('[role="alert"]')?.textContent).toContain(
+      'El servicio rechazó el correo luis.ramos@asociacion.pe: le falta un punto en el dominio',
+    );
+    expect((component as unknown as { password(): string | null }).password()).toBeNull();
+  });
+
   it('sends a generated 16-character password, shows it only on request, and "Ya la entregué" drops it', async () => {
     fill();
     await submit();

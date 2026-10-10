@@ -210,6 +210,7 @@ export class CertificateIssuePage {
             text: writeErrorText(error, ISSUE_UNCERTAIN, {
               'RPT-004': `Esta empresa ya tiene un certificado que se superpone con ${draft.label}. Cada día se certifica una sola vez.`,
               'RPT-005': `No hay un registro SIGERSOL de la asociación que cubra todo ${draft.label}. Regístralo y vuelve a revisar el borrador.`,
+              'RPT-009': `El servicio rechazó ${draft.label}: la fecha final es anterior a la inicial. Revisa las fechas del período.`,
             }),
           });
           // Whatever happened, the next attempt needs a fresh confirmation, and the list the screen

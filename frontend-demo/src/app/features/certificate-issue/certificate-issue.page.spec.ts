@@ -200,12 +200,14 @@ describe('CertificateIssuePage', () => {
     expect((el.querySelector('.check input') as HTMLInputElement).checked).toBe(false);
   });
 
-  it('RPT-004, RPT-005 and an unknown outcome each say what to do, and ask to confirm again', async () => {
+  it('RPT-004, RPT-005, RPT-009 and an unknown outcome each say what to do, and ask to confirm again', async () => {
     await setInput('month', '2026-09');
     await review();
     const cases: [ApiError, RegExp, string | null][] = [
       [new ApiError(409, 'RPT-004', null, null), /ya tiene un certificado que se superpone con Setiembre 2026/, 'Ver los certificados de la empresa'],
       [new ApiError(409, 'RPT-005', null, null), /No hay un registro SIGERSOL de la asociación que cubra todo Setiembre 2026/, 'Registrar el dato SIGERSOL de este período'],
+      // The screen refuses a backwards period first; this is the backend's own refusal if one got through.
+      [new ApiError(400, 'RPT-009', null, null), /rechazó Setiembre 2026: la fecha final es anterior a la inicial/, null],
       [new ApiError(504, null, null, null), new RegExp(ISSUE_UNCERTAIN.slice(0, 40)), 'Ver los certificados de la empresa'],
     ];
     for (const [error, text, link] of cases) {
@@ -216,9 +218,9 @@ describe('CertificateIssuePage', () => {
       await settle();
       const block = el.querySelector('.issue-problem') as HTMLElement;
       expect(block.textContent).toMatch(text);
-      expect(block.querySelector('a')?.textContent?.trim()).toBe(link);
+      expect(block.querySelector('a')?.textContent?.trim() ?? null).toBe(link);
       expect((el.querySelector('.check input') as HTMLInputElement).checked).toBe(false);
     }
-    expect(issued).toHaveLength(3);
+    expect(issued).toHaveLength(4);
   });
 });

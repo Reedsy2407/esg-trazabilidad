@@ -12,6 +12,7 @@ export const CODE_MESSAGES: Readonly<Record<string, string>> = {
   'AUTH-002': 'Ya existe una cuenta del personal con ese correo.',
   'AUTH-003': 'No se encontró la cuenta del personal.',
   'AUTH-004': 'Demasiados intentos de inicio de sesión. Espera un momento.',
+  'AUTH-005': 'El correo no es válido: le falta un punto en el dominio.',
   'ASO-001': 'La asociación no existe.',
   'ASO-002': 'Ya hay una asociación registrada con ese RUC.',
   'ASO-003': 'La asociación ya está en ese estado.',
@@ -38,6 +39,7 @@ export const CODE_MESSAGES: Readonly<Record<string, string>> = {
   'RPT-006': 'Ya hay un registro SIGERSOL de esa asociación que se superpone con ese período.',
   'RPT-007': 'El registro SIGERSOL no existe.',
   'RPT-008': 'Los datos del registro SIGERSOL no son válidos.',
+  'RPT-009': 'La fecha final del período es anterior a la inicial.',
   VALIDATION_ERROR: 'El servicio rechazó los datos enviados. Revisa los campos.',
   DATA_CONFLICT: 'La operación choca con datos ya registrados.',
 };

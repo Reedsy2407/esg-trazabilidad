@@ -1,5 +1,5 @@
 import { ApiError } from '../core/http/api-error';
-import { codeMessage, loadErrorMessage } from './error-message';
+import { codeMessage, loadErrorMessage, writeErrorText } from './error-message';
 
 const error = (status: number, code: string | null = null, retryAfter: number | null = null) =>
   new ApiError(status, code, null, retryAfter);
@@ -46,5 +46,21 @@ describe('codeMessage', () => {
     expect(loadErrorMessage(error(0), 'las asociaciones', 'el servicio de recicladores')).toBe(
       'No se pudo conectar con el servicio de recicladores para cargar las asociaciones. Comprueba tu conexión.',
     );
+  });
+});
+
+describe('writeErrorText', () => {
+  const UNCERTAIN = 'No pudimos confirmar si quedó registrado.';
+  it('never claims a failure when the outcome is unknown', () => {
+    for (const e of [error(0), error(408), error(500), error(502, 'RPT-002'), error(504), new Error('x')]) {
+      expect(writeErrorText(e, UNCERTAIN)).toBe(UNCERTAIN);
+    }
+  });
+
+  it('a page override, then the catalog, then the bare code', () => {
+    expect(writeErrorText(error(409, 'RPT-002'), UNCERTAIN, { 'RPT-002': 'Ese RUC ya está.' })).toBe('Ese RUC ya está.');
+    expect(writeErrorText(error(409, 'COL-002'), UNCERTAIN)).toBe('Este vecino ya tiene un cronograma activo ese día de la semana.');
+    expect(writeErrorText(error(409, 'ZZZ-1'), UNCERTAIN)).toBe('El servicio no aceptó la operación (ZZZ-1).');
+    expect(writeErrorText(error(429, null, 9), UNCERTAIN)).toBe('Demasiadas solicitudes. Vuelve a intentarlo en 9 s.');
   });
 });

@@ -1,8 +1,12 @@
 import { Injectable, computed, signal } from '@angular/core';
 
 const STORAGE_KEY = 'esg.session';
+/** Other sessionStorage entries that belong to the signed-in person and end with the session. */
+export const COLLECTION_LOG_KEY = 'esg.bitacora';
 
 interface Session {
+  /** Random, per sign-in: what session-scoped data (the bitácora) is tied to. Not a secret. */
+  readonly id: string;
   readonly token: string;
   readonly email: string;
   /** Epoch milliseconds, from the token's `exp`. */
@@ -21,6 +25,8 @@ export class SessionService {
 
   readonly token = computed(() => this.session()?.token ?? null);
   readonly email = computed(() => this.session()?.email ?? null);
+  /** Changes with every sign-in, even of the same person; null when signed out. */
+  readonly sessionId = computed(() => this.session()?.id ?? null);
 
   isAuthenticated(now: number = Date.now()): boolean {
     const current = this.session();
@@ -30,13 +36,17 @@ export class SessionService {
   /** Throws if the token isn't a JWT carrying `email` and `exp`. */
   start(token: string): void {
     const payload = decodeJwtPayload(token);
-    const session: Session = { token, email: payload.email, expiresAt: payload.exp * 1000 };
+    const session: Session = { id: newId(), token, email: payload.email, expiresAt: payload.exp * 1000 };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    // A new sign-in starts a new bitácora, whatever ended the previous session (sign-out, or an
+    // expired token that sent the tab back to the login without passing through clear()).
+    sessionStorage.removeItem(COLLECTION_LOG_KEY);
     this.session.set(session);
   }
 
   clear(): void {
     sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(COLLECTION_LOG_KEY);
     this.session.set(null);
   }
 }
@@ -73,11 +83,24 @@ function readStored(): Session | null {
     if (typeof value !== 'object' || value === null) {
       return null;
     }
-    const { token, email, expiresAt } = value as Record<string, unknown>;
-    return typeof token === 'string' && typeof email === 'string' && typeof expiresAt === 'number'
-      ? { token, email, expiresAt }
-      : null;
+    const { id, token, email, expiresAt } = value as Record<string, unknown>;
+    if (typeof token !== 'string' || typeof email !== 'string' || typeof expiresAt !== 'number') {
+      return null;
+    }
+    if (typeof id === 'string') {
+      return { id, token, email, expiresAt };
+    }
+    // Stored before sessions had an id: give it one and keep it, so a reload doesn't change it.
+    const session = { id: newId(), token, email, expiresAt };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    return session;
   } catch {
     return null;
   }
+}
+
+function newId(): string {
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }

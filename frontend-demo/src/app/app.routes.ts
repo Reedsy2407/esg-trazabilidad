@@ -41,6 +41,21 @@ export const routes: Routes = [
         loadComponent: () => import('./features/associations/association.page').then((m) => m.AssociationPage),
       },
       {
+        path: 'vecinos',
+        title: 'Vecinos · Trazabilidad ESG',
+        loadComponent: () => import('./features/neighbors/neighbors.page').then((m) => m.NeighborsPage),
+      },
+      {
+        path: 'vecinos/nuevo',
+        title: 'Registrar vecino · Trazabilidad ESG',
+        loadComponent: () => import('./features/neighbors/neighbor-new.page').then((m) => m.NeighborNewPage),
+      },
+      {
+        path: 'vecinos/:id',
+        title: 'Vecino · Trazabilidad ESG',
+        loadComponent: () => import('./features/neighbors/neighbor.page').then((m) => m.NeighborPage),
+      },
+      {
         path: 'recojos/nuevo',
         title: 'Registrar recojo · Trazabilidad ESG',
         loadComponent: () =>

@@ -104,6 +104,14 @@ export interface Certification {
   readonly expired: boolean;
 }
 
+/** collection-service CreateNeighborRequest: fullName and address @NotBlank; phone and district optional. */
+export interface CreateNeighborRequest {
+  readonly fullName: string;
+  readonly address: string;
+  readonly phone: string | null;
+  readonly district: string | null;
+}
+
 /** collection-service CollectionScheduleResponse: java.time.DayOfWeek and LocalTime ("HH:mm:ss" or "HH:mm"). */
 export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
 export type CollectionScheduleStatus = 'ACTIVE' | 'PAUSED' | 'CANCELLED';
@@ -115,6 +123,16 @@ export interface CollectionSchedule {
   readonly time: string;
   readonly status: CollectionScheduleStatus;
 }
+
+/** CreateCollectionScheduleRequest: both @NotNull; `time` as LocalTime ("HH:mm"). COL-002 if the
+ * neighbour already has an ACTIVE schedule that day of the week, whatever the time. */
+export interface CreateCollectionScheduleRequest {
+  readonly dayOfWeek: DayOfWeek;
+  readonly time: string;
+}
+
+/** PATCH /neighbors/{id}/schedules/{scheduleId}/{transition}, no body. COL-008 when not allowed from the current state. */
+export type ScheduleTransition = 'pause' | 'cancel' | 'reactivate';
 
 /**
  * CreateCollectionRecordRequest: associationId, collectionDate (LocalDate) and

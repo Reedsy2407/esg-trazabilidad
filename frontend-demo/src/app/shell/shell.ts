@@ -16,6 +16,7 @@ import { SessionService } from '../core/auth/session.service';
       <nav aria-label="Secciones">
         <a routerLink="/empresas" routerLinkActive="current" ariaCurrentWhenActive="page">Empresas</a>
         <a routerLink="/asociaciones" routerLinkActive="current" ariaCurrentWhenActive="page">Asociaciones</a>
+        <a routerLink="/vecinos" routerLinkActive="current" ariaCurrentWhenActive="page">Vecinos</a>
         <a routerLink="/recojos/nuevo" routerLinkActive="current" ariaCurrentWhenActive="page">Registrar recojo</a>
       </nav>
       <div class="user">

@@ -29,7 +29,18 @@
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate #formElement>
         <div class="pair">
           <div class="field">
-            <label for="neighbor">Vecino</label>
+            <label for="neighbor-search">Buscar vecino <span class="optional">(por nombre o distrito)</span></label>
+            <input
+              id="neighbor-search"
+              class="control search"
+              type="search"
+              autocomplete="off"
+              aria-controls="neighbor"
+              [value]="neighborQuery()"
+              (input)="neighborQuery.set($any($event.target).value)"
+            />
+            <p class="visually-hidden" role="status">{{ neighborMatches() }}</p>
+            <label for="neighbor" class="second-label">Vecino</label>
             @if (neighbors.error(); as e) {
               <div class="problem load-problem" role="alert">
                 <p>{{ loadError(e, 'los vecinos') }}</p>
@@ -45,7 +56,7 @@
               [attr.aria-busy]="neighbors.isLoading()"
             >
               <option value="">{{ neighbors.isLoading() ? 'Cargando vecinos…' : 'Elige un vecino' }}</option>
-              @for (n of neighborOptions(); track n.id) {
+              @for (n of filteredNeighborOptions(); track n.id) {
                 <option [value]="n.id">{{ n.label }}</option>
               }
             </select>
@@ -179,3 +190,22 @@
     </aside>
   }
 </div>
+
+<!-- Bitácora: what this tab registered since signing in, newest first. Session-only. -->
+<section class="log" aria-labelledby="log-title">
+  <h2 id="log-title">Recojos registrados en esta sesión</h2>
+  @if (log.entries().length === 0) {
+    <p class="log-empty">Aún no registras recojos en esta sesión. Aparecerán aquí, del más reciente al más antiguo.</p>
+  } @else {
+    <ol class="log-list">
+      @for (e of log.entries(); track e.id) {
+        <li>
+          <span class="log-kilos mono">{{ e.kilos }}</span>
+          <span class="log-who">{{ e.neighbor }}<span class="log-meta">{{ e.association }} · <span class="mono">{{ e.date }}</span></span></span>
+          <code class="log-code mono">{{ e.id }}</code>
+        </li>
+      }
+    </ol>
+    <p class="log-note">Solo en esta pestaña: se borra al cerrar sesión o la pestaña. {{ log.entries().length }} {{ log.entries().length === 1 ? 'recojo' : 'recojos' }}.</p>
+  }
+</section>

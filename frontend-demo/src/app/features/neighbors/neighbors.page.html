@@ -1,0 +1,109 @@
+<header class="page-head with-action">
+  <div>
+    <h1>Vecinos</h1>
+    <p class="sub">Los vecinos que entregan sus residuos, sus cronogramas y sus recojos.</p>
+  </div>
+  <a class="btn btn-primary" routerLink="/vecinos/nuevo">Registrar vecino</a>
+</header>
+
+<div class="filters">
+  <nav class="state-filter" aria-label="Filtrar por estado">
+    @for (f of filters; track f.label) {
+      <a
+        [routerLink]="[]"
+        [queryParams]="{ estado: f.estado, pagina: null }"
+        queryParamsHandling="merge"
+        [attr.aria-current]="f === filter() ? 'page' : null"
+        [class.current]="f === filter()"
+        >{{ f.label }}</a
+      >
+    }
+  </nav>
+  <form class="district" role="search" aria-label="Filtrar por distrito" (submit)="searchDistrict($event)">
+    <label for="district">Distrito</label>
+    <div class="district-row">
+      <input id="district" name="distrito" class="control" type="search" [value]="district() ?? ''" aria-describedby="district-hint" />
+      <button type="submit" class="btn">Filtrar</button>
+    </div>
+    <p class="hint" id="district-hint">Escríbelo tal como se registró (mayúsculas y tildes incluidas).</p>
+  </form>
+</div>
+
+<p class="visually-hidden" role="status">{{ neighbors.isLoading() ? 'Cargando vecinos' : announcement() }}</p>
+
+@if (loadError(); as message) {
+  <div class="problem" role="alert">
+    <p>{{ message }}</p>
+    <button type="button" class="btn" (click)="neighbors.reload()">Volver a intentar</button>
+  </div>
+} @else if (page(); as current) {
+  @if (current.content.length === 0 && current.totalElements > 0) {
+    <p class="empty-note">
+      Esta página ya no tiene vecinos. <a [routerLink]="[]" [queryParams]="{ pagina: null }" queryParamsHandling="merge">Ir a la primera página</a>
+    </p>
+  } @else if (current.content.length === 0) {
+    <p class="empty-note">
+      @if (district() !== null || filter().status !== null) {
+        Ningún vecino coincide con este filtro.
+        <a [routerLink]="[]" [queryParams]="{}">Ver todos los vecinos</a>
+      } @else {
+        Todavía no hay vecinos registrados. <a routerLink="/vecinos/nuevo">Registra el primero</a>.
+      }
+    </p>
+  } @else {
+    <div class="ledger-wide" [attr.aria-busy]="neighbors.isLoading()">
+      <table class="ledger">
+        <caption class="visually-hidden">Vecinos por nombre</caption>
+        <thead>
+          <tr>
+            <th scope="col">Vecino</th>
+            <th scope="col">Distrito</th>
+            <th scope="col">Dirección</th>
+            <th scope="col">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (n of current.content; track n.id) {
+            <tr>
+              <td><a class="row-link" [routerLink]="['/vecinos', n.id]">{{ n.fullName }}</a></td>
+              <td>{{ n.district?.trim() || '—' }}</td>
+              <td>{{ n.address }}</td>
+              <td class="nowrap" [class.inactive]="n.status === 'INACTIVE'">{{ n.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <ul class="entries" aria-label="Vecinos">
+      @for (n of current.content; track n.id) {
+        <li>
+          <a class="entry" [routerLink]="['/vecinos', n.id]" [attr.aria-labelledby]="'vec-' + n.id">
+            <span class="entry-title" [id]="'vec-' + n.id">{{ n.fullName }}</span>
+            <dl>
+              <div><dt>Distrito</dt><dd>{{ n.district?.trim() || '—' }}</dd></div>
+              <div><dt>Estado</dt><dd>{{ n.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</dd></div>
+            </dl>
+          </a>
+        </li>
+      }
+    </ul>
+  }
+  <nav class="list-foot" aria-label="Paginación de vecinos">
+    <p class="count">
+      @if (range(); as r) {
+        Mostrando {{ r.first | number }}–{{ r.last | number }} de {{ r.total | number }} {{ r.total === 1 ? 'vecino' : 'vecinos' }}
+      }
+    </p>
+    @if (current.totalPages > 1) {
+      <div class="pages">
+        <button type="button" class="btn" [disabled]="pagina() <= 1" (click)="goTo(pagina() - 1)">Anterior</button>
+        <span class="where">Página {{ pagina() }} de {{ current.totalPages }}</span>
+        <button type="button" class="btn" [disabled]="pagina() >= current.totalPages" (click)="goTo(pagina() + 1)">Siguiente</button>
+      </div>
+    }
+  </nav>
+} @else {
+  <div aria-hidden="true">
+    <span class="skel wide"></span><span class="skel wide"></span><span class="skel wide"></span>
+  </div>
+}

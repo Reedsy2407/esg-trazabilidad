@@ -110,6 +110,16 @@ export interface BackendOptions {
   companyLists?: ('empty' | 'full' | 'fail')[];
   /** Delay before answering GET /tracked-companies, to observe the loading state. */
   companyListDelayMs?: number;
+  /** How many neighbours GET /neighbors knows (default NEIGHBORS; more are generated, for paging). */
+  neighborCount?: number;
+  /** GET /neighbors, .../schedules or .../collection-records fail with this status (a bare 5xx). */
+  neighborsStatus?: number;
+  schedulesStatus?: number;
+  recordsStatus?: number;
+  /** POST /neighbors answers this instead of 201 (code null: a bare gateway answer). */
+  neighborFailure?: { status: number; code: string | null };
+  /** Every write (POST/PATCH) the fake services received, in order. */
+  writes?: { method: string; path: string; body: unknown }[];
   /** Every POST body received by collection-records, for the test to inspect. */
   collectionPosts?: { neighborId: string; body: unknown }[];
 }
@@ -171,6 +181,50 @@ export const SCHEDULES: Record<string, { id: string; neighborId: string; dayOfWe
     { id: '0192f3a8-b000-7000-8000-000000000003', neighborId: NEIGHBORS[1].id, dayOfWeek: 'WEDNESDAY', time: '07:00:00', status: 'ACTIVE' },
   ],
 };
+
+interface NeighborRow {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  address: string;
+  district: string | null;
+  status: string;
+}
+interface ScheduleRow {
+  id: string;
+  neighborId: string;
+  dayOfWeek: string;
+  time: string;
+  status: string;
+}
+interface RecordRow {
+  id: string;
+  neighborId: string;
+  scheduleId: string | null;
+  associationId: string;
+  collectionDate: string;
+  weightKg: number;
+}
+
+/** Generated neighbours up to `count` in all (for paging), each in a district of Lima. */
+function extraNeighbors(count: number = NEIGHBORS.length): NeighborRow[] {
+  const districts = ['Comas', 'Rímac', 'Los Olivos', 'Independencia'];
+  return Array.from({ length: Math.max(0, count - NEIGHBORS.length) }, (_, i) => ({
+    id: `0192f3a8-a000-7000-8000-${String(100 + i).padStart(12, '0')}`,
+    fullName: `Vecino de prueba ${String(i + 1).padStart(2, '0')}`,
+    phone: null,
+    address: `Calle ${i + 1}`,
+    district: districts[i % districts.length],
+    status: 'ACTIVE',
+  }));
+}
+
+/** Rosa's past collections (CollectionRecordResponse). */
+export const RECORDS: readonly RecordRow[] = [
+  { id: '0192f3a8-d000-7000-8000-000000000101', neighborId: NEIGHBORS[1].id, scheduleId: SCHEDULES[NEIGHBORS[1].id][0].id, associationId: ASSOCIATIONS[0].id, collectionDate: '2026-10-05', weightKg: 12.5 },
+  { id: '0192f3a8-d000-7000-8000-000000000102', neighborId: NEIGHBORS[1].id, scheduleId: null, associationId: ASSOCIATIONS[0].id, collectionDate: '2026-09-28', weightKg: 8.25 },
+  { id: '0192f3a8-d000-7000-8000-000000000103', neighborId: NEIGHBORS[1].id, scheduleId: null, associationId: ASSOCIATIONS[1].id, collectionDate: '2026-08-14', weightKg: 20 },
+];
 
 export async function fakeBackend(page: Page, options: BackendOptions = {}): Promise<void> {
   // Registered first, so it only answers what no route below handles. ng serve proxies /svc/* to
@@ -256,28 +310,152 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');
   });
 
+  // collection-service with state, per page: neighbours created and schedules changed by a test
+  // are what the next GET answers, as the real service would.
+  const neighbors: NeighborRow[] = [...NEIGHBORS.map((n) => ({ ...n })), ...extraNeighbors(options.neighborCount)];
+  const schedules: ScheduleRow[] = Object.values(SCHEDULES)
+    .flat()
+    .map((sc) => ({ ...sc }));
+  const records: RecordRow[] = RECORDS.map((r) => ({ ...r }));
+  let created = 0;
+
   await page.route('**/svc/collection/neighbors**', (route) => {
     if (!authorized(route)) {
       return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
     }
+    const request = route.request();
+    const method = request.method();
     const json = (status: number, body: unknown) =>
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
-    const { pathname } = new URL(route.request().url());
-    const [, neighborId, sub] = /\/neighbors(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(pathname) ?? [];
+    const url = new URL(request.url());
+    const [, neighborId, sub, subId, action] =
+      /\/neighbors(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(url.pathname) ?? [];
+    const paged = <T,>(all: T[]) => {
+      const size = Math.min(Number(url.searchParams.get('size') ?? 20), 100);
+      const number = Number(url.searchParams.get('page') ?? 0);
+      return {
+        content: all.slice(number * size, number * size + size),
+        page: number,
+        size,
+        totalElements: all.length,
+        totalPages: Math.ceil(all.length / size),
+      };
+    };
+
     if (neighborId === undefined) {
-      // The API sorts by fullName.
-      return json(200, pageOf([...NEIGHBORS].sort((a, b) => a.fullName.localeCompare(b.fullName))));
+      if (method === 'POST') {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        options.writes?.push({ method, path: url.pathname, body });
+        if (options.neighborFailure !== undefined) {
+          return options.neighborFailure.code === null
+            ? gatewayError(route, options.neighborFailure.status)
+            : problem(route, options.neighborFailure.status, options.neighborFailure.code, 'Rechazado');
+        }
+        const fullName = body['fullName'];
+        const address = body['address'];
+        if (typeof fullName !== 'string' || fullName.trim() === '' || typeof address !== 'string' || address.trim() === '') {
+          return problem(route, 400, 'VALIDATION_ERROR', 'fullName: no debe estar vacío');
+        }
+        created += 1;
+        const neighbor: NeighborRow = {
+          id: `0192f3a8-a000-7000-8000-${String(900 + created).padStart(12, '0')}`,
+          fullName,
+          phone: (body['phone'] as string | null) ?? null,
+          address,
+          district: (body['district'] as string | null) ?? null,
+          status: 'ACTIVE',
+        };
+        neighbors.push(neighbor);
+        return json(201, neighbor);
+      }
+      if (options.neighborsStatus !== undefined) {
+        return gatewayError(route, options.neighborsStatus);
+      }
+      const status = url.searchParams.get('status');
+      const district = url.searchParams.get('district');
+      // The API sorts by fullName; district is an exact, case-sensitive match.
+      const all = neighbors
+        .filter((n) => (status === null || n.status === status) && (district === null || n.district === district))
+        .sort((a, b) => a.fullName.localeCompare(b.fullName));
+      return json(200, paged(all));
     }
-    const neighbor = NEIGHBORS.find((n) => n.id === neighborId);
-    if (neighbor === undefined) {
-      return problem(route, 404, 'COL-001', 'Vecino no encontrado');
+
+    const neighbor = neighbors.find((n) => n.id === neighborId);
+    if (sub === undefined) {
+      return neighbor === undefined ? problem(route, 404, 'COL-001', 'Vecino no encontrado') : json(200, neighbor);
     }
+
     if (sub === 'schedules') {
-      return json(200, pageOf(SCHEDULES[neighbor.id] ?? []));
+      const own = schedules.filter((sc) => sc.neighborId === neighborId);
+      if (subId === undefined && method === 'GET') {
+        if (options.schedulesStatus !== undefined) {
+          return gatewayError(route, options.schedulesStatus);
+        }
+        // Stored as text: the API sorts dayOfWeek alphabetically.
+        return json(200, paged([...own].sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek))));
+      }
+      if (subId === undefined && method === 'POST') {
+        const body = request.postDataJSON() as { dayOfWeek: string; time: string };
+        options.writes?.push({ method, path: url.pathname, body });
+        if (neighbor === undefined) {
+          return problem(route, 404, 'COL-001', 'Vecino no encontrado');
+        }
+        if (own.some((sc) => sc.status === 'ACTIVE' && sc.dayOfWeek === body.dayOfWeek)) {
+          return problem(route, 409, 'COL-002', 'Conflicto de horario de recojo');
+        }
+        const schedule: ScheduleRow = {
+          id: `0192f3a8-b000-7000-8000-${String(900 + schedules.length).padStart(12, '0')}`,
+          neighborId,
+          dayOfWeek: body.dayOfWeek,
+          time: `${body.time}:00`,
+          status: 'ACTIVE',
+        };
+        schedules.push(schedule);
+        return json(201, schedule);
+      }
+      const schedule = own.find((sc) => sc.id === subId);
+      if (method === 'PATCH' && action !== undefined) {
+        options.writes?.push({ method, path: url.pathname, body: null });
+        if (schedule === undefined) {
+          return problem(route, 404, 'COL-006', 'Programación de recojo no encontrada');
+        }
+        const allowed: Record<string, string[]> = { pause: ['ACTIVE'], cancel: ['ACTIVE', 'PAUSED'], reactivate: ['PAUSED'] };
+        if (!allowed[action]?.includes(schedule.status)) {
+          return problem(route, 409, 'COL-008', 'Transición de estado no permitida para esta programación');
+        }
+        if (
+          action === 'reactivate' &&
+          own.some((sc) => sc.id !== schedule.id && sc.status === 'ACTIVE' && sc.dayOfWeek === schedule.dayOfWeek)
+        ) {
+          return problem(route, 409, 'COL-002', 'Conflicto de horario de recojo');
+        }
+        schedule.status = action === 'pause' ? 'PAUSED' : action === 'cancel' ? 'CANCELLED' : 'ACTIVE';
+        return json(200, schedule);
+      }
     }
-    if (sub === 'collection-records' && route.request().method() === 'POST') {
-      const body = route.request().postDataJSON() as Record<string, unknown>;
+
+    if (sub === 'collection-records' && method === 'GET') {
+      if (options.recordsStatus !== undefined) {
+        return gatewayError(route, options.recordsStatus);
+      }
+      const from = url.searchParams.get('from');
+      const to = url.searchParams.get('to');
+      const all = records
+        .filter(
+          (r) =>
+            r.neighborId === neighborId && (from === null || r.collectionDate >= from) && (to === null || r.collectionDate <= to),
+        )
+        .sort((a, b) => b.collectionDate.localeCompare(a.collectionDate));
+      return json(200, paged(all));
+    }
+
+    if (sub === 'collection-records' && method === 'POST') {
+      if (neighbor === undefined) {
+        return problem(route, 404, 'COL-001', 'Vecino no encontrado');
+      }
+      const body = request.postDataJSON() as Record<string, unknown>;
       options.collectionPosts?.push({ neighborId, body });
+      options.writes?.push({ method, path: url.pathname, body });
       if (options.collectionFailure !== undefined) {
         const { status, code } = options.collectionFailure;
         if (code === null) {
@@ -286,14 +464,16 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
         }
         return problem(route, status, code, 'Rechazado');
       }
-      return json(201, {
-        id: '0192f3a8-d000-7000-8000-000000000001',
+      const record: RecordRow = {
+        id: `0192f3a8-d000-7000-8000-${String(records.length + 1).padStart(12, '0')}`,
         neighborId,
-        scheduleId: body['scheduleId'] ?? null,
-        associationId: body['associationId'],
-        collectionDate: body['collectionDate'],
-        weightKg: body['weightKg'],
-      });
+        scheduleId: (body['scheduleId'] as string | null) ?? null,
+        associationId: body['associationId'] as string,
+        collectionDate: body['collectionDate'] as string,
+        weightKg: body['weightKg'] as number,
+      };
+      records.push(record);
+      return json(201, record);
     }
     return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');
   });

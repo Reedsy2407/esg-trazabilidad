@@ -397,6 +397,16 @@ select.control:disabled {
   font-size: 44px;
   line-height: 1.02;
 }
+.page-head.with-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-6);
+}
+a.btn {
+  text-decoration: none;
+}
 .page-head .sub {
   margin: var(--space-2) 0 0;
   color: var(--ink-soft);
@@ -404,6 +414,32 @@ select.control:disabled {
 .back-link {
   display: inline-block;
   margin-bottom: var(--space-5);
+}
+/* State filter: three printed tabs on the concrete; the current one is underlined in cobalt,
+   the same "where you are" mark as the top bar. */
+.state-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin-bottom: var(--space-4);
+  font-size: 14px;
+}
+.state-filter a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-top: 3px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+}
+.state-filter a:hover {
+  color: var(--ink);
+}
+.state-filter a.current {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
 }
 /* A ledger: flat paper, ink rule under the head, thin rules between rows. Table from 640 px,
    stacked entries below (no sideways scrolling). */

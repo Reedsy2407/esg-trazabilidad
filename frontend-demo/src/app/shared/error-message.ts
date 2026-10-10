@@ -88,3 +88,29 @@ export function loadErrorMessage(error: unknown, what: string, service = 'el ser
   }
   return `${couldNot(what)} cargar ${what} (${error.code ?? `HTTP ${error.status}`}).`;
 }
+
+/**
+ * One sentence for a write (POST/PATCH) the backend didn't accept. With no answer, a 408 or a
+ * 5xx the outcome is unknown (the write may have gone through; Render answers 502/504 while a
+ * service wakes), so `uncertain` says how to check before retrying, and never claims it failed.
+ * Otherwise `overrides` (page-specific wording) or the catalog speaks for the code.
+ */
+export function writeErrorText(
+  error: unknown,
+  uncertain: string,
+  overrides: Readonly<Record<string, string>> = {},
+): string {
+  if (!(error instanceof ApiError) || error.status === 0 || error.status === 408 || error.status >= 500) {
+    return uncertain;
+  }
+  const specific = error.code === null ? undefined : overrides[error.code];
+  if (specific !== undefined) {
+    return specific;
+  }
+  if (error.status === 429) {
+    return error.retryAfterSeconds === null
+      ? 'Demasiadas solicitudes. Espera un momento y vuelve a intentarlo.'
+      : `Demasiadas solicitudes. Vuelve a intentarlo en ${error.retryAfterSeconds} s.`;
+  }
+  return codeMessage(error) ?? `El servicio no aceptó la operación (${error.code ?? `HTTP ${error.status}`}).`;
+}

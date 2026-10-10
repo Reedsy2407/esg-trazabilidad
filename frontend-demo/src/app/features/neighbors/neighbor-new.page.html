@@ -1,0 +1,58 @@
+<a class="back-link" routerLink="/vecinos">Volver a vecinos</a>
+
+<header class="page-head">
+  <h1>Registrar vecino</h1>
+  <p class="sub">Quedará activo y podrás agregarle cronogramas y recojos.</p>
+</header>
+
+<form class="form-sheet" [formGroup]="form" (ngSubmit)="submit()" novalidate #formElement>
+  <div class="field">
+    <label for="fullName">Nombre completo</label>
+    <input
+      id="fullName"
+      class="control"
+      formControlName="fullName"
+      autocomplete="off"
+      [attr.aria-invalid]="invalid('fullName')"
+      [attr.aria-describedby]="invalid('fullName') ? 'fullName-error' : null"
+    />
+    @if (invalid('fullName')) {
+      <p class="field-error" id="fullName-error">Escribe el nombre del vecino.</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="address">Dirección</label>
+    <input
+      id="address"
+      class="control"
+      formControlName="address"
+      autocomplete="off"
+      [attr.aria-invalid]="invalid('address')"
+      [attr.aria-describedby]="invalid('address') ? 'address-error' : null"
+    />
+    @if (invalid('address')) {
+      <p class="field-error" id="address-error">Escribe la dirección donde se recoge.</p>
+    }
+  </div>
+
+  <div class="pair">
+    <div class="field">
+      <label for="district">Distrito <span class="optional">(opcional)</span></label>
+      <input id="district" class="control" formControlName="district" autocomplete="off" aria-describedby="district-hint" />
+      <p class="hint" id="district-hint">Escríbelo siempre igual: la lista filtra por el texto exacto.</p>
+    </div>
+    <div class="field">
+      <label for="phone">Teléfono <span class="optional">(opcional)</span></label>
+      <input id="phone" class="control mono" formControlName="phone" type="tel" inputmode="tel" autocomplete="off" />
+    </div>
+  </div>
+
+  @if (error(); as message) {
+    <p class="problem form-problem" role="alert">{{ message }}</p>
+  }
+
+  <button class="btn btn-primary submit" type="submit" [disabled]="submitting()">
+    {{ submitting() ? 'Registrando…' : 'Registrar vecino' }}
+  </button>
+</form>

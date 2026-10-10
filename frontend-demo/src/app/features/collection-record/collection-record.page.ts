@@ -1,11 +1,14 @@
-import { Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { rxResource, takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { finalize, map } from 'rxjs';
 
-import { CollectionRecord, CollectionSchedule, CollectionScheduleStatus, DayOfWeek, Neighbor } from '../../core/api/api.types';
+import { CollectionRecord } from '../../core/api/api.types';
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
+import { CollectionLogService } from '../../core/session/collection-log.service';
+import { rememberAssociation, rememberedAssociation } from '../../core/session/remembered-association';
+import { byWeekday, neighborLabel, scheduleLabel } from '../../shared/collection-labels';
 import { loadErrorMessage } from '../../shared/error-message';
 import { formatKg, formatLocalDate, todayInLima } from '../../shared/format';
 
@@ -15,6 +18,11 @@ import { formatKg, formatLocalDate, todayInLima } from '../../shared/format';
  * separator, so "1,5" is never read as one and a half or as fifteen.
  */
 const WEIGHT = /^\d{1,8}(\.\d{1,2})?$/;
+
+/** Lower case, without accents: "quispe" finds "Quispe", "nunez" finds "Núñez". */
+export function searchKey(text: string): string {
+  return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
 
 function weightValidator(control: AbstractControl<string>): ValidationErrors | null {
   const value = control.value.trim();
@@ -27,33 +35,8 @@ function weightValidator(control: AbstractControl<string>): ValidationErrors | n
   return Number(value) > 0 ? null : { positive: true };
 }
 
-const DAYS: Record<DayOfWeek, string> = {
-  MONDAY: 'Lunes',
-  TUESDAY: 'Martes',
-  WEDNESDAY: 'Miércoles',
-  THURSDAY: 'Jueves',
-  FRIDAY: 'Viernes',
-  SATURDAY: 'Sábado',
-  SUNDAY: 'Domingo',
-};
-
-const DAY_ORDER = Object.keys(DAYS) as DayOfWeek[];
-
-/** Monday to Sunday, then by time: the API's order is alphabetical (dayOfWeek is stored as text). */
-export function byWeekday(a: CollectionSchedule, b: CollectionSchedule): number {
-  return DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek) || a.time.localeCompare(b.time);
-}
-
-const SCHEDULE_STATUS: Record<CollectionScheduleStatus, string> = {
-  ACTIVE: '',
-  PAUSED: ' (pausado)',
-  CANCELLED: ' (cancelado)',
-};
-
-/** "Lunes 08:00", plus its state when it isn't active. LocalTime comes as "08:00" or "08:00:00". */
-export function scheduleLabel(schedule: CollectionSchedule): string {
-  return `${DAYS[schedule.dayOfWeek]} ${schedule.time.slice(0, 5)}${SCHEDULE_STATUS[schedule.status]}`;
-}
+// Re-exported: the page's spec and older imports use them from here.
+export { byWeekday, neighborLabel, scheduleLabel } from '../../shared/collection-labels';
 
 /**
  * The POST isn't idempotent, and with no answer (network drop, CORS, timeout) or a 408/5xx
@@ -61,15 +44,6 @@ export function scheduleLabel(schedule: CollectionSchedule): string {
  */
 export const UNCERTAIN_OUTCOME =
   'No pudimos confirmar si el recojo quedó registrado. Espera un momento y revisa antes de volver a intentarlo, para no duplicarlo.';
-
-/**
- * "Name · District (inactivo)": the district is optional in the API (null, or blank), so a
- * neighbour without one shows just the name, never " · null".
- */
-export function neighborLabel(n: Pick<Neighbor, 'fullName' | 'district' | 'status'>): string {
-  const district = n.district?.trim();
-  return `${n.fullName}${district ? ` · ${district}` : ''}${n.status === 'INACTIVE' ? ' (inactivo)' : ''}`;
-}
 
 /**
  * One sentence per backend answer, in es-PE. The UI branches on `code`;
@@ -120,6 +94,10 @@ export class CollectionRecordPage {
   private readonly api = inject(BackendApi);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  protected readonly log = inject(CollectionLogService);
+
+  /** ?vecino=<id>, from a neighbour's page: that neighbour starts chosen. */
+  readonly vecino = input<string | undefined>(undefined);
 
   protected readonly form = this.fb.group({
     neighborId: ['', Validators.required],
@@ -146,6 +124,30 @@ export class CollectionRecordPage {
         }))
       : [],
   );
+  /** The search box above the neighbour picker: narrows the loaded list, the API has no name search. */
+  protected readonly neighborQuery = signal('');
+  protected readonly filteredNeighborOptions = computed(() => {
+    const query = searchKey(this.neighborQuery());
+    const all = this.neighborOptions();
+    if (query === '') {
+      return all;
+    }
+    const chosen = this.neighborId();
+    // The chosen neighbour stays listed, or the select would silently lose its value.
+    return all.filter((n) => n.id === chosen || searchKey(n.label).includes(query));
+  });
+  /** "3 vecinos coinciden", said politely while typing; empty when not searching. */
+  protected readonly neighborMatches = computed(() => {
+    const query = this.neighborQuery().trim();
+    if (query === '' || !this.neighbors.hasValue()) {
+      return '';
+    }
+    const count = this.neighborOptions().filter((n) => searchKey(n.label).includes(searchKey(query))).length;
+    return count === 0
+      ? `Ningún vecino coincide con «${query}».`
+      : `${count} ${count === 1 ? 'vecino coincide' : 'vecinos coinciden'} con «${query}».`;
+  });
+
   protected readonly associationOptions = computed(() =>
     this.associations.hasValue()
       ? this.associations.value().content.map((a) => ({
@@ -207,6 +209,29 @@ export class CollectionRecordPage {
       .subscribe(() => this.form.controls.scheduleId.setValue(''));
     // A rejection is about what was sent: once the user edits, it no longer applies.
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.error.set(null));
+
+    // Once the lists arrive: the neighbour from ?vecino= and the association used last time,
+    // each only if it is still in the list.
+    // ?vecino= is applied once per value: a later link to another neighbour (same component,
+    // new query) chooses that one, but re-rendering never undoes the user's own choice.
+    let appliedVecino: string | undefined;
+    effect(() => {
+      const wanted = this.vecino();
+      if (wanted && wanted !== appliedVecino && this.neighborOptions().some((n) => n.id === wanted)) {
+        appliedVecino = wanted;
+        untracked(() => this.form.controls.neighborId.setValue(wanted));
+      }
+    });
+    effect(() => {
+      const remembered = rememberedAssociation();
+      if (remembered !== null && this.associationOptions().some((a) => a.id === remembered)) {
+        untracked(() => {
+          if (this.form.controls.associationId.value === '') {
+            this.form.controls.associationId.setValue(remembered);
+          }
+        });
+      }
+    });
   }
 
   protected fieldInvalid(name: 'neighborId' | 'associationId' | 'collectionDate' | 'weightKg'): boolean {
@@ -241,6 +266,7 @@ export class CollectionRecordPage {
     }
     const value = this.form.getRawValue();
     const neighbor = this.neighborOptions().find((n) => n.id === value.neighborId)?.label ?? '';
+    const association = this.associationOptions().find((a) => a.id === value.associationId)?.label ?? '';
     this.error.set(null);
     this.saved.set(null);
     this.submitting.set(true);
@@ -257,12 +283,10 @@ export class CollectionRecordPage {
       )
       .subscribe({
         next: (record) => {
-          this.saved.set({
-            record,
-            neighbor,
-            kilos: formatKg(record.weightKg),
-            date: formatLocalDate(record.collectionDate),
-          });
+          const saved = { record, neighbor, kilos: formatKg(record.weightKg), date: formatLocalDate(record.collectionDate) };
+          this.saved.set(saved);
+          rememberAssociation(record.associationId);
+          this.log.add({ id: record.id, neighbor, association, date: saved.date, kilos: saved.kilos });
           // The submit button just left the page: focus the confirmation instead of losing it to <body>.
           setTimeout(() => this.savedTitle()?.nativeElement.focus());
         },

@@ -164,3 +164,77 @@ input.num {
     width: 100%;
   }
 }
+
+/* Neighbour search: the box narrows the picker below it. */
+.second-label {
+  margin-top: var(--space-3);
+}
+
+/* Bitácora: a till roll of this session's tickets, kilos first, as the scale prints them. */
+.log {
+  max-width: 1080px;
+  margin-top: var(--space-8);
+}
+.log h2 {
+  margin-bottom: var(--space-3);
+  font-size: 15px;
+}
+.log-empty,
+.log-note {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.log-empty {
+  padding: var(--space-5) var(--space-4);
+  background: var(--paper);
+}
+.log-note {
+  margin-top: var(--space-3);
+}
+.log-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--paper);
+}
+.log-list li {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 2px dotted var(--rule-dots);
+}
+.log-list li:last-child {
+  border-bottom: 0;
+}
+.log-kilos {
+  font-size: 17px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+.log-who {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.log-meta {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 400;
+}
+.log-code {
+  color: var(--ink-soft);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767.98px) {
+  .log-list li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .log-kilos {
+    text-align: left;
+  }
+}

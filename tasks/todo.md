@@ -449,7 +449,7 @@
 Decisiones de Angel: empresa = tracked company de reporting (no `/companies` de collection); sin rol admin (confirmación explícita antes de acciones irreversibles/sensibles); SIGERSOL siempre "ingreso manual"; datos de demo fuera de este módulo; huecos de backend solo se documentan. Ninguna escritura contra producción: todo con el backend falso.
 
 - [x] V1: Asociaciones — lista (filtro por estado, páginas de 20) + detalle con certificaciones (chips vigente / por vencer / vencido; "por vencer" = 30 días, PENDIENTE de confirmar por Angel)
-- [ ] V2: Vecinos + cronogramas + recojos (buscador en el selector, recordar asociación, bitácora de sesión)
+- [x] V2: Vecinos (lista con filtros, registro, ficha) + cronogramas (agregar, pausar, reactivar, cancelar con confirmación) + recojos por fechas; en el formulario: buscador de vecino, ?vecino=, última asociación recordada, bitácora de la sesión ligada a cada inicio de sesión
 - [ ] V3: Registrar empresa (POST /tracked-companies, RUC 11 dígitos, RPT-002)
 - [ ] V4: SIGERSOL como "ingreso manual" (POST /sigersol-syncs, RPT-005)
 - [ ] V5: Emitir certificado — PARADA: diseño de la confirmación antes del envío real (RPT-004)

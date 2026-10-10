@@ -13,7 +13,10 @@ import {
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
 import { todayInLima } from '../../shared/format';
-import { CollectionRecordPage, UNCERTAIN_OUTCOME, neighborLabel, scheduleLabel, submitErrorText } from './collection-record.page';
+import { SessionService } from '../../core/auth/session.service';
+import { CollectionLogService } from '../../core/session/collection-log.service';
+import { inOneHour, testJwt } from '../../testing/jwt';
+import { CollectionRecordPage, UNCERTAIN_OUTCOME, neighborLabel, scheduleLabel, searchKey, submitErrorText } from './collection-record.page';
 
 const page = <T,>(content: T[], totalElements = content.length): Page<T> => ({
   content,
@@ -85,6 +88,8 @@ describe('CollectionRecordPage', () => {
   };
 
   beforeEach(async () => {
+    localStorage.clear();
+    sessionStorage.clear();
     posts = [];
     answer = new Subject<CollectionRecord>();
     TestBed.configureTestingModule({
@@ -269,6 +274,85 @@ describe('CollectionRecordPage', () => {
       's-1',
     ]);
     expect(submitButton().disabled).toBe(false);
+  });
+});
+
+describe('CollectionRecordPage, V2 conveniences', () => {
+  const setup = async (vecino?: string, signedIn = false) => {
+    TestBed.configureTestingModule({
+      imports: [CollectionRecordPage],
+      providers: [
+        provideRouter([]),
+        {
+          provide: BackendApi,
+          useValue: {
+            neighbors: () => of(page(NEIGHBORS)),
+            associations: () => of(page(ASSOCIATIONS)),
+            schedules: () => of(page([])),
+            createCollectionRecord: (neighborId: string, body: CreateCollectionRecordRequest) =>
+              of({ id: 'r-9', neighborId, ...body }),
+          },
+        },
+      ],
+    });
+    if (signedIn) {
+      TestBed.inject(SessionService).start(testJwt({ email: 'ana@asociacion.pe', exp: inOneHour() }));
+    }
+    const fixture = TestBed.createComponent(CollectionRecordPage);
+    if (vecino !== undefined) {
+      fixture.componentRef.setInput('vecino', vecino);
+    }
+    TestBed.tick();
+    await Promise.resolve();
+    TestBed.tick();
+    return fixture.nativeElement as HTMLElement;
+  };
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('?vecino= chooses that neighbour, only if listed', async () => {
+    let el = await setup(NEIGHBORS[1].id);
+    expect((el.querySelector('#neighbor') as HTMLSelectElement).value).toBe(NEIGHBORS[1].id);
+    TestBed.resetTestingModule();
+    el = await setup('no-such-id');
+    expect((el.querySelector('#neighbor') as HTMLSelectElement).value).toBe('');
+  });
+
+  it('chooses the association used last time, if it is still listed', async () => {
+    localStorage.setItem('esg.recojo.asociacion', ASSOCIATIONS[1].id);
+    let el = await setup();
+    expect((el.querySelector('#association') as HTMLSelectElement).value).toBe(ASSOCIATIONS[1].id);
+    TestBed.resetTestingModule();
+    localStorage.setItem('esg.recojo.asociacion', 'gone');
+    el = await setup();
+    expect((el.querySelector('#association') as HTMLSelectElement).value).toBe('');
+  });
+
+  it('a registered collection is remembered and goes to the session log, newest first', async () => {
+    const el = await setup(NEIGHBORS[0].id, true);
+    const association = el.querySelector('#association') as HTMLSelectElement;
+    association.value = ASSOCIATIONS[0].id;
+    association.dispatchEvent(new Event('change'));
+    const weight = el.querySelector('#weight') as HTMLInputElement;
+    weight.value = '3.5';
+    weight.dispatchEvent(new Event('input'));
+    (el.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    TestBed.tick();
+    expect(localStorage.getItem('esg.recojo.asociacion')).toBe(ASSOCIATIONS[0].id);
+    const entries = TestBed.inject(CollectionLogService).entries();
+    expect(entries).toEqual([
+      { id: 'r-9', neighbor: neighborLabel(NEIGHBORS[0]), association: ASSOCIATIONS[0].name, date: expect.any(String), kilos: '3.50 kg' },
+    ]);
+    expect(el.querySelectorAll('.log-list li')).toHaveLength(1);
+  });
+});
+
+describe('searchKey', () => {
+  it('ignores case and accents', () => {
+    expect(searchKey('  Núñez HUAMÁN ')).toBe('nunez huaman');
+    expect(searchKey('Rímac').includes(searchKey('rimac'))).toBe(true);
   });
 });
 

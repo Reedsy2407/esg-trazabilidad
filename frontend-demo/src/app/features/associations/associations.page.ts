@@ -23,7 +23,6 @@ const FILTERS = [
   selector: 'app-associations-page',
   imports: [RouterLink, DecimalPipe, StatusLabel],
   templateUrl: './associations.page.html',
-  styleUrl: './associations.page.css',
 })
 export class AssociationsPage {
   private readonly api = inject(BackendApi);

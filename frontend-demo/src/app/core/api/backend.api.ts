@@ -11,11 +11,15 @@ import {
   CollectionRecord,
   CollectionSchedule,
   CreateCollectionRecordRequest,
+  CreateCollectionScheduleRequest,
+  CreateNeighborRequest,
   EsgCertificate,
   LoginRequest,
   LoginResponse,
   Neighbor,
+  NeighborStatus,
   Page,
+  ScheduleTransition,
   TrackedCompany,
 } from './api.types';
 
@@ -76,6 +80,61 @@ export class BackendApi {
   neighbors(): Observable<Page<Neighbor>> {
     const params = new HttpParams().set('size', PICKER_PAGE_SIZE);
     return this.http.get<Page<Neighbor>>(`${collection}/neighbors`, { params });
+  }
+
+  /**
+   * The neighbours screen: 20 per page by name. `district` matches exactly (case-sensitive, the
+   * backend's equality filter); there is no search by name in the API.
+   */
+  neighborsPage(page: number, status: NeighborStatus | null, district: string | null): Observable<Page<Neighbor>> {
+    let params = new HttpParams().set('page', page).set('size', 20);
+    if (status !== null) {
+      params = params.set('status', status);
+    }
+    if (district !== null) {
+      params = params.set('district', district);
+    }
+    return this.http.get<Page<Neighbor>>(`${collection}/neighbors`, { params });
+  }
+
+  /** COL-001 (404) when it doesn't exist. */
+  neighbor(id: string): Observable<Neighbor> {
+    return this.http.get<Neighbor>(`${collection}/neighbors/${encodeURIComponent(id)}`);
+  }
+
+  /** 201 with the new neighbour, always ACTIVE. Not idempotent. */
+  createNeighbor(request: CreateNeighborRequest): Observable<Neighbor> {
+    return this.http.post<Neighbor>(`${collection}/neighbors`, request);
+  }
+
+  /** 201; COL-001 (neighbour), COL-002 (an ACTIVE schedule that day already). */
+  createSchedule(neighborId: string, request: CreateCollectionScheduleRequest): Observable<CollectionSchedule> {
+    return this.http.post<CollectionSchedule>(`${collection}/neighbors/${encodeURIComponent(neighborId)}/schedules`, request);
+  }
+
+  /**
+   * pause: ACTIVE → PAUSED; cancel: ACTIVE or PAUSED → CANCELLED (final); reactivate: PAUSED → ACTIVE
+   * (COL-002 if another ACTIVE schedule took that day). COL-008 otherwise, COL-006 if it isn't this neighbour's.
+   */
+  transitionSchedule(neighborId: string, scheduleId: string, transition: ScheduleTransition): Observable<CollectionSchedule> {
+    return this.http.patch<CollectionSchedule>(
+      `${collection}/neighbors/${encodeURIComponent(neighborId)}/schedules/${encodeURIComponent(scheduleId)}/${transition}`,
+      null,
+    );
+  }
+
+  /** A neighbour's collections, newest first, 20 per page; `from`/`to` inclusive LocalDates. */
+  collectionRecords(neighborId: string, page: number, from: string | null, to: string | null): Observable<Page<CollectionRecord>> {
+    let params = new HttpParams().set('page', page).set('size', 20);
+    if (from !== null) {
+      params = params.set('from', from);
+    }
+    if (to !== null) {
+      params = params.set('to', to);
+    }
+    return this.http.get<Page<CollectionRecord>>(`${collection}/neighbors/${encodeURIComponent(neighborId)}/collection-records`, {
+      params,
+    });
   }
 
   /** Every association, by name (backend sort). Lives in recycler-service. */

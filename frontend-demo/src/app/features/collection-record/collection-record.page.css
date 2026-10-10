@@ -1,22 +1,20 @@
 .head {
-  padding-bottom: var(--space-4);
   margin-bottom: var(--space-6);
-  border-bottom: 1px solid var(--line);
 }
 h1 {
-  font-size: 26px;
+  font-size: 44px;
+  line-height: 1.02;
 }
 .lead {
-  margin: var(--space-1) 0 0;
+  margin: var(--space-2) 0 0;
   color: var(--ink-soft);
 }
 
+/* The form is flat paper: no serrated edge (only literal tickets get one). */
 .sheet {
-  max-width: 640px;
-  padding: var(--space-6);
+  max-width: 760px;
+  padding: var(--space-8);
   background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-frame);
 }
 
 .field {
@@ -41,6 +39,34 @@ label {
 input.num {
   text-align: right;
 }
+/* The weight is the slip's one big figure, with its unit printed beside it. */
+.weigh-box {
+  position: relative;
+}
+.weigh-box input.control {
+  height: 64px;
+  padding-right: 56px;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+/* Two narrow columns (640-768 px): the largest weight, 99999999.99, must still fit. */
+@media (min-width: 640px) and (max-width: 767.98px) {
+  .weigh-box input.control {
+    font-size: 24px;
+  }
+}
+.weigh-box .unit {
+  position: absolute;
+  right: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  pointer-events: none;
+}
 .hint {
   margin: var(--space-2) 0 0;
   color: var(--ink-soft);
@@ -53,19 +79,19 @@ input.num {
   margin-bottom: var(--space-2);
 }
 
-/* Ink and cobalt, not --vigente: that green belongs to certification states (brief). */
+/* Ink, not --vigente: that green belongs to certification states (brief). */
 .saved {
-  padding: var(--space-4);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-data);
+  padding: var(--space-5);
+  border: 2px solid var(--ink);
 }
 .saved p {
   margin: 0 0 var(--space-2);
   overflow-wrap: anywhere;
 }
 .saved-title {
-  color: var(--accent);
-  font-weight: 600;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 800;
 }
 .saved-code {
   color: var(--ink-soft);
@@ -80,6 +106,9 @@ input.num {
 }
 
 @media (max-width: 639.98px) {
+  h1 {
+    font-size: 32px;
+  }
   .sheet {
     padding: var(--space-5) var(--space-4);
   }

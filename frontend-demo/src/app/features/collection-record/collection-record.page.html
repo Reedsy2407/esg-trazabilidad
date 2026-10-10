@@ -26,62 +26,64 @@
 
   @if (!saved()) {
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate #formElement>
-      <div class="field">
-        <label for="neighbor">Vecino</label>
-        @if (neighbors.error(); as e) {
-          <div class="problem load-problem" role="alert">
-            <p>{{ loadError(e, 'los vecinos') }}</p>
-            <button type="button" class="btn" (click)="neighbors.reload()">Volver a intentar</button>
-          </div>
-        }
-        <select
-          class="control"
-          id="neighbor"
-          formControlName="neighborId"
-          [attr.aria-invalid]="fieldInvalid('neighborId')"
-          [attr.aria-describedby]="describedBy(fieldInvalid('neighborId') ? 'neighbor-error' : null, neighborsTruncated() ? 'neighbor-more' : null)"
-          [attr.aria-busy]="neighbors.isLoading()"
-        >
-          <option value="">{{ neighbors.isLoading() ? 'Cargando vecinos…' : 'Elige un vecino' }}</option>
-          @for (n of neighborOptions(); track n.id) {
-            <option [value]="n.id">{{ n.label }}</option>
+      <div class="pair">
+        <div class="field">
+          <label for="neighbor">Vecino</label>
+          @if (neighbors.error(); as e) {
+            <div class="problem load-problem" role="alert">
+              <p>{{ loadError(e, 'los vecinos') }}</p>
+              <button type="button" class="btn" (click)="neighbors.reload()">Volver a intentar</button>
+            </div>
           }
-        </select>
-        @if (neighborsTruncated()) {
-          <p class="hint" id="neighbor-more">Se muestran los primeros {{ neighborOptions().length }} vecinos por nombre.</p>
-        }
-        @if (fieldInvalid('neighborId')) {
-          <p class="field-error" id="neighbor-error">Elige el vecino del recojo.</p>
-        }
-      </div>
+          <select
+            class="control"
+            id="neighbor"
+            formControlName="neighborId"
+            [attr.aria-invalid]="fieldInvalid('neighborId')"
+            [attr.aria-describedby]="describedBy(fieldInvalid('neighborId') ? 'neighbor-error' : null, neighborsTruncated() ? 'neighbor-more' : null)"
+            [attr.aria-busy]="neighbors.isLoading()"
+          >
+            <option value="">{{ neighbors.isLoading() ? 'Cargando vecinos…' : 'Elige un vecino' }}</option>
+            @for (n of neighborOptions(); track n.id) {
+              <option [value]="n.id">{{ n.label }}</option>
+            }
+          </select>
+          @if (neighborsTruncated()) {
+            <p class="hint" id="neighbor-more">Se muestran los primeros {{ neighborOptions().length }} vecinos por nombre.</p>
+          }
+          @if (fieldInvalid('neighborId')) {
+            <p class="field-error" id="neighbor-error">Elige el vecino del recojo.</p>
+          }
+        </div>
 
-      <div class="field">
-        <label for="association">Asociación</label>
-        @if (associations.error(); as e) {
-          <div class="problem load-problem" role="alert">
-            <p>{{ loadError(e, 'las asociaciones') }}</p>
-            <button type="button" class="btn" (click)="associations.reload()">Volver a intentar</button>
-          </div>
-        }
-        <select
-          class="control"
-          id="association"
-          formControlName="associationId"
-          [attr.aria-invalid]="fieldInvalid('associationId')"
-          [attr.aria-describedby]="describedBy(fieldInvalid('associationId') ? 'association-error' : null, associationsTruncated() ? 'association-more' : null)"
-          [attr.aria-busy]="associations.isLoading()"
-        >
-          <option value="">{{ associations.isLoading() ? 'Cargando asociaciones…' : 'Elige una asociación' }}</option>
-          @for (a of associationOptions(); track a.id) {
-            <option [value]="a.id">{{ a.label }}</option>
+        <div class="field">
+          <label for="association">Asociación</label>
+          @if (associations.error(); as e) {
+            <div class="problem load-problem" role="alert">
+              <p>{{ loadError(e, 'las asociaciones') }}</p>
+              <button type="button" class="btn" (click)="associations.reload()">Volver a intentar</button>
+            </div>
           }
-        </select>
-        @if (associationsTruncated()) {
-          <p class="hint" id="association-more">Se muestran las primeras {{ associationOptions().length }} asociaciones por nombre.</p>
-        }
-        @if (fieldInvalid('associationId')) {
-          <p class="field-error" id="association-error">Elige la asociación que hizo el recojo.</p>
-        }
+          <select
+            class="control"
+            id="association"
+            formControlName="associationId"
+            [attr.aria-invalid]="fieldInvalid('associationId')"
+            [attr.aria-describedby]="describedBy(fieldInvalid('associationId') ? 'association-error' : null, associationsTruncated() ? 'association-more' : null)"
+            [attr.aria-busy]="associations.isLoading()"
+          >
+            <option value="">{{ associations.isLoading() ? 'Cargando asociaciones…' : 'Elige una asociación' }}</option>
+            @for (a of associationOptions(); track a.id) {
+              <option [value]="a.id">{{ a.label }}</option>
+            }
+          </select>
+          @if (associationsTruncated()) {
+            <p class="hint" id="association-more">Se muestran las primeras {{ associationOptions().length }} asociaciones por nombre.</p>
+          }
+          @if (fieldInvalid('associationId')) {
+            <p class="field-error" id="association-error">Elige la asociación que hizo el recojo.</p>
+          }
+        </div>
       </div>
 
       <div class="pair">
@@ -100,19 +102,22 @@
           }
         </div>
 
-        <div class="field">
+        <div class="field weigh">
           <label for="weight">Peso recolectado (kg)</label>
-          <input
-            id="weight"
-            #weightInput
-            class="control mono num"
-            type="text"
-            inputmode="decimal"
-            autocomplete="off"
-            formControlName="weightKg"
-            [attr.aria-invalid]="fieldInvalid('weightKg')"
-            [attr.aria-describedby]="fieldInvalid('weightKg') ? 'weight-hint weight-error' : 'weight-hint'"
-          />
+          <div class="weigh-box">
+            <input
+              id="weight"
+              #weightInput
+              class="control mono num"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              formControlName="weightKg"
+              [attr.aria-invalid]="fieldInvalid('weightKg')"
+              [attr.aria-describedby]="fieldInvalid('weightKg') ? 'weight-hint weight-error' : 'weight-hint'"
+            />
+            <span class="unit" aria-hidden="true">kg</span>
+          </div>
           <p class="hint" id="weight-hint">Con punto para decimales, hasta 2: por ejemplo 12.50</p>
           @if (fieldInvalid('weightKg')) {
             <p class="field-error" id="weight-error">

@@ -434,7 +434,7 @@
 - [x] R3: Login (ticket + titular centrados como conjunto; impresión una vez)
 - [x] R4: Empresas y ficha con el gráfico (talones dentados, resumen dentado, tabla plana, barras legibles)
 - [x] R5: Certificado (ticket dentado, h1 sin rótulo encima, impresión una vez)
-- [ ] R6: Registrar recojo (formulario plano)
+- [x] R6: Registrar recojo (formulario plano)
 - [ ] R7: Movimiento, bundle, CSP en build de producción, docs de diseño y TOOLING.md
 
 ### Pendientes (tareas aparte)

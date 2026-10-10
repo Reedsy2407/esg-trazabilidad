@@ -169,3 +169,13 @@ for (const width of [360, 768, 1280]) {
     expect(await axe()).toEqual([]);
   });
 }
+
+test('the largest weight the column allows (99999999.99) fits in the field at every width', async ({ page }) => {
+  await openForm(page);
+  for (const width of [360, 640, 700, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.getByLabel('Peso recolectado (kg)').fill('99999999.99');
+    const fit = await page.getByLabel('Peso recolectado (kg)').evaluate((el) => ({ client: el.clientWidth, scroll: el.scrollWidth }));
+    expect(fit.scroll, `${width} px`).toBeLessThanOrEqual(fit.client);
+  }
+});

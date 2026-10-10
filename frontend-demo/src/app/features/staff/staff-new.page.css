@@ -1,0 +1,77 @@
+h2:focus {
+  outline: none;
+}
+.handover {
+  border-left: 4px solid var(--ink);
+}
+.warning {
+  font-weight: 600;
+}
+/* The secret: one line of ink on paper, between two heavy rules, like the code on a ticket. */
+.secret {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4) 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+.secret code {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+.secret-actions,
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.notice {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  border: 2px solid var(--ink);
+}
+.notice p {
+  margin: 0 0 var(--space-3);
+}
+/* Two classes: the global `.form-sheet label` would otherwise make it a block. */
+.notice .check,
+.retry .check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.notice .check input,
+.retry .check input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+.retry .row {
+  margin-top: var(--space-2);
+}
+.problem {
+  margin-top: var(--space-4);
+}
+
+.confirm-discard {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 2px solid var(--ink);
+}
+.confirm-discard p:focus {
+  outline: none;
+}
+.confirm-discard p {
+  margin: 0 0 var(--space-3);
+  font-weight: 600;
+}

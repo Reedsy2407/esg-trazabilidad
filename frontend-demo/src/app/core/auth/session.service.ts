@@ -11,6 +11,8 @@ interface Session {
   readonly email: string;
   /** Epoch milliseconds, from the token's `exp`. */
   readonly expiresAt: number;
+  /** Epoch milliseconds, from the token's `iat` (auth-service sets it); null if a token lacks it. */
+  readonly issuedAt: number | null;
 }
 
 /**
@@ -25,6 +27,8 @@ export class SessionService {
 
   readonly token = computed(() => this.session()?.token ?? null);
   readonly email = computed(() => this.session()?.email ?? null);
+  readonly expiresAt = computed(() => this.session()?.expiresAt ?? null);
+  readonly issuedAt = computed(() => this.session()?.issuedAt ?? null);
   /** Changes with every sign-in, even of the same person; null when signed out. */
   readonly sessionId = computed(() => this.session()?.id ?? null);
 
@@ -36,7 +40,13 @@ export class SessionService {
   /** Throws if the token isn't a JWT carrying `email` and `exp`. */
   start(token: string): void {
     const payload = decodeJwtPayload(token);
-    const session: Session = { id: newId(), token, email: payload.email, expiresAt: payload.exp * 1000 };
+    const session: Session = {
+      id: newId(),
+      token,
+      email: payload.email,
+      expiresAt: payload.exp * 1000,
+      issuedAt: payload.iat === null ? null : payload.iat * 1000,
+    };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     // A new sign-in starts a new bitácora, whatever ended the previous session (sign-out, or an
     // expired token that sent the tab back to the login without passing through clear()).
@@ -51,7 +61,7 @@ export class SessionService {
   }
 }
 
-export function decodeJwtPayload(token: string): { email: string; exp: number } {
+export function decodeJwtPayload(token: string): { email: string; exp: number; iat: number | null } {
   const part = token.split('.')[1];
   if (part === undefined) {
     throw new Error('Not a JWT');
@@ -66,11 +76,11 @@ export function decodeJwtPayload(token: string): { email: string; exp: number } 
   if (typeof payload !== 'object' || payload === null) {
     throw new Error('JWT payload is not an object');
   }
-  const { email, exp } = payload as Record<string, unknown>;
+  const { email, exp, iat } = payload as Record<string, unknown>;
   if (typeof email !== 'string' || typeof exp !== 'number') {
     throw new Error('JWT payload lacks email or exp');
   }
-  return { email, exp };
+  return { email, exp, iat: typeof iat === 'number' ? iat : null };
 }
 
 function readStored(): Session | null {
@@ -83,15 +93,16 @@ function readStored(): Session | null {
     if (typeof value !== 'object' || value === null) {
       return null;
     }
-    const { id, token, email, expiresAt } = value as Record<string, unknown>;
+    const { id, token, email, expiresAt, issuedAt } = value as Record<string, unknown>;
     if (typeof token !== 'string' || typeof email !== 'string' || typeof expiresAt !== 'number') {
       return null;
     }
+    const iat = typeof issuedAt === 'number' ? issuedAt : null;
     if (typeof id === 'string') {
-      return { id, token, email, expiresAt };
+      return { id, token, email, expiresAt, issuedAt: iat };
     }
     // Stored before sessions had an id: give it one and keep it, so a reload doesn't change it.
-    const session = { id: newId(), token, email, expiresAt };
+    const session = { id: newId(), token, email, expiresAt, issuedAt: iat };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     return session;
   } catch {

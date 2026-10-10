@@ -1,0 +1,35 @@
+<header class="page-head">
+  <h1>Mi sesión</h1>
+  <p class="sub">{{ expiry() }}</p>
+</header>
+
+<section class="sheet-flat panel" aria-labelledby="account-title" [attr.aria-busy]="me.isLoading()">
+  <h2 id="account-title">Tu cuenta</h2>
+  @if (me.hasValue()) {
+    @let m = me.value();
+    <dl class="facts">
+      <div><dt>Nombre</dt><dd>{{ m.fullName }}</dd></div>
+      <div><dt>Correo</dt><dd>{{ m.email }}</dd></div>
+      <div><dt>Estado</dt><dd>{{ m.active ? 'Activa' : 'Inactiva' }}</dd></div>
+      <div><dt>Creada el</dt><dd class="mono">{{ created() }}</dd></div>
+    </dl>
+  } @else if (me.error(); as e) {
+    <div class="problem" role="alert">
+      <p>{{ errorText(e) }}</p>
+      <button type="button" class="btn" (click)="me.reload()">Volver a intentar</button>
+    </div>
+  } @else {
+    <div aria-hidden="true"><span class="skel"></span><span class="skel"></span><span class="skel"></span></div>
+    <p class="visually-hidden">Cargando tu cuenta</p>
+  }
+  <button type="button" class="btn sign-out" (click)="signOut()">Cerrar sesión</button>
+</section>
+
+<section class="sheet-flat panel" aria-labelledby="staff-title">
+  <h2 id="staff-title">Personal</h2>
+  <p>
+    Cualquier persona del personal puede crear cuentas: la aplicación no tiene roles, así que cada cuenta nueva tiene acceso
+    completo.
+  </p>
+  <a class="btn" routerLink="/mi-sesion/personal/nueva">Crear una cuenta del personal</a>
+</section>

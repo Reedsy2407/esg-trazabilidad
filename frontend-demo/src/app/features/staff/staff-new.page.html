@@ -1,0 +1,146 @@
+<a class="back-link" routerLink="/mi-sesion">Volver a mi sesión</a>
+
+<header class="page-head">
+  <h1>Crear una cuenta del personal</h1>
+  <p class="sub">La contraseña inicial la genera esta pantalla; no se escribe.</p>
+</header>
+
+<!-- Always in the DOM: copy and hand-over results are announced here. -->
+<p class="visually-hidden" role="status">{{ status() }}</p>
+
+@if (outcome(); as o) {
+  <!-- The password, in memory only: a text node while "Mostrar" is on, never an attribute. -->
+  <section class="sheet-flat panel handover" aria-labelledby="result-title">
+    <h2 id="result-title" tabindex="-1" #resultTitle>{{ heading() }}</h2>
+    @switch (o.kind) {
+      @case ('created') {
+        <p>Esta es su contraseña inicial. Entrégala en persona: no se puede cambiar ni recuperar desde la aplicación, y no se volverá a mostrar.</p>
+      }
+      @case ('exists') {
+        <p class="warning">
+          Si la creó el intento anterior, su contraseña es esta. Si esa cuenta ya existía antes, esta contraseña no es la suya.
+          Antes de entregarla, compruébalo iniciando sesión con ese correo y esta contraseña en una ventana privada u otro navegador (si sales de esta pantalla, la contraseña se borra): no se puede cambiar ni
+          recuperar desde la aplicación.
+        </p>
+      }
+      @case ('uncertain') {
+        <p class="warning">
+          Si se creó, su contraseña es esta. Guárdala hasta comprobarlo: vuelve a intentarlo con los mismos datos, o inicia sesión con
+          ese correo y esta contraseña en una ventana privada u otro navegador (si sales de esta pantalla, la contraseña se borra). Si al reintentar responde que el correo ya existe, todavía hay que
+          comprobarlo: esa cuenta pudo existir antes.
+        </p>
+      }
+    }
+
+    @if (hasPassword()) {
+      <div class="secret">
+        @if (passwordText(); as text) {
+          <code class="mono">{{ text }}</code>
+        } @else {
+          <code class="mono" aria-label="Contraseña oculta">•••• •••• •••• ••••</code>
+        }
+        <div class="secret-actions">
+          <button type="button" class="btn" [attr.aria-pressed]="shown()" (click)="toggleShown()">Mostrar</button>
+          <button type="button" class="btn" (click)="copy()">Copiar</button>
+        </div>
+      </div>
+    }
+
+    @if (o.kind === 'uncertain') {
+      <div class="retry">
+        <label class="check">
+          <input type="checkbox" [checked]="acknowledged()" (change)="setAcknowledged($event)" [disabled]="sending()" />
+          Entiendo que la cuenta tendrá acceso completo
+        </label>
+        <div class="row">
+          <button type="button" class="btn btn-primary" [disabled]="!acknowledged() || sending()" (click)="submit()">
+            {{ sending() ? 'Creando…' : 'Volver a intentar con los mismos datos' }}
+          </button>
+          <button type="button" class="btn" #discardButton [disabled]="sending() || confirmingDiscard()" (click)="askDiscard()">Descartar</button>
+        </div>
+      </div>
+    } @else if (o.kind === 'exists') {
+      <div class="row">
+        <button type="button" class="btn btn-primary" (click)="handedOver()">Ya la comprobé y la entregué</button>
+        <button type="button" class="btn" #discardButton [disabled]="confirmingDiscard()" (click)="askDiscard()">Descartar</button>
+      </div>
+    } @else {
+      <button type="button" class="btn btn-primary" (click)="handedOver()">Ya la entregué</button>
+    }
+    @if (confirmingDiscard()) {
+      <div class="confirm-discard" role="group" aria-labelledby="discard-text">
+        <p id="discard-text" tabindex="-1" #discardText>
+          Si la cuenta se creó, nadie podrá volver a ver su contraseña y no hay forma de cambiarla. ¿Descartarla igualmente?
+        </p>
+        <div class="row">
+          <button type="button" class="btn btn-primary" (click)="handedOver()">Sí, descartar la contraseña</button>
+          <button type="button" class="btn" (click)="keepPassword()">No, mantenerla</button>
+        </div>
+      </div>
+    }
+    @if (error(); as message) {
+      <p class="problem" role="alert">{{ message }}</p>
+    }
+  </section>
+} @else {
+  <form class="form-sheet" [formGroup]="form" (ngSubmit)="submit()" novalidate autocomplete="off" #formElement aria-labelledby="form-title">
+    <h2 id="form-title" class="visually-hidden" tabindex="-1" #formTitle>Datos de la cuenta</h2>
+    <div class="field">
+      <label for="fullName">Nombre completo</label>
+      <input
+        id="fullName"
+        class="control"
+        formControlName="fullName"
+        autocomplete="off"
+        [attr.aria-invalid]="invalid('fullName')"
+        [attr.aria-describedby]="invalid('fullName') ? 'fullName-error' : null"
+      />
+      @if (invalid('fullName')) {
+        <p class="field-error" id="fullName-error">Escribe el nombre de la persona.</p>
+      }
+    </div>
+    <div class="field">
+      <label for="email">Correo</label>
+      <input
+        id="email"
+        class="control"
+        type="email"
+        formControlName="email"
+        autocomplete="off"
+        spellcheck="false"
+        [attr.aria-invalid]="invalid('email')"
+        [attr.aria-describedby]="invalid('email') ? 'email-hint email-error' : 'email-hint'"
+      />
+      <p class="hint" id="email-hint">Con el que iniciará sesión, por ejemplo nombre&#64;asociacion.pe.</p>
+      @if (invalid('email')) {
+        <p class="field-error" id="email-error">
+          @if (form.controls.email.hasError('required')) {
+            Escribe el correo.
+          } @else {
+            Escribe un correo completo, con un punto en el dominio (por ejemplo, &#64;asociacion.pe).
+          }
+        </p>
+      }
+    </div>
+
+    <div class="notice">
+      <p>
+        La cuenta nueva tendrá acceso completo: podrá registrar datos, emitir certificados (que no se pueden anular) y crear otras
+        cuentas. Cualquier persona del personal puede crearlas; la aplicación no tiene roles.
+      </p>
+      <label class="check">
+        <input type="checkbox" [checked]="acknowledged()" (change)="setAcknowledged($event)" [attr.aria-invalid]="submitted() && !acknowledged()" [attr.aria-describedby]="submitted() && !acknowledged() ? 'ack-error' : null" />
+        Entiendo que la cuenta tendrá acceso completo
+      </label>
+      @if (submitted() && !acknowledged()) {
+        <p class="field-error" id="ack-error">Marca la casilla para confirmar.</p>
+      }
+    </div>
+
+    @if (error(); as message) {
+      <p class="problem form-problem" role="alert">{{ message }}</p>
+    }
+
+    <button class="btn btn-primary submit" type="submit" [disabled]="sending()">{{ sending() ? 'Creando…' : 'Crear cuenta' }}</button>
+  </form>
+}

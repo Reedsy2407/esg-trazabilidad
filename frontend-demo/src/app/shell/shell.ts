@@ -21,7 +21,7 @@ import { SessionService } from '../core/auth/session.service';
         <a routerLink="/sigersol" routerLinkActive="current" ariaCurrentWhenActive="page">SIGERSOL</a>
       </nav>
       <div class="user">
-        <span class="email">{{ session.email() }}</span>
+        <a class="email" routerLink="/mi-sesion" routerLinkActive="current" ariaCurrentWhenActive="page" aria-label="Mi sesión: {{ session.email() }}">{{ session.email() }}</a>
         <button type="button" class="btn-link" (click)="signOut()">Cerrar sesión</button>
       </div>
     </header>
@@ -96,7 +96,17 @@ import { SessionService } from '../core/auth/session.service';
       color: var(--ink-soft-on-ink);
     }
     .user .btn-link { color: var(--paper); min-height: 44px; }
-    .email { overflow-wrap: anywhere; }
+    .email {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      color: var(--ink-soft-on-ink);
+      overflow-wrap: anywhere;
+      text-decoration: underline;
+      text-decoration-color: transparent;
+    }
+    .email:hover { color: var(--paper); text-decoration-color: currentColor; }
+    .email.current { color: var(--paper); font-weight: 600; text-decoration-color: var(--accent-on-ink); text-decoration-thickness: 3px; }
     main {
       max-width: 1120px;
       margin: 0 auto;

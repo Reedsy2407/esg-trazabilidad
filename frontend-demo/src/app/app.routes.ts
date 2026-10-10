@@ -71,6 +71,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/sigersol/sigersol-new.page').then((m) => m.SigersolNewPage),
       },
       {
+        path: 'mi-sesion',
+        title: 'Mi sesión · Trazabilidad ESG',
+        loadComponent: () => import('./features/staff/my-session.page').then((m) => m.MySessionPage),
+      },
+      {
+        path: 'mi-sesion/personal/nueva',
+        title: 'Crear una cuenta del personal · Trazabilidad ESG',
+        loadComponent: () => import('./features/staff/staff-new.page').then((m) => m.StaffNewPage),
+      },
+      {
         path: 'recojos/nuevo',
         title: 'Registrar recojo · Trazabilidad ESG',
         loadComponent: () =>

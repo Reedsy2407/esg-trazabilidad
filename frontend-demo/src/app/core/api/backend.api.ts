@@ -13,6 +13,7 @@ import {
   CreateCollectionRecordRequest,
   CreateCollectionScheduleRequest,
   CreateNeighborRequest,
+  CreateStaffUserRequest,
   EsgCertificate,
   IssueCertificateRequest,
   LoginRequest,
@@ -23,6 +24,7 @@ import {
   RegisterSigersolSyncRequest,
   RegisterTrackedCompanyRequest,
   SigersolSync,
+  StaffUser,
   ScheduleTransition,
   TrackedCompany,
 } from './api.types';
@@ -43,6 +45,16 @@ export class BackendApi {
 
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${auth}/auth/login`, request);
+  }
+
+  /** The signed-in staff member (the token's `sub`). */
+  me(): Observable<StaffUser> {
+    return this.http.get<StaffUser>(`${auth}/auth/me`);
+  }
+
+  /** 201 with the new account (active). Any signed-in staff member may call it: there are no roles. Not idempotent. */
+  createStaffUser(request: CreateStaffUserRequest): Observable<StaffUser> {
+    return this.http.post<StaffUser>(`${auth}/auth/staff-users`, request);
   }
 
   /** Sorted by name by the backend; `page` is zero-based, 20 per page. */

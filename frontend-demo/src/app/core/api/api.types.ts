@@ -13,6 +13,27 @@ export interface LoginResponse {
   readonly accessToken: string;
 }
 
+/** auth-service StaffUserResponse (GET /auth/me, POST /auth/staff-users). email is stored lower-cased. */
+export interface StaffUser {
+  readonly id: string;
+  readonly email: string;
+  readonly fullName: string;
+  readonly active: boolean;
+  readonly createdAt: string;
+}
+
+/**
+ * auth-service CreateStaffUserRequest: all three @NotBlank, email @Email. The domain model also
+ * requires a dot in the domain (^[^@\s]+@[^@\s]+\.[^@\s]+$), stricter than @Email: "a@b" passes
+ * the annotation and then fails as a 500, so the form checks it first. AUTH-002 (409) for an email
+ * already registered. No password rule in the backend; the browser generates it (16 characters).
+ */
+export interface CreateStaffUserRequest {
+  readonly email: string;
+  readonly password: string;
+  readonly fullName: string;
+}
+
 /** reporting-service TrackedCompanyStatus. */
 export type TrackedCompanyStatus = 'ACTIVE' | 'INACTIVE';
 

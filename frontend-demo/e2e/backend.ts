@@ -28,8 +28,10 @@ export const EMAIL = 'ana.paredes@asociacion.pe';
 
 export function jwtFor(email: string, expiresInSeconds = 3600): string {
   const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
-  const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
-  return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: 'staff-1', email, exp })}.signature`;
+  // As auth-service's JwtIssuer: sub, email, iat and exp (one hour after iat there).
+  const iat = Math.floor(Date.now() / 1000);
+  const exp = iat + expiresInSeconds;
+  return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: 'staff-1', email, iat, exp })}.signature`;
 }
 
 const problem = (route: Route, status: number, code: string, detail: string, headers: Record<string, string> = {}) =>
@@ -126,6 +128,15 @@ export interface BackendOptions {
   sigersolFailure?: { status: number; code: string | null };
   /** POST .../certificates answers this instead of 201 (code null: a bare gateway answer). */
   issueFailure?: { status: number; code: string | null };
+  /** Lifetime of the tokens the login issues (exp - iat); auth-service's is one hour. */
+  tokenLifetimeSeconds?: number;
+  /** GET /auth/me fails with this status (a bare 5xx). */
+  meStatus?: number;
+  /**
+   * Answers to successive POST /auth/staff-users, in order: a status for a bare gateway failure
+   * (nothing created), 'applied' (created, but the answer is a 504), or 'pass' (the normal answer).
+   */
+  staffFailures?: (number | 'applied' | 'pass')[];
   /** Every write (POST/PATCH) the fake services received, in order. */
   writes?: { method: string; path: string; body: unknown }[];
   /** Every POST body received by collection-records, for the test to inspect. */
@@ -273,7 +284,52 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     if (password !== PASSWORD) {
       return problem(route, 401, 'AUTH-001', 'Credenciales inválidas');
     }
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ accessToken: jwtFor(email) }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ accessToken: jwtFor(email, options.tokenLifetimeSeconds) }) });
+  });
+
+  // auth-service staff accounts, with state. Emails are stored lower-cased, as the real service does.
+  const staff: { id: string; email: string; fullName: string; active: boolean; createdAt: string }[] = [
+    { id: 'staff-1', email: EMAIL, fullName: 'Ana Paredes Quispe', active: true, createdAt: '2026-08-14T15:20:00Z' },
+  ];
+  await page.route('**/svc/auth/auth/me', (route) => {
+    const authorization = route.request().headers()['authorization'];
+    if (options.rejectTokens || authorization === undefined || !authorization.startsWith('Bearer ')) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    if (options.meStatus !== undefined) {
+      return gatewayError(route, options.meStatus);
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(staff[0]) });
+  });
+  await page.route('**/svc/auth/auth/staff-users', (route) => {
+    const authorization = route.request().headers()['authorization'];
+    if (options.rejectTokens || authorization === undefined || !authorization.startsWith('Bearer ')) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    const body = route.request().postDataJSON() as { email?: string; password?: string; fullName?: string };
+    options.writes?.push({ method: 'POST', path: new URL(route.request().url()).pathname, body });
+    const failure = options.staffFailures?.shift();
+    if (failure !== undefined && failure !== 'pass') {
+      // 'applied': the account IS created, but the answer never arrives (a gateway timeout).
+      if (failure === 'applied' && body.email && body.password && body.fullName) {
+        staff.push({ id: `staff-${staff.length + 1}`, email: body.email.toLowerCase(), fullName: body.fullName, active: true, createdAt: new Date().toISOString() });
+        return gatewayError(route, 504);
+      }
+      return gatewayError(route, failure === 'applied' ? 504 : failure);
+    }
+    if (!body.email || !body.password?.trim() || !body.fullName?.trim()) {
+      return problem(route, 400, 'VALIDATION_ERROR', 'email, password o fullName vacíos');
+    }
+    // @Email accepts "a@b"; the domain's own regex (a dot in the domain) then throws: a bare 500.
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email)) {
+      return gatewayError(route, 500);
+    }
+    if (staff.some((u) => u.email === body.email!.toLowerCase())) {
+      return problem(route, 409, 'AUTH-002', 'Ya existe una cuenta de staff con ese email');
+    }
+    const created = { id: `staff-${staff.length + 1}`, email: body.email.toLowerCase(), fullName: body.fullName, active: true, createdAt: new Date().toISOString() };
+    staff.push(created);
+    return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(created) });
   });
 
   const authorized = (route: Route) => {

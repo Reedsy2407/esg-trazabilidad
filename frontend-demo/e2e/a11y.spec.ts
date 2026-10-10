@@ -266,6 +266,11 @@ test('warm-up in Windows high contrast (forced colors): ready, waking and no ans
   await warmupWithAllStates(page);
   await page.clock.fastForward('03:10');
   await expect(page.locator('tr[data-status="unresponsive"]')).toHaveCount(2);
+  // Reduced motion must not create transitions: the old global rule (transition-duration 0.01ms
+  // on every element, property `all`) made each new state wait a frame and this test flaky.
+  expect(
+    await page.evaluate(() => document.getAnimations().filter((a) => a.constructor.name === 'CSSTransition').length),
+  ).toBe(0);
   const look = (status: string) =>
     page.locator(`tr[data-status="${status}"] .mark`).first().evaluate((el) => {
       const s = getComputedStyle(el);

@@ -161,7 +161,7 @@ for (const width of [360, 768, 1280]) {
     });
     expect(layout.scroll).toBeLessThanOrEqual(layout.inner);
     // AXE judges the printed ticket, not a half-revealed one.
-    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+    await page.evaluate(() => Promise.all(document.querySelector('section.ticket')!.getAnimations().map((a) => a.finished)));
     if (!layout.tall) {
       // Vertically centred as one set: equal room above and below (within a few px).
       expect(Math.abs(layout.top - layout.bottom)).toBeLessThanOrEqual(4);

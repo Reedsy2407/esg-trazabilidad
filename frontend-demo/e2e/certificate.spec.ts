@@ -138,6 +138,8 @@ for (const width of [360, 768, 1280]) {
     });
     expect(inside).toBe(true);
 
+    // AXE judges the printed ticket, not a half-revealed one.
+    await page.evaluate(() => Promise.all(document.querySelector('article.sheet')!.getAnimations().map((a) => a.finished)));
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     const blocking = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
     expect(blocking.map((v) => v.id)).toEqual([]);

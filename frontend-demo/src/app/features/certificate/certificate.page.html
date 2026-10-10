@@ -3,61 +3,71 @@
 </a>
 
 @if (view(); as v) {
-  <article class="sheet" aria-labelledby="doc-title">
-    <header>
+  <div class="cert-layout">
+    <!-- The month's ticket: printed once when it opens, serrated, one ink. -->
+    <article class="sheet ticket" aria-labelledby="doc-title">
+      <!-- The document's title is the heading; the company is its first printed line, not a
+           smaller label above a bigger one. Screen readers hear both in the heading. -->
       <h1 id="doc-title">
-        <span class="doc-type">Certificado de trazabilidad ESG</span>
-        <span class="company">{{ v.company }}</span>
+        Certificado de trazabilidad ESG<span class="visually-hidden"> de {{ v.company }}</span>
       </h1>
+      <hr class="dots" />
+
+      <p class="label">Empresa</p>
+      <p class="company">{{ v.company }}</p>
       <p class="ruc">RUC <span class="mono">{{ v.ruc }}</span></p>
-    </header>
 
-    <hr class="rule" />
+      <hr class="dots" />
 
-    <dl class="figures">
-      <div>
+      <dl class="total">
         <dt>Kilos trazados</dt>
         <dd class="mono">{{ v.kilos }}</dd>
-      </div>
-      <div>
-        <dt>Cumplimiento de jerarquía</dt>
-        <dd class="mono">{{ v.compliance }}</dd>
-      </div>
-    </dl>
+      </dl>
 
-    <dl class="meta">
-      <div>
-        <dt>Período</dt>
-        <dd class="mono">{{ v.period }}</dd>
-      </div>
-      <div>
-        <dt>Emitido</dt>
-        <dd class="mono">{{ v.issued }}</dd>
-      </div>
-    </dl>
+      <hr class="dots" />
 
-    <div class="code">
-      <div>
-        <span class="code-label">Código del certificado</span>
-        <code class="mono">{{ v.id }}</code>
+      <dl class="lines">
+        <div class="leader">
+          <dt>Cumplimiento de jerarquía</dt>
+          <dd class="mono">{{ v.compliance }}</dd>
+        </div>
+        <div class="leader">
+          <dt>Período</dt>
+          <dd class="mono">{{ v.period }}</dd>
+        </div>
+        <div class="leader">
+          <dt>Emitido</dt>
+          <dd class="mono">{{ v.issued }}</dd>
+        </div>
+      </dl>
+
+      <hr class="dots" />
+
+      <div class="code">
+        <div>
+          <span class="label">Código del certificado</span>
+          <code class="mono">{{ v.id }}</code>
+        </div>
+        <button type="button" class="btn" (click)="copy(v.id)" aria-label="Copiar código del certificado">Copiar</button>
       </div>
-      <button type="button" class="btn" (click)="copy(v.id)" aria-label="Copiar código del certificado">Copiar</button>
+      <p class="copy-status" role="status" aria-live="polite">{{ copyStatus() }}</p>
+    </article>
+
+    <div class="side">
+      <div class="actions">
+        <button type="button" class="btn btn-primary" [disabled]="downloading() !== null" (click)="download('pdf')">
+          {{ downloading() === 'pdf' ? 'Descargando PDF…' : 'Descargar PDF' }}
+        </button>
+        <button type="button" class="btn" [disabled]="downloading() !== null" (click)="download('csv')">
+          {{ downloading() === 'csv' ? 'Descargando CSV…' : 'Descargar CSV' }}
+        </button>
+      </div>
+      <p class="hint">El CSV incluye las pesadas que respaldan este certificado.</p>
+      @if (downloadError(); as message) {
+        <p class="problem" role="alert">{{ message }}</p>
+      }
     </div>
-    <p class="copy-status" role="status" aria-live="polite">{{ copyStatus() }}</p>
-
-    <div class="actions">
-      <button type="button" class="btn btn-primary" [disabled]="downloading() !== null" (click)="download('pdf')">
-        {{ downloading() === 'pdf' ? 'Descargando PDF…' : 'Descargar PDF' }}
-      </button>
-      <button type="button" class="btn" [disabled]="downloading() !== null" (click)="download('csv')">
-        {{ downloading() === 'csv' ? 'Descargando CSV…' : 'Descargar CSV' }}
-      </button>
-    </div>
-    <p class="hint">El CSV incluye las pesadas que respaldan este certificado.</p>
-    @if (downloadError(); as message) {
-      <p class="problem" role="alert">{{ message }}</p>
-    }
-  </article>
+  </div>
 } @else if (certificate.error(); as error) {
   <div class="problem" role="alert">
     @if (isNotFound(error)) {
@@ -69,10 +79,12 @@
     }
   </div>
 } @else {
-  <div class="sheet" aria-hidden="true">
-    <span class="bone title"></span>
-    <span class="bone"></span>
-    <span class="bone big"></span>
+  <div class="cert-layout" aria-hidden="true">
+    <div class="sheet ticket skeleton">
+      <span class="bone title"></span>
+      <span class="bone"></span>
+      <span class="bone big"></span>
+    </div>
   </div>
 }
 <!-- Only the loading line is live: the certificate itself is not read out when it arrives. -->

@@ -3,64 +3,91 @@
   margin-bottom: var(--space-5);
 }
 
-/* The signature screen: a printed sheet, ink border, no shadow. */
+/* The ticket centred on the concrete, the downloads beside it; stacked on narrow screens. */
+.cert-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 560px) minmax(0, 280px);
+  justify-content: center;
+  align-items: start;
+  gap: var(--space-8);
+}
 .sheet {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: var(--space-8) var(--space-12);
-  background: var(--paper);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-data);
+  padding-left: var(--space-8);
+  padding-right: var(--space-8);
 }
+/* Printed once when it opens, in printer-like steps; already printed when motion is reduced. */
+article.sheet {
+  animation: feed 1s steps(20, end) both;
+}
+@keyframes feed {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
 h1 {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
 }
-.doc-type {
-  color: var(--accent);
-  font-size: 16px;
-  font-weight: 600;
+.label,
+dt {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
 }
 .company {
-  font-size: 26px;
-  font-weight: 600;
+  margin: var(--space-1) 0 0;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
   overflow-wrap: anywhere;
 }
 .ruc {
   margin: var(--space-2) 0 0;
   color: var(--ink-soft);
 }
-.rule {
-  margin: var(--space-6) 0;
-  border: 0;
-  border-top: 1px solid var(--ink);
+.ruc .mono {
+  color: var(--ink);
 }
-
-.figures,
-.meta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-6) var(--space-8);
+dl {
   margin: 0;
-}
-.meta {
-  margin-top: var(--space-6);
-}
-dt {
-  color: var(--ink-soft);
-  font-size: 14px;
-  margin-bottom: var(--space-1);
 }
 dd {
   margin: 0;
+}
+.total dd {
+  margin-top: var(--space-1);
+  font-size: 52px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.05em;
   overflow-wrap: anywhere;
 }
-.figures dd {
-  color: var(--accent);
-  font-size: 34px;
+/* Ticket lines: label, dotted leader, value. When the value doesn't fit beside the label
+   it drops to its own line, right-aligned, and the leader fills the rest of the first. */
+.leader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  padding: var(--space-1) 0;
+}
+.leader::after {
+  content: '';
+  order: 1;
+  flex: 1 1 var(--space-4);
+  border-bottom: 2px dotted var(--rule-dots);
+  transform: translateY(-4px);
+}
+.leader dd {
+  order: 2;
+  margin-left: auto;
   font-weight: 600;
-  line-height: 1.15;
 }
 
 /* The certificate id, whole: a UUID v7's first 8 characters can repeat. */
@@ -70,44 +97,41 @@ dd {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin-top: var(--space-6);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--line);
 }
 .code > div {
   min-width: 0;
   flex: 1 1 260px;
 }
-.code-label {
+.code .label {
   display: block;
-  color: var(--ink-soft);
-  font-size: 14px;
 }
 code {
   display: block;
-  font-size: 15px;
+  margin-top: var(--space-1);
+  font-size: 14px;
   overflow-wrap: anywhere;
   word-break: break-all;
 }
 .copy-status {
   min-height: 1.5em;
-  margin: var(--space-1) 0 0;
+  margin: var(--space-2) 0 0;
   color: var(--ink-soft);
   font-size: 14px;
 }
 
 .actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: var(--space-3);
-  margin-top: var(--space-4);
+}
+.actions .btn {
+  width: 100%;
 }
 .hint {
   margin: var(--space-3) 0 0;
   color: var(--ink-soft);
   font-size: 14px;
 }
-.problem {
+.side .problem {
   margin-top: var(--space-4);
 }
 
@@ -118,13 +142,12 @@ code {
   height: 14px;
   margin-top: var(--space-3);
   background: var(--line);
-  border-radius: var(--radius-data);
   animation: pulse 1.2s ease-in-out infinite alternate;
 }
 .bone.title {
-  width: 360px;
-  height: 26px;
-  margin-top: 0;
+  width: 320px;
+  height: 22px;
+  margin: 0 auto;
 }
 .bone.big {
   width: 100%;
@@ -139,19 +162,27 @@ code {
   }
 }
 
+@media (max-width: 900px) {
+  .cert-layout {
+    grid-template-columns: minmax(0, 560px);
+    gap: var(--space-5);
+  }
+}
 @media (max-width: 639.98px) {
   .sheet {
-    padding: var(--space-5) var(--space-4);
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
   }
-  .figures,
-  .meta {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-4);
+  .company {
+    font-size: 24px;
   }
-  .figures dd {
-    font-size: 28px;
+  .total dd {
+    font-size: 38px;
   }
-  .actions .btn {
-    flex: 1 1 100%;
+}
+@media (max-width: 400px) {
+  /* "12,480.50 kg" stays on one line on a 360 px phone. */
+  .total dd {
+    font-size: 30px;
   }
 }

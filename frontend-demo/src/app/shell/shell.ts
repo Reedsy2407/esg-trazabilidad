@@ -18,6 +18,7 @@ import { SessionService } from '../core/auth/session.service';
         <a routerLink="/asociaciones" routerLinkActive="current" ariaCurrentWhenActive="page">Asociaciones</a>
         <a routerLink="/vecinos" routerLinkActive="current" ariaCurrentWhenActive="page">Vecinos</a>
         <a routerLink="/recojos/nuevo" routerLinkActive="current" ariaCurrentWhenActive="page">Registrar recojo</a>
+        <a routerLink="/sigersol" routerLinkActive="current" ariaCurrentWhenActive="page">SIGERSOL</a>
       </nav>
       <div class="user">
         <span class="email">{{ session.email() }}</span>

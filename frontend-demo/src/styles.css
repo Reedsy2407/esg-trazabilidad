@@ -643,3 +643,21 @@ a.entry:hover {
     width: 100%;
   }
 }
+.form-sheet fieldset {
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.form-sheet legend {
+  margin-bottom: var(--space-3);
+  padding: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.form-sheet fieldset .field {
+  margin-bottom: 0;
+}
+.form-sheet fieldset .pair {
+  row-gap: var(--space-4);
+}

@@ -8,6 +8,7 @@
       <p class="meta">
         <span>RUC <span class="mono">{{ a.ruc }}</span></span>
         <app-status-label [status]="a.status" />
+        <a routerLink="/sigersol" [queryParams]="{ asociacion: a.id }">Registros SIGERSOL</a>
       </p>
     </header>
     <section class="sheet-flat details" aria-labelledby="details-title">

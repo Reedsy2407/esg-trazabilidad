@@ -61,6 +61,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/neighbors/neighbor.page').then((m) => m.NeighborPage),
       },
       {
+        path: 'sigersol',
+        title: 'Registros SIGERSOL · Trazabilidad ESG',
+        loadComponent: () => import('./features/sigersol/sigersol.page').then((m) => m.SigersolPage),
+      },
+      {
+        path: 'sigersol/nuevo',
+        title: 'Registrar dato SIGERSOL · Trazabilidad ESG',
+        loadComponent: () => import('./features/sigersol/sigersol-new.page').then((m) => m.SigersolNewPage),
+      },
+      {
         path: 'recojos/nuevo',
         title: 'Registrar recojo · Trazabilidad ESG',
         loadComponent: () =>

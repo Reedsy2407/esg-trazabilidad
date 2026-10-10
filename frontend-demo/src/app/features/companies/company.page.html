@@ -44,6 +44,9 @@
           <div class="figure"><dt>Kilos trazados</dt><dd class="mono">{{ s.kilos }}</dd></div>
           <div class="figure"><dt>Cumplimiento de jerarquía</dt><dd class="mono">{{ s.compliance }}</dd></div>
         </dl>
+        @if (!s.missingSigersol) {
+          <p class="source">El cumplimiento es un dato SIGERSOL de ingreso manual.</p>
+        }
       } @else if (summary.error(); as error) {
         <div class="problem" role="alert">
           <p>{{ errorText(error, 'el resumen del período') }}</p>

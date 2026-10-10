@@ -1,0 +1,150 @@
+<a class="back-link" routerLink="/sigersol">Volver a registros SIGERSOL</a>
+
+<header class="page-head">
+  <h1>Registrar dato SIGERSOL</h1>
+  <p class="sub lead">
+    <app-manual-tag /> Copia las cifras oficiales del período tal como aparecen en SIGERSOL. Quedarán marcadas como ingreso manual.
+  </p>
+</header>
+
+<form class="form-sheet" [formGroup]="form" (ngSubmit)="submit()" novalidate #formElement>
+  <div class="field">
+    <label for="association">Asociación</label>
+    @if (associations.error(); as e) {
+      <div class="problem load-problem" role="alert">
+        <p>{{ loadError(e) }}</p>
+        <button type="button" class="btn" (click)="associations.reload()">Volver a intentar</button>
+      </div>
+    }
+    <select
+      id="association"
+      class="control"
+      formControlName="associationId"
+      [attr.aria-busy]="associations.isLoading()"
+      [attr.aria-invalid]="invalid('associationId')"
+      [attr.aria-describedby]="invalid('associationId') ? 'association-error' : associationsTruncated() ? 'association-more' : null"
+    >
+      <option value="">{{ associations.isLoading() ? 'Cargando asociaciones…' : 'Elige una asociación' }}</option>
+      @for (a of associationOptions(); track a.id) {
+        <option [value]="a.id">{{ a.label }}</option>
+      }
+    </select>
+    @if (associationsTruncated()) {
+      <p class="hint" id="association-more">Se muestran las primeras {{ associationOptions().length }} asociaciones por nombre.</p>
+    }
+    @if (invalid('associationId')) {
+      <p class="field-error" id="association-error">Elige la asociación del dato.</p>
+    }
+  </div>
+
+  <fieldset class="period">
+    <legend>Período que cubre el dato</legend>
+    <div class="pair">
+      <div class="field">
+        <label for="periodStart">Desde</label>
+        <input
+          id="periodStart"
+          class="control"
+          type="date"
+          formControlName="periodStart"
+          [attr.aria-invalid]="invalid('periodStart')"
+          [attr.aria-describedby]="invalid('periodStart') ? 'period-hint period-error' : 'period-hint'"
+        />
+      </div>
+      <div class="field">
+        <label for="periodEnd">Hasta</label>
+        <input
+          id="periodEnd"
+          class="control"
+          type="date"
+          formControlName="periodEnd"
+          [attr.aria-invalid]="invalid('periodEnd')"
+          [attr.aria-describedby]="invalid('periodEnd') ? 'period-hint period-error' : 'period-hint'"
+        />
+      </div>
+    </div>
+    <p class="hint" id="period-hint">
+      Ambas fechas incluidas{{ periodText() ? ': ' + periodText() : '' }}. Un certificado solo se emite si un único registro cubre todo su período.
+    </p>
+    @if (invalid('periodStart') || invalid('periodEnd')) {
+      <p class="field-error" id="period-error">
+        @if (periodBackwards()) {
+          La fecha «hasta» no puede ser anterior a «desde».
+        } @else {
+          Escribe las dos fechas del período.
+        }
+      </p>
+    }
+  </fieldset>
+
+  <div class="pair">
+    <div class="field num-field">
+      <label for="compliance">Cumplimiento de jerarquía (%)</label>
+      <input
+        id="compliance"
+        class="control mono"
+        inputmode="decimal"
+        autocomplete="off"
+        formControlName="compliance"
+        [attr.aria-invalid]="invalid('compliance')"
+        [attr.aria-describedby]="invalid('compliance') ? 'compliance-hint compliance-error' : 'compliance-hint'"
+      />
+      <p class="hint" id="compliance-hint">De 0 a 100, con punto y hasta 2 decimales: 87.50</p>
+      @if (invalid('compliance')) {
+        <p class="field-error" id="compliance-error">
+          @if (form.controls.compliance.hasError('required')) {
+            Escribe el porcentaje de cumplimiento.
+          } @else if (form.controls.compliance.hasError('max')) {
+            El cumplimiento no puede pasar de 100.
+          } @else {
+            Escribe solo números, con punto y hasta 2 decimales.
+          }
+        </p>
+      }
+    </div>
+    <div class="field num-field">
+      <label for="kilos">Kilos declarados <span class="optional">(opcional)</span></label>
+      <input
+        id="kilos"
+        class="control mono"
+        inputmode="decimal"
+        autocomplete="off"
+        formControlName="kilos"
+        [attr.aria-invalid]="invalid('kilos')"
+        [attr.aria-describedby]="invalid('kilos') ? 'kilos-hint kilos-error' : 'kilos-hint'"
+      />
+      <p class="hint" id="kilos-hint">Si SIGERSOL los muestra. Con punto y hasta 2 decimales.</p>
+      @if (invalid('kilos')) {
+        <p class="field-error" id="kilos-error">Escribe solo números, con punto y hasta 2 decimales (máximo 999999999999.99).</p>
+      }
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="note">Nota sobre la fuente <span class="optional">(opcional)</span></label>
+    <textarea
+      id="note"
+      class="control"
+      formControlName="note"
+      rows="3"
+      [attr.maxlength]="noteMax"
+      aria-describedby="note-hint note-count"
+      [attr.aria-invalid]="invalid('note')"
+    ></textarea>
+    <p class="hint" id="note-hint">Por ejemplo, de qué reporte o pantalla de SIGERSOL salió y quién lo copió.</p>
+    <p class="counter" id="note-count">{{ noteLength() }} de {{ noteMax }} caracteres</p>
+  </div>
+
+  @if (error(); as message) {
+    <div class="problem form-problem" role="alert">
+      <p>{{ message }}</p>
+      @if (checkAssociation(); as id) {
+        <p><a routerLink="/sigersol" [queryParams]="{ asociacion: id }">Ver los registros de esta asociación</a></p>
+      }
+    </div>
+  }
+
+  <button class="btn btn-primary submit" type="submit" [disabled]="submitting()">
+    {{ submitting() ? 'Registrando…' : 'Registrar dato SIGERSOL' }}
+  </button>
+</form>

@@ -37,6 +37,36 @@ export interface RegisterTrackedCompanyRequest {
 }
 
 /**
+ * reporting-service SigersolSyncResponse: official figures copied by hand from SIGERSOL (no
+ * integration exists). BigDecimals as JSON numbers; declaredAt is the server's Instant.now().
+ */
+export interface SigersolSync {
+  readonly id: string;
+  readonly associationId: string;
+  readonly periodStart: string;
+  readonly periodEnd: string;
+  readonly hierarchyCompliancePercent: number;
+  readonly officialKilosDeclared: number | null;
+  readonly declaredAt: string;
+  readonly sourceNote: string | null;
+}
+
+/**
+ * RegisterSigersolSyncRequest: associationId, periodStart, periodEnd and hierarchyCompliancePercent
+ * (0-100, stored decimal(5,2)) required; officialKilosDeclared (>= 0, decimal(14,2)) and sourceNote
+ * (varchar(255)) optional. RPT-006 (409) if it overlaps another of the association's records (a
+ * shared day counts); RPT-008 (400) if end is before start.
+ */
+export interface RegisterSigersolSyncRequest {
+  readonly associationId: string;
+  readonly periodStart: string;
+  readonly periodEnd: string;
+  readonly hierarchyCompliancePercent: number;
+  readonly officialKilosDeclared: number | null;
+  readonly sourceNote: string | null;
+}
+
+/**
  * reporting-service EsgCertificateResponse. LocalDate fields arrive as
  * "yyyy-MM-dd", the Instant as ISO-8601 UTC, BigDecimals as JSON numbers.
  * hierarchyCompliancePercent is 0-100. A certificate has no status: the

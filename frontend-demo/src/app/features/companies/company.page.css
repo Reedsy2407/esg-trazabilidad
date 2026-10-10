@@ -268,3 +268,12 @@ tbody tr:has(.row-link:focus-visible) {
   background: var(--paper);
   font-weight: 600;
 }
+
+/* Where the compliance figure comes from: typed in from SIGERSOL (brief: always "ingreso manual"). */
+.source {
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-3);
+  border-top: 2px dotted var(--rule-dots);
+  color: var(--ink-soft);
+  font-size: 13px;
+}

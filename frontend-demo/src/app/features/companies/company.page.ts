@@ -90,6 +90,7 @@ export class CompanyPage {
       period: periodLabel(s.periodStart, s.periodEnd),
       kilos: formatKg(s.kilosTrazados),
       compliance: formatPercent(s.hierarchyCompliancePercent),
+      missingSigersol: s.hierarchyCompliancePercent === null,
     };
   });
 

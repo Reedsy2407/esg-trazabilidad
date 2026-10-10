@@ -19,7 +19,9 @@ import {
   Neighbor,
   NeighborStatus,
   Page,
+  RegisterSigersolSyncRequest,
   RegisterTrackedCompanyRequest,
+  SigersolSync,
   ScheduleTransition,
   TrackedCompany,
 } from './api.types';
@@ -55,6 +57,20 @@ export class BackendApi {
   /** 201 with the company, always ACTIVE; RPT-002 for a RUC already registered. Not idempotent. */
   registerTrackedCompany(request: RegisterTrackedCompanyRequest): Observable<TrackedCompany> {
     return this.http.post<TrackedCompany>(`${reporting}/tracked-companies`, request);
+  }
+
+  /** Newest period first, 20 per page; `associationId` filters exactly. */
+  sigersolSyncs(page: number, associationId: string | null): Observable<Page<SigersolSync>> {
+    let params = new HttpParams().set('page', page).set('size', 20);
+    if (associationId !== null) {
+      params = params.set('associationId', associationId);
+    }
+    return this.http.get<Page<SigersolSync>>(`${reporting}/sigersol-syncs`, { params });
+  }
+
+  /** 201; RPT-006 (overlap with the association's other records), RPT-008 (invalid data). Not idempotent. */
+  registerSigersolSync(request: RegisterSigersolSyncRequest): Observable<SigersolSync> {
+    return this.http.post<SigersolSync>(`${reporting}/sigersol-syncs`, request);
   }
 
   /** Most recently issued first, 20 per page (backend default). */

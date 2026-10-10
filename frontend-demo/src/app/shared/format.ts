@@ -57,6 +57,11 @@ export function formatPercent(value: number | null): string {
   return value === null ? 'Sin registro SIGERSOL' : `${formatNumber(value, LOCALE, '1.1-1')} %`;
 }
 
+/** 91.25 -> "91.25 %", 90 -> "90 %": a figure typed in by hand, shown exactly as stored (decimal(5,2)). */
+export function formatPercentExact(value: number): string {
+  return `${formatNumber(value, LOCALE, '1.0-2')} %`;
+}
+
 function daysInMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }

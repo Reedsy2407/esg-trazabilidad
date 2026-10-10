@@ -3,6 +3,7 @@ import {
   formatKg,
   formatLocalDate,
   formatPercent,
+  formatPercentExact,
   isWholeMonth,
   periodLabel,
   shortPeriodLabel,
@@ -49,5 +50,13 @@ describe('es-PE formatters', () => {
     expect(shortPeriodLabel('2024-10-01', '2024-10-31')).toBe('Oct 24');
     expect(shortPeriodLabel('2024-09-01', '2024-09-30')).toBe('Set 24');
     expect(shortPeriodLabel('2024-10-01', '2024-10-15')).toBe('01/10');
+  });
+});
+
+describe('formatPercentExact', () => {
+  it('shows a typed-in percentage as stored, up to 2 decimals', () => {
+    expect(formatPercentExact(91.25)).toBe('91.25 %');
+    expect(formatPercentExact(90)).toBe('90 %');
+    expect(formatPercentExact(87.5)).toBe('87.5 %');
   });
 });

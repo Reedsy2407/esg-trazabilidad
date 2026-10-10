@@ -1,0 +1,119 @@
+<header class="page-head with-action">
+  <div>
+    <h1>Registros SIGERSOL</h1>
+    <p class="sub">
+      <app-manual-tag /> Cifras oficiales de cada asociación, copiadas a mano desde SIGERSOL. Esta aplicación no se conecta
+      con SIGERSOL.
+    </p>
+  </div>
+  <a class="btn btn-primary" routerLink="/sigersol/nuevo" [queryParams]="{ asociacion: associationId() }">Registrar dato SIGERSOL</a>
+</header>
+
+<!-- Always in the DOM (a live region inserted together with its text isn't reliably announced). -->
+<p class="done" role="status" [class.visually-hidden]="!(registered && syncs.hasValue())">
+  {{ registered && syncs.hasValue() ? 'Dato SIGERSOL registrado como ingreso manual.' : '' }}
+</p>
+
+<div class="filter-row">
+  <label for="association-filter">Asociación</label>
+  <select id="association-filter" class="control" [value]="associationId() ?? ''" (change)="filterBy($event)">
+    <option value="">Todas las asociaciones</option>
+    @if (filterUnlisted()) {
+      <option [value]="associationId()" selected>Asociación elegida (no está entre las listadas)</option>
+    }
+    @for (a of associationOptions(); track a.id) {
+      <option [value]="a.id" [selected]="a.id === associationId()">{{ a.name }}</option>
+    }
+  </select>
+</div>
+
+@if (associations.error()) {
+  <p class="names-note">No se pudieron cargar los nombres de las asociaciones; los registros se muestran igual.</p>
+}
+
+<p class="visually-hidden" role="status">{{ syncs.isLoading() ? 'Cargando registros SIGERSOL' : announcement() }}</p>
+
+@if (loadError(); as message) {
+  <div class="problem" role="alert">
+    <p>{{ message }}</p>
+    <button type="button" class="btn" (click)="syncs.reload()">Volver a intentar</button>
+  </div>
+} @else if (page(); as current) {
+  @if (current.content.length === 0 && current.totalElements > 0) {
+    <p class="empty-note">
+      Esta página ya no tiene registros. <a [routerLink]="[]" [queryParams]="{ pagina: null }" queryParamsHandling="merge">Ir a la primera página</a>
+    </p>
+  } @else if (current.content.length === 0) {
+    <p class="empty-note">
+      @if (associationId() !== null) {
+        Esta asociación todavía no tiene registros SIGERSOL. Sin uno que cubra el período no se le puede emitir un certificado a sus empresas.
+      } @else {
+        Todavía no hay registros SIGERSOL.
+      }
+      <a routerLink="/sigersol/nuevo" [queryParams]="{ asociacion: associationId() }">Registrar el primero</a>.
+    </p>
+  } @else {
+    <div class="ledger-wide" [attr.aria-busy]="syncs.isLoading()">
+      <table class="ledger">
+        <caption class="visually-hidden">Registros SIGERSOL de ingreso manual, el período más reciente primero</caption>
+        <thead>
+          <tr>
+            <th scope="col">Período</th>
+            <th scope="col">Asociación</th>
+            <th scope="col" class="num">Cumplimiento de jerarquía</th>
+            <th scope="col" class="num">Kilos declarados</th>
+            <th scope="col">Ingresado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rows(); track r.id) {
+            <tr>
+              <td class="nowrap">
+                {{ r.period }}
+                @if (r.note; as note) {
+                  <span class="note">{{ note }}</span>
+                }
+              </td>
+              <td>{{ r.association }}</td>
+              <td class="num mono nowrap">{{ r.compliance }}</td>
+              <td class="num mono nowrap">{{ r.kilos }}</td>
+              <td class="mono nowrap">{{ r.declared }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <ul class="entries" aria-label="Registros SIGERSOL de ingreso manual">
+      @for (r of rows(); track r.id) {
+        <li class="entry">
+          <span class="entry-title">{{ r.period }}</span>
+          <dl>
+            <div><dt>Asociación</dt><dd>{{ r.association }}</dd></div>
+            <div><dt>Cumplimiento</dt><dd class="mono">{{ r.compliance }}</dd></div>
+            <div><dt>Kilos declarados</dt><dd class="mono">{{ r.kilos }}</dd></div>
+            <div><dt>Ingresado</dt><dd class="mono">{{ r.declared }}</dd></div>
+            @if (r.note; as note) {
+              <div><dt>Nota</dt><dd>{{ note }}</dd></div>
+            }
+          </dl>
+        </li>
+      }
+    </ul>
+  }
+  <nav class="list-foot" aria-label="Paginación de registros SIGERSOL">
+    <p class="count">
+      @if (range(); as r) {
+        Mostrando {{ r.first | number }}–{{ r.last | number }} de {{ r.total | number }} {{ r.total === 1 ? 'registro' : 'registros' }}
+      }
+    </p>
+    @if (current.totalPages > 1) {
+      <div class="pages">
+        <button type="button" class="btn" [disabled]="pagina() <= 1" (click)="goTo(pagina() - 1)">Anterior</button>
+        <span class="where">Página {{ pagina() }} de {{ current.totalPages }}</span>
+        <button type="button" class="btn" [disabled]="pagina() >= current.totalPages" (click)="goTo(pagina() + 1)">Siguiente</button>
+      </div>
+    }
+  </nav>
+} @else {
+  <div aria-hidden="true"><span class="skel wide"></span><span class="skel wide"></span></div>
+}

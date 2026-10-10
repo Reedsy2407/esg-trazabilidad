@@ -1,0 +1,34 @@
+.sub app-manual-tag {
+  margin-right: var(--space-2);
+}
+.done {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-weight: 600;
+}
+.filter-row {
+  width: min(100%, 420px);
+  margin-bottom: var(--space-4);
+}
+.filter-row label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+.note {
+  display: block;
+  max-width: 32ch;
+  color: var(--ink-soft);
+  font-size: 13px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.names-note {
+  margin: 0 0 var(--space-3);
+  color: var(--ink-soft);
+  font-size: 14px;
+}

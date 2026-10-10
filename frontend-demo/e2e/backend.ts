@@ -120,6 +120,10 @@ export interface BackendOptions {
   neighborFailure?: { status: number; code: string | null };
   /** POST /tracked-companies answers this instead of 201 (code null: a bare gateway answer). */
   companyFailure?: { status: number; code: string | null };
+  /** GET /sigersol-syncs fails with this status (a bare 5xx). */
+  sigersolStatus?: number;
+  /** POST /sigersol-syncs answers this instead of 201 (code null: a bare gateway answer). */
+  sigersolFailure?: { status: number; code: string | null };
   /** Every write (POST/PATCH) the fake services received, in order. */
   writes?: { method: string; path: string; body: unknown }[];
   /** Every POST body received by collection-records, for the test to inspect. */
@@ -226,6 +230,23 @@ export const RECORDS: readonly RecordRow[] = [
   { id: '0192f3a8-d000-7000-8000-000000000101', neighborId: NEIGHBORS[1].id, scheduleId: SCHEDULES[NEIGHBORS[1].id][0].id, associationId: ASSOCIATIONS[0].id, collectionDate: '2026-10-05', weightKg: 12.5 },
   { id: '0192f3a8-d000-7000-8000-000000000102', neighborId: NEIGHBORS[1].id, scheduleId: null, associationId: ASSOCIATIONS[0].id, collectionDate: '2026-09-28', weightKg: 8.25 },
   { id: '0192f3a8-d000-7000-8000-000000000103', neighborId: NEIGHBORS[1].id, scheduleId: null, associationId: ASSOCIATIONS[1].id, collectionDate: '2026-08-14', weightKg: 20 },
+];
+
+interface SyncRow {
+  id: string;
+  associationId: string;
+  periodStart: string;
+  periodEnd: string;
+  hierarchyCompliancePercent: number;
+  officialKilosDeclared: number | null;
+  declaredAt: string;
+  sourceNote: string | null;
+}
+
+/** SIGERSOL records (SigersolSyncResponse) of ASSOCIATIONS[0], typed in by hand. */
+export const SIGERSOL_SYNCS: readonly SyncRow[] = [
+  { id: '0192f3a8-f000-7000-8000-000000000001', associationId: ASSOCIATIONS[0].id, periodStart: '2024-12-01', periodEnd: '2024-12-31', hierarchyCompliancePercent: 87.5, officialKilosDeclared: 12500, declaredAt: '2025-01-03T14:00:00Z', sourceNote: 'Reporte anual SIGERSOL, copiado por A. Paredes' },
+  { id: '0192f3a8-f000-7000-8000-000000000002', associationId: ASSOCIATIONS[0].id, periodStart: '2026-09-01', periodEnd: '2026-09-30', hierarchyCompliancePercent: 91.25, officialKilosDeclared: null, declaredAt: '2026-10-02T15:30:00Z', sourceNote: null },
 ];
 
 export async function fakeBackend(page: Page, options: BackendOptions = {}): Promise<void> {
@@ -478,6 +499,72 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
       return json(201, record);
     }
     return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');
+  });
+
+  // reporting-service SIGERSOL records, with state: one registered by a test is listed afterwards.
+  const syncs: SyncRow[] = SIGERSOL_SYNCS.map((s) => ({ ...s }));
+
+  await page.route('**/svc/reporting/sigersol-syncs**', (route) => {
+    if (!authorized(route)) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    const request = route.request();
+    const url = new URL(request.url());
+    const json = (status: number, body: unknown) =>
+      route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (request.method() === 'POST') {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      options.writes?.push({ method: 'POST', path: url.pathname, body });
+      if (options.sigersolFailure !== undefined) {
+        return options.sigersolFailure.code === null
+          ? gatewayError(route, options.sigersolFailure.status)
+          : problem(route, options.sigersolFailure.status, options.sigersolFailure.code, 'Rechazado');
+      }
+      const { associationId, periodStart, periodEnd, hierarchyCompliancePercent } = body as Record<string, string & number>;
+      if (!associationId || !periodStart || !periodEnd || typeof hierarchyCompliancePercent !== 'number') {
+        return problem(route, 400, 'VALIDATION_ERROR', 'Faltan campos obligatorios');
+      }
+      // Bean validation (@DecimalMin/@DecimalMax/@PositiveOrZero) answers first, as VALIDATION_ERROR.
+      const kilos = body['officialKilosDeclared'];
+      if (hierarchyCompliancePercent < 0 || hierarchyCompliancePercent > 100 || (typeof kilos === 'number' && kilos < 0)) {
+        return problem(route, 400, 'VALIDATION_ERROR', 'hierarchyCompliancePercent: fuera de rango');
+      }
+      // Then, as the real service: the overlap check (a shared day counts) runs before the domain's.
+      if (syncs.some((s) => s.associationId === associationId && s.periodStart <= periodEnd && s.periodEnd >= periodStart)) {
+        return problem(route, 409, 'RPT-006', 'Ya existe un registro SIGERSOL para esa asociación que se superpone con ese periodo');
+      }
+      if (periodEnd < periodStart) {
+        return problem(route, 400, 'RPT-008', 'Los datos del registro SIGERSOL no son válidos');
+      }
+      const sync: SyncRow = {
+        id: `0192f3a8-f000-7000-8000-${String(syncs.length + 1).padStart(12, '0')}`,
+        associationId,
+        periodStart,
+        periodEnd,
+        hierarchyCompliancePercent,
+        officialKilosDeclared: (body['officialKilosDeclared'] as number | null) ?? null,
+        declaredAt: new Date().toISOString(),
+        sourceNote: (body['sourceNote'] as string | null) ?? null,
+      };
+      syncs.push(sync);
+      return json(201, sync);
+    }
+    if (options.sigersolStatus !== undefined) {
+      return gatewayError(route, options.sigersolStatus);
+    }
+    const associationId = url.searchParams.get('associationId');
+    const size = Math.min(Number(url.searchParams.get('size') ?? 20), 100);
+    const number = Number(url.searchParams.get('page') ?? 0);
+    const all = syncs
+      .filter((s) => associationId === null || s.associationId === associationId)
+      .sort((a, b) => b.periodStart.localeCompare(a.periodStart));
+    return json(200, {
+      content: all.slice(number * size, number * size + size),
+      page: number,
+      size,
+      totalElements: all.length,
+      totalPages: Math.ceil(all.length / size),
+    });
   });
 
   // Tracked companies with state: one registered by a test is listed and opens afterwards.

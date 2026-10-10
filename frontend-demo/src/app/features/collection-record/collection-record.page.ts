@@ -3,7 +3,7 @@ import { rxResource, takeUntilDestroyed, toSignal } from '@angular/core/rxjs-int
 import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { finalize, map } from 'rxjs';
 
-import { CollectionRecord, CollectionSchedule, CollectionScheduleStatus, DayOfWeek } from '../../core/api/api.types';
+import { CollectionRecord, CollectionSchedule, CollectionScheduleStatus, DayOfWeek, Neighbor } from '../../core/api/api.types';
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
 import { formatKg, formatLocalDate, todayInLima } from '../../shared/format';
@@ -60,6 +60,15 @@ export function scheduleLabel(schedule: CollectionSchedule): string {
  */
 export const UNCERTAIN_OUTCOME =
   'No pudimos confirmar si el recojo quedó registrado. Espera un momento y revisa antes de volver a intentarlo, para no duplicarlo.';
+
+/**
+ * "Name · District (inactivo)": the district is optional in the API (null, or blank), so a
+ * neighbour without one shows just the name, never " · null".
+ */
+export function neighborLabel(n: Pick<Neighbor, 'fullName' | 'district' | 'status'>): string {
+  const district = n.district?.trim();
+  return `${n.fullName}${district ? ` · ${district}` : ''}${n.status === 'INACTIVE' ? ' (inactivo)' : ''}`;
+}
 
 /**
  * One sentence per backend answer, in es-PE. The UI branches on `code`;
@@ -139,7 +148,7 @@ export class CollectionRecordPage {
     this.neighbors.hasValue()
       ? this.neighbors.value().content.map((n) => ({
           id: n.id,
-          label: `${n.fullName} · ${n.district}${n.status === 'INACTIVE' ? ' (inactivo)' : ''}`,
+          label: neighborLabel(n),
         }))
       : [],
   );

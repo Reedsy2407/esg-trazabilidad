@@ -166,3 +166,36 @@ test('each company stub is a 44 px+ target with a visible focus ring drawn insid
   expect(ring.offset).toBeLessThan(0); // inside the stub, where the serrated mask can't clip it
   expect(ring.height).toBeGreaterThanOrEqual(44);
 });
+
+test('"Actualizar la lista": says "Actualizando…" and waits while loading, then announces "Lista actualizada."', async ({ page }) => {
+  await fakeBackend(page, { companyLists: ['empty', 'full'], companyListDelayMs: 600 });
+  await page.goto('/login');
+  await page.getByLabel('Correo electrónico').fill(EMAIL);
+  await page.getByLabel('Contraseña').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+  await expect(page.getByText('Todavía no hay empresas registradas para trazabilidad.')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Lista actualizada.' })).toHaveCount(0); // the first load is silent
+
+  await page.getByRole('button', { name: 'Actualizar la lista' }).click();
+  const busy = page.getByRole('button', { name: 'Actualizando…' });
+  await expect(busy).toBeVisible();
+  await expect(busy).toHaveAttribute('aria-disabled', 'true');
+  await expect(busy).toBeFocused(); // still focused while it works
+
+  await expect(page.locator('a.card')).toHaveCount(2);
+  await expect(page.getByRole('status').filter({ hasText: 'Lista actualizada.' })).toHaveCount(1);
+  await expect(page.locator('ul.stubs')).toBeFocused(); // focus moves to the refreshed list
+});
+
+test('"Actualizar la lista" that fails: the error block says why (role=alert), the polite region stays silent', async ({ page }) => {
+  await fakeBackend(page, { companyLists: ['empty', 'fail'] });
+  await page.goto('/login');
+  await page.getByLabel('Correo electrónico').fill(EMAIL);
+  await page.getByLabel('Contraseña').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+  await page.getByRole('button', { name: 'Actualizar la lista' }).click();
+
+  await expect(page.getByRole('alert')).toContainText('No se pudo cargar la lista de empresas.');
+  await expect(page.getByRole('button', { name: 'Volver a intentar' })).toBeFocused();
+  await expect(page.getByRole('status').filter({ hasText: 'Lista actualizada.' })).toHaveCount(0);
+});

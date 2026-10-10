@@ -13,6 +13,7 @@ h1 {
 /* The list: ticket stubs stacked on the concrete, each one a link to its company. */
 .stubs {
   display: grid;
+  outline: none; /* focused only by script after a refresh; the stubs carry their own focus */
   /* Wide enough that two stubs' serrated edges read as two tickets, not one band. */
   gap: var(--space-8);
   margin: 0;

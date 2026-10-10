@@ -3,14 +3,17 @@
   <p class="sub">Abre una empresa para ver sus kilos trazados y sus certificados.</p>
 </header>
 
+<!-- Always in the DOM (a live region that appears with its text isn't reliably announced). -->
+<p class="visually-hidden" role="status" aria-live="polite">{{ refreshMessage() }}</p>
+
 @if (loadError(); as message) {
   <div class="problem" role="alert">
     <p>{{ message }}</p>
-    <button type="button" class="btn" (click)="companies.reload()">Volver a intentar</button>
+    <button type="button" class="btn" #retryButton (click)="retry()">Volver a intentar</button>
   </div>
 } @else {
   <!-- Each company is a stub torn from the scale's roll: one link per company, at every width. -->
-  <ul class="stubs" [attr.aria-busy]="companies.isLoading()" aria-label="Empresas, página {{ pagina() }}">
+  <ul class="stubs" #list tabindex="-1" [attr.aria-busy]="companies.isLoading()" aria-label="Empresas, página {{ pagina() }}">
     @if (companies.isLoading() && page() === null) {
       @for (row of [1, 2, 3, 4]; track row) {
         <li class="card ticket skeleton" aria-hidden="true">
@@ -31,7 +34,11 @@
       } @empty {
         <li class="empty sheet-flat">
           Todavía no hay empresas registradas para trazabilidad.
-          <button type="button" class="btn-link" (click)="companies.reload()">Actualizar la lista</button>
+          <!-- aria-disabled, not disabled: a disabled button would drop the focus and its new
+               label might go unread; refresh() ignores clicks while it runs. -->
+          <button type="button" class="btn-link" [attr.aria-disabled]="refreshing()" (click)="refresh()">
+            {{ refreshing() ? 'Actualizando…' : 'Actualizar la lista' }}
+          </button>
         </li>
       }
     }

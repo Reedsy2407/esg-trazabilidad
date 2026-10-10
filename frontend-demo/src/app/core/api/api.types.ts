@@ -57,29 +57,35 @@ export interface CertificateSummary {
   readonly hierarchyCompliancePercent: number | null;
 }
 
-/** collection-service NeighborResponse. */
+/**
+ * collection-service NeighborResponse. CreateNeighborRequest requires only fullName and
+ * address (@NotBlank); phone and district are optional, so null on the wire.
+ */
 export type NeighborStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface Neighbor {
   readonly id: string;
   readonly fullName: string;
-  readonly phone: string;
+  readonly phone: string | null;
   readonly address: string;
-  readonly district: string;
+  readonly district: string | null;
   readonly status: NeighborStatus;
 }
 
-/** recycler-service AssociationResponse. */
+/**
+ * recycler-service AssociationResponse. CreateAssociationRequest requires only name and RUC;
+ * registrationNumber, address, contactEmail and contactPhone are optional, so null on the wire.
+ */
 export type AssociationStatus = 'ACTIVE' | 'SUSPENDED';
 
 export interface Association {
   readonly id: string;
   readonly name: string;
   readonly ruc: string;
-  readonly registrationNumber: string;
-  readonly address: string;
-  readonly contactEmail: string;
-  readonly contactPhone: string;
+  readonly registrationNumber: string | null;
+  readonly address: string | null;
+  readonly contactEmail: string | null;
+  readonly contactPhone: string | null;
   readonly status: AssociationStatus;
 }
 

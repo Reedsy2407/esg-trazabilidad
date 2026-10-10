@@ -371,6 +371,12 @@ select.control:disabled {
 .btn-link:hover:not(:disabled) {
   background: none;
 }
+.btn-link:disabled,
+.btn-link[aria-disabled='true'] {
+  color: var(--disabled-ink);
+  text-decoration: none;
+  cursor: progress;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,

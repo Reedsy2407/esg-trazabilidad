@@ -90,6 +90,13 @@ export interface BackendOptions {
   collectionFailure?: { status: number; code: string | null };
   /** GET /associations fails with this status. */
   associationsStatus?: number;
+  /**
+   * Answers to successive GET /tracked-companies calls, in order: 'empty' (no companies yet),
+   * 'full' (COMPANIES) or 'fail' (503); after the list runs out, 'full'.
+   */
+  companyLists?: ('empty' | 'full' | 'fail')[];
+  /** Delay before answering GET /tracked-companies, to observe the loading state. */
+  companyListDelayMs?: number;
   /** Every POST body received by collection-records, for the test to inspect. */
   collectionPosts?: { neighborId: string; body: unknown }[];
 }
@@ -202,7 +209,7 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');
   });
 
-  await page.route('**/svc/reporting/tracked-companies**', (route) => {
+  await page.route('**/svc/reporting/tracked-companies**', async (route) => {
     const authorization = route.request().headers()['authorization'];
     if (options.rejectTokens || authorization === undefined || !authorization.startsWith('Bearer ')) {
       return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
@@ -212,7 +219,15 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     const [, id, sub, certId, file] =
       /\/tracked-companies(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(url.pathname) ?? [];
     if (id === undefined) {
-      return json({ content: COMPANIES, page: 0, size: 20, totalElements: COMPANIES.length, totalPages: 1 });
+      const mode = options.companyLists?.shift() ?? 'full';
+      if (options.companyListDelayMs) {
+        await new Promise((resolve) => setTimeout(resolve, options.companyListDelayMs));
+      }
+      if (mode === 'fail') {
+        return problem(route, 503, 'X-503', 'Servicio no disponible');
+      }
+      const content = mode === 'empty' ? [] : COMPANIES;
+      return json({ content, page: 0, size: 20, totalElements: content.length, totalPages: content.length === 0 ? 0 : 1 });
     }
     const company = COMPANIES.find((c) => c.id === id);
     if (company === undefined) {

@@ -13,7 +13,7 @@ import {
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
 import { todayInLima } from '../../shared/format';
-import { CollectionRecordPage, UNCERTAIN_OUTCOME, scheduleLabel, submitErrorText } from './collection-record.page';
+import { CollectionRecordPage, UNCERTAIN_OUTCOME, neighborLabel, scheduleLabel, submitErrorText } from './collection-record.page';
 
 const page = <T,>(content: T[], totalElements = content.length): Page<T> => ({
   content,
@@ -322,6 +322,18 @@ describe('submitErrorText', () => {
     // Known 4xx answers keep their specific messages.
     expect(submitErrorText(e(409, 'COL-009'))).toContain('certificación vencida');
     expect(submitErrorText(e(404))).not.toBe(UNCERTAIN_OUTCOME);
+  });
+});
+
+describe('neighborLabel', () => {
+  it('shows the district only when there is one: never " · null" or a dangling dot', () => {
+    const n = (district: string | null, status: 'ACTIVE' | 'INACTIVE' = 'ACTIVE') => neighborLabel({ fullName: 'Rosa Quispe', district, status });
+    expect(n('Cercado de Lima')).toBe('Rosa Quispe · Cercado de Lima');
+    expect(n(null)).toBe('Rosa Quispe');
+    expect(n('')).toBe('Rosa Quispe');
+    expect(n('   ')).toBe('Rosa Quispe');
+    expect(n(null, 'INACTIVE')).toBe('Rosa Quispe (inactivo)');
+    expect(n(' Rímac ', 'INACTIVE')).toBe('Rosa Quispe · Rímac (inactivo)');
   });
 });
 

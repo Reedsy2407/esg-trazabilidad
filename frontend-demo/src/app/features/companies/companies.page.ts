@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, input, numberAttribute } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, input, numberAttribute, signal, viewChild } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 
@@ -47,7 +47,45 @@ export class CompaniesPage {
       : 'No se pudo cargar la lista de empresas.';
   });
 
+  /** "Actualizar la lista" in flight: the button says so and waits; one refresh at a time. */
+  protected readonly refreshing = signal(false);
+  /**
+   * Said once by the polite live region when a refresh succeeds. A failed refresh is already
+   * announced by the error block (role="alert"), so it isn't repeated here.
+   */
+  protected readonly refreshMessage = signal('');
+
+  private readonly list = viewChild<ElementRef<HTMLElement>>('list');
+  private readonly retryButton = viewChild<ElementRef<HTMLElement>>('retryButton');
+
+  constructor() {
+    effect(() => {
+      if (this.refreshing() && !this.companies.isLoading()) {
+        this.refreshing.set(false);
+        const failed = this.loadError() !== null;
+        this.refreshMessage.set(failed ? '' : 'Lista actualizada.');
+        // The button the user pressed is gone: put focus where the result is.
+        setTimeout(() => (failed ? this.retryButton() : this.list())?.nativeElement.focus());
+      }
+    });
+  }
+
+  protected refresh(): void {
+    if (this.refreshing()) {
+      return;
+    }
+    this.refreshMessage.set('');
+    this.refreshing.set(true);
+    this.companies.reload();
+  }
+
+  protected retry(): void {
+    this.refreshMessage.set('');
+    this.companies.reload();
+  }
+
   protected goTo(pagina: number): void {
+    this.refreshMessage.set('');
     void this.router.navigate([], { queryParams: { pagina: pagina === 1 ? null : pagina } });
   }
 }

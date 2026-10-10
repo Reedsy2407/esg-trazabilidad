@@ -441,7 +441,7 @@
 
 - [x] Módulo de cobertura completa → ver "Frontend v2" abajo
 
-- [ ] Datos de demo en producción → ver "Frontend v2" abajo (lista propuesta, desde las pantallas, cada escritura aprobada por Angel)
+- [ ] Datos de demo en producción → ver "Frontend v2" abajo (scripts/demo-seed, lo corre Angel)
 
 ## Frontend v2: cobertura completa (brief 2026-10-10, dirección A, sin cambios de backend)
 
@@ -453,9 +453,10 @@
 - [x] V5 Emitir certificado (62f5987) — ver tasks/LEARNINGS.md#frontend-v2-cobertura-completa
 - [x] V6 Mi sesión + crear personal (f50ba20) — ver tasks/LEARNINGS.md#frontend-v2-cobertura-completa
 - [x] Cierre: docs/frontend.md (matriz 27/44, reglas del frontend, limitaciones, pendientes de backend), README
-- [ ] Human review del módulo y aprobación (Angel)
-- [ ] Pregunta abierta a Angel: ¿emitir certificados a empresas INACTIVE? (hoy se permite, como el backend)
-- [ ] Datos de demo ficticios en producción: lista propuesta en el reporte final, cada escritura aprobada por Angel (tarea aparte)
+- [x] Human review del módulo y aprobación (Angel y Cowork, 2026-10-10): APROBADO con 2 reservas y 2 decisiones, todas cerradas — ver tasks/LEARNINGS.md#cierre-de-v2-reservas-y-decisiones
+- [x] Empresa INACTIVE: se BLOQUEA la emisión (regla del frontend, docs/frontend.md)
+- [x] scripts/demo-seed: script idempotente, simulación por defecto (README en scripts/demo-seed/)
+- [ ] Carga de datos de demo en producción: la corre Angel en su PowerShell con scripts/demo-seed (simulación primero; certificado solo con --apply --emit-certificate)
 
 ## Handoff v2 (2026-10-10)
 
@@ -484,14 +485,15 @@
 
 ### Pendientes
 
-- [ ] Regla empresa inactiva: ¿se puede emitir certificado a una empresa INACTIVE? Hoy se permite, igual que el backend; decide Angel.
-- [ ] scripts/demo-seed: no existe todavía en el repo; detalle por definir con Angel (cómo cargar la lista de abajo, cada escritura aprobada).
-- [ ] 2 reservas: anotadas por pedido del usuario; su contenido no quedó registrado en el repo, completar aquí.
-- [ ] Human review del módulo v2 y aprobación (Angel).
+- [x] Regla empresa inactiva: Angel decidió BLOQUEAR la emisión (regla del frontend; el backend la permite).
+- [x] scripts/demo-seed: hecho; lo corre Angel en su PowerShell, nunca desde la terminal de Claude.
+- [x] 2 reservas: (1) "Ingreso manual" pegado al "%" a 360 px en el borrador de emisión; (2) capturas v4/empresa-sin-sigersol-* obsoletas, rehechas (locales, gitignored).
+- [x] Human review del módulo v2 y aprobación (Angel y Cowork, 2026-10-10).
+- [ ] Carga de los datos de demo de abajo en producción (Angel, con scripts/demo-seed).
 
-### Datos de demo ficticios propuestos (tal cual se reportaron; nada escrito en producción)
+### Datos de demo ficticios (lista aprobada por Angel el 2026-10-10; nada escrito en producción todavía)
 
-Son 15 escrituras, una por una, cada una con aprobación.
+Los carga scripts/demo-seed (copia exacta en scripts/demo-seed/data.mjs): 16 altas más el certificado, este último solo con `--apply --emit-certificate`.
 
 0. Lo que no tiene pantalla, para decidir cómo hacerlo:
    - Asociación: "Asociación de Recicladores Demo Norte (ficticia)", RUC 20999000011. Si ya existe una asociación en producción, se puede usar esa.

@@ -145,3 +145,42 @@ for (const width of [360, 768, 1280]) {
     expect(blocking.map((v) => v.id)).toEqual([]);
   });
 }
+
+for (const width of [320, 360, 400, 768, 1280]) {
+  test(`certificate at ${width} px: the code breaks only after a hyphen, and the three ticket lines are laid out alike`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await openCertificate(page);
+    await expect(sheet(page).locator('code')).toHaveText(LATEST.id);
+    await page.evaluate(() => Promise.all(document.querySelector('article.sheet')!.getAnimations().map((a) => a.finished)));
+
+    // Where does each rendered line of the code start? Only right after a "-" (or at the start).
+    const breaks = await sheet(page).locator('code').evaluate((code) => {
+      const text = code.firstChild as Text;
+      const tops: number[] = [];
+      for (let i = 0; i < text.length; i++) {
+        const range = document.createRange();
+        range.setStart(text, i);
+        range.setEnd(text, i + 1);
+        tops.push(Math.round(range.getBoundingClientRect().top));
+      }
+      const starts: number[] = [];
+      tops.forEach((top, i) => {
+        if (i > 0 && top > tops[i - 1]) starts.push(i);
+      });
+      return starts.map((i) => text.data[i - 1]);
+    });
+    expect(breaks.every((ch) => ch === '-'), `line breaks after: ${JSON.stringify(breaks)}`).toBe(true);
+
+    // Compliance, period and issue date: all on one line with their label, or all stacked.
+    const rows = await sheet(page).locator('.leader').evaluateAll((els) =>
+      els.map((el) => {
+        const dt = el.querySelector('dt')!.getBoundingClientRect();
+        const dd = el.querySelector('dd')!.getBoundingClientRect();
+        return dd.top >= dt.bottom - 1 ? 'stacked' : 'inline';
+      }),
+    );
+    expect(rows).toHaveLength(3);
+    expect(new Set(rows).size, JSON.stringify(rows)).toBe(1);
+    expect(rows[0]).toBe(width <= 400 ? 'stacked' : 'inline');
+  });
+}

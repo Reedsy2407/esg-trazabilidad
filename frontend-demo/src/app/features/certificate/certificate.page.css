@@ -107,12 +107,15 @@ dd {
 .code .label {
   display: block;
 }
+/* The id wraps after one of its hyphens, never inside a group, wherever a hyphen break fits
+   (no break-all). `anywhere` is only the last resort for engines that won't break between a
+   hyphen and a digit (Safari, per UAX#14 LB25): there a group may split rather than overflow
+   the ticket at 320 px. Copying is unaffected; the text itself has no breaks. */
 code {
   display: block;
   margin-top: var(--space-1);
   font-size: 14px;
   overflow-wrap: anywhere;
-  word-break: break-all;
 }
 .copy-status {
   min-height: 1.5em;
@@ -189,5 +192,17 @@ code {
   /* "12,480.50 kg" stays on one line on a 360 px phone. */
   .total dd {
     font-size: 30px;
+  }
+  /* The period doesn't fit beside its label: all three lines switch to label above, value
+     below, so they stay alike instead of one dropping its value onto a second line. */
+  .leader {
+    display: block;
+    padding: var(--space-2) 0;
+  }
+  .leader::after {
+    content: none;
+  }
+  .leader dd {
+    margin-top: 2px;
   }
 }

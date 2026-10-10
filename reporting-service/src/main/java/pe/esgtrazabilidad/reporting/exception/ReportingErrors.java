@@ -34,7 +34,12 @@ public enum ReportingErrors implements ApplicationError {
     // own single-reason catch for CER-003 -- but this domain has more than one
     // reason, so the message can't name just "periodo" without being wrong for
     // the other cause.
-    INVALID_SIGERSOL_SYNC_DATA("RPT-008", "Los datos del registro SIGERSOL no son válidos", HttpStatus.BAD_REQUEST);
+    INVALID_SIGERSOL_SYNC_DATA("RPT-008", "Los datos del registro SIGERSOL no son válidos", HttpStatus.BAD_REQUEST),
+    // Certificate issue and summary preview: the end date is before the start.
+    // Checked by CertificateService before any lookup, so it never reaches
+    // EsgCertificate.issue()'s own IllegalArgumentException (which was a 500).
+    INVALID_CERTIFICATE_PERIOD(
+            "RPT-009", "El periodo no es válido: la fecha final es anterior a la inicial", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;

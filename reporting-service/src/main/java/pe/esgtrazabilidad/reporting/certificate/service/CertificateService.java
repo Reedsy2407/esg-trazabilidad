@@ -63,6 +63,7 @@ class CertificateService
 
     @Override
     public CertificateSummary previewSummary(UUID trackedCompanyId, LocalDate periodStart, LocalDate periodEnd) {
+        requireValidPeriod(periodStart, periodEnd);
         TrackedCompany trackedCompany = findTrackedCompany(trackedCompanyId);
 
         BigDecimal kilosTrazados = sumTracedKilos(trackedCompany.getAssociationId(), periodStart, periodEnd);
@@ -78,6 +79,7 @@ class CertificateService
     @Override
     @Transactional
     public EsgCertificate issue(IssueCertificateCommand command) {
+        requireValidPeriod(command.periodStart(), command.periodEnd());
         TrackedCompany trackedCompany = findTrackedCompany(command.trackedCompanyId());
 
         // Service-level fast check first (clean 409 without ever reaching
@@ -144,6 +146,13 @@ class CertificateService
         EsgCertificate certificate = getById(trackedCompanyId, id);
         List<EsgCertificateLineItem> lineItems = esgCertificateRepository.findLineItems(certificate.getId());
         return certificateCsvExporter.export(certificate, lineItems);
+    }
+
+    // Both dates are @NotNull / required params at the HTTP edge; only their order is checked here.
+    private static void requireValidPeriod(LocalDate periodStart, LocalDate periodEnd) {
+        if (periodEnd.isBefore(periodStart)) {
+            throw new ApplicationException(ReportingErrors.INVALID_CERTIFICATE_PERIOD);
+        }
     }
 
     private TrackedCompany findTrackedCompany(UUID trackedCompanyId) {

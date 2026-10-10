@@ -251,6 +251,44 @@ class CertificateApiIT {
     }
 
     @Test
+    void issuingWithTheEndBeforeTheStartReturnsBadRequestAndIssuesNothing() {
+        UUID associationId = UUID.randomUUID();
+        String companyId = registerTrackedCompany("20300000001", associationId);
+        // A SIGERSOL record covering both dates, so the only thing wrong is their order.
+        registerSigersolSync(associationId, "2026-07-01", "2026-07-31");
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(issueCertificateRequest("2026-07-31", "2026-07-01"))
+                .when()
+                .post("/tracked-companies/{companyId}/certificates", companyId)
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("RPT-009"));
+
+        given()
+                .when()
+                .get("/tracked-companies/{companyId}/certificates", companyId)
+                .then()
+                .statusCode(200)
+                .body("content.size()", equalTo(0));
+    }
+
+    @Test
+    void previewingWithTheEndBeforeTheStartReturnsBadRequest() {
+        String companyId = registerTrackedCompany("20300000002", UUID.randomUUID());
+
+        given()
+                .queryParam("periodStart", "2026-01-31")
+                .queryParam("periodEnd", "2026-01-01")
+                .when()
+                .get("/tracked-companies/{companyId}/certificate-summary", companyId)
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("RPT-009"));
+    }
+
+    @Test
     void issuingForAMissingTrackedCompanyReturnsNotFound() {
         given()
                 .contentType(ContentType.JSON)

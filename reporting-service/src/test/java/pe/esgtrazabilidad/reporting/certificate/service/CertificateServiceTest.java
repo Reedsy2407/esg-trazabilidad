@@ -121,10 +121,30 @@ class CertificateServiceTest {
                         .isEqualTo(ReportingErrors.TRACKED_COMPANY_NOT_FOUND));
     }
 
+    @Test
+    void rejectsAPreviewWhoseEndIsBeforeItsStartBeforeAnyLookup() {
+        assertThatThrownBy(() -> service.previewSummary(trackedCompanyId, periodEnd, periodStart))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(ReportingErrors.INVALID_CERTIFICATE_PERIOD));
+        verify(trackedCompanyRepository, never()).findById(any());
+    }
+
     // --- issue() ---
 
     private IssueCertificateCommand sampleCommand() {
         return new IssueCertificateCommand(trackedCompanyId, periodStart, periodEnd);
+    }
+
+    @Test
+    void rejectsIssuingAPeriodWhoseEndIsBeforeItsStartAndSavesNothing() {
+        IssueCertificateCommand backwards = new IssueCertificateCommand(trackedCompanyId, periodEnd, periodStart);
+
+        assertThatThrownBy(() -> service.issue(backwards))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(ReportingErrors.INVALID_CERTIFICATE_PERIOD));
+        verify(esgCertificateRepository, never()).save(any(), any());
     }
 
     @Test

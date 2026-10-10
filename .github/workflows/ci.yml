@@ -128,7 +128,7 @@ jobs:
 
       - name: Keep Playwright traces of a failed run
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-traces
           path: frontend-demo/test-results/

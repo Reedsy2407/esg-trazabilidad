@@ -424,7 +424,7 @@
 - [x] F2: Ficha de empresa — resumen del mes en curso, gráfica SVG de 12 períodos, tabla/tarjetas de certificados — ver tasks/LEARNINGS.md#frontend
 - [x] F3: Detalle del certificado (elemento firma) + descargas PDF/CSV con nombre sanitizado — ver tasks/LEARNINGS.md#frontend
 - [x] F4: Alta de recojo (vecino, asociación, fecha, kg, cronograma opcional) — ver tasks/LEARNINGS.md#frontend
-- [ ] F5: Asociaciones (lista con estado ACTIVE/SUSPENDED) — recortada de la tanda F3–F6 (2026-10-08): queda pendiente tras F6; `GET /associations` ya se usa en F4
+- [x] F5: Asociaciones — absorbida por Frontend v2 / V1 (9639af6)
 - [x] F6: Despliegue del frontend (https://esg-frontend-egcf.onrender.com) + `CORS_ALLOWED_ORIGINS` en esg-shared + Playwright en CI — ver tasks/LEARNINGS.md#frontend. Límite: ficha, certificado y descargas no se pudieron probar en vivo porque producción no tiene empresas; cubiertas por 40 Playwright en CI y la comprobación local de la build de producción bajo la misma CSP
 
 ## Rediseño visual: dirección A "Ticket de balanza" (elegida 2026-10-10)
@@ -439,19 +439,20 @@
 
 ### Pendientes (tareas aparte)
 
-- [ ] Módulo de cobertura completa → ver "Frontend v2" abajo
+- [x] Módulo de cobertura completa → ver "Frontend v2" abajo
 
-- [ ] Datos de demo en producción (empresa + sincronización SIGERSOL + recojos + certificado emitido), con script reproducible, cada escritura aprobada por Angel; tarea aparte
-- [ ] F5: Asociaciones → absorbida por Frontend v2 / V1
+- [ ] Datos de demo en producción → ver "Frontend v2" abajo (lista propuesta, desde las pantallas, cada escritura aprobada por Angel)
 
 ## Frontend v2: cobertura completa (brief 2026-10-10, dirección A, sin cambios de backend)
 
-Decisiones de Angel: empresa = tracked company de reporting (no `/companies` de collection); sin rol admin (confirmación explícita antes de acciones irreversibles/sensibles); SIGERSOL siempre "ingreso manual"; datos de demo fuera de este módulo; huecos de backend solo se documentan. Ninguna escritura contra producción: todo con el backend falso.
-
-- [x] V1: Asociaciones — lista (filtro por estado, páginas de 20) + detalle con certificaciones (chips vigente / por vencer / vencido; "por vencer" = 30 días, PENDIENTE de confirmar por Angel)
-- [x] V2: Vecinos (lista con filtros, registro, ficha) + cronogramas (agregar, pausar, reactivar, cancelar con confirmación) + recojos por fechas; en el formulario: buscador de vecino, ?vecino=, última asociación recordada, bitácora de la sesión ligada a cada inicio de sesión
-- [x] V3: Registrar empresa (POST /tracked-companies; RUC de 11 dígitos con separadores quitados; RPT-002 con el RUC y enlace a la lista; nunca /companies de collection)
-- [x] V4: SIGERSOL como "ingreso manual" — lista por asociación + registro (precisión de las columnas, nota ≤ 255, RPT-006 con un día compartido, RPT-008); el cumplimiento se rotula "ingreso manual" en la ficha y el certificado; RPT-005 real llega con V5 (formulario prellenado por dirección listo)
-- [x] V5: Emitir certificado — mes completo + rango; bloquea período abierto (Lima), 0 kg, sin cobertura SIGERSOL y solapes listados; borrador discontinuo; casilla + botón con el período; envío único hasta abrir el certificado; RPT-004/RPT-005/incierto; "Certificado emitido." anunciado. Pregunta abierta a Angel: ¿emitir a empresas INACTIVE?
-- [ ] V6: Personal / mi sesión — PARADA: diseño de seguridad antes de implementar
-- [ ] Cierre: docs (limitaciones, pendientes de backend), reporte final, lista de datos de demo ficticios para aprobar
+- [x] V1 Asociaciones + regla "por vencer" (9639af6, 67169a8) — ver tasks/LEARNINGS.md#frontend-v2-cobertura-completa
+- [x] V2 Vecinos, cronogramas, recojos, buscador, asociación recordada, bitácora (b9a8d89) — ver tasks/LEARNINGS.md#frontend-v2-cobertura-completa
+- [x] V3 Registrar empresa (23ead4e) — ver tasks/LEARNINGS.md#frontend-v2-cobertura-completa
+- [x] V4 SIGERSOL "ingreso manual" (b846bd1) — ver tasks/LEARNINGS.md#frontend-v2-cobertura-completa
+- [x] Reduced-motion: 0s en transiciones, test de alto contraste estable (a1098a0) — ver tasks/LEARNINGS.md#frontend-v2-cobertura-completa
+- [x] V5 Emitir certificado (62f5987) — ver tasks/LEARNINGS.md#frontend-v2-cobertura-completa
+- [x] V6 Mi sesión + crear personal (f50ba20) — ver tasks/LEARNINGS.md#frontend-v2-cobertura-completa
+- [x] Cierre: docs/frontend.md (matriz 27/44, reglas del frontend, limitaciones, pendientes de backend), README
+- [ ] Human review del módulo y aprobación (Angel)
+- [ ] Pregunta abierta a Angel: ¿emitir certificados a empresas INACTIVE? (hoy se permite, como el backend)
+- [ ] Datos de demo ficticios en producción: lista propuesta en el reporte final, cada escritura aprobada por Angel (tarea aparte)

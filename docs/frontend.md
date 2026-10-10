@@ -45,14 +45,14 @@ The backend doesn't enforce these; the screens do, and say so.
   - A period with 0 kg is refused.
   - A period without one SIGERSOL record covering all of it is refused before asking (the backend would answer RPT-005), with a link to register it.
   - A period overlapping a listed certificate is refused before asking (the backend would answer RPT-004).
-  - An end before the start is refused (the backend has no code for it).
+  - An end before the start is refused before asking (the backend would answer RPT-009).
   - The confirmation is a checkbox plus a button that names the period.
 - **SIGERSOL** figures are always labelled "ingreso manual": they are typed in from SIGERSOL; nothing integrates with it. The form keeps the columns' precision, and caps the note at 255 characters: a longer one would fail in the database and come back as RPT-006 ("overlap"), which would mislead.
 - **Staff accounts:**
   - The initial password is always generated in the browser (16 characters, `crypto.getRandomValues`, no ambiguous characters). It is never typed.
   - It exists only in the page's memory: never in storage, the URL, router state, the console or a DOM attribute. It is dropped by "Ya la entregué", by a confirmed "Descartar", by leaving the page, or when an attempt is refused before ever creating the account. If the screen copied it, the clipboard is overwritten too.
   - After an unknown outcome it stays visible, and a retry reuses it.
-  - Emails need a dot in the domain: `@Email` accepts `a@b`, which the domain then rejects with a 500.
+  - Emails need a dot in the domain, checked before sending: `@Email` accepts `a@b`, which the service then refuses with AUTH-005.
 - **Session:** "Tu sesión vence a las HH:MM (dura X y no se renueva)" takes the time from the token's `exp` (shown in Lima) and the length from `exp − iat`. auth-service issues no refresh token.
 - **Unknown outcomes:** a write with no answer, a 408 or a 5xx (Render answers 502/504 while a service wakes) never claims it failed. The message says how to check before retrying.
 
@@ -77,5 +77,4 @@ reporting-service's **tracked company** (`/tracked-companies`) is the company ce
 - Search neighbours by name (the list only filters by state and exact district).
 - The association's name on the certificate (`EsgCertificateResponse` has only `associationId`).
 - A JSON endpoint for a certificate's weighings (they travel only in the CSV).
-- A validation code for a period whose end is before its start, at certificate issue.
 - Decide between `/companies` (collection) and `/tracked-companies` (reporting).

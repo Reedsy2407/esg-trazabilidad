@@ -14,6 +14,10 @@ test('warm services, wrong password, then sign in and open a company', async ({ 
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
   await expect(page.getByRole('alert')).toHaveText('El correo o la contraseña no son correctos.');
   await expect(page).toHaveURL(/\/login$/);
+  // Only the credentials message, not also the empty-field one; the password field is ready to retype.
+  await expect(page.getByText('Escribe tu contraseña.')).toHaveCount(0);
+  await expect(page.getByLabel('Contraseña')).toBeFocused();
+  await expect(page.getByLabel('Contraseña')).toHaveValue('');
 
   await page.getByLabel('Contraseña').fill(PASSWORD);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();

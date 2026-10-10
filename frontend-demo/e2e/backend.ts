@@ -87,7 +87,7 @@ export interface BackendOptions {
   /** A 200 download answered as the SPA's HTML page (a proxy fallback), not the file. */
   downloadAsHtml?: boolean;
   /** POST .../collection-records answers this problem instead of 201. */
-  collectionFailure?: { status: number; code: string };
+  collectionFailure?: { status: number; code: string | null };
   /** GET /associations fails with this status. */
   associationsStatus?: number;
   /** Every POST body received by collection-records, for the test to inspect. */
@@ -184,6 +184,10 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
       options.collectionPosts?.push({ neighborId, body });
       if (options.collectionFailure !== undefined) {
         const { status, code } = options.collectionFailure;
+        if (code === null) {
+          // A gateway answer (Render's proxy, e.g. 504 while the service wakes): no problem detail.
+          return route.fulfill({ status, contentType: 'text/plain', body: 'Gateway Timeout' });
+        }
         return problem(route, status, code, 'Rechazado');
       }
       return json(201, {

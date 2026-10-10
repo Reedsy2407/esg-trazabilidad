@@ -194,6 +194,8 @@ The browser calls the four APIs directly, cross-origin, so they must allow the s
 
 The site's response headers (in `render.yaml`) include a Content-Security-Policy: scripts only from the site itself, API calls only to the four services, no framing. Critical-CSS inlining is off in `angular.json` because its `onload=` handler would need inline scripts. A new API host has to be added to `connect-src` before the frontend can call it.
 
+`Strict-Transport-Security` is not in `render.yaml` because Render already sends it on `*.onrender.com`: checked on 2026-10-09 (Lima) with `curl -sI https://esg-frontend-egcf.onrender.com/`, which returns `strict-transport-security: max-age=315360000; includeSubdomains; preload` (the platform's value, stronger than the one-year header we would set). Declaring our own would duplicate it.
+
 ## Known limitations of the free tiers
 
 - **Spin-down and cold start.** A free Render service sleeps after 15 minutes without inbound HTTP. The next request waits for a full container and Spring Boot start on 0.1 CPU. **Measured on Render (2026-09-28): 95–126 s** for that first request. Render's proxy holds the connection open for that whole time and then answers 200; it does not time out. Once a service is awake, `/actuator/health` answers in 0.27–0.57 s. Class Data Sharing (CDS) or AOT could shorten the cold start, but probably not below a minute; that's an unprioritized follow-up.

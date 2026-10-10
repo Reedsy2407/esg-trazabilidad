@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -28,6 +28,8 @@ export class LoginPage {
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
+
+  private readonly passwordInput = viewChild<ElementRef<HTMLInputElement>>('passwordInput');
 
   protected readonly submitting = signal(false);
   protected readonly submitted = signal(false);
@@ -86,7 +88,11 @@ export class LoginPage {
     switch (error.code) {
       case 'AUTH-001':
         this.error.set('El correo o la contraseña no son correctos.');
+        // A fresh, untouched password field: only the credentials message shows, not also
+        // "Escribe tu contraseña.". The next submit validates as usual.
+        this.submitted.set(false);
         this.form.controls.password.reset();
+        setTimeout(() => this.passwordInput()?.nativeElement.focus());
         return;
       case 'AUTH-004':
         this.startLock(error.retryAfterSeconds ?? FALLBACK_LOCK_SECONDS);

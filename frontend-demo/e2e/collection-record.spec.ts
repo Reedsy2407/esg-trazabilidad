@@ -116,6 +116,23 @@ test('COL-009 (association with an expired certification) is explained and nothi
   await expect(page.getByRole('button', { name: 'Registrar recojo' })).toBeEnabled();
 });
 
+test('a 504 from the gateway: the form warns the record may exist, never says it was not saved, and keeps the data', async ({ page }) => {
+  const posts: { neighborId: string; body: unknown }[] = [];
+  await openForm(page, { collectionFailure: { status: 504, code: null }, collectionPosts: posts });
+  await page.getByLabel('Vecino').selectOption({ label: `${ROSA.fullName} · ${ROSA.district}` });
+  await page.getByLabel('Asociación').selectOption({ label: ASSOCIATIONS[0].name });
+  await page.getByLabel('Peso recolectado (kg)').fill('8.25');
+  await page.getByRole('button', { name: 'Registrar recojo' }).click();
+
+  await expect(page.getByRole('alert')).toHaveText(
+    'No pudimos confirmar si el recojo quedó registrado. Espera un momento y revisa antes de volver a intentarlo, para no duplicarlo.',
+  );
+  await expect(page.getByRole('alert')).not.toContainText('no se registró');
+  await expect(page.getByLabel('Peso recolectado (kg)')).toHaveValue('8.25');
+  await expect(page.getByLabel('Asociación')).toHaveValue(ASSOCIATIONS[0].id);
+  expect(posts).toHaveLength(1); // exactly one attempt reached the server
+});
+
 test('if the associations fail to load, the form says so and offers a retry', async ({ page }) => {
   await fakeBackend(page, { associationsStatus: 503 });
   await page.goto('/login');

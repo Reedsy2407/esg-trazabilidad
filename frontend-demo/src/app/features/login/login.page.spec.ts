@@ -92,6 +92,29 @@ describe('LoginPage', () => {
     expect(TestBed.inject(SessionService).token()).toBeNull();
   });
 
+  it('after AUTH-001 only the credentials message shows, the password field takes the focus, and the next submit validates as usual', () => {
+    vi.useFakeTimers();
+    type('#email', 'ana.paredes@asociacion.pe');
+    type('#password', 'incorrecta');
+    submit();
+    backend
+      .expectOne(LOGIN_URL)
+      .flush({ status: 401, code: 'AUTH-001', detail: 'Credenciales inválidas' }, { status: 401, statusText: 'Unauthorized' });
+    fixture.detectChanges();
+    vi.runAllTimers();
+
+    expect(text()).toContain('El correo o la contraseña no son correctos.');
+    expect(text()).not.toContain('Escribe tu contraseña.');
+    expect(page.querySelector('#password')?.getAttribute('aria-invalid')).toBe('false');
+    expect((page.querySelector('#password') as HTMLInputElement).value).toBe('');
+    expect(document.activeElement).toBe(page.querySelector('#password'));
+
+    // Submitting again with the field still empty: the field error is back, and no request goes out.
+    submit();
+    backend.expectNone(LOGIN_URL);
+    expect(text()).toContain('Escribe tu contraseña.');
+  });
+
   it('on AUTH-004, announces the lock once, counts Retry-After down, then lets the person try again', () => {
     vi.useFakeTimers();
     type('#email', 'ana.paredes@asociacion.pe');

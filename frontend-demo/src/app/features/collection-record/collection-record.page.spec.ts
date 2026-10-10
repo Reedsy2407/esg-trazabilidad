@@ -13,7 +13,7 @@ import {
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
 import { todayInLima } from '../../shared/format';
-import { CollectionRecordPage, scheduleLabel, submitErrorText } from './collection-record.page';
+import { CollectionRecordPage, UNCERTAIN_OUTCOME, scheduleLabel, submitErrorText } from './collection-record.page';
 
 const page = <T,>(content: T[], totalElements = content.length): Page<T> => ({
   content,
@@ -229,6 +229,26 @@ describe('CollectionRecordPage', () => {
     await choose('association', 'a-2');
     expect(alertText()).toBeUndefined();
   });
+
+  it('a 504 (outcome unknown) warns against duplicating and keeps every field as typed', async () => {
+    await fillValid();
+    await type('date', '2026-10-05');
+    await choose('schedule', 's-1');
+    submitButton().click();
+    await settle();
+    answer.error(new ApiError(504, null, null, null));
+    await settle();
+
+    expect(alertText()).toBe(UNCERTAIN_OUTCOME);
+    expect([select('neighbor').value, select('association').value, input('date').value, input('weight').value, select('schedule').value]).toEqual([
+      'n-1',
+      'a-1',
+      '2026-10-05',
+      '12.50',
+      's-1',
+    ]);
+    expect(submitButton().disabled).toBe(false);
+  });
 });
 
 describe('CollectionRecordPage with more neighbors than one page', () => {
@@ -266,10 +286,21 @@ describe('submitErrorText', () => {
     expect(submitErrorText(e(404, 'COL-006'))).toContain('El cronograma elegido ya no existe');
     expect(submitErrorText(e(409, 'COL-009'))).toContain('certificación vencida');
     expect(submitErrorText(e(400, 'VALIDATION_ERROR'))).toContain('Revisa la fecha y el peso');
-    expect(submitErrorText(e(0))).toContain('el recojo no se registró');
     expect(submitErrorText(e(429, null, 9))).toBe('Demasiadas solicitudes. Vuelve a intentarlo en 9 s.');
-    expect(submitErrorText(e(500, 'X-500'))).toBe('No se pudo registrar el recojo (X-500). Inténtalo de nuevo.');
-    expect(submitErrorText(new Error('boom'))).toBe('No se pudo registrar el recojo. Inténtalo de nuevo.');
+    expect(submitErrorText(e(418))).toBe('No se pudo registrar el recojo (HTTP 418). Inténtalo de nuevo.');
+  });
+
+  it('with no answer, a 408 or any 5xx it never claims the record was not saved: the POST may have gone through', () => {
+    const e = (status: number, code: string | null = null) => new ApiError(status, code, null, null);
+    // A 5xx carrying a known code (none do today) and a non-ApiError are just as uncertain.
+    for (const error of [e(0), e(408), e(500, 'X-500'), e(502), e(503), e(504), e(500, 'COL-009'), new Error('boom')]) {
+      const message = submitErrorText(error);
+      expect(message, String(error)).toBe(UNCERTAIN_OUTCOME);
+      expect(message).not.toMatch(/no se registr/i);
+    }
+    // Known 4xx answers keep their specific messages.
+    expect(submitErrorText(e(409, 'COL-009'))).toContain('certificación vencida');
+    expect(submitErrorText(e(404))).not.toBe(UNCERTAIN_OUTCOME);
   });
 });
 

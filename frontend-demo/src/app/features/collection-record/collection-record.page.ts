@@ -55,12 +55,22 @@ export function scheduleLabel(schedule: CollectionSchedule): string {
 }
 
 /**
+ * The POST isn't idempotent, and with no answer (network drop, CORS, timeout) or a 408/5xx
+ * (e.g. Render's 502/504 while a service wakes) it may already have been processed.
+ */
+export const UNCERTAIN_OUTCOME =
+  'No pudimos confirmar si el recojo quedó registrado. Espera un momento y revisa antes de volver a intentarlo, para no duplicarlo.';
+
+/**
  * One sentence per backend answer, in es-PE. The UI branches on `code`;
- * 401 never gets here (errorInterceptor ends the session).
+ * 401 never gets here (errorInterceptor ends the session). Never claims the
+ * record wasn't saved when the outcome is unknown (see UNCERTAIN_OUTCOME).
  */
 export function submitErrorText(error: unknown): string {
-  if (!(error instanceof ApiError)) {
-    return 'No se pudo registrar el recojo. Inténtalo de nuevo.';
+  // Checked before any code: a 5xx with a code would still be an unknown outcome, and an
+  // error that isn't an ApiError gives no evidence either way.
+  if (!(error instanceof ApiError) || error.status === 0 || error.status === 408 || error.status >= 500) {
+    return UNCERTAIN_OUTCOME;
   }
   switch (error.code) {
     case 'COL-001':
@@ -73,8 +83,6 @@ export function submitErrorText(error: unknown): string {
       return 'El servicio rechazó los datos. Revisa la fecha y el peso.';
   }
   switch (error.status) {
-    case 0:
-      return 'No se pudo conectar con el servicio de recojos. Comprueba tu conexión; el recojo no se registró.';
     case 429:
       return error.retryAfterSeconds === null
         ? 'Demasiadas solicitudes. Espera un momento y vuelve a intentarlo.'

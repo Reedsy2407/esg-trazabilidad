@@ -1,0 +1,45 @@
+# gitleaks configuration (CI: .github/workflows/ci.yml, job "secrets").
+# The default rules, plus one allowlist entry per known false positive. Each
+# entry needs ALL of: the commit that added the line, the file, and the exact
+# line text (gitleaks has no line-number field, so the line is pinned by its
+# content). Nothing is allowlisted by rule, so a new match anywhere else, or a
+# changed line here, still fails CI. Reviewed 2026-10-10 (docs/security.md).
+# The line regexes start with \s* because gitleaks may hand the line over with
+# its leading newline.
+
+[extend]
+useDefault = true
+
+# A UUID used as the subject of a locally signed test token (not a secret).
+[[allowlists]]
+description = "recycler-service IT token subject (UUID)"
+condition = "AND"
+commits = ["292ec2f54fb6ea49fb25e693512aff90bbbff9a2"]
+paths = ['''^recycler-service/src/test/java/pe/esgtrazabilidad/recycler/it/support/TestJwtTokens\.java$''']
+regexTarget = "line"
+regexes = ['''^\s*return signToken\(TEST_SECRET, "01a0d8cb-f219-72a2-b006-5150f0e0d685"\);\s*$''']
+
+[[allowlists]]
+description = "collection-service IT token subject (UUID)"
+condition = "AND"
+commits = ["738ad81ff4b4bfa243c73938edc21d796222a69c"]
+paths = ['''^collection-service/src/test/java/pe/esgtrazabilidad/collection/it/support/TestJwtTokens\.java$''']
+regexTarget = "line"
+regexes = ['''^\s*return signToken\(TEST_SECRET, "01a0d8cb-f219-72a2-b006-5150f0e0d685"\);\s*$''']
+
+[[allowlists]]
+description = "reporting-service IT token subject (UUID)"
+condition = "AND"
+commits = ["e34aef01ae61a4c638c8481b961618ea5af6c8d9"]
+paths = ['''^reporting-service/src/test/java/pe/esgtrazabilidad/reporting/it/support/TestJwtTokens\.java$''']
+regexTarget = "line"
+regexes = ['''^\s*return signToken\(TEST_SECRET, "01a0d8cb-f219-72a2-b006-5150f0e0d685"\);\s*$''']
+
+# The alphabet the browser draws initial staff passwords from (public by design).
+[[allowlists]]
+description = "frontend-demo initial-password alphabet"
+condition = "AND"
+commits = ["f50ba2068377cc69b6e4b83abef9281843140cf0"]
+paths = ['''^frontend-demo/src/app/features/staff/initial-password\.ts$''']
+regexTarget = "line"
+regexes = ['''^\s*export const PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';\s*$''']

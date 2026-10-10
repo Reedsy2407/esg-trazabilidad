@@ -29,6 +29,32 @@ jobs:
       - name: Build and test full reactor
         run: mvn -B verify
 
+  # Secret scan of the whole git history with gitleaks (default rules plus the
+  # per-commit/file/line allowlist in .gitleaks.toml). Any new match fails the
+  # job; --redact keeps matched values out of the log. Pinned release binary,
+  # checked against the release's own checksums file.
+  secrets:
+    runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: 8.30.1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfLO "$base/$tarball"
+          curl -sSfLO "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          sha256sum --ignore-missing -c "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          tar -xzf "$tarball" gitleaks
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Scan history for secrets (gitleaks)
+        run: gitleaks git . --config .gitleaks.toml --redact --no-banner --exit-code 1
+
   # Which parts of the repo this push or PR touched. Native git, no third-party
   # action. An unknown base (first push, force push) counts as "changed".
   changes:
@@ -76,6 +102,11 @@ jobs:
 
       - name: Install (lockfile only)
         run: npm ci
+
+      # Known high/critical advisories in what ships to the browser only;
+      # dev tooling (Angular CLI, Vitest, Playwright) never reaches it.
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Lint
         run: npm run lint

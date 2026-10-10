@@ -43,3 +43,14 @@ updates:
         update-types:
           - minor
           - patch
+
+  # frontend-demo/'s npm dependencies (package.json + package-lock.json).
+  - package-ecosystem: npm
+    directory: /frontend-demo
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - minor
+          - patch

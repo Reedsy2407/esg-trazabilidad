@@ -156,6 +156,27 @@ export class CollectionRecordPage {
       ? [...this.schedules.value()].sort(byWeekday).map((s) => ({ id: s.id, label: scheduleLabel(s) }))
       : [],
   );
+  /** The form's current value, as a signal, so the preview follows every keystroke. */
+  private readonly formValue = toSignal(this.form.valueChanges.pipe(map(() => this.form.getRawValue())), {
+    initialValue: this.form.getRawValue(),
+  });
+  /**
+   * The ticket this record will print, built only from the request's real fields. Presentational:
+   * the form already says all of it, so the preview is aria-hidden (no duplicate announcements).
+   */
+  protected readonly preview = computed(() => {
+    const v = this.formValue();
+    const pick = (options: { id: string; label: string }[], id: string) => options.find((o) => o.id === id)?.label ?? null;
+    const weight = v.weightKg.trim();
+    return {
+      neighbor: pick(this.neighborOptions(), v.neighborId),
+      association: pick(this.associationOptions(), v.associationId),
+      date: /^\d{4}-\d{2}-\d{2}$/.test(v.collectionDate) ? formatLocalDate(v.collectionDate) : null,
+      schedule: v.scheduleId === '' ? 'Sin cronograma' : pick(this.scheduleOptions(), v.scheduleId),
+      kilos: weight !== '' && weightValidator(this.form.controls.weightKg) === null ? formatKg(Number(weight)) : null,
+    };
+  });
+
   /** More rows than one picker page: say so instead of silently cutting the list. */
   protected readonly neighborsTruncated = computed(
     () => this.neighbors.hasValue() && this.neighbors.value().totalElements > this.neighbors.value().content.length,

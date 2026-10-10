@@ -47,6 +47,9 @@ const SCHEDULES: Record<string, CollectionSchedule[]> = {
   'n-2': [],
 };
 
+/** Today in Lima as the preview prints it (dd/MM/yyyy). */
+const todayInLimaText = () => todayInLima().split('-').reverse().join('/');
+
 describe('CollectionRecordPage', () => {
   let fixture: ComponentFixture<CollectionRecordPage>;
   let el: HTMLElement;
@@ -212,6 +215,24 @@ describe('CollectionRecordPage', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('the preview ticket follows the form as it is filled, from the real fields only, and is hidden from screen readers', async () => {
+    const preview = () => el.querySelector('aside.preview') as HTMLElement;
+    // [Vecino, Asociación, Fecha, Cronograma] then the kilos line.
+    const values = () => [...Array.from(preview().querySelectorAll('dd'), (d) => d.textContent!.trim()), preview().querySelector('.preview-kilos')!.textContent!.trim()];
+    expect(preview().getAttribute('aria-hidden')).toBe('true');
+    expect(values()).toEqual(['—', '—', todayInLimaText(), 'Sin cronograma', '— kg']);
+
+    await fillValid();
+    await type('date', '2026-10-05');
+    await choose('schedule', 's-1');
+    expect(values()).toEqual(['Rosa Quispe · Cercado de Lima', 'Asociación Recicla Rímac', '05/10/2026', 'Lunes 08:00', '12.50 kg']);
+
+    await type('weight', '12,5'); // invalid: the preview shows no number rather than a wrong one
+    expect(values()[4]).toBe('— kg');
+    await choose('schedule', '');
+    expect(values()[3]).toBe('Sin cronograma');
   });
 
   it('a rejected submission says why and lets the user try again', async () => {

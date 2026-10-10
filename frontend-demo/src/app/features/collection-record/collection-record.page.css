@@ -10,11 +10,55 @@ h1 {
   color: var(--ink-soft);
 }
 
-/* The form is flat paper: no serrated edge (only literal tickets get one). */
+/* The form, flat paper, with the preview ticket beside it (below it on narrow screens). */
+.record-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+  align-items: start;
+  gap: var(--space-6);
+  max-width: 1080px;
+}
 .sheet {
-  max-width: 760px;
   padding: var(--space-8);
   background: var(--paper);
+}
+/* The record's ticket: a literal ticket, so it gets the serrated edge. */
+.preview {
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+}
+.preview-title {
+  margin: 0;
+  font-weight: 800;
+  font-size: 17px;
+}
+.preview dl {
+  margin: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.preview dt {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.preview dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.preview-kilos {
+  margin: 0;
+  text-align: right;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  white-space: nowrap; /* "99,999,999.99 kg" stays on one line, unit included */
+}
+@media (max-width: 1000px) {
+  .record-layout {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 760px;
+  }
 }
 
 .field {
@@ -50,8 +94,9 @@ input.num {
   font-weight: 600;
   letter-spacing: -0.04em;
 }
-/* Two narrow columns (640-768 px): the largest weight, 99999999.99, must still fit. */
-@media (min-width: 640px) and (max-width: 767.98px) {
+/* Narrow columns, the largest weight (99999999.99) must still fit: two columns at 640-768 px,
+   and again at 1001-1199 px, where the preview ticket takes 300 px beside the form. */
+@media (min-width: 640px) and (max-width: 767.98px), (min-width: 1001px) and (max-width: 1199.98px) {
   .weigh-box input.control {
     font-size: 24px;
   }

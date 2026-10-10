@@ -172,10 +172,43 @@ for (const width of [360, 768, 1280]) {
 
 test('the largest weight the column allows (99999999.99) fits in the field at every width', async ({ page }) => {
   await openForm(page);
-  for (const width of [360, 640, 700, 768, 1280]) {
+  for (const width of [360, 640, 700, 768, 1001, 1024, 1100, 1199, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.getByLabel('Peso recolectado (kg)').fill('99999999.99');
     const fit = await page.getByLabel('Peso recolectado (kg)').evaluate((el) => ({ client: el.clientWidth, scroll: el.scrollWidth }));
     expect(fit.scroll, `${width} px`).toBeLessThanOrEqual(fit.client);
+    // The preview prints it on one line too, unit included, inside the ticket.
+    const line = await page.locator('aside.preview .preview-kilos').evaluate((el) => ({
+      text: el.textContent!.trim(),
+      fits: el.scrollWidth <= el.clientWidth,
+    }));
+    expect(line.text, `${width} px`).toBe('99,999,999.99 kg');
+    expect(line.fits, `${width} px: preview kilos fit`).toBe(true);
   }
 });
+
+for (const width of [360, 768, 1280]) {
+  test(`the preview ticket at ${width} px: follows the typing, ${width >= 1001 ? 'beside' : 'below'} the form, presentational`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await openForm(page);
+    const preview = page.locator('aside.preview');
+    await expect(preview).toHaveAttribute('aria-hidden', 'true');
+
+    await page.getByLabel('Vecino').selectOption({ label: `${ROSA.fullName} · ${ROSA.district}` });
+    await page.getByLabel('Asociación').selectOption({ label: ASSOCIATIONS[0].name });
+    await page.getByLabel('Peso recolectado (kg)').fill('8.25');
+    await expect(preview).toContainText(ROSA.fullName);
+    await expect(preview).toContainText(ASSOCIATIONS[0].name);
+    await expect(preview).toContainText('8.25 kg');
+
+    const [form, ticket] = await Promise.all([page.locator('section.sheet').boundingBox(), preview.boundingBox()]);
+    if (width >= 1001) {
+      expect(ticket!.x).toBeGreaterThan(form!.x + form!.width - 1); // beside
+    } else {
+      expect(ticket!.y).toBeGreaterThan(form!.y + form!.height - 1); // below
+    }
+    await expectNoSidewaysScroll(page);
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+    expect(results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
+  });
+}

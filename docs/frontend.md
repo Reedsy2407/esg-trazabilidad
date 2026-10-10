@@ -41,6 +41,7 @@ The backend doesn't enforce these; the screens do, and say so.
 
 - **"Por vencer"** (association certifications): an unexpired certification that expires in **less than 30 days**, counted on Lima's calendar. It is not a backend state: the backend only says `expired`. "Vencido" follows that flag, plus any date already past in Lima (a clock-skew guard). The constant is `EXPIRING_SOON_DAYS` in `features/associations/certification-state.ts`. On screen it reads "vence en menos de 30 días (regla de esta aplicación…)". Green, amber and red are used only for these three chips.
 - **Issuing a certificate** (irreversible, no endpoint voids one):
+  - An **INACTIVE** company can't be issued any certificate (product owner's decision, 2026-10-10). The backend allows it; the issue screen shows "Esta empresa está inactiva: no se pueden emitir certificados" instead of the period form, with no issue button. The status comes from `TrackedCompanyResponse.status`.
   - A period that hasn't ended (end date today or later in Lima) is refused, saying from which date it can be issued.
   - A period with 0 kg is refused.
   - A period without one SIGERSOL record covering all of it is refused before asking (the backend would answer RPT-005), with a link to register it.
@@ -59,7 +60,6 @@ The backend doesn't enforce these; the screens do, and say so.
 ## Known limitations
 
 - **No roles.** Any signed-in staff member can issue certificates, create staff accounts, cancel schedules and register companies or SIGERSOL figures. The screens say so and ask for an explicit confirmation before the irreversible or sensitive actions.
-- **Issuing to an inactive company is allowed**, as the backend allows it. Open question for the product owner.
 - **Pickers load one page of 100** (the services' `max-page-size`). They say so when there are more. Neighbour search filters only what was loaded.
 - **The district filter is exact.** It is case- and accent-sensitive, because the backend compares with equality.
 - **The session log (bitácora)** lives in the tab's sessionStorage, tied to one sign-in. It is not a server record.
@@ -74,6 +74,7 @@ reporting-service's **tracked company** (`/tracked-companies`) is the company ce
 - Edit, deactivate or delete: neighbours, tracked companies, SIGERSOL records, staff accounts.
 - Change or reset a staff password. Today the initial password is permanent.
 - Roles or permissions (who may issue certificates or create staff).
+- Refuse certificates for an INACTIVE tracked company (today only the frontend refuses them).
 - Search neighbours by name (the list only filters by state and exact district).
 - The association's name on the certificate (`EsgCertificateResponse` has only `associationId`).
 - A JSON endpoint for a certificate's weighings (they travel only in the CSV).

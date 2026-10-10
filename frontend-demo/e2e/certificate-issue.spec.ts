@@ -1,7 +1,7 @@
 import { Page, expect, test } from '@playwright/test';
 
 import { ASSOCIATIONS, BackendOptions, COMPANIES, limaDate } from './backend';
-import { WIDTHS, checkA11y, expectNoSidewaysScroll, signedIn } from './session';
+import { WIDTHS, checkA11y, expectManualTagSpaced, expectNoSidewaysScroll, signedIn } from './session';
 
 const ENVASES = COMPANIES[0]; // association: Recicla Rímac, with a SIGERSOL record for 2026-09 and 8.25 kg collected that month
 
@@ -124,6 +124,28 @@ test('RPT-004 and RPT-005 from the service, and an unknown outcome', async ({ pa
   }
 });
 
+test('an INACTIVE company: a clear message instead of the period form, and no way to issue', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 900 });
+  const inactive = COMPANIES[1];
+  const writes: NonNullable<BackendOptions['writes']> = [];
+  const unmocked = await signedIn(page, `/empresas/${inactive.id}`, { writes });
+  await page.getByRole('link', { name: 'Emitir certificado' }).click();
+  await expect(page.getByRole('heading', { name: 'Emitir certificado', level: 1 })).toBeVisible();
+  await expect(page.getByText(inactive.name)).toBeVisible();
+
+  await expect(page.getByText('Esta empresa está inactiva: no se pueden emitir certificados.')).toBeVisible();
+  await expect(page.getByLabel('Mes', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Revisar el borrador' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Emitir certificado/ })).toHaveCount(0);
+  await expectNoSidewaysScroll(page);
+  await checkA11y(page);
+
+  await page.getByRole('link', { name: 'Ver los certificados de la empresa' }).click();
+  await expect(page.getByRole('heading', { name: inactive.name, level: 1 })).toBeVisible();
+  expect(writes).toEqual([]);
+  expect(unmocked).toEqual([]);
+});
+
 for (const width of WIDTHS) {
   test(`issue screen at ${width} px: no sideways scroll, axe clean, with the draft and the confirmation`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -132,6 +154,7 @@ for (const width of WIDTHS) {
     await checkA11y(page);
     await reviewMonth(page, '2026-09');
     await expect(page.getByRole('button', { name: 'Emitir certificado de Setiembre 2026' })).toBeVisible();
+    await expectManualTagSpaced(page.locator('.draft dd').filter({ has: page.locator('app-manual-tag') }));
     await expectNoSidewaysScroll(page);
     await checkA11y(page);
     expect(unmocked).toEqual([]);

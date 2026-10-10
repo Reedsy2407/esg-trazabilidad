@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { Page, expect } from '@playwright/test';
+import { Locator, Page, expect } from '@playwright/test';
 
 import { BackendOptions, EMAIL, PASSWORD, fakeBackend } from './backend';
 
@@ -37,6 +37,29 @@ export async function expectNoSidewaysScroll(page: Page): Promise<void> {
     innerWidth: window.innerWidth,
   }));
   expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
+}
+
+/**
+ * The "Ingreso manual" tag never touches what precedes or follows it: a real space in the text
+ * (Angular drops whitespace-only text nodes) and a visible gap on screen, in whatever `container` holds it.
+ */
+export async function expectManualTagSpaced(container: Locator): Promise<void> {
+  const tag = container.locator('app-manual-tag');
+  await expect(tag).toBeVisible();
+  const { text, gaps } = await container.evaluate((el) => {
+    const box = el.querySelector('app-manual-tag')!.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    // Text boxes on the tag's line, left and right of it (the tag's own boxes excluded).
+    const line = Array.from(range.getClientRects()).filter(
+      (r) => r.width > 0 && r.bottom > box.top && r.top < box.bottom && (r.right <= box.left || r.left >= box.right),
+    );
+    const before = line.filter((r) => r.right <= box.left).map((r) => box.left - r.right);
+    const after = line.filter((r) => r.left >= box.right).map((r) => r.left - box.right);
+    return { text: (el.textContent ?? '').replace(/\s+/g, ' ').trim(), gaps: [...before, ...after] };
+  });
+  expect(text).toMatch(/(^|\S )Ingreso manual($| \S)/);
+  expect(Math.min(...gaps)).toBeGreaterThanOrEqual(4);
 }
 
 export const WIDTHS = [360, 768, 1280] as const;

@@ -1,7 +1,7 @@
 import { Page, expect, test } from '@playwright/test';
 
 import { ASSOCIATIONS, BackendOptions, COMPANIES } from './backend';
-import { WIDTHS, checkA11y, expectNoSidewaysScroll, signedIn } from './session';
+import { WIDTHS, checkA11y, expectManualTagSpaced, expectNoSidewaysScroll, signedIn } from './session';
 
 const RIMAC = ASSOCIATIONS[0];
 
@@ -132,9 +132,11 @@ for (const width of WIDTHS) {
     await page.setViewportSize({ width, height: 900 });
     const { unmocked } = await open(page, '/sigersol');
     await expect(page.getByText('Mostrando 1–2 de 2 registros', { exact: true })).toBeVisible();
+    await expectManualTagSpaced(page.locator('.sub'));
     await expectNoSidewaysScroll(page);
     await checkA11y(page);
     await page.getByRole('link', { name: 'Registrar dato SIGERSOL' }).click();
+    await expectManualTagSpaced(page.locator('.lead'));
     await page.getByRole('button', { name: 'Registrar dato SIGERSOL' }).click();
     await expect(page.getByText('Escribe el porcentaje de cumplimiento.')).toBeVisible();
     await expectNoSidewaysScroll(page);

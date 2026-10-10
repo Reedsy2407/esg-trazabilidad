@@ -31,6 +31,7 @@ describe('CertificateIssuePage', () => {
   let navigate: ReturnType<typeof vi.spyOn>;
   let summaryCalls: number;
   let page: CertificateIssuePage;
+  let company: typeof COMPANY;
 
   const settle = async () => {
     TestBed.tick();
@@ -59,6 +60,7 @@ describe('CertificateIssuePage', () => {
     summary = { kilosTrazados: 8.25, hierarchyCompliancePercent: 91.25 };
     issued = [];
     summaryCalls = 0;
+    company = COMPANY;
     answer = new Subject<EsgCertificate>();
     TestBed.configureTestingModule({
       imports: [CertificateIssuePage],
@@ -67,7 +69,7 @@ describe('CertificateIssuePage', () => {
         {
           provide: BackendApi,
           useValue: {
-            trackedCompany: () => of(COMPANY),
+            trackedCompany: () => of(company),
             association: () => of({ id: 'a-1', name: 'Asociación Recicla Rímac' }),
             certificates: () => of({ content: [EXISTING], page: 0, size: 20, totalElements: 1, totalPages: 1 }),
             certificateSummary: (_: string, periodStart: string, periodEnd: string) => {
@@ -98,6 +100,23 @@ describe('CertificateIssuePage', () => {
     expect(el.querySelector('.draft')).toBeNull();
   });
 
+  it('an INACTIVE company: a message instead of the period form, and nothing can be reviewed or issued', async () => {
+    company = { ...COMPANY, status: 'INACTIVE' };
+    (page as unknown as { company: { reload(): void } }).company.reload();
+    await settle();
+    expect(el.textContent).toContain('Esta empresa está inactiva: no se pueden emitir certificados.');
+    expect(el.querySelector('#month')).toBeNull();
+    expect(button(/Revisar el borrador/)).toBeUndefined();
+    expect(button(/Emitir certificado/)).toBeUndefined();
+    // Not only the missing controls: review() and issue() refuse too.
+    const internals = page as unknown as { review(): void; issue(): void };
+    internals.review();
+    internals.issue();
+    await settle();
+    expect(summaryCalls).toBe(0);
+    expect(issued).toEqual([]);
+  });
+
   it('the draft: dashed, named a draft, with the figures; issue only after the checkbox, once', async () => {
     await setInput('month', '2026-09');
     await review();
@@ -105,6 +124,8 @@ describe('CertificateIssuePage', () => {
     expect(draft.textContent).toContain('Borrador · aún no emitido');
     expect(draft.textContent).toContain('Setiembre 2026');
     expect(draft.textContent).toContain('8.25 kg');
+    // A real space between the figure and the tag: a whitespace-only text node there would be dropped.
+    expect(draft.textContent).toContain('91.3 % Ingreso manual');
     expect(draft.textContent).toContain('Asociación Recicla Rímac');
     expect(el.textContent).toContain('Emitir es definitivo');
     expect(el.textContent).toContain('Las cifras se recalculan al emitir');

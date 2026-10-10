@@ -21,7 +21,8 @@ type ErrorKind = 'overlap' | 'sigersol' | 'uncertain' | 'other';
  * or voids a certificate. Three steps on one page: choose the period (a whole month, or a free
  * range); review the draft, recomputed live by GET certificate-summary (nothing is issued); confirm
  * with a checkbox and a button that names the period. Never offered: a period that hasn't ended
- * (Lima), 0 kg, a period without SIGERSOL coverage, one overlapping a listed certificate.
+ * (Lima), 0 kg, a period without SIGERSOL coverage, one overlapping a listed certificate, or any
+ * period at all for an INACTIVE company (a frontend rule: the backend would issue it).
  */
 @Component({
   selector: 'app-certificate-issue-page',
@@ -41,6 +42,8 @@ export class CertificateIssuePage {
     params: () => this.id(),
     stream: ({ params: id }) => this.api.trackedCompany(id),
   });
+  /** Frontend rule (Angel, 2026-10-10): an INACTIVE company gets a message instead of the period form. */
+  protected readonly inactive = computed(() => this.company.hasValue() && this.company.value().status === 'INACTIVE');
   /** Only for the draft's "Asociación" line; failing leaves the line without a name. */
   protected readonly association = rxResource({
     params: () => (this.company.hasValue() ? this.company.value().associationId : undefined),
@@ -167,7 +170,7 @@ export class CertificateIssuePage {
   protected review(): void {
     this.stepOneTried.set(true);
     const period = this.period();
-    if (period === null || this.problem() !== null) {
+    if (period === null || this.problem() !== null || this.inactive()) {
       return;
     }
     this.reset();
@@ -182,7 +185,7 @@ export class CertificateIssuePage {
 
   protected issue(): void {
     const draft = this.draft();
-    if (draft === null || !this.issuable() || !this.confirmed() || this.issuing() || this.done()) {
+    if (draft === null || !this.issuable() || !this.confirmed() || this.issuing() || this.done() || this.inactive()) {
       return;
     }
     this.error.set(null);

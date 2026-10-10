@@ -1,5 +1,6 @@
 .page {
   min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9,31 +10,44 @@
 .page.hidden {
   visibility: hidden;
 }
-.sheet {
+/* The scale's printer head, with the status ticket hanging from it. */
+.printout {
   width: 100%;
   max-width: 560px;
-  padding: var(--space-8);
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-frame);
+}
+.printer {
+  height: 22px;
+  margin: 0 -10px;
+  background: var(--ink);
+}
+.sheet {
+  padding-left: var(--space-8);
+  padding-right: var(--space-8);
 }
 h1 {
-  font-size: 22px;
+  font-size: 26px;
 }
 .sub {
-  margin: var(--space-2) 0 var(--space-5);
+  margin: var(--space-2) 0 0;
   color: var(--ink-soft);
 }
 table {
   width: 100%;
   border-collapse: collapse;
-  border-top: 1px solid var(--line);
 }
+/* One printed line per service, separated by one unbroken dotted rule per row. */
 th,
 td {
   padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--line);
   vertical-align: baseline;
+}
+/* Painted on the row, not as cell borders: a collapsed table draws one border segment per
+   cell and the dots restart in each, leaving seams at the column boundaries. */
+tbody tr {
+  background: radial-gradient(circle, var(--rule-dots) 1px, transparent 1.2px) left bottom / 6px 2px repeat-x;
+}
+tbody tr:last-child {
+  background: none;
 }
 th {
   text-align: left;
@@ -49,38 +63,42 @@ th {
 .status {
   padding-left: var(--space-4);
   white-space: nowrap;
-}
-.mark {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: var(--space-2);
-  border: 1px solid currentColor;
+  color: var(--ink);
 }
 .time {
   width: 64px;
   text-align: right;
   color: var(--ink-soft);
 }
-/* Status colors from DESIGN-BRIEF.md's palette (user decision after the F1
-   screenshot review): ready #1A7A48, waking #9A5B00, no answer #B3261E, all
-   >= 4.5:1 on the white sheet. The word always carries the meaning too. */
-tr[data-status='waking'] .status {
-  color: var(--por-vencer);
-}
-/* The one motion the brief allows besides focus and loading: the warm-up cue. */
-tr[data-status='waking'] .mark {
-  animation: breathe 1.4s ease-in-out infinite alternate;
-}
-tr[data-status='ready'] .status {
-  color: var(--vigente);
+
+/* State marks, all in ink (green, amber and red belong to certification states only).
+   The word always carries the meaning; the mark reinforces it in greyscale too. */
+.mark {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: var(--space-2);
+  border: 1.5px solid currentColor;
 }
 tr[data-status='ready'] .mark {
   background: currentColor;
 }
+/* Waking: hollow, breathing between empty and filled. */
+tr[data-status='waking'] .mark {
+  animation: breathe 1.4s ease-in-out infinite alternate;
+}
+/* No answer: the mark struck through, the word in bold. */
+tr[data-status='unresponsive'] .mark {
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 1px),
+    currentColor calc(50% - 1px),
+    currentColor calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+}
 tr[data-status='unresponsive'] .status {
-  color: var(--vencido);
-  font-weight: 600;
+  font-weight: 800;
 }
 @keyframes breathe {
   from {
@@ -90,15 +108,48 @@ tr[data-status='unresponsive'] .status {
     background: currentColor;
   }
 }
+/* Reduced motion: the global rule ends the breathing at once and, with no fill-mode, the
+   mark returns to hollow, so "waking" never looks like "ready" (tested in e2e). */
+
+/* Windows high contrast drops backgrounds and gradients: keep the marks distinct with the
+   system colours, and bring the row separators back as borders. */
+@media (forced-colors: active) {
+  .mark {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+  tr[data-status='ready'] .mark {
+    background: CanvasText;
+  }
+  tr[data-status='unresponsive'] .mark {
+    background: linear-gradient(
+      to top right,
+      transparent calc(50% - 1px),
+      CanvasText calc(50% - 1px),
+      CanvasText calc(50% + 1px),
+      transparent calc(50% + 1px)
+    );
+  }
+  tbody tr:not(:last-child) > * {
+    border-bottom: 1px dotted CanvasText;
+  }
+}
+
 .retry {
   margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 2px dotted var(--rule-dots);
 }
 .retry p {
   margin: 0 0 var(--space-3);
 }
 @media (max-width: 400px) {
   .sheet {
-    padding: var(--space-5);
+    padding-left: var(--space-5);
+    padding-right: var(--space-5);
+  }
+  .printer {
+    margin: 0 -6px;
   }
 }
 /* Phones: three columns don't fit. Each service becomes a block: name and
@@ -117,7 +168,6 @@ tr[data-status='unresponsive'] .status {
     column-gap: var(--space-2);
     row-gap: var(--space-1);
     padding: var(--space-3) 0;
-    border-bottom: 1px solid var(--line);
   }
   th,
   td {

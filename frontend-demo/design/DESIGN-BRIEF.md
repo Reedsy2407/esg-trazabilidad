@@ -19,7 +19,7 @@
 | accent-on-ink | #8EA3F0 | cobalto aclarado para la barra oscura: foco y subrayado activo (6.5:1 sobre ink) |
 | vigente / por-vencer / vencido | #1A7A48 / #9A5B00 / #B3261E | **solo** estados de certificación de asociaciones; nunca errores ni interfaz |
 
-Bordes de campos: #6F7A77 (4.4:1 sobre paper). Guías punteadas: #A9B2AF. Los errores van en tinta, con un signo dibujado y borde más grueso, no en rojo. Excepción vigente por decisión anterior del dueño: la pantalla "Preparando el sistema" usa verde/ámbar/rojo para el estado de cada servicio.
+Bordes de campos: #6F7A77 (4.4:1 sobre paper). Guías punteadas: #A9B2AF. Los errores van en tinta, con un signo dibujado y borde más grueso, no en rojo. "Preparando el sistema" también va en tinta (decisión del dueño, 2026-10-10): marca llena = listo, hueca que respira = despertando, tachada = sin respuesta, siempre con la palabra.
 
 ## Tipografía
 Archivo (interfaz, 400/600/800) + Martian Mono (kilos, RUC, fechas, códigos: medición, no disfraz). Autoalojadas en woff2, solo subconjunto latin (`public/fonts`, @fontsource 5.3.0, OFL), con caras de respaldo locales ajustadas (`size-adjust`, `ascent/descent-override`) para que el cambio de fuente no mueva la maquetación. Cifras tabulares en toda la app. Nunca Inter, Roboto, Arial ni la fuente del sistema como voz.

@@ -175,17 +175,19 @@ test('with prefers-reduced-motion the tickets are already printed: no feed anima
   await fakeBackend(page);
   // Fully printed: no clip, or an inset whose every side is zero (e.g. "inset(0px 0px 0%)").
   const unclipped = /^(none|inset\((0(px|%)?\s*)+\))$/;
-  const printed = (selector: string) =>
-    page.locator(selector).evaluate((el) => {
-      const running = el.getAnimations().filter((a) => a.playState === 'running');
-      return { running: running.length, clip: getComputedStyle(el).clipPath };
-    });
+  // The feed's effective duration: with the global reduced-motion rule it is 0.01 ms, without
+  // it 900-1000 ms. Deterministic, unlike sampling whether it is still running.
+  const longest = (selector: string) =>
+    page.locator(selector).evaluate((el) =>
+      Math.max(0, ...el.getAnimations().map((a) => Number(a.effect?.getComputedTiming().duration ?? 0))),
+    );
+  const clip = (selector: string) => page.locator(selector).evaluate((el) => getComputedStyle(el).clipPath);
 
   await page.goto('/login');
   await expect(page.locator('section.ticket')).toBeVisible();
-  const login = await printed('section.ticket');
-  expect(login.running).toBe(0);
-  expect(login.clip).toMatch(unclipped);
+  expect(await page.locator('section.ticket').evaluate((el) => el.getAnimations().length)).toBeGreaterThan(0);
+  expect(await longest('section.ticket')).toBeLessThanOrEqual(1);
+  await expect.poll(() => clip('section.ticket')).toMatch(unclipped);
 
   await page.getByLabel('Correo electrónico').fill(EMAIL);
   await page.getByLabel('Contraseña').fill(PASSWORD);
@@ -194,7 +196,84 @@ test('with prefers-reduced-motion the tickets are already printed: no feed anima
   await page.goto(`/empresas/${COMPANIES[0].id}`);
   await page.getByRole('link', { name: 'Diciembre 2024' }).click();
   await expect(page.locator('article.sheet')).toBeVisible();
-  const certificate = await printed('article.sheet');
-  expect(certificate.running).toBe(0);
-  expect(certificate.clip).toMatch(unclipped);
+  expect(await page.locator('article.sheet').evaluate((el) => el.getAnimations().length)).toBeGreaterThan(0);
+  expect(await longest('article.sheet')).toBeLessThanOrEqual(1);
+  await expect.poll(() => clip('article.sheet')).toMatch(unclipped);
+});
+
+/** Two services answer, two never do: after the 3-minute limit (clock fast-forwarded) all three states show. */
+async function warmupWithAllStates(page: Page): Promise<void> {
+  await page.clock.install();
+  await page.route('**/svc/auth/actuator/health/liveness', (r) => r.fulfill({ status: 200, body: '{"status":"UP"}' }));
+  await page.route('**/svc/recycler/actuator/health/liveness', (r) => r.fulfill({ status: 200, body: '{"status":"UP"}' }));
+  await page.route('**/svc/collection/actuator/health/liveness', () => new Promise(() => undefined));
+  await page.route('**/svc/reporting/actuator/health/liveness', () => new Promise(() => undefined));
+  await page.goto('/');
+  await page.clock.fastForward(2000);
+  await expect(page.getByRole('heading', { name: 'Preparando el sistema' })).toBeVisible();
+}
+
+for (const width of [360, 768, 1280]) {
+  test(`warm-up at ${width} px: every state in ink with its word, no sideways scrolling, AXE clean`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await warmupWithAllStates(page);
+    const inkAndWords = async () => {
+      const states = await page.locator('tbody tr').evaluateAll((rows) =>
+        rows.map((tr) => ({
+          status: tr.getAttribute('data-status'),
+          word: tr.querySelector('.status')!.textContent!.trim(),
+          color: getComputedStyle(tr.querySelector('.status')!).color,
+          ink: getComputedStyle(document.body).color,
+        })),
+      );
+      for (const s of states) {
+        // Green, amber and red belong to certification states: here every state is the body ink.
+        expect(s.color, s.status!).toBe(s.ink);
+        expect(s.word).toBe({ ready: 'Listo', waking: 'Despertando', unresponsive: 'Sin respuesta' }[s.status as 'ready']);
+      }
+    };
+    await expect(page.locator('tr[data-status="ready"]')).toHaveCount(2);
+    await expect(page.locator('tr[data-status="waking"]')).toHaveCount(2);
+    await inkAndWords(); // ready + waking
+    await checkA11y(page, `warm-up waking ${width}`);
+
+    await page.clock.fastForward('03:10');
+    await expect(page.locator('tr[data-status="unresponsive"]')).toHaveCount(2);
+    await expect(page.getByRole('button', { name: 'Reintentar' })).toBeVisible();
+    await inkAndWords(); // ready + unresponsive
+    const { scroll, inner } = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: innerWidth }));
+    expect(scroll).toBeLessThanOrEqual(inner);
+    await checkA11y(page, `warm-up all states ${width}`);
+  });
+}
+
+test('warm-up with prefers-reduced-motion: a waking service keeps a hollow, still mark (never mistaken for ready)', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await warmupWithAllStates(page);
+  await expect(page.locator('tr[data-status="ready"]')).toHaveCount(2);
+  await expect(page.locator('tr[data-status="waking"]')).toHaveCount(2);
+  const marks = (status: string) =>
+    page.locator(`tr[data-status="${status}"] .mark`).evaluateAll((els) =>
+      els.map((el) => `${getComputedStyle(el).backgroundColor} animations:${el.getAnimations().length}`),
+    );
+  // Waking: hollow and still. Ready: filled with the ink. Polled, so a frame mid-update can't decide it.
+  await expect.poll(() => marks('waking')).toEqual(['rgba(0, 0, 0, 0) animations:0', 'rgba(0, 0, 0, 0) animations:0']);
+  await expect.poll(() => marks('ready')).toEqual(['rgb(27, 36, 34) animations:0', 'rgb(27, 36, 34) animations:0']);
+});
+
+test('warm-up in Windows high contrast (forced colors): ready, waking and no answer keep distinct marks', async ({ page }) => {
+  await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' });
+  await warmupWithAllStates(page);
+  await page.clock.fastForward('03:10');
+  await expect(page.locator('tr[data-status="unresponsive"]')).toHaveCount(2);
+  const look = (status: string) =>
+    page.locator(`tr[data-status="${status}"] .mark`).first().evaluate((el) => {
+      const s = getComputedStyle(el);
+      return `${s.backgroundColor}|${s.backgroundImage === 'none' ? 'plain' : 'drawn'}`;
+    });
+  const ready = await look('ready');
+  const unresponsive = await look('unresponsive');
+  expect(ready.split('|')[0]).not.toBe('rgba(0, 0, 0, 0)'); // filled
+  expect(unresponsive.split('|')[1]).toBe('drawn'); // struck through
+  expect(ready).not.toBe(unresponsive);
 });

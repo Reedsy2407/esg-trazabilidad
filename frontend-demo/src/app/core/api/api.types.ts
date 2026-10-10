@@ -86,6 +86,17 @@ export interface EsgCertificate {
 }
 
 /**
+ * IssueCertificateRequest: both @NotNull LocalDates, nothing else checked by annotations. The
+ * service answers RPT-001, then RPT-004 (overlap with this company's certificates, a shared day
+ * counts), then RPT-005 (no single SIGERSOL record of the association covers the whole period).
+ * It does NOT refuse a period that hasn't ended, 0 kg or end before start: the screen does.
+ */
+export interface IssueCertificateRequest {
+  readonly periodStart: string;
+  readonly periodEnd: string;
+}
+
+/**
  * reporting-service CertificateSummaryResponse: a live preview for any period,
  * nothing is issued. hierarchyCompliancePercent is null when no SIGERSOL sync
  * covers the period.

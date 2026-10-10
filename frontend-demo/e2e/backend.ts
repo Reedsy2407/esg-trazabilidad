@@ -124,6 +124,8 @@ export interface BackendOptions {
   sigersolStatus?: number;
   /** POST /sigersol-syncs answers this instead of 201 (code null: a bare gateway answer). */
   sigersolFailure?: { status: number; code: string | null };
+  /** POST .../certificates answers this instead of 201 (code null: a bare gateway answer). */
+  issueFailure?: { status: number; code: string | null };
   /** Every write (POST/PATCH) the fake services received, in order. */
   writes?: { method: string; path: string; body: unknown }[];
   /** Every POST body received by collection-records, for the test to inspect. */
@@ -567,6 +569,21 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     });
   });
 
+  // Certificates with state: one issued by a test is listed and opens afterwards.
+  const certificates: (typeof CERTIFICATES)[number][] = [...CERTIFICATES, FOREIGN_CERTIFICATE].map((c) => ({ ...c }));
+  /**
+   * What reporting-service computes for a period: kilos from the association's traced collections
+   * (here, the fake collection-service's records, by association and date, both days included) and
+   * the compliance of the one SIGERSOL record covering the whole period, if any.
+   */
+  const recompute = (associationId: string, periodStart: string, periodEnd: string) => {
+    const kilos = records
+      .filter((r) => r.associationId === associationId && r.collectionDate >= periodStart && r.collectionDate <= periodEnd)
+      .reduce((sum, r) => sum + r.weightKg, 0);
+    const covering = syncs.find((s) => s.associationId === associationId && s.periodStart <= periodStart && s.periodEnd >= periodEnd);
+    return { kilos: Math.round(kilos * 100) / 100, compliance: covering?.hierarchyCompliancePercent ?? null };
+  };
+
   // Tracked companies with state: one registered by a test is listed and opens afterwards.
   const companies: { id: string; name: string; ruc: string; associationId: string; status: string }[] = COMPANIES.map((c) => ({ ...c }));
 
@@ -618,9 +635,7 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
       return json(company);
     }
     if (sub === 'certificates' && certId !== undefined) {
-      const certificate = [...CERTIFICATES, FOREIGN_CERTIFICATE].find(
-        (c) => c.id === certId && c.trackedCompanyId === company.id,
-      );
+      const certificate = certificates.find((c) => c.id === certId && c.trackedCompanyId === company.id);
       if (certificate === undefined) {
         return problem(route, 404, 'RPT-003', 'Certificado no encontrado');
       }
@@ -650,24 +665,66 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
         body: file === 'pdf' ? '%PDF-1.7 test' : 'Empresa,x\nFecha de recoleccion,Peso (kg)\n',
       });
     }
+    if (sub === 'certificates' && route.request().method() === 'POST') {
+      const body = route.request().postDataJSON() as { periodStart?: string; periodEnd?: string };
+      options.writes?.push({ method: 'POST', path: url.pathname, body });
+      if (options.issueFailure !== undefined) {
+        return options.issueFailure.code === null
+          ? gatewayError(route, options.issueFailure.status)
+          : problem(route, options.issueFailure.status, options.issueFailure.code, 'Rechazado');
+      }
+      const { periodStart, periodEnd } = body;
+      if (!periodStart || !periodEnd) {
+        return problem(route, 400, 'VALIDATION_ERROR', 'periodStart: no debe ser nulo');
+      }
+      // The real order: overlap with this company's certificates (a shared day counts), then coverage.
+      if (certificates.some((c) => c.trackedCompanyId === company.id && c.periodStart <= periodEnd && c.periodEnd >= periodStart)) {
+        return problem(route, 409, 'RPT-004', 'Ya existe un certificado emitido que se superpone con ese periodo');
+      }
+      const figures = recompute(company.associationId, periodStart, periodEnd);
+      if (figures.compliance === null) {
+        return problem(route, 409, 'RPT-005', 'No hay datos oficiales de SIGERSOL cargados para esa asociación y periodo');
+      }
+      const issued = {
+        id: `0192f3a8-c000-7000-8000-${String(900 + certificates.length).padStart(12, '0')}`,
+        trackedCompanyId: company.id,
+        associationId: company.associationId,
+        companyName: company.name,
+        companyRuc: company.ruc,
+        periodStart,
+        periodEnd,
+        kilosTrazados: figures.kilos,
+        hierarchyCompliancePercent: figures.compliance,
+        issuedAt: new Date().toISOString(),
+      };
+      certificates.unshift(issued);
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(issued) });
+    }
     if (sub === 'certificates') {
       if (options.certificatesStatus !== undefined) {
         return gatewayError(route, options.certificatesStatus);
       }
-      const content = company.id === COMPANIES[0].id ? CERTIFICATES : [];
+      // FOREIGN_CERTIFICATE exists only to be asked for under the wrong company: never listed.
+      const content = certificates.filter((c) => c.trackedCompanyId === company.id && c.id !== FOREIGN_CERTIFICATE.id);
       return json({ content, page: 0, size: 20, totalElements: content.length, totalPages: content.length === 0 ? 0 : 1 });
     }
     if (sub === 'certificate-summary') {
       // A live recomputation of that period: here, the certificate's own figures.
       const periodStart = url.searchParams.get('periodStart');
       const periodEnd = url.searchParams.get('periodEnd');
-      const certified = CERTIFICATES.find((c) => c.periodStart === periodStart && c.periodEnd === periodEnd);
+      const certified = CERTIFICATES.find(
+        (c) => c.trackedCompanyId === company.id && c.periodStart === periodStart && c.periodEnd === periodEnd,
+      );
+      const figures =
+        certified !== undefined
+          ? { kilos: certified.kilosTrazados, compliance: certified.hierarchyCompliancePercent }
+          : recompute(company.associationId, periodStart ?? '', periodEnd ?? '');
       return json({
         trackedCompanyId: company.id,
         periodStart,
         periodEnd,
-        kilosTrazados: certified?.kilosTrazados ?? 0,
-        hierarchyCompliancePercent: options.summaryComplianceNull ? null : (certified?.hierarchyCompliancePercent ?? null),
+        kilosTrazados: figures.kilos,
+        hierarchyCompliancePercent: options.summaryComplianceNull ? null : figures.compliance,
       });
     }
     return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');

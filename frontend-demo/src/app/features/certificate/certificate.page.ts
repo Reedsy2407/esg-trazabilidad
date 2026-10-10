@@ -10,6 +10,16 @@ import { DownloadKind } from '../../shared/download-filename';
 import { loadErrorMessage } from '../../shared/error-message';
 import { formatInstantDate, formatKg, formatLocalDate, formatPercent } from '../../shared/format';
 
+/** Opened right after issuing it (router state from CertificateIssuePage)? Read once, then dropped. */
+function justIssued(): boolean {
+  const state: unknown = history.state;
+  if (typeof state !== 'object' || state === null || (state as Record<string, unknown>)['emitido'] !== true) {
+    return false;
+  }
+  history.replaceState({ ...(state as Record<string, unknown>), emitido: false }, '');
+  return true;
+}
+
 /**
  * Certificate detail, the brief's signature screen: a printed-document look
  * built only from real fields (header with company and RUC, the two figures,
@@ -31,6 +41,11 @@ export class CertificatePage {
 
   readonly companyId = input.required<string>();
   readonly certificateId = input.required<string>();
+  /**
+   * "Certificado emitido.", once, for the certificate just issued. The page never links to another
+   * certificate, so the component isn't reused for a different one while this is true.
+   */
+  protected readonly issued = justIssued();
 
   protected readonly certificate = rxResource({
     params: () => ({ companyId: this.companyId(), certificateId: this.certificateId() }),

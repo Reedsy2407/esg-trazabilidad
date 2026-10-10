@@ -14,6 +14,7 @@ import {
   CreateCollectionScheduleRequest,
   CreateNeighborRequest,
   EsgCertificate,
+  IssueCertificateRequest,
   LoginRequest,
   LoginResponse,
   Neighbor,
@@ -80,6 +81,11 @@ export class BackendApi {
       `${reporting}/tracked-companies/${encodeURIComponent(companyId)}/certificates`,
       { params },
     );
+  }
+
+  /** 201 with the certificate. Irreversible: there is no endpoint to edit or void one. */
+  issueCertificate(companyId: string, request: IssueCertificateRequest): Observable<EsgCertificate> {
+    return this.http.post<EsgCertificate>(`${reporting}/tracked-companies/${encodeURIComponent(companyId)}/certificates`, request);
   }
 
   /** RPT-003 (404) when the id doesn't exist or belongs to another company. */

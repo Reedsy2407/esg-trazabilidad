@@ -452,6 +452,6 @@ Decisiones de Angel: empresa = tracked company de reporting (no `/companies` de 
 - [x] V2: Vecinos (lista con filtros, registro, ficha) + cronogramas (agregar, pausar, reactivar, cancelar con confirmación) + recojos por fechas; en el formulario: buscador de vecino, ?vecino=, última asociación recordada, bitácora de la sesión ligada a cada inicio de sesión
 - [x] V3: Registrar empresa (POST /tracked-companies; RUC de 11 dígitos con separadores quitados; RPT-002 con el RUC y enlace a la lista; nunca /companies de collection)
 - [x] V4: SIGERSOL como "ingreso manual" — lista por asociación + registro (precisión de las columnas, nota ≤ 255, RPT-006 con un día compartido, RPT-008); el cumplimiento se rotula "ingreso manual" en la ficha y el certificado; RPT-005 real llega con V5 (formulario prellenado por dirección listo)
-- [ ] V5: Emitir certificado — PARADA: diseño de la confirmación antes del envío real (RPT-004)
+- [x] V5: Emitir certificado — mes completo + rango; bloquea período abierto (Lima), 0 kg, sin cobertura SIGERSOL y solapes listados; borrador discontinuo; casilla + botón con el período; envío único hasta abrir el certificado; RPT-004/RPT-005/incierto; "Certificado emitido." anunciado. Pregunta abierta a Angel: ¿emitir a empresas INACTIVE?
 - [ ] V6: Personal / mi sesión — PARADA: diseño de seguridad antes de implementar
 - [ ] Cierre: docs (limitaciones, pendientes de backend), reporte final, lista de datos de demo ficticios para aprobar

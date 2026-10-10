@@ -77,6 +77,12 @@ export const routes: Routes = [
           import('./features/collection-record/collection-record.page').then((m) => m.CollectionRecordPage),
       },
       {
+        path: 'empresas/:id/emitir',
+        title: 'Emitir certificado · Trazabilidad ESG',
+        loadComponent: () =>
+          import('./features/certificate-issue/certificate-issue.page').then((m) => m.CertificateIssuePage),
+      },
+      {
         path: 'empresas/:companyId/certificados/:certificateId',
         title: 'Certificado · Trazabilidad ESG',
         loadComponent: () => import('./features/certificate/certificate.page').then((m) => m.CertificatePage),

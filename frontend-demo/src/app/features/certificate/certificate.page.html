@@ -2,6 +2,9 @@
   {{ view() ? 'Volver a ' + view()!.company : 'Volver a la empresa' }}
 </a>
 
+<!-- Always in the DOM (a live region inserted together with its text isn't reliably announced). -->
+<p class="done" role="status" [class.visually-hidden]="!(issued && view())">{{ issued && view() ? 'Certificado emitido.' : '' }}</p>
+
 @if (view(); as v) {
   <div class="cert-layout">
     <!-- The month's ticket: printed once when it opens, serrated, one ink. -->

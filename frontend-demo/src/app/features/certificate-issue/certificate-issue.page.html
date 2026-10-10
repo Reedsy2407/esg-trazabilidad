@@ -1,0 +1,165 @@
+<a class="back-link" [routerLink]="['/empresas', id()]">Volver a la empresa</a>
+
+@if (company.error(); as e) {
+  <div class="problem" role="alert">
+    @if (companyMissing(e)) {
+      <p>Esta empresa no existe o ya no está registrada.</p>
+      <a routerLink="/empresas">Ver todas las empresas</a>
+    } @else {
+      <p>{{ loadError(e, 'los datos de la empresa') }}</p>
+      <button type="button" class="btn" (click)="company.reload()">Volver a intentar</button>
+    }
+  </div>
+} @else {
+  <header class="page-head">
+    <h1>Emitir certificado</h1>
+    <p class="sub">{{ company.hasValue() ? company.value().name : 'Cargando empresa…' }}</p>
+  </header>
+
+  <!-- ======================= 1. Período ======================= -->
+  <section class="sheet-flat step" aria-labelledby="step1-title">
+    <h2 id="step1-title">1. Período</h2>
+    <fieldset class="modes" [disabled]="issuing() || done()">
+      <legend class="visually-hidden">Tipo de período</legend>
+      <label><input type="radio" name="mode" value="mes" [checked]="mode() === 'mes'" (change)="setMode('mes')" /> Mes completo</label>
+      <label><input type="radio" name="mode" value="rango" [checked]="mode() === 'rango'" (change)="setMode('rango')" /> Otro rango</label>
+    </fieldset>
+
+    @if (mode() === 'mes') {
+      <div class="field">
+        <label for="month">Mes</label>
+        <input
+          id="month"
+          class="control"
+          type="month"
+          [value]="month()"
+          [disabled]="issuing() || done()"
+          (input)="setValue('month', $event)"
+          [attr.aria-invalid]="stepOneTried() && (period() === null || problemText() !== null)"
+          [attr.aria-describedby]="stepOneTried() && (period() === null || problemText()) ? 'period-error' : null"
+        />
+      </div>
+    } @else {
+      <div class="range">
+        <div class="field">
+          <label for="from">Desde</label>
+          <input
+            id="from"
+            class="control"
+            type="date"
+            [value]="from()"
+            [disabled]="issuing() || done()"
+            (input)="setValue('from', $event)"
+            [attr.aria-invalid]="stepOneTried() && (period() === null || problemText() !== null)"
+            [attr.aria-describedby]="stepOneTried() && (period() === null || problemText()) ? 'period-error' : null"
+          />
+        </div>
+        <div class="field">
+          <label for="to">Hasta</label>
+          <input
+            id="to"
+            class="control"
+            type="date"
+            [value]="to()"
+            [disabled]="issuing() || done()"
+            (input)="setValue('to', $event)"
+            [attr.aria-invalid]="stepOneTried() && (period() === null || problemText() !== null)"
+            [attr.aria-describedby]="stepOneTried() && (period() === null || problemText()) ? 'period-error' : null"
+          />
+        </div>
+      </div>
+    }
+    <p class="hint">Ambas fechas incluidas. Solo se emiten períodos que ya terminaron.</p>
+    @if (stepOneTried() && (period() === null || problemText())) {
+      <p class="field-error" id="period-error" role="alert">{{ problemText() ?? 'Elige el período completo.' }}</p>
+    }
+    <button type="button" class="btn" [disabled]="!company.hasValue() || issuing() || done()" (click)="review()">Revisar el borrador</button>
+  </section>
+
+  <!-- ======================= 2–3. Borrador y confirmación ======================= -->
+  @if (reviewed(); as r) {
+    <section class="step" aria-labelledby="draft-title">
+      <h2 id="draft-title" tabindex="-1" #draftTitle>2. Borrador</h2>
+      @if (summary.error(); as e) {
+        <div class="problem" role="alert">
+          <p>{{ loadError(e, 'el borrador del período') }}</p>
+          <button type="button" class="btn" (click)="summary.reload()">Volver a intentar</button>
+        </div>
+      } @else if (draft(); as d) {
+        <!-- A draft, not a ticket: dashed edge; the serrated edge is for issued certificates. -->
+        <article class="draft" aria-label="Borrador del certificado, aún no emitido">
+          <p class="draft-mark">Borrador · aún no emitido</p>
+          <p class="draft-company">{{ d.company }}</p>
+          <p class="draft-meta">RUC <span class="mono">{{ d.ruc }}</span> · {{ d.association ?? 'Asociación no disponible' }}</p>
+          <dl>
+            <div class="leader"><dt>Período</dt><dd>{{ d.label }} <span class="mono dates">({{ d.dates }})</span></dd></div>
+            <div class="leader"><dt>Kilos trazados</dt><dd class="mono">{{ d.kilos }}</dd></div>
+            <div class="leader">
+              <dt>Cumplimiento de jerarquía</dt>
+              <dd><span class="mono">{{ d.compliance }}</span> @if (!d.missingSigersol) { <app-manual-tag /> }</dd>
+            </div>
+          </dl>
+        </article>
+
+        @if (d.overlapping; as o) {
+          <div class="problem" role="alert">
+            <p>Esta empresa ya tiene el certificado de {{ o.label }}, que comparte días con {{ d.label }}. Cada día se certifica una sola vez.</p>
+            <p><a [routerLink]="['/empresas', id(), 'certificados', o.id]">Ver el certificado de {{ o.label }}</a></p>
+          </div>
+        } @else if (d.missingSigersol) {
+          <div class="problem" role="alert">
+            <p>No hay un registro SIGERSOL de la asociación que cubra todo {{ d.label }}, así que no se puede emitir.</p>
+            <p>
+              <a routerLink="/sigersol/nuevo" [queryParams]="{ asociacion: d.associationId, desde: d.period.start, hasta: d.period.end }"
+                >Registrar el dato SIGERSOL de este período</a
+              >
+            </p>
+          </div>
+        } @else if (d.zero) {
+          <div class="problem" role="alert">
+            <p>No hay recojos de la asociación registrados en {{ d.label }} (0 kg), así que no hay nada que certificar.</p>
+          </div>
+        } @else {
+          <div class="final">
+            <h2 class="step-title">3. Confirmar</h2>
+            <p class="definitive">
+              Emitir es definitivo: el certificado no se puede editar ni anular, y esta empresa no podrá tener otro que toque estos días.
+            </p>
+            <p class="hint">Las cifras se recalculan al emitir: si se registran recojos del período antes de confirmar, el certificado los incluirá.</p>
+            <label class="check">
+              <input type="checkbox" [checked]="confirmed()" (change)="setConfirmed($event)" [disabled]="issuing() || done()" />
+              Revisé la empresa, el período y las cifras
+            </label>
+            <button type="button" class="btn btn-primary" [disabled]="!confirmed() || issuing() || done()" (click)="issue()">
+              {{ issuing() || done() ? 'Emitiendo…' : 'Emitir certificado de ' + d.label }}
+            </button>
+          </div>
+        }
+
+        @if (issuedNotOpened(); as certId) {
+          <div class="problem" role="alert">
+            <p>El certificado de {{ d.label }} se emitió, pero su página no se pudo abrir.</p>
+            <p><a [routerLink]="['/empresas', id(), 'certificados', certId]">Abrir el certificado</a></p>
+          </div>
+        }
+        @if (error(); as e) {
+          <div class="problem issue-problem" role="alert" tabindex="-1" #errorBlock>
+            <p>{{ e.text }}</p>
+            @if (e.kind === 'sigersol') {
+              <p>
+                <a routerLink="/sigersol/nuevo" [queryParams]="{ asociacion: d.associationId, desde: d.period.start, hasta: d.period.end }"
+                  >Registrar el dato SIGERSOL de este período</a
+                >
+              </p>
+            } @else if (e.kind === 'overlap' || e.kind === 'uncertain') {
+              <p><a [routerLink]="['/empresas', id()]">Ver los certificados de la empresa</a></p>
+            }
+          </div>
+        }
+      } @else {
+        <div aria-hidden="true"><span class="skel wide"></span><span class="skel wide"></span></div>
+        <p class="visually-hidden" role="status">Calculando el borrador de {{ reviewingLabel() }}</p>
+      }
+    </section>
+  }
+}

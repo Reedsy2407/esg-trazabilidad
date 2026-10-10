@@ -1,0 +1,160 @@
+.step {
+  max-width: 760px;
+  margin-bottom: var(--space-6);
+}
+.sheet-flat.step {
+  padding: var(--space-5) var(--space-6);
+}
+h2 {
+  margin-bottom: var(--space-3);
+  font-size: 15px;
+}
+h2:focus {
+  outline: none;
+}
+.modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
+}
+.modes label,
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.modes input,
+.check input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+.field {
+  min-width: 0;
+}
+.field label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+.field .control {
+  max-width: 260px;
+}
+.range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-5);
+}
+.hint {
+  margin: var(--space-2) 0 var(--space-4);
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.field-error {
+  margin-bottom: var(--space-4);
+}
+
+/* The draft: paper with a dashed ink edge, never serrated (that edge is for issued tickets). */
+.draft {
+  padding: var(--space-5) var(--space-6);
+  background: var(--paper);
+  border: 2px dashed var(--ink);
+}
+.draft-mark {
+  margin: 0 0 var(--space-3);
+  font-size: 13px;
+  font-weight: 800;
+}
+.draft-company {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.draft-meta {
+  margin: var(--space-1) 0 var(--space-4);
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.draft dl {
+  margin: 0;
+  border-top: 2px dotted var(--rule-dots);
+}
+.leader {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 2px dotted var(--rule-dots);
+}
+.leader dt {
+  color: var(--ink-soft);
+}
+.leader dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+.dates {
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 400;
+}
+.problem {
+  margin-top: var(--space-4);
+}
+.issue-problem:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.final {
+  margin-top: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  background: var(--paper);
+  border-left: 4px solid var(--ink);
+}
+.step-title {
+  font-size: 15px;
+}
+.definitive {
+  margin: 0;
+  font-weight: 700;
+}
+.final .btn-primary {
+  display: flex;
+  margin-top: var(--space-3);
+}
+@media (max-width: 639.98px) {
+  .sheet-flat.step,
+  .draft,
+  .final {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+  .field .control {
+    max-width: none;
+  }
+  .range .field {
+    flex: 1 1 100%;
+  }
+  .final .btn-primary {
+    width: 100%;
+  }
+  .leader dd {
+    text-align: left;
+  }
+}
+.leader dd app-manual-tag {
+  margin-left: var(--space-2);
+}

@@ -7,12 +7,15 @@
 <div aria-live="polite" [attr.aria-busy]="company.isLoading()">
   @if (company.hasValue()) {
     @let c = company.value();
-    <header class="head">
-      <h1>{{ c.name }}</h1>
-      <p class="meta">
-        <span>RUC <span class="mono">{{ c.ruc }}</span></span>
-        <app-status-label [status]="c.status" />
-      </p>
+    <header class="head page-head with-action">
+      <div>
+        <h1>{{ c.name }}</h1>
+        <p class="meta">
+          <span>RUC <span class="mono">{{ c.ruc }}</span></span>
+          <app-status-label [status]="c.status" />
+        </p>
+      </div>
+      <a class="btn btn-primary" [routerLink]="['/empresas', c.id, 'emitir']">Emitir certificado</a>
     </header>
   } @else if (company.error(); as error) {
     <div class="problem" role="alert">

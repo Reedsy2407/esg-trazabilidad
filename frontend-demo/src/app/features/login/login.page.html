@@ -11,6 +11,7 @@
       <div class="field">
         <label for="email">Correo electrónico</label>
         <input
+          class="control"
           id="email"
           type="email"
           formControlName="email"
@@ -28,6 +29,7 @@
       <div class="field">
         <label for="password">Contraseña</label>
         <input
+          class="control"
           id="password"
           #passwordInput
           type="password"
@@ -42,7 +44,7 @@
       </div>
 
       @if (error(); as message) {
-        <p class="form-error" role="alert">{{ message }}</p>
+        <p class="problem form-problem" role="alert">{{ message }}</p>
       }
 
       <p class="lock-live" role="status" aria-live="polite">{{ lockAnnouncement() }}</p>

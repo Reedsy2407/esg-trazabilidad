@@ -29,12 +29,13 @@
       <div class="field">
         <label for="neighbor">Vecino</label>
         @if (neighbors.error(); as e) {
-          <div class="load-error" role="alert">
+          <div class="problem load-problem" role="alert">
             <p>{{ loadError(e, 'los vecinos') }}</p>
             <button type="button" class="btn" (click)="neighbors.reload()">Volver a intentar</button>
           </div>
         }
         <select
+          class="control"
           id="neighbor"
           formControlName="neighborId"
           [attr.aria-invalid]="fieldInvalid('neighborId')"
@@ -57,12 +58,13 @@
       <div class="field">
         <label for="association">Asociación</label>
         @if (associations.error(); as e) {
-          <div class="load-error" role="alert">
+          <div class="problem load-problem" role="alert">
             <p>{{ loadError(e, 'las asociaciones') }}</p>
             <button type="button" class="btn" (click)="associations.reload()">Volver a intentar</button>
           </div>
         }
         <select
+          class="control"
           id="association"
           formControlName="associationId"
           [attr.aria-invalid]="fieldInvalid('associationId')"
@@ -86,6 +88,7 @@
         <div class="field">
           <label for="date">Fecha del recojo</label>
           <input
+            class="control"
             id="date"
             type="date"
             formControlName="collectionDate"
@@ -102,7 +105,7 @@
           <input
             id="weight"
             #weightInput
-            class="mono num"
+            class="control mono num"
             type="text"
             inputmode="decimal"
             autocomplete="off"
@@ -127,7 +130,7 @@
 
       <div class="field">
         <label for="schedule">Cronograma <span class="optional">(opcional)</span></label>
-        <select id="schedule" formControlName="scheduleId" [attr.aria-busy]="schedules.isLoading()">
+        <select id="schedule" class="control" formControlName="scheduleId" [attr.aria-busy]="schedules.isLoading()">
           <option value="">
             {{ !form.controls.neighborId.value ? 'Elige primero un vecino' : schedules.isLoading() ? 'Cargando cronogramas…' : 'Sin cronograma' }}
           </option>
@@ -143,7 +146,7 @@
       </div>
 
       @if (error(); as message) {
-        <p class="form-error" role="alert">{{ message }}</p>
+        <p class="problem form-problem" role="alert">{{ message }}</p>
       }
 
       <button class="btn btn-primary submit" type="submit" [disabled]="submitting()">

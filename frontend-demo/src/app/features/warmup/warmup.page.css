@@ -13,7 +13,7 @@
   width: 100%;
   max-width: 560px;
   padding: var(--space-8);
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius-frame);
 }
@@ -22,7 +22,7 @@ h1 {
 }
 .sub {
   margin: var(--space-2) 0 var(--space-5);
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 table {
   width: 100%;
@@ -37,12 +37,12 @@ td {
 }
 th {
   text-align: left;
-  font-weight: 500;
+  font-weight: 600;
 }
 .service {
   display: block;
   white-space: nowrap;
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 13px;
   font-weight: 400;
 }
@@ -60,7 +60,7 @@ th {
 .time {
   width: 64px;
   text-align: right;
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 /* Status colors from DESIGN-BRIEF.md's palette (user decision after the F1
    screenshot review): ready #1A7A48, waking #9A5B00, no answer #B3261E, all
@@ -80,7 +80,7 @@ tr[data-status='ready'] .mark {
 }
 tr[data-status='unresponsive'] .status {
   color: var(--vencido);
-  font-weight: 500;
+  font-weight: 600;
 }
 @keyframes breathe {
   from {

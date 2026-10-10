@@ -32,7 +32,7 @@ import { SessionService } from '../core/auth/session.service';
       left: var(--space-4);
       top: -100px;
       padding: var(--space-2) var(--space-3);
-      background: var(--surface);
+      background: var(--paper);
       border: 1px solid var(--line-input);
     }
     .skip:focus { top: var(--space-2); }
@@ -43,11 +43,11 @@ import { SessionService } from '../core/auth/session.service';
       justify-content: space-between;
       gap: var(--space-3);
       padding: var(--space-3) var(--space-6);
-      background: var(--surface);
+      background: var(--paper);
       border-bottom: 1px solid var(--line);
     }
     .brand {
-      color: var(--petrol);
+      color: var(--accent);
       font-weight: 600;
       font-size: 16px;
       text-decoration: none;
@@ -63,22 +63,22 @@ import { SessionService } from '../core/auth/session.service';
       display: inline-flex;
       align-items: center;
       min-height: 44px;
-      color: var(--muted);
+      color: var(--ink-soft);
       text-decoration: none;
       border-bottom: 2px solid transparent;
     }
     nav a:hover { color: var(--ink); }
     nav a.current {
       color: var(--ink);
-      font-weight: 500;
-      border-bottom-color: var(--petrol);
+      font-weight: 600;
+      border-bottom-color: var(--accent);
     }
     .user {
       display: flex;
       align-items: center;
       gap: var(--space-4);
       font-size: 14px;
-      color: var(--muted);
+      color: var(--ink-soft);
     }
     .email { overflow-wrap: anywhere; }
     main {

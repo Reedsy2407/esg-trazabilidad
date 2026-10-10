@@ -41,7 +41,7 @@
           <p class="empty">Aún no hay certificados emitidos, así que no hay períodos que graficar.</p>
         }
       } @else if (certificates.error()) {
-        <p class="block-error">La gráfica no está disponible porque no se pudieron cargar los certificados.</p>
+        <p class="problem">La gráfica no está disponible porque no se pudieron cargar los certificados.</p>
       } @else {
         <div class="bone chart" aria-hidden="true"></div>
       }
@@ -63,7 +63,7 @@
       } @else if (certificates.hasValue() && latest() === null) {
         <p class="empty">Aún no hay certificados.</p>
       } @else if (certificates.error()) {
-        <p class="block-error">El resumen no está disponible porque no se pudieron cargar los certificados.</p>
+        <p class="problem">El resumen no está disponible porque no se pudieron cargar los certificados.</p>
       } @else {
         <div aria-hidden="true">
           <span class="bone"></span><span class="bone"></span><span class="bone"></span>

@@ -15,7 +15,7 @@ h1 {
   flex-wrap: wrap;
   gap: var(--space-4);
   margin: var(--space-2) 0 0;
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 h2 {
   font-size: 16px;
@@ -39,7 +39,7 @@ h2 {
 .panel {
   min-width: 0;
   padding: var(--space-4);
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius-frame);
 }
@@ -60,7 +60,7 @@ h2 {
   border-bottom: 0;
 }
 .lines dt {
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 .lines dd {
   margin: 0;
@@ -71,17 +71,17 @@ h2 {
 table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--line);
 }
 th {
   height: 44px;
   padding: 0 var(--space-4);
-  background: var(--paper);
+  background: var(--ground);
   border-bottom: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   text-align: left;
 }
 td {
@@ -108,7 +108,7 @@ tbody tr:last-child td {
 }
 .card {
   padding: var(--space-3) var(--space-4);
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius-data);
 }
@@ -125,7 +125,7 @@ a.card:hover {
   background: var(--row-hover);
 }
 a.card:focus-visible {
-  outline: 2px solid var(--petrol);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 /* Table rows: the period's link stretches over the whole row. */
@@ -148,18 +148,18 @@ tbody tr:has(.row-link):hover {
   outline: none;
 }
 tbody tr:has(.row-link:focus-visible) {
-  outline: 2px solid var(--petrol);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 .chev {
   width: 48px;
   text-align: right;
   vertical-align: middle;
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 .card-title {
   display: block;
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: var(--space-2);
 }
 .card dl {
@@ -173,7 +173,7 @@ tbody tr:has(.row-link:focus-visible) {
   padding: var(--space-1) 0;
 }
 .card dt {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
 }
 .card dd {
@@ -189,23 +189,19 @@ tbody tr:has(.row-link:focus-visible) {
 }
 .foot {
   margin: var(--space-3) 0 0;
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
 }
 
 .empty {
   margin: 0;
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 .empty.boxed {
   padding: var(--space-6) var(--space-4);
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius-data);
-}
-.block-error {
-  margin: 0;
-  color: var(--vencido);
 }
 
 .bone {

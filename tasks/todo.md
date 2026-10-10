@@ -427,7 +427,19 @@
 - [ ] F5: Asociaciones (lista con estado ACTIVE/SUSPENDED) — recortada de la tanda F3–F6 (2026-10-08): queda pendiente tras F6; `GET /associations` ya se usa en F4
 - [x] F6: Despliegue del frontend (https://esg-frontend-egcf.onrender.com) + `CORS_ALLOWED_ORIGINS` en esg-shared + Playwright en CI — ver tasks/LEARNINGS.md#frontend. Límite: ficha, certificado y descargas no se pudieron probar en vivo porque producción no tiene empresas; cubiertas por 40 Playwright en CI y la comprobación local de la build de producción bajo la misma CSP
 
+## Rediseño visual: dirección A "Ticket de balanza" (elegida 2026-10-10)
+
+- [x] R1: Tokens y tipografía (Archivo + Martian Mono autoalojadas, controles propios, un bloque de error, deshabilitado, cifras tabulares)
+- [ ] R2: Shell y navegación (foco ≥ 3:1 sobre la barra oscura)
+- [ ] R3: Login (ticket + titular centrados como conjunto; impresión una vez)
+- [ ] R4: Empresas y ficha con el gráfico (talones dentados, resumen dentado, tabla plana, barras legibles)
+- [ ] R5: Certificado (ticket dentado, h1 sin rótulo encima, impresión una vez)
+- [ ] R6: Registrar recojo (formulario plano)
+- [ ] R7: Movimiento, bundle, CSP en build de producción, docs de diseño y TOOLING.md
+
 ### Pendientes (tareas aparte)
+
+- [ ] Módulo de cobertura completa, ideas de comportamiento de la crítica de Impeccable (fuera del rediseño visual): buscador de vecino (combobox), recordar la última asociación, bitácora de recojos de la sesión
 
 - [ ] Datos de demo en producción (empresa + sincronización SIGERSOL + recojos + certificado emitido), con script reproducible, cada escritura aprobada por Angel; tarea aparte
 - [ ] F5: Asociaciones (ver arriba)

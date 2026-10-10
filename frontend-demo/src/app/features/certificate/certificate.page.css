@@ -8,7 +8,7 @@
   max-width: 760px;
   margin: 0 auto;
   padding: var(--space-8) var(--space-12);
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--ink);
   border-radius: var(--radius-data);
 }
@@ -18,7 +18,7 @@ h1 {
   gap: var(--space-2);
 }
 .doc-type {
-  color: var(--petrol);
+  color: var(--accent);
   font-size: 16px;
   font-weight: 600;
 }
@@ -29,7 +29,7 @@ h1 {
 }
 .ruc {
   margin: var(--space-2) 0 0;
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 .rule {
   margin: var(--space-6) 0;
@@ -48,7 +48,7 @@ h1 {
   margin-top: var(--space-6);
 }
 dt {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
   margin-bottom: var(--space-1);
 }
@@ -57,9 +57,9 @@ dd {
   overflow-wrap: anywhere;
 }
 .figures dd {
-  color: var(--petrol);
+  color: var(--accent);
   font-size: 34px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.15;
 }
 
@@ -80,7 +80,7 @@ dd {
 }
 .code-label {
   display: block;
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
 }
 code {
@@ -92,7 +92,7 @@ code {
 .copy-status {
   min-height: 1.5em;
   margin: var(--space-1) 0 0;
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
 }
 
@@ -104,7 +104,7 @@ code {
 }
 .hint {
   margin: var(--space-3) 0 0;
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
 }
 .problem {

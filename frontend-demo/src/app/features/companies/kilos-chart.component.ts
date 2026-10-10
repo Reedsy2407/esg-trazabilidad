@@ -68,9 +68,9 @@ const MARGINS = { wide: { left: 64, right: 8 }, compact: { left: 112, right: 44 
     :host { display: block; position: relative; }
     svg { display: block; }
     .grid { stroke: var(--line); stroke-width: 1; }
-    .bar { fill: var(--petrol); }
-    text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
-    .label.current { fill: var(--ink); font-weight: 500; }
+    .bar { fill: var(--accent); }
+    text { font-family: var(--font-mono); font-size: 11px; fill: var(--ink-soft); }
+    .label.current { fill: var(--ink); font-weight: 600; }
     /* Phones: the 640-unit drawing shrinks about 2x, so its text doubles to stay
        legible; skipLabel() then keeps one period label in three. */
     @media (max-width: 639.98px) {

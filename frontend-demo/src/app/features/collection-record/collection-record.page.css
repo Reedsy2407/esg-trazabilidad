@@ -8,13 +8,13 @@ h1 {
 }
 .lead {
   margin: var(--space-1) 0 0;
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 
 .sheet {
   max-width: 640px;
   padding: var(--space-6);
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius-frame);
 }
@@ -32,56 +32,31 @@ label {
   display: block;
   margin-bottom: var(--space-2);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
 }
 .optional {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-weight: 400;
-}
-input,
-select {
-  display: block;
-  width: 100%;
-  height: 44px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--line-input);
-  border-radius: var(--radius-control);
-  background: var(--surface);
 }
 input.num {
   text-align: right;
 }
-[aria-invalid='true'] {
-  border-color: var(--vencido);
-}
 .hint {
   margin: var(--space-2) 0 0;
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
 }
-.field-error,
-.form-error {
-  margin: var(--space-2) 0 0;
-  color: var(--vencido);
-  font-size: 14px;
-}
-.form-error {
+.form-problem {
   margin: 0 0 var(--space-4);
 }
-.load-error {
+.load-problem {
   margin-bottom: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--vencido);
-  border-radius: var(--radius-data);
-}
-.load-error p {
-  margin: 0 0 var(--space-2);
 }
 
-/* Petrol, not --vigente: that green belongs to certification states (brief). */
+/* Ink and cobalt, not --vigente: that green belongs to certification states (brief). */
 .saved {
   padding: var(--space-4);
-  border: 1px solid var(--petrol);
+  border: 1px solid var(--accent);
   border-radius: var(--radius-data);
 }
 .saved p {
@@ -89,11 +64,11 @@ input.num {
   overflow-wrap: anywhere;
 }
 .saved-title {
-  color: var(--petrol);
+  color: var(--accent);
   font-weight: 600;
 }
 .saved-code {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
 }
 .saved-code code {

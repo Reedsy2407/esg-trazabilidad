@@ -8,22 +8,22 @@ h1 {
 }
 .sub {
   margin: var(--space-1) 0 0;
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--line);
 }
 th {
   height: 44px;
   padding: 0 var(--space-4);
-  background: var(--paper);
+  background: var(--ground);
   border-bottom: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   text-align: left;
 }
 td {
@@ -44,7 +44,7 @@ tbody tr:has(.row-link):hover {
 }
 .row-link {
   color: var(--ink);
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
 }
 .row-link::after {
@@ -56,14 +56,14 @@ tbody tr:has(.row-link):hover {
   outline: none;
 }
 tbody tr:has(.row-link:focus-visible) {
-  outline: 2px solid var(--petrol);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 .chev {
   width: 48px;
   text-align: right;
   vertical-align: middle;
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 .chev app-chevron-icon {
   vertical-align: middle;
@@ -72,7 +72,7 @@ tbody tr:has(.row-link:focus-visible) {
   height: auto;
   padding: var(--space-8) var(--space-4);
   white-space: normal;
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 .bone {
   display: block;
@@ -106,7 +106,7 @@ tbody tr:has(.row-link:focus-visible) {
 }
 .count {
   margin: 0;
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
 }
 .pages {
@@ -115,7 +115,7 @@ tbody tr:has(.row-link:focus-visible) {
   gap: var(--space-3);
 }
 .where {
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
 }
 /* Wide screens: the table. Its own scroll box is only a safety net for very
@@ -138,7 +138,7 @@ tbody tr:has(.row-link:focus-visible) {
   display: block;
   min-height: 44px;
   padding: var(--space-3) var(--space-4);
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius-data);
   color: var(--ink);
@@ -151,7 +151,7 @@ a.card:hover {
   background: var(--row-hover);
 }
 a.card:focus-visible {
-  outline: 2px solid var(--petrol);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 .card-top {
@@ -161,7 +161,7 @@ a.card:focus-visible {
   gap: var(--space-3);
 }
 .card-name {
-  font-weight: 500;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .card-top app-status-label {
@@ -171,7 +171,7 @@ a.card:focus-visible {
 .card-ruc {
   display: block;
   margin-top: var(--space-1);
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14px;
 }
 .card.skeleton .bone + .bone {
@@ -179,9 +179,9 @@ a.card:focus-visible {
 }
 .cards .empty {
   padding: var(--space-6) var(--space-4);
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--ink-soft);
 }
 
 @media (max-width: 639.98px) {

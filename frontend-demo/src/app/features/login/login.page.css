@@ -1,33 +1,71 @@
+/* The login is the most branded screen: a ticket hanging from the printer's head on the
+   concrete floor, beside one plain statement of what the tool does. The ticket and the
+   statement are centred together, as one set. */
 .page {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-8) var(--space-4);
+  min-height: 100svh; /* phones with a dynamic toolbar: centre in the visible area */
+  display: grid;
+  align-content: center;
+  padding: var(--space-8) var(--space-8);
 }
-.card {
+.set {
+  display: grid;
+  grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-12) 72px;
   width: 100%;
-  max-width: 420px;
-  padding: var(--space-8);
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-frame);
+  max-width: 1120px;
+  margin: 0 auto;
+}
+.printer {
+  height: 22px;
+  margin: 0 -10px;
+  background: var(--ink);
+}
+/* Feeds out of the head once (per page load), in printer-like steps; already printed when
+   motion is reduced. During those 0.9 s a click on a still-hidden part goes to the page
+   behind, which has nothing to activate. */
+.card {
+  padding-left: var(--space-8);
+  padding-right: var(--space-8);
+  animation: feed 900ms steps(18, end) both;
+}
+@keyframes feed {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
 }
 h1 {
-  color: var(--accent);
-  font-size: 22px;
+  color: var(--ink);
+  font-size: 24px;
+  text-align: center;
 }
 .lead {
-  margin: var(--space-1) 0 var(--space-5);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--line);
+  margin: var(--space-2) 0 0;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.claim {
+  margin: 0;
+  max-width: 13ch;
+  font-size: clamp(44px, 6vw, 76px);
+  font-weight: 800;
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.claim span {
+  display: block;
   color: var(--ink-soft);
 }
 .notice {
   margin: 0 0 var(--space-4);
   padding: var(--space-3);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-data);
+  border: 2px solid var(--accent);
 }
 .field {
   margin-bottom: var(--space-4);
@@ -59,8 +97,32 @@ label {
   width: 100%;
   margin-top: var(--space-2);
 }
+/* Phones: the ticket first (signing in is the task), the statement after it, smaller. */
+@media (max-width: 900px) {
+  .page {
+    padding: var(--space-6) var(--space-4);
+  }
+  .set {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: var(--space-8);
+  }
+  .printout {
+    width: 100%;
+    max-width: 440px;
+  }
+  .claim {
+    max-width: 440px;
+    width: 100%;
+    font-size: 34px;
+  }
+}
 @media (max-width: 400px) {
   .card {
-    padding: var(--space-5);
+    padding-left: var(--space-5);
+    padding-right: var(--space-5);
+  }
+  .printer {
+    margin: 0 -6px;
   }
 }

@@ -431,7 +431,7 @@
 
 - [x] R1: Tokens y tipografía (Archivo + Martian Mono autoalojadas, controles propios, un bloque de error, deshabilitado, cifras tabulares)
 - [x] R2: Shell y navegación (foco ≥ 3:1 sobre la barra oscura)
-- [ ] R3: Login (ticket + titular centrados como conjunto; impresión una vez)
+- [x] R3: Login (ticket + titular centrados como conjunto; impresión una vez)
 - [ ] R4: Empresas y ficha con el gráfico (talones dentados, resumen dentado, tabla plana, barras legibles)
 - [ ] R5: Certificado (ticket dentado, h1 sin rótulo encima, impresión una vez)
 - [ ] R6: Registrar recojo (formulario plano)

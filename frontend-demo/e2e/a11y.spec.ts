@@ -147,3 +147,25 @@ test('a11y: keyboard focus on the dark bar is visible (outline at least 3:1 agai
     expect(ring.bottom, `${name}: ring bottom`).toBeLessThanOrEqual(band.bottom);
   }
 });
+
+for (const width of [360, 768, 1280]) {
+  test(`login at ${width} px: no sideways scrolling, the ticket and statement centred as a set, AXE clean`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await fakeBackend(page);
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Trazabilidad ESG' })).toBeVisible();
+
+    const layout = await page.evaluate(() => {
+      const set = document.querySelector('.set')!.getBoundingClientRect();
+      return { scroll: document.documentElement.scrollWidth, inner: innerWidth, top: set.top, bottom: innerHeight - set.bottom, tall: set.height > innerHeight };
+    });
+    expect(layout.scroll).toBeLessThanOrEqual(layout.inner);
+    // AXE judges the printed ticket, not a half-revealed one.
+    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+    if (!layout.tall) {
+      // Vertically centred as one set: equal room above and below (within a few px).
+      expect(Math.abs(layout.top - layout.bottom)).toBeLessThanOrEqual(4);
+    }
+    await checkA11y(page, `login ${width}`);
+  });
+}

@@ -18,7 +18,9 @@
 #    build plus a cold start of up to ~2 min.
 #
 # Prints one line per service and a final CI line; exits non-zero if anything
-# fails. It never prints tokens or environment variables.
+# fails. When a service is still on an older commit that <sha> didn't touch,
+# it suggests a Manual Deploy (see docs/deployment.md, 5b). It never prints
+# tokens or environment variables.
 set -uo pipefail
 
 REPO="${VERIFY_REPO:-Reedsy2407/esg-trazabilidad}"
@@ -133,6 +135,12 @@ probe() { # name url expected outfile pathspecs...
     if [ $((SECONDS - t0)) -ge $SERVICE_TIMEOUT ]; then
       printf '%-10s FAIL %4ss  serving %s, expected %s%s\n' "$name" "$((SECONDS - t0))" \
         "${served:0:7}" "${expected:0:7}" "${live:+ (liveness $live)}" >"$out"
+      # Still on an older commit, and <sha> itself didn't touch this service:
+      # the multi-commit push case Render may skip (docs/deployment.md, 5b).
+      if [ "$expected" != "$sha" ] &&
+        git -C "$root" merge-base --is-ancestor "$served" "$expected" 2>/dev/null; then
+        touch "$out.stale"
+      fi
       return
     fi
     sleep "$INTERVAL"
@@ -163,4 +171,12 @@ for name in "${names[@]}"; do
   grep -q " OK " "$tmp/$name" || status=1
 done
 echo "$ci_line"
+stale=()
+for name in "${names[@]}"; do [ -e "$tmp/$name.stale" ] && stale+=("$name"); done
+if [ "${#stale[@]}" -gt 0 ]; then
+  echo "hint: ${stale[*]} still on an older commit. ${sha:0:7} touches none of their buildFilter"
+  echo "      paths, and Render may skip the auto-deploy when a push's last commit doesn't match,"
+  echo "      even if earlier commits in it do. Use Manual Deploy > Deploy latest commit for them"
+  echo "      in Render, then run this script again (docs/deployment.md, 5b)."
+fi
 exit $status

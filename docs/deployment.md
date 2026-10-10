@@ -85,6 +85,8 @@ It is never logged again, and there is no change-password endpoint yet. The boot
 
 `scripts/verify-deploy.sh [sha]` (bash, needs `gh` logged in with read access to Actions) waits for CI on the commit, then for each service to serve the commit it should. It reads the deployed commit from the public `GET /actuator/info` (the static frontend: `GET /version.json`) (`{"commit": "<sha>"}`, from Render's `RENDER_GIT_COMMIT`). The expected commit per service is the newest one that touched its `buildFilter` paths, so a service a commit didn't touch isn't expected to redeploy. It allows up to 10 minutes for CI and up to 10 minutes per service, which covers the build and a cold start.
 
+**A push of several commits can leave a service undeployed.** Render seems to decide the auto-deploy from the push's last commit: if that commit touches none of a service's `buildFilter` paths (for example a final `docs/`-only commit), the service may not redeploy, even when earlier commits in the same push changed it. Seen on 2026-10-10: a push ending in a `docs/` commit left auth-service, reporting-service and the frontend on the previous commit. The script then fails those services and prints a hint naming them. The fix is **Manual Deploy → Deploy latest commit** for each of them in Render, then run the script again. To avoid it, make a service-touching commit the last one of the push, or push it on its own.
+
 ## 6. Smoke check
 
 Run this against the public URLs, `https://<service>.onrender.com`. The commands are for **bash** (item 3's `read -s` isn't POSIX `sh`). Set these first, in your own shell only:

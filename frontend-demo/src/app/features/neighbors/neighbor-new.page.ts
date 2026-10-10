@@ -26,7 +26,6 @@ const optional = (value: string) => (value.trim() === '' ? null : value.trim());
   selector: 'app-neighbor-new-page',
   imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './neighbor-new.page.html',
-  styleUrl: './neighbor-form.css',
 })
 export class NeighborNewPage {
   private readonly api = inject(BackendApi);

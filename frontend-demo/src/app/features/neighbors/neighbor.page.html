@@ -1,8 +1,7 @@
 <a class="back-link" routerLink="/vecinos">Volver a vecinos</a>
 
-@if (registered && neighbor.hasValue()) {
-  <p class="done" role="status">Vecino registrado. Ya puedes agregarle cronogramas y recojos.</p>
-}
+<!-- Always in the DOM (a live region inserted together with its text isn't reliably announced). -->
+<p class="done" role="status" [class.visually-hidden]="!(registered && neighbor.hasValue())">{{ registered && neighbor.hasValue() ? 'Vecino registrado. Ya puedes agregarle cronogramas y recojos.' : '' }}</p>
 
 <div [attr.aria-busy]="neighbor.isLoading()">
   @if (neighbor.hasValue()) {

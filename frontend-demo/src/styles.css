@@ -598,3 +598,48 @@ a.entry:hover {
     display: block;
   }
 }
+
+/* Flat paper form (v2 screens), the same vocabulary as Registrar recojo. */
+.form-sheet {
+  max-width: 760px;
+  padding: var(--space-8);
+  background: var(--paper);
+}
+.form-sheet .field {
+  margin-bottom: var(--space-5);
+  min-width: 0;
+}
+.form-sheet .pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-5);
+}
+.form-sheet label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+.form-sheet .optional {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+.form-sheet .hint {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.form-sheet .form-problem {
+  margin: 0 0 var(--space-4);
+}
+@media (max-width: 639.98px) {
+  .form-sheet {
+    padding: var(--space-5) var(--space-4);
+  }
+  .form-sheet .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .form-sheet .submit {
+    width: 100%;
+  }
+}

@@ -26,6 +26,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/companies/companies.page').then((m) => m.CompaniesPage),
       },
       {
+        path: 'empresas/nueva',
+        title: 'Registrar empresa · Trazabilidad ESG',
+        loadComponent: () => import('./features/companies/company-new.page').then((m) => m.CompanyNewPage),
+      },
+      {
         path: 'empresas/:id',
         title: 'Empresa · Trazabilidad ESG',
         loadComponent: () => import('./features/companies/company.page').then((m) => m.CompanyPage),

@@ -21,6 +21,15 @@ function originPage(): number | null {
   return typeof pagina === 'number' && Number.isInteger(pagina) && pagina > 1 ? pagina : null;
 }
 
+function justRegistered(): boolean {
+  const state: unknown = history.state;
+  if (typeof state !== 'object' || state === null || (state as Record<string, unknown>)['registrada'] !== true) {
+    return false;
+  }
+  history.replaceState({ ...(state as Record<string, unknown>), registrada: false }, '');
+  return true;
+}
+
 /**
  * Ficha de empresa (DESIGN-BRIEF.md, round-3 rules): header, period summary,
  * one 12-period chart, certificates table. Each block loads on its own, so a
@@ -43,6 +52,8 @@ export class CompanyPage {
   readonly id = input.required<string>();
 
   protected readonly backParams = { pagina: originPage() };
+  /** Opened right after registering it (router state from CompanyNewPage); dropped so a reload doesn't repeat it. */
+  protected readonly registered = justRegistered();
 
   protected readonly company = rxResource({
     params: () => this.id(),

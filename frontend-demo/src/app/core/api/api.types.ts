@@ -26,6 +26,17 @@ export interface TrackedCompany {
 }
 
 /**
+ * reporting-service RegisterTrackedCompanyRequest: name @NotBlank, ruc exactly 11 digits,
+ * associationId @NotNull (not checked against recycler-service). RPT-002 (409) for a RUC already
+ * registered. Not the same as collection-service's /companies, which this app doesn't use.
+ */
+export interface RegisterTrackedCompanyRequest {
+  readonly name: string;
+  readonly ruc: string;
+  readonly associationId: string;
+}
+
+/**
  * reporting-service EsgCertificateResponse. LocalDate fields arrive as
  * "yyyy-MM-dd", the Instant as ISO-8601 UTC, BigDecimals as JSON numbers.
  * hierarchyCompliancePercent is 0-100. A certificate has no status: the

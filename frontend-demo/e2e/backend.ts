@@ -118,6 +118,8 @@ export interface BackendOptions {
   recordsStatus?: number;
   /** POST /neighbors answers this instead of 201 (code null: a bare gateway answer). */
   neighborFailure?: { status: number; code: string | null };
+  /** POST /tracked-companies answers this instead of 201 (code null: a bare gateway answer). */
+  companyFailure?: { status: number; code: string | null };
   /** Every write (POST/PATCH) the fake services received, in order. */
   writes?: { method: string; path: string; body: unknown }[];
   /** Every POST body received by collection-records, for the test to inspect. */
@@ -478,6 +480,9 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');
   });
 
+  // Tracked companies with state: one registered by a test is listed and opens afterwards.
+  const companies: { id: string; name: string; ruc: string; associationId: string; status: string }[] = COMPANIES.map((c) => ({ ...c }));
+
   await page.route('**/svc/reporting/tracked-companies**', async (route) => {
     const authorization = route.request().headers()['authorization'];
     if (options.rejectTokens || authorization === undefined || !authorization.startsWith('Bearer ')) {
@@ -487,6 +492,26 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     const url = new URL(route.request().url());
     const [, id, sub, certId, file] =
       /\/tracked-companies(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(url.pathname) ?? [];
+    if (id === undefined && route.request().method() === 'POST') {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      options.writes?.push({ method: 'POST', path: url.pathname, body });
+      if (options.companyFailure !== undefined) {
+        return options.companyFailure.code === null
+          ? gatewayError(route, options.companyFailure.status)
+          : problem(route, options.companyFailure.status, options.companyFailure.code, 'Rechazado');
+      }
+      const { name, ruc, associationId } = body as { name?: unknown; ruc?: unknown; associationId?: unknown };
+      if (typeof name !== 'string' || name.trim() === '' || typeof ruc !== 'string' || !/^\d{11}$/.test(ruc) || typeof associationId !== 'string') {
+        return problem(route, 400, 'VALIDATION_ERROR', 'name, ruc o associationId no válidos');
+      }
+      if (companies.some((c) => c.ruc === ruc)) {
+        return problem(route, 409, 'RPT-002', 'Ya existe una empresa rastreada con ese RUC');
+      }
+      // Like the real service: associationId is not checked against recycler-service.
+      const company = { id: `0192f3a8-9000-7000-8000-${String(companies.length + 1).padStart(12, '0')}`, name, ruc, associationId, status: 'ACTIVE' };
+      companies.push(company);
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(company) });
+    }
     if (id === undefined) {
       const mode = options.companyLists?.shift() ?? 'full';
       if (options.companyListDelayMs) {
@@ -495,10 +520,10 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
       if (mode === 'fail') {
         return problem(route, 503, 'X-503', 'Servicio no disponible');
       }
-      const content = mode === 'empty' ? [] : COMPANIES;
+      const content = mode === 'empty' ? [] : [...companies].sort((a, b) => a.name.localeCompare(b.name));
       return json({ content, page: 0, size: 20, totalElements: content.length, totalPages: content.length === 0 ? 0 : 1 });
     }
-    const company = COMPANIES.find((c) => c.id === id);
+    const company = companies.find((c) => c.id === id);
     if (company === undefined) {
       return problem(route, 404, 'RPT-001', 'Empresa no encontrada en reporting-service');
     }

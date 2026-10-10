@@ -260,3 +260,11 @@ tbody tr:has(.row-link:focus-visible) {
     opacity: 1;
   }
 }
+
+.done {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-weight: 600;
+}

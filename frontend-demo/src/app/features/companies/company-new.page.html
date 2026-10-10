@@ -1,0 +1,95 @@
+<a class="back-link" routerLink="/empresas">Volver a empresas</a>
+
+<header class="page-head">
+  <h1>Registrar empresa</h1>
+  <p class="sub">La empresa a la que se trazarán los recojos de una asociación, para emitirle certificados.</p>
+</header>
+
+<form class="form-sheet" [formGroup]="form" (ngSubmit)="submit()" novalidate #formElement>
+  <div class="field">
+    <label for="name">Razón social</label>
+    <input
+      id="name"
+      class="control"
+      formControlName="name"
+      autocomplete="organization"
+      [attr.aria-invalid]="invalid('name')"
+      [attr.aria-describedby]="invalid('name') ? 'name-error' : null"
+    />
+    @if (invalid('name')) {
+      <p class="field-error" id="name-error">Escribe la razón social de la empresa.</p>
+    }
+  </div>
+
+  <div class="field ruc">
+    <label for="ruc">RUC</label>
+    <input
+      id="ruc"
+      class="control mono"
+      formControlName="ruc"
+      inputmode="numeric"
+      autocomplete="off"
+      maxlength="14"
+      (blur)="normalizeRuc()"
+      [attr.aria-invalid]="invalid('ruc')"
+      [attr.aria-describedby]="invalid('ruc') ? 'ruc-hint ruc-error' : 'ruc-hint'"
+    />
+    <p class="hint" id="ruc-hint">11 dígitos. Si lo pegas con espacios, guiones o puntos, se quitan.</p>
+    @if (invalid('ruc')) {
+      <p class="field-error" id="ruc-error">
+        @if (form.controls.ruc.hasError('required')) {
+          Escribe el RUC de la empresa.
+        } @else if (rucHasOtherCharacters()) {
+          El RUC lleva solo números: quita las letras u otros signos.
+        } @else {
+          El RUC debe tener exactamente 11 dígitos (tiene {{ form.controls.ruc.value.length }}).
+        }
+      </p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="association">Asociación que recoge sus residuos</label>
+    @if (associations.error(); as e) {
+      <div class="problem load-problem" role="alert">
+        <p>{{ loadError(e) }}</p>
+        <button type="button" class="btn" (click)="associations.reload()">Volver a intentar</button>
+      </div>
+    }
+    <select
+      id="association"
+      class="control"
+      formControlName="associationId"
+      [attr.aria-busy]="associations.isLoading()"
+      [attr.aria-invalid]="invalid('associationId')"
+      [attr.aria-describedby]="invalid('associationId') ? 'association-hint association-error' : 'association-hint'"
+    >
+      <option value="">{{ associations.isLoading() ? 'Cargando asociaciones…' : 'Elige una asociación' }}</option>
+      @for (a of associationOptions(); track a.id) {
+        <option [value]="a.id">{{ a.label }}</option>
+      }
+    </select>
+    <p class="hint" id="association-hint">
+      Sus certificados sumarán los recojos de esta asociación.
+      @if (associationsTruncated()) {
+        Se muestran las primeras {{ associationOptions().length }} por nombre.
+      }
+    </p>
+    @if (invalid('associationId')) {
+      <p class="field-error" id="association-error">Elige la asociación.</p>
+    }
+  </div>
+
+  @if (error(); as message) {
+    <div class="problem form-problem" role="alert">
+      <p>{{ message }}</p>
+      @if (duplicateRuc()) {
+        <p><a routerLink="/empresas">Ver la lista de empresas</a></p>
+      }
+    </div>
+  }
+
+  <button class="btn btn-primary submit" type="submit" [disabled]="submitting()">
+    {{ submitting() ? 'Registrando…' : 'Registrar empresa' }}
+  </button>
+</form>

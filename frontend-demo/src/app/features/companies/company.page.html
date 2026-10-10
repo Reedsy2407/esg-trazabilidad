@@ -1,5 +1,8 @@
 <a class="back" routerLink="/empresas" [queryParams]="backParams">Volver a empresas</a>
 
+<!-- Always in the DOM (a live region inserted together with its text isn't reliably announced). -->
+<p class="done" role="status" [class.visually-hidden]="!(registered && company.hasValue())">{{ registered && company.hasValue() ? 'Empresa registrada.' : '' }}</p>
+
 <!-- Header: the only block that decides whether the page exists at all. -->
 <div aria-live="polite" [attr.aria-busy]="company.isLoading()">
   @if (company.hasValue()) {

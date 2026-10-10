@@ -19,6 +19,7 @@ import {
   Neighbor,
   NeighborStatus,
   Page,
+  RegisterTrackedCompanyRequest,
   ScheduleTransition,
   TrackedCompany,
 } from './api.types';
@@ -49,6 +50,11 @@ export class BackendApi {
 
   trackedCompany(id: string): Observable<TrackedCompany> {
     return this.http.get<TrackedCompany>(`${reporting}/tracked-companies/${encodeURIComponent(id)}`);
+  }
+
+  /** 201 with the company, always ACTIVE; RPT-002 for a RUC already registered. Not idempotent. */
+  registerTrackedCompany(request: RegisterTrackedCompanyRequest): Observable<TrackedCompany> {
+    return this.http.post<TrackedCompany>(`${reporting}/tracked-companies`, request);
   }
 
   /** Most recently issued first, 20 per page (backend default). */

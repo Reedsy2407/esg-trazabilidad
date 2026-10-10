@@ -1,6 +1,9 @@
-<header class="head">
-  <h1>Empresas</h1>
-  <p class="sub">Abre una empresa para ver sus kilos trazados y sus certificados.</p>
+<header class="head page-head with-action">
+  <div>
+    <h1>Empresas</h1>
+    <p class="sub">Abre una empresa para ver sus kilos trazados y sus certificados.</p>
+  </div>
+  <a class="btn btn-primary" routerLink="/empresas/nueva">Registrar empresa</a>
 </header>
 
 <!-- Always in the DOM (a live region that appears with its text isn't reliably announced). -->
@@ -33,7 +36,7 @@
         </li>
       } @empty {
         <li class="empty sheet-flat">
-          Todavía no hay empresas registradas para trazabilidad.
+          Todavía no hay empresas registradas para trazabilidad. <a routerLink="/empresas/nueva">Registra la primera</a>.
           <!-- aria-disabled, not disabled: a disabled button would drop the focus and its new
                label might go unread; refresh() ignores clicks while it runs. -->
           <button type="button" class="btn-link" [attr.aria-disabled]="refreshing()" (click)="refresh()">

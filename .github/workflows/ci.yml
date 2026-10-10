@@ -55,6 +55,19 @@ jobs:
       - name: Scan history for secrets (gitleaks)
         run: gitleaks git . --config .gitleaks.toml --redact --no-banner --exit-code 1
 
+  # scripts/demo-seed: unit tests with a fake fetch (no network, no dependencies, a few seconds).
+  demo-seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Demo seed unit tests
+        run: node --test scripts/demo-seed/seed.test.mjs
+
   # Which parts of the repo this push or PR touched. Native git, no third-party
   # action. An unknown base (first push, force push) counts as "changed".
   changes:

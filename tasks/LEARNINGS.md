@@ -1917,3 +1917,10 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 - `mvn -B -pl collection-service verify` en worktree limpio (compose propio del worktree, levantado solo para esta corrida): BUILD SUCCESS, 87 tests (unit+IT), 0 fallos.
 - Frontend: `npm test` (Vitest) 195/195 verde; `npx playwright test` 126/126 verde (contra un `ng serve` real, backend mockeado con `page.route` por diseño de la suite).
 - Nada que corregir: los dos commits de V3-2.6 (`501db2e`, `6aac591`) ya dejaron todo verde; este checkpoint solo lo confirmó de nuevo en limpio.
+
+### Checkpoint V3-M2 (segunda corrida, tras sincronizar con main)
+
+- Antes de sincronizar: en `NeighborDeletionApiIT`/`NeighborStatusApiIT` se reemplazó el `TOKEN_SUBJECT` local (literal duplicado del UUID de prueba) por la constante pública nueva `TestJwtTokens.SUBJECT`, para que las tres copias no puedan desalinearse (`c591689`).
+- `main` traía mergeados M0 (#23), M1/#26, el ADR migration (#27) y el export de OpenAPI del portal (#29); merge de `origin/main` en `v3/m2` con un solo conflicto en `tasks/todo.md`, resuelto conservando ambos lados (`4b6a54a`).
+- Spec de collection-service regenerado (`mvn -pl collection-service -am verify -Dit.test=OpenApiExportIT,OpenApiDocsIT` + `node portal/scripts/export-openapi.mjs`) y commiteado; los otros tres specs salieron bit a bit idénticos a lo ya commiteado (`0ae7c45`).
+- Checkpoint repetido completo: backend 88 tests (87 + `OpenApiExportIT`, traído por el merge), 0 fallos; frontend unit 195/195; Playwright 126/126. Todo verde, nada que corregir.

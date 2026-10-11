@@ -14,6 +14,14 @@
       <h1 id="doc-title">
         Certificado de trazabilidad ESG<span class="visually-hidden"> de {{ v.company }}</span>
       </h1>
+      @if (v.annulled; as a) {
+        <!-- The stamp is text first (a screen reader reads it with the heading), the heavy frame only reinforces it. -->
+        <p class="stamp">Anulado</p>
+        <p class="annulment">
+          @if (a.at) { Anulado el <span class="mono">{{ a.at }}</span>@if (a.by) { por <span class="mono">{{ a.by }}</span> }. }
+          @if (a.reason) { <br />Motivo: {{ a.reason }} }
+        </p>
+      }
       <hr class="dots" />
 
       <p class="label">Empresa</p>
@@ -67,11 +75,36 @@
         </button>
       </div>
       <p class="hint">El CSV incluye las pesadas que respaldan este certificado.</p>
+      <p class="hint">Los archivos llevan el pie «Proyecto académico, sin validez legal».</p>
       @if (downloadError(); as message) {
         <p class="problem" role="alert">{{ message }}</p>
       }
     </div>
   </div>
+
+  <section class="annul" aria-labelledby="annul-title">
+    <h2 id="annul-title" class="sec">Anular certificado</h2>
+    <p class="done" role="status" [class.visually-hidden]="!annulStatus()">{{ annulStatus() }}</p>
+    @if (v.annulled) {
+      <p>Este certificado está anulado. No se borra: queda como constancia, y el período ya puede emitirse de nuevo.</p>
+    } @else if (annulling()) {
+      <app-reason-confirm
+        idPrefix="annul"
+        title="Anular certificado"
+        explanation="No se borra: queda marcado como ANULADO con tu motivo, y el período queda libre para emitir otro certificado. No se puede deshacer desde esta aplicación."
+        confirmLabel="Entiendo que la anulación no se puede deshacer"
+        [actionText]="'Anular el certificado de ' + v.period"
+        busyText="Anulando…"
+        [busy]="annulBusy()"
+        [error]="annulError()"
+        (confirm)="annul($event)"
+        (cancelled)="closeAnnul()"
+      />
+    } @else {
+      <p>Si el certificado se emitió con datos erróneos, anúlalo con un motivo y emite el correcto.</p>
+      <button type="button" class="btn" data-panel="annul" (click)="openAnnul()">Anular certificado</button>
+    }
+  </section>
 } @else if (certificate.error(); as error) {
   <div class="problem" role="alert">
     @if (isNotFound(error)) {

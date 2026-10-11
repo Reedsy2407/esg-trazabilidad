@@ -44,6 +44,8 @@ export const CODE_MESSAGES: Readonly<Record<string, string>> = {
   'RPT-007': 'El registro SIGERSOL no existe.',
   'RPT-008': 'Los datos del registro SIGERSOL no son válidos.',
   'RPT-009': 'La fecha final del período es anterior a la inicial.',
+  'RPT-015': 'La empresa está inactiva: no se pueden emitir certificados.',
+  'RPT-019': 'El certificado ya está anulado.',
   VALIDATION_ERROR: 'El servicio rechazó los datos enviados. Revisa los campos.',
   DATA_CONFLICT: 'La operación choca con datos ya registrados.',
 };

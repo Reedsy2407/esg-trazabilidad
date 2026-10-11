@@ -20,6 +20,20 @@ const CERT: EsgCertificate = {
   kilosTrazados: 12480.5,
   hierarchyCompliancePercent: 87.5,
   issuedAt: '2025-01-05T15:00:00Z',
+  status: 'ISSUED',
+    annulledAt: null,
+    annulledById: null,
+    annulledByEmail: null,
+    annulmentReason: null,
+};
+
+const ANNULLED: EsgCertificate = {
+  ...CERT,
+  status: 'ANNULLED',
+  annulledAt: '2025-02-10T15:00:00Z',
+  annulledById: 'staff-1',
+  annulledByEmail: 'ana@example.com',
+  annulmentReason: 'Se emitió con kilos erróneos',
 };
 
 describe('CertificatePage', () => {
@@ -28,6 +42,8 @@ describe('CertificatePage', () => {
   let certificate$: Observable<EsgCertificate>;
   let calls: { companyId: string; certificateId: string; kind: DownloadKind }[];
   let pending: Subject<string>;
+  let annulCalls: { reason: string }[];
+  let annul$: Observable<EsgCertificate>;
 
   const button = (name: string) =>
     Array.from(page.querySelectorAll('button')).find((b) => b.textContent?.includes(name)) as HTMLButtonElement;
@@ -47,11 +63,22 @@ describe('CertificatePage', () => {
     certificate$ = of(CERT);
     calls = [];
     pending = new Subject<string>();
+    annulCalls = [];
+    annul$ = of(ANNULLED);
     TestBed.configureTestingModule({
       imports: [CertificatePage],
       providers: [
         provideRouter([]),
-        { provide: BackendApi, useValue: { certificate: () => certificate$ } },
+        {
+          provide: BackendApi,
+          useValue: {
+            certificate: () => certificate$,
+            annulCertificate: (_companyId: string, _certificateId: string, reason: string) => {
+              annulCalls.push({ reason });
+              return annul$;
+            },
+          },
+        },
         {
           provide: CertificateDownloadService,
           useValue: {
@@ -172,5 +199,90 @@ describe('CertificatePage', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe('annulment', () => {
+    const type = (selector: string, value: string) => {
+      const field = page.querySelector(selector) as HTMLTextAreaElement | HTMLInputElement;
+      field.value = value;
+      field.dispatchEvent(new Event(field.type === 'checkbox' ? 'change' : 'input'));
+      if (field.type === 'checkbox') {
+        (field as HTMLInputElement).checked = true;
+        field.dispatchEvent(new Event('change'));
+      }
+      TestBed.tick();
+    };
+    const submit = () => {
+      (page.querySelector('form.reason') as HTMLFormElement).dispatchEvent(new Event('submit', { cancelable: true }));
+      TestBed.tick();
+    };
+    const open = () => {
+      button('Anular certificado').click();
+      TestBed.tick();
+    };
+
+    it('an issued certificate shows no stamp and offers to annul it', async () => {
+      await render();
+
+      expect(page.querySelector('.stamp')).toBeNull();
+      expect(button('Anular certificado')).toBeTruthy();
+    });
+
+    it('asks for the reason and an explicit confirmation before sending anything', async () => {
+      await render();
+      open();
+
+      expect(page.querySelector('form.reason')).toBeTruthy();
+      expect((page.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
+
+      type('#annul-reason', '   ');
+      type('#annul-title ~ label.check input', 'on');
+      submit();
+      expect(annulCalls).toEqual([]);
+      expect(page.querySelector('.field-error')?.textContent).toContain('Escribe el motivo');
+    });
+
+    it('sends the trimmed reason and then shows ANULADO with when, who and why, keeping the numbers', async () => {
+      await render();
+      open();
+      type('#annul-reason', '  Se emitió con kilos erróneos ');
+      type('.check input', 'on');
+      submit();
+
+      expect(annulCalls).toEqual([{ reason: 'Se emitió con kilos erróneos' }]);
+      expect(page.querySelector('.stamp')?.textContent).toContain('Anulado');
+      const annulment = page.querySelector('.annulment')?.textContent ?? '';
+      expect(annulment).toContain('10/02/2025');
+      expect(annulment).toContain('ana@example.com');
+      expect(annulment).toContain('Se emitió con kilos erróneos');
+      expect(page.querySelector('article')?.textContent).toContain('12,480.50 kg');
+      expect(page.querySelector('button[data-panel="annul"]')).toBeNull();
+      expect(page.querySelector('.annul [role="status"]')?.textContent).toContain('Certificado anulado.');
+    });
+
+    it('an already annulled certificate shows the stamp from the start and offers no annulment', async () => {
+      certificate$ = of(ANNULLED);
+      await render();
+
+      expect(page.querySelector('.stamp')).toBeTruthy();
+      expect(page.querySelector('button[data-panel="annul"]')).toBeNull();
+    });
+
+    it('says so on RPT-019 and keeps the panel open; an unknown outcome is not reported as done', async () => {
+      await render();
+      open();
+      type('#annul-reason', 'Motivo');
+      type('.check input', 'on');
+
+      annul$ = throwError(() => new ApiError(409, 'RPT-019', null, null));
+      submit();
+      expect(alert()).toContain('ya estaba anulado');
+      expect(page.querySelector('.stamp')).toBeNull();
+
+      annul$ = throwError(() => new ApiError(503, null, null, null));
+      submit();
+      expect(alert()).toContain('No pudimos confirmar si el certificado se anuló');
+      expect(page.querySelector('.stamp')).toBeNull();
+    });
   });
 });

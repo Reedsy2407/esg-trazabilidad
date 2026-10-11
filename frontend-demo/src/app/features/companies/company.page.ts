@@ -107,6 +107,7 @@ export class CompanyPage {
         kilos: formatKg(c.kilosTrazados),
         compliance: formatPercent(c.hierarchyCompliancePercent),
         issued: formatInstantDate(c.issuedAt),
+        annulled: c.status === 'ANNULLED',
       })),
     };
   });

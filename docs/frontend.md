@@ -36,6 +36,7 @@ The Angular app in `frontend-demo/` is the staff console for the four services. 
 | reporting | `GET …/certificates`, `GET …/certificates/{id}`, `…/pdf`, `…/csv` | Empresa, Certificado; Emitir certificado (overlap check) |
 | reporting | `GET …/certificate-summary` | Empresa (period summary), Emitir certificado (draft) |
 | reporting | `POST …/certificates` | Emitir certificado |
+| reporting | `POST …/certificates/{id}/annul` | Certificado (Anular certificado) |
 | reporting | `GET /sigersol-syncs`, `POST /sigersol-syncs` | Registros SIGERSOL, Registrar dato SIGERSOL |
 | reporting | `GET /sigersol-syncs/{id}` | — (the list carries the same fields) |
 
@@ -44,14 +45,15 @@ The Angular app in `frontend-demo/` is the staff console for the four services. 
 The backend doesn't enforce these; the screens do, and say so.
 
 - **"Por vencer"** (association certifications): an unexpired certification that expires in **less than 30 days**, counted on Lima's calendar. It is not a backend state: the backend only says `expired`. "Vencido" follows that flag, plus any date already past in Lima (a clock-skew guard). The constant is `EXPIRING_SOON_DAYS` in `features/associations/certification-state.ts`. On screen it reads "vence en menos de 30 días (regla de esta aplicación…)". Green, amber and red are used only for these three chips.
-- **Issuing a certificate** (irreversible, no endpoint voids one):
-  - An **INACTIVE** company can't be issued any certificate (product owner's decision, 2026-10-10). The backend allows it; the issue screen shows "Esta empresa está inactiva: no se pueden emitir certificados" instead of the period form, with no issue button. The status comes from `TrackedCompanyResponse.status`.
+- **Issuing a certificate** (it is never deleted; the only way back is to annul it, see below):
+  - An **INACTIVE** company can't be issued any certificate (product owner's decision, 2026-10-10). The backend refuses it too (`RPT-015`); the issue screen shows "Esta empresa está inactiva: no se pueden emitir certificados" instead of the period form, with no issue button. The status comes from `TrackedCompanyResponse.status`.
   - A period that hasn't ended (end date today or later in Lima) is refused, saying from which date it can be issued.
   - A period with 0 kg is refused.
   - A period without one SIGERSOL record covering all of it is refused before asking (the backend would answer RPT-005), with a link to register it.
-  - A period overlapping a listed certificate is refused before asking (the backend would answer RPT-004).
+  - A period overlapping a listed **Emitido** certificate is refused before asking (the backend would answer RPT-004). An **Anulado** one frees its period and never counts.
   - An end before the start is refused before asking (the backend would answer RPT-009).
   - The confirmation is a checkbox plus a button that names the period.
+- **Annulling a certificate** (M3): the certificate page offers "Anular certificado" while it is Emitido. It asks for a reason (500 characters at most, `shared/reason-confirm.ts`) and the same checkbox-and-named-button confirmation; who and when are never asked, the backend takes them from the JWT. An annulled certificate is never deleted: its page shows a heavy "ANULADO" stamp with the date, the staff member's email and the reason, its frozen numbers unchanged, and its PDF and CSV carry the same marks. It stays in the company's list tagged "Anulado", and it feeds neither the period summary nor the chart (they describe certified periods only). `RPT-019` (already annulled, e.g. by someone else a moment ago) says so and points to a reload; an unknown outcome never claims it failed. To correct wrong data the flow is: annul the certificate, deactivate the company, register the right one, issue again (the company-side steps arrive with M4).
 - **Neighbour deactivate, reactivate and delete** (M2) all require a reason (`reason-confirm.ts`, max 500 characters) plus the same checkbox-and-named-button confirmation used for issuing a certificate; who does it is never asked, the backend takes it from the JWT. Reactivating offers the schedules that deactivation paused (D8) so staff can resume them one by one; deleting cancels the remaining `ACTIVE`/`PAUSED` schedules outright. A delete refused with `COL-011` (the neighbour has collection records) points at "Desactivar" instead.
 - **SIGERSOL** figures are always labelled "ingreso manual": they are typed in from SIGERSOL; nothing integrates with it. The form keeps the columns' precision, and caps the note at 255 characters: a longer one would fail in the database and come back as RPT-006 ("overlap"), which would mislead.
 - **Staff accounts:**
@@ -92,7 +94,6 @@ reporting-service's **tracked company** (`/tracked-companies`) is the company ce
 - Edit, deactivate or delete: tracked companies, SIGERSOL records, staff accounts. (Neighbours got all three in M2.)
 - Change or reset a staff password. Today the initial password is permanent.
 - Roles or permissions (who may issue certificates or create staff).
-- Refuse certificates for an INACTIVE tracked company (today only the frontend refuses them).
 - Search neighbours by name (the list only filters by state and exact district).
 - The association's name on the certificate (`EsgCertificateResponse` has only `associationId`).
 - A JSON endpoint for a certificate's weighings (they travel only in the CSV).

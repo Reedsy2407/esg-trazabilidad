@@ -17,7 +17,7 @@
   </header>
 
   @if (inactive()) {
-    <!-- Frontend rule: no period form and no issue button for an INACTIVE company (the backend allows it). -->
+    <!-- No period form and no issue button for an INACTIVE company (the backend refuses it too: RPT-015). -->
     <div class="problem">
       <p>Esta empresa está inactiva: no se pueden emitir certificados.</p>
       <p><a [routerLink]="['/empresas', id()]">Ver los certificados de la empresa</a></p>

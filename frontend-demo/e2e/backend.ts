@@ -69,6 +69,11 @@ export const CERTIFICATES = Array.from({ length: 14 }, (_, i) => {
     kilosTrazados: [8420.25, 9105.5, 7988, 10230.75, 11002.4, 9876.1, 12480.5, 13050, 11870.3, 12210.8, 14105.6, 12990.45, 13420.1, 12480.5][i],
     hierarchyCompliancePercent: [82.5, 84, 79.5, 86.2, 88, 85.5, 87.5, 90.1, 89.3, 91, 92.4, 90.8, 93.2, 87.5][i],
     issuedAt: issued.toISOString(),
+    status: 'ISSUED' as 'ISSUED' | 'ANNULLED',
+    annulledAt: null as string | null,
+    annulledById: null as string | null,
+    annulledByEmail: null as string | null,
+    annulmentReason: null as string | null,
   };
 }).reverse(); // the API lists newest issued first
 
@@ -132,6 +137,8 @@ export interface BackendOptions {
   sigersolFailure?: { status: number; code: string | null };
   /** POST .../certificates answers this instead of 201 (code null: a bare gateway answer). */
   issueFailure?: { status: number; code: string | null };
+  /** POST .../certificates/{id}/annul answers this instead of 200 (code null: a bare gateway answer). */
+  annulFailure?: { status: number; code: string | null };
   /** Lifetime of the tokens the login issues (exp - iat); auth-service's is one hour. */
   tokenLifetimeSeconds?: number;
   /** GET /auth/me fails with this status (a bare 5xx). */
@@ -805,6 +812,30 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
       if (certificate === undefined) {
         return problem(route, 404, 'RPT-003', 'Certificado no encontrado');
       }
+      if (file === 'annul' && route.request().method() === 'POST') {
+        const body = route.request().postDataJSON() as { reason?: unknown };
+        options.writes?.push({ method: 'POST', path: url.pathname, body });
+        if (options.annulFailure !== undefined) {
+          return options.annulFailure.code === null
+            ? gatewayError(route, options.annulFailure.status)
+            : problem(route, options.annulFailure.status, options.annulFailure.code, 'Rechazado');
+        }
+        if (typeof body.reason !== 'string' || body.reason.trim() === '' || body.reason.length > 500) {
+          return problem(route, 400, 'VALIDATION_ERROR', 'reason: no debe estar vacío');
+        }
+        if (certificate.status === 'ANNULLED') {
+          return problem(route, 409, 'RPT-019', 'El certificado ya está anulado');
+        }
+        // Like the real service: the actor is the token's (here the fake login's), never the body's.
+        Object.assign(certificate, {
+          status: 'ANNULLED',
+          annulledAt: new Date().toISOString(),
+          annulledById: 'staff-1',
+          annulledByEmail: EMAIL,
+          annulmentReason: body.reason.trim(),
+        });
+        return json(certificate);
+      }
       if (file === undefined) {
         return json(certificate);
       }
@@ -843,8 +874,16 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
       if (!periodStart || !periodEnd) {
         return problem(route, 400, 'VALIDATION_ERROR', 'periodStart: no debe ser nulo');
       }
-      // The real order: overlap with this company's certificates (a shared day counts), then coverage.
-      if (certificates.some((c) => c.trackedCompanyId === company.id && c.periodStart <= periodEnd && c.periodEnd >= periodStart)) {
+      // The real order: inactive company, overlap with this company's ISSUED certificates (a shared
+      // day counts; an annulled one frees its period), then coverage.
+      if (company.status === 'INACTIVE') {
+        return problem(route, 409, 'RPT-015', 'La empresa está inactiva: no se pueden emitir certificados');
+      }
+      if (
+        certificates.some(
+          (c) => c.trackedCompanyId === company.id && c.status === 'ISSUED' && c.periodStart <= periodEnd && c.periodEnd >= periodStart,
+        )
+      ) {
         return problem(route, 409, 'RPT-004', 'Ya existe un certificado emitido que se superpone con ese periodo');
       }
       const figures = recompute(company.associationId, periodStart, periodEnd);
@@ -862,6 +901,11 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
         kilosTrazados: figures.kilos,
         hierarchyCompliancePercent: figures.compliance,
         issuedAt: new Date().toISOString(),
+        status: 'ISSUED' as 'ISSUED' | 'ANNULLED',
+        annulledAt: null as string | null,
+        annulledById: null as string | null,
+        annulledByEmail: null as string | null,
+        annulmentReason: null as string | null,
       };
       certificates.unshift(issued);
       return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(issued) });

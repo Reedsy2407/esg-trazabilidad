@@ -91,9 +91,12 @@ export interface RegisterSigersolSyncRequest {
 /**
  * reporting-service EsgCertificateResponse. LocalDate fields arrive as
  * "yyyy-MM-dd", the Instant as ISO-8601 UTC, BigDecimals as JSON numbers.
- * hierarchyCompliancePercent is 0-100. A certificate has no status: the
- * VIGENTE / POR VENCER / VENCIDO states belong to association certifications.
+ * hierarchyCompliancePercent is 0-100. Its status is ISSUED or ANNULLED (shown Emitido / Anulado);
+ * the VIGENTE / POR VENCER / VENCIDO states belong to association certifications. An annulled
+ * certificate keeps its frozen numbers and gains when, who (from the token) and why.
  */
+export type CertificateStatus = 'ISSUED' | 'ANNULLED';
+
 export interface EsgCertificate {
   readonly id: string;
   readonly trackedCompanyId: string;
@@ -105,12 +108,18 @@ export interface EsgCertificate {
   readonly kilosTrazados: number;
   readonly hierarchyCompliancePercent: number;
   readonly issuedAt: string;
+  readonly status: CertificateStatus;
+  readonly annulledAt: string | null;
+  readonly annulledById: string | null;
+  readonly annulledByEmail: string | null;
+  readonly annulmentReason: string | null;
 }
 
 /**
  * IssueCertificateRequest: both @NotNull LocalDates, nothing else checked by annotations. The
  * service answers RPT-009 (400, end before start; the draft's GET certificate-summary too), then
- * RPT-001, then RPT-004 (overlap with this company's certificates, a shared day counts), then
+ * RPT-001, then RPT-015 (inactive company), then RPT-004 (overlap with this company's ISSUED certificates, a
+ * shared day counts; an annulled one frees its period), then
  * RPT-005 (no single SIGERSOL record of the association covers the whole period). It does NOT
  * refuse a period that hasn't ended or 0 kg: the screen does.
  */

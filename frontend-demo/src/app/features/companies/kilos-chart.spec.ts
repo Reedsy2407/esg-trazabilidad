@@ -15,6 +15,11 @@ function certificate(month: string, kg: number, issuedAt = '2026-01-10T15:00:00Z
     kilosTrazados: kg,
     hierarchyCompliancePercent: 90,
     issuedAt,
+    status: 'ISSUED',
+      annulledAt: null,
+      annulledById: null,
+      annulledByEmail: null,
+      annulmentReason: null,
   };
 }
 
@@ -75,5 +80,28 @@ describe('latestCertificate', () => {
 
   it('is null without certificates', () => {
     expect(latestCertificate([])).toBeNull();
+  });
+});
+
+describe('annulled certificates', () => {
+  const annulled = (month: string, kg: number): EsgCertificate => ({
+    ...certificate(month, kg),
+    status: 'ANNULLED',
+    annulledAt: '2026-02-01T10:00:00Z',
+    annulledById: 'staff-1',
+    annulledByEmail: 'ana@example.com',
+    annulmentReason: 'Datos erróneos',
+  });
+
+  it('draw no bar: an annulled period is history, and the period reissued over it counts once', () => {
+    const chart = buildKilosChart([annulled('2025-03', 99_000), certificate('2025-03', 500), certificate('2025-02', 400)]);
+
+    expect(chart.bars.map((b) => b.kg)).toEqual([400, 500]);
+    expect(chart.axisTop).toBe(AXIS_MIN_TOP_KG);
+  });
+
+  it('are never the latest certified period', () => {
+    expect(latestCertificate([annulled('2025-05', 1), certificate('2025-04', 2)])?.id).toBe('cert-2025-04');
+    expect(latestCertificate([annulled('2025-05', 1)])).toBeNull();
   });
 });

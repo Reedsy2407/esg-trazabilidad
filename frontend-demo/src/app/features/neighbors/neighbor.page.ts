@@ -22,7 +22,7 @@ import { districtByUbigeo } from '../../shared/districts';
 import { loadErrorMessage, writeErrorText } from '../../shared/error-message';
 import { LIMA_OFFSET, LOCALE, formatKg, formatLocalDate } from '../../shared/format';
 import { notBlank, optional } from './neighbor-new.page';
-import { ReasonConfirm } from './reason-confirm';
+import { ReasonConfirm } from '../../shared/reason-confirm';
 
 const SERVICE = 'el servicio de recojos';
 const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/;

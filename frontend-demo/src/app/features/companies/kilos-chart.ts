@@ -21,12 +21,17 @@ export interface ChartModel {
   readonly ticks: readonly number[];
 }
 
+/** An annulled certificate is history, not a certified period: it feeds neither the chart nor the summary. */
+export function isIssued(certificate: EsgCertificate): boolean {
+  return certificate.status === 'ISSUED';
+}
+
 /**
  * The most recent certified period (by period, not issue date): the same one
  * the chart highlights as its last bar. Null without certificates.
  */
 export function latestCertificate(certificates: readonly EsgCertificate[]): EsgCertificate | null {
-  return certificates.reduce<EsgCertificate | null>(
+  return certificates.filter(isIssued).reduce<EsgCertificate | null>(
     (latest, c) => (latest === null || c.periodStart > latest.periodStart ? c : latest),
     null,
   );
@@ -38,7 +43,8 @@ export function latestCertificate(certificates: readonly EsgCertificate[]): EsgC
  * no invented zero periods.
  */
 export function buildKilosChart(certificates: readonly EsgCertificate[]): ChartModel {
-  const latest = [...certificates]
+  const latest = certificates
+    .filter(isIssued)
     .sort((a, b) => b.periodStart.localeCompare(a.periodStart))
     .slice(0, MAX_PERIODS)
     .reverse();

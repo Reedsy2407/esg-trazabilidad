@@ -277,3 +277,15 @@ tbody tr:has(.row-link:focus-visible) {
   color: var(--ink-soft);
   font-size: 13px;
 }
+
+/* An annulled certificate stays in the list, marked: the word carries it, the heavy rule only reinforces it. */
+.annulled-tag {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border: 2px solid var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

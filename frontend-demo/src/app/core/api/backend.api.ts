@@ -98,7 +98,7 @@ export class BackendApi {
     );
   }
 
-  /** 201 with the certificate. Irreversible: there is no endpoint to edit or void one. */
+  /** 201 with the certificate. Only annulling undoes it (annulCertificate); RPT-015 for an inactive company. */
   issueCertificate(companyId: string, request: IssueCertificateRequest): Observable<EsgCertificate> {
     return this.http.post<EsgCertificate>(`${reporting}/tracked-companies/${encodeURIComponent(companyId)}/certificates`, request);
   }
@@ -107,6 +107,18 @@ export class BackendApi {
   certificate(companyId: string, certificateId: string): Observable<EsgCertificate> {
     return this.http.get<EsgCertificate>(
       `${reporting}/tracked-companies/${encodeURIComponent(companyId)}/certificates/${encodeURIComponent(certificateId)}`,
+    );
+  }
+
+  /**
+   * 200 with the certificate, now ANNULLED. The reason is required (500 at most); who and when come
+   * from the token and the server. Never deleted. RPT-019 if it was already annulled, RPT-003 if it
+   * isn't this company's.
+   */
+  annulCertificate(companyId: string, certificateId: string, reason: string): Observable<EsgCertificate> {
+    return this.http.post<EsgCertificate>(
+      `${reporting}/tracked-companies/${encodeURIComponent(companyId)}/certificates/${encodeURIComponent(certificateId)}/annul`,
+      { reason },
     );
   }
 

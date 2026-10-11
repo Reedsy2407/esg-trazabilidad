@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, signal, viewChild } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -7,8 +7,9 @@ import { BackendApi } from '../../core/api/backend.api';
 import { CertificateDownloadService, UnexpectedDownloadError } from '../../core/api/certificate-download.service';
 import { ApiError } from '../../core/http/api-error';
 import { DownloadKind } from '../../shared/download-filename';
-import { loadErrorMessage } from '../../shared/error-message';
+import { loadErrorMessage, writeErrorText } from '../../shared/error-message';
 import { formatInstantDate, formatKg, formatLocalDate, formatPercent } from '../../shared/format';
+import { ReasonConfirm } from '../../shared/reason-confirm';
 
 /** Opened right after issuing it (router state from CertificateIssuePage)? Read once, then dropped. */
 function justIssued(): boolean {
@@ -26,11 +27,16 @@ function justIssued(): boolean {
  * period, issue date, the full certificate id). No status stamp and no
  * weighings table: the certificate has no status, and the weighings travel in
  * the CSV. Nothing here suggests third-party verification: there is no public
- * verification endpoint.
+ * verification endpoint. A certificate is never deleted: an ISSUED one can be annulled, with a
+ * required reason (who and when come from the session on the server), and then shows ANULADO with
+ * its frozen numbers untouched.
  */
+export const ANNUL_UNCERTAIN =
+  'No pudimos confirmar si el certificado se anuló. Vuelve a cargar la página para ver su estado actual antes de reintentar.';
+
 @Component({
   selector: 'app-certificate-page',
-  imports: [RouterLink],
+  imports: [RouterLink, ReasonConfirm],
   templateUrl: './certificate.page.html',
   styleUrl: './certificate.page.css',
 })
@@ -65,8 +71,66 @@ export class CertificatePage {
       compliance: formatPercent(c.hierarchyCompliancePercent),
       period: `${formatLocalDate(c.periodStart)} – ${formatLocalDate(c.periodEnd)}`,
       issued: formatInstantDate(c.issuedAt),
+      annulled:
+        c.status === 'ANNULLED'
+          ? {
+              at: c.annulledAt === null ? null : formatInstantDate(c.annulledAt),
+              by: c.annulledByEmail ?? c.annulledById,
+              reason: c.annulmentReason,
+            }
+          : null,
     };
   });
+
+  // ---- Annulment: one panel, a reason and an explicit confirmation.
+  protected readonly annulling = signal(false);
+  protected readonly annulBusy = signal(false);
+  protected readonly annulError = signal<string | null>(null);
+  /** Polite announcement once it is done. */
+  protected readonly annulStatus = signal('');
+  private readonly reasonPanel = viewChild(ReasonConfirm);
+
+  protected openAnnul(): void {
+    this.annulling.set(true);
+    this.annulError.set(null);
+    this.annulStatus.set('');
+    setTimeout(() => this.reasonPanel()?.focus());
+  }
+
+  protected closeAnnul(): void {
+    this.annulling.set(false);
+    this.annulError.set(null);
+  }
+
+  protected annul(reason: string): void {
+    if (this.annulBusy()) {
+      return;
+    }
+    this.annulError.set(null);
+    this.annulBusy.set(true);
+    this.api
+      .annulCertificate(this.companyId(), this.certificateId(), reason)
+      .pipe(
+        finalize(() => this.annulBusy.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (updated) => {
+          this.certificate.set(updated);
+          this.annulling.set(false);
+          this.annulStatus.set('Certificado anulado.');
+        },
+        error: (error: unknown) => {
+          this.annulError.set(
+            writeErrorText(error, ANNUL_UNCERTAIN, {
+              'RPT-019': 'Este certificado ya estaba anulado. Vuelve a cargar la página para ver quién lo anuló y por qué.',
+              'RPT-003': 'Este certificado no existe o no pertenece a esta empresa.',
+            }),
+          );
+          this.reasonPanel()?.focusError();
+        },
+      });
+  }
 
   /** Which download is in flight; one at a time. */
   protected readonly downloading = signal<DownloadKind | null>(null);

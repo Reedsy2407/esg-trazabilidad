@@ -82,7 +82,7 @@ carpeta. Por eso se usa `errores-auth.md` y `estados-auth.md`, no `errores/auth.
 
 | Job | Depende de | Qué hace |
 |---|---|---|
-| `build` | — | `bash portal/scripts/build-local.sh` y sube el zip y `report.json` como artifact `portal`. |
+| `build` | — | Libera espacio en el runner (SDKs que no usa), corre `bash portal/scripts/build-local.sh` y sube el zip y `report.json` como artifact `portal`. |
 | `check` | `build` | `JetBrains/writerside-checker-action@v1`: falla si el builder reportó errores. |
 | `deploy` | `build`, `check` | Solo en `main` (no en PR): descomprime el zip y publica en GitHub Pages. |
 

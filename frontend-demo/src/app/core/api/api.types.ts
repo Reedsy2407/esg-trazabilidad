@@ -133,8 +133,9 @@ export interface CertificateSummary {
 }
 
 /**
- * collection-service NeighborResponse. CreateNeighborRequest requires only fullName and
- * address (@NotBlank); phone and district are optional, so null on the wire.
+ * collection-service NeighborResponse. `districtUbigeo` is the INEI code of one of the 50
+ * districts of Lima Metropolitana and Callao (null only for a neighbour registered before v3 whose
+ * free text matched none); `district` is that district's name, accents included (or the old text).
  */
 export type NeighborStatus = 'ACTIVE' | 'INACTIVE';
 
@@ -144,8 +145,25 @@ export interface Neighbor {
   readonly phone: string | null;
   readonly address: string;
   readonly district: string | null;
+  readonly districtUbigeo: string | null;
   readonly status: NeighborStatus;
 }
+
+/** collection-service NeighborStatusChangeResponse: one deactivation or reactivation, newest first. */
+export interface NeighborStatusChange {
+  readonly id: string;
+  readonly fromStatus: NeighborStatus;
+  readonly toStatus: NeighborStatus;
+  readonly reason: string;
+  readonly actorId: string;
+  /** From the staff member's token; may be missing. */
+  readonly actorEmail: string | null;
+  /** An Instant (ISO, UTC). */
+  readonly changedAt: string;
+}
+
+/** PATCH /neighbors/{id}/deactivate or /activate. */
+export type NeighborTransition = 'deactivate' | 'activate';
 
 /**
  * recycler-service AssociationResponse. CreateAssociationRequest requires only name and RUC;
@@ -179,13 +197,18 @@ export interface Certification {
   readonly expired: boolean;
 }
 
-/** collection-service CreateNeighborRequest: fullName and address @NotBlank; phone and district optional. */
+/**
+ * collection-service CreateNeighborRequest and EditNeighborRequest: fullName, address and the
+ * district's ubigeo required (COL-010 outside the list), phone optional (null clears it on edit).
+ */
 export interface CreateNeighborRequest {
   readonly fullName: string;
   readonly address: string;
   readonly phone: string | null;
-  readonly district: string | null;
+  readonly districtUbigeo: string;
 }
+
+export type EditNeighborRequest = CreateNeighborRequest;
 
 /** collection-service CollectionScheduleResponse: java.time.DayOfWeek and LocalTime ("HH:mm:ss" or "HH:mm"). */
 export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';

@@ -1,0 +1,91 @@
+:host {
+  display: block;
+  position: relative;
+}
+.combo {
+  position: relative;
+}
+.combo .control {
+  padding-right: 48px;
+}
+/* The chevron of a select, as a 44 px target inside the field's right edge. */
+.toggle {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.toggle svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+.toggle:disabled {
+  cursor: default;
+  color: var(--disabled-ink);
+}
+/* The list prints on paper under the field, like the ticket's stub. */
+.listbox {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  max-height: min(320px, 50vh);
+  overflow-y: auto;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+.listbox[hidden] {
+  display: none;
+}
+.group-label {
+  position: sticky;
+  top: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--ground);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  border-bottom: 2px dotted var(--rule-dots);
+}
+.option {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+  cursor: pointer;
+}
+.option:hover {
+  background: var(--row-hover);
+}
+.option.active {
+  background: var(--selection);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.option[aria-selected='true'] {
+  font-weight: 700;
+}
+.option[aria-selected='true']::after {
+  content: '✓';
+  margin-left: auto;
+}
+.option.all {
+  border-bottom: 2px dotted var(--rule-dots);
+}
+.none {
+  padding: var(--space-3);
+  color: var(--ink-soft);
+}

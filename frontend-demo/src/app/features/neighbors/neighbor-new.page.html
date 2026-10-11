@@ -38,9 +38,17 @@
 
   <div class="pair">
     <div class="field">
-      <label for="district">Distrito <span class="optional">(opcional)</span></label>
-      <input id="district" class="control" formControlName="district" autocomplete="off" aria-describedby="district-hint" />
-      <p class="hint" id="district-hint">Escríbelo siempre igual: la lista filtra por el texto exacto.</p>
+      <label for="district">Distrito</label>
+      <app-district-select
+        inputId="district"
+        formControlName="districtUbigeo"
+        [invalid]="invalid('districtUbigeo')"
+        [describedBy]="invalid('districtUbigeo') ? 'district-hint district-error' : 'district-hint'"
+      />
+      <p class="hint" id="district-hint">Lima Metropolitana o Callao. Escribe parte del nombre para filtrar.</p>
+      @if (invalid('districtUbigeo')) {
+        <p class="field-error" id="district-error">Elige el distrito del vecino.</p>
+      }
     </div>
     <div class="field">
       <label for="phone">Teléfono <span class="optional">(opcional)</span></label>

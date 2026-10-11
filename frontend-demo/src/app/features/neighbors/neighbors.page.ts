@@ -1,10 +1,13 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, input, linkedSignal, numberAttribute } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
+import { Component, computed, effect, inject, input, linkedSignal, numberAttribute } from '@angular/core';
+import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
 import { Neighbor, NeighborStatus, Page } from '../../core/api/api.types';
 import { BackendApi } from '../../core/api/backend.api';
+import { DistrictSelect } from '../../shared/district-select/district-select';
+import { districtByName, districtByUbigeo } from '../../shared/districts';
 import { loadErrorMessage } from '../../shared/error-message';
 
 const FILTERS = [
@@ -14,13 +17,36 @@ const FILTERS = [
 ] as const satisfies readonly { estado: string | null; status: NeighborStatus | null; label: string }[];
 
 /**
+ * ?distrito= holds a ubigeo. An older link may carry a name ("Comas", "rimac"): it still works
+ * when it names a district of the list; anything else is ignored (no filter).
+ */
+export function districtFilter(param: string | undefined): string | null {
+  const value = param?.trim() ?? '';
+  return districtByUbigeo(value)?.ubigeo ?? districtByName(value)?.ubigeo ?? null;
+}
+
+/**
+ * The name of the neighbour just deleted (router state from NeighborPage), read once and dropped
+ * from the history entry so a reload doesn't announce it again.
+ */
+function justDeleted(): string | null {
+  const state: unknown = history.state;
+  const name = typeof state === 'object' && state !== null ? (state as Record<string, unknown>)['eliminado'] : null;
+  if (typeof name !== 'string') {
+    return null;
+  }
+  history.replaceState({ ...(state as Record<string, unknown>), eliminado: null }, '');
+  return name;
+}
+
+/**
  * Vecinos (collection-service GET /neighbors): 20 per page by name, filtered by state and by
- * district. The district filter is the backend's exact match, so the page says so; the API has
- * no search by name.
+ * district (one of the 50 of Lima Metropolitana and Callao, by ubigeo). The API has no search by
+ * name. Inactive neighbours are reactivated from their own page (it asks for a reason).
  */
 @Component({
   selector: 'app-neighbors-page',
-  imports: [RouterLink, DecimalPipe],
+  imports: [RouterLink, DecimalPipe, ReactiveFormsModule, DistrictSelect],
   templateUrl: './neighbors.page.html',
   styleUrl: './neighbors.page.css',
 })
@@ -32,9 +58,13 @@ export class NeighborsPage {
   readonly estado = input<string | undefined>(undefined);
   readonly distrito = input<string | undefined>(undefined);
 
+  protected readonly deleted = justDeleted();
   protected readonly filters = FILTERS;
   protected readonly filter = computed(() => FILTERS.find((f) => f.estado === this.estado()) ?? FILTERS[0]);
-  protected readonly district = computed(() => this.distrito()?.trim() || null);
+  protected readonly district = computed(() => districtFilter(this.distrito()));
+
+  /** The picker shows the district in the URL; choosing one navigates. */
+  protected readonly districtControl = new FormControl<string | null>(null);
 
   protected readonly neighbors = rxResource({
     params: () => ({ page: this.pagina() - 1, status: this.filter().status, district: this.district() }),
@@ -69,11 +99,13 @@ export class NeighborsPage {
     return error === undefined ? null : loadErrorMessage(error, 'los vecinos', 'el servicio de recojos');
   });
 
-  protected searchDistrict(event: SubmitEvent): void {
-    event.preventDefault();
-    const value = new FormData(event.target as HTMLFormElement).get('distrito');
-    const district = typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
-    void this.router.navigate([], { queryParams: { distrito: district, pagina: null }, queryParamsHandling: 'merge' });
+  constructor() {
+    effect(() => this.districtControl.setValue(this.district(), { emitEvent: false }));
+    this.districtControl.valueChanges.pipe(takeUntilDestroyed()).subscribe((ubigeo) => {
+      if (ubigeo !== this.district()) {
+        void this.router.navigate([], { queryParams: { distrito: ubigeo, pagina: null }, queryParamsHandling: 'merge' });
+      }
+    });
   }
 
   protected goTo(pagina: number): void {

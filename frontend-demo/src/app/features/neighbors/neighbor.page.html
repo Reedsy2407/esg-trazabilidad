@@ -2,6 +2,7 @@
 
 <!-- Always in the DOM (a live region inserted together with its text isn't reliably announced). -->
 <p class="done" role="status" [class.visually-hidden]="!(registered && neighbor.hasValue())">{{ registered && neighbor.hasValue() ? 'Vecino registrado. Ya puedes agregarle cronogramas y recojos.' : '' }}</p>
+<p class="done" role="status" [class.visually-hidden]="neighborStatus() === ''">{{ neighborStatus() }}</p>
 
 <div [attr.aria-busy]="neighbor.isLoading()">
   @if (neighbor.hasValue()) {
@@ -9,23 +10,189 @@
     <header class="page-head with-action">
       <div>
         <h1>{{ n.fullName }}</h1>
-        <p class="meta" [class.inactive]="n.status === 'INACTIVE'">{{ n.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</p>
+        <p class="meta" [class.inactive]="n.status === 'INACTIVE'">{{ neighborState(n.status) }}</p>
       </div>
-      <a class="btn btn-primary" routerLink="/recojos/nuevo" [queryParams]="{ vecino: n.id }">Registrar recojo de este vecino</a>
+      @if (n.status === 'ACTIVE') {
+        <a class="btn btn-primary" routerLink="/recojos/nuevo" [queryParams]="{ vecino: n.id }">Registrar recojo de este vecino</a>
+      }
     </header>
+    @if (n.status === 'INACTIVE') {
+      <p class="inactive-note">Este vecino está inactivo: no recibe recojos ni cronogramas activos. Para eso, reactívalo (abajo, en «Estado del vecino»).</p>
+    }
     <section class="sheet-flat details" aria-labelledby="details-title">
-      <h2 id="details-title">Datos del vecino</h2>
-      <dl>
-        <div><dt>Dirección</dt><dd>{{ n.address }}</dd></div>
-        <div>
-          <dt>Distrito</dt>
-          @if (n.district?.trim(); as district) { <dd>{{ district }}</dd> } @else { <dd class="missing">No registrado</dd> }
+      <div class="section-head">
+        <h2 id="details-title">Datos del vecino</h2>
+        @if (!editing()) {
+          <button type="button" class="btn" #editButton (click)="startEdit()">Editar datos</button>
+        }
+      </div>
+      @if (editing()) {
+        <form class="edit" [formGroup]="editForm" (ngSubmit)="saveEdit()" novalidate #editFormEl aria-label="Editar datos del vecino">
+          <div class="edit-grid">
+            <div class="field">
+              <label for="edit-fullName">Nombre completo</label>
+              <input id="edit-fullName" class="control" formControlName="fullName" autocomplete="off" [attr.aria-invalid]="editInvalid('fullName')" [attr.aria-describedby]="editInvalid('fullName') ? 'edit-fullName-error' : null" />
+              @if (editInvalid('fullName')) {
+                <p class="field-error" id="edit-fullName-error">Escribe el nombre del vecino.</p>
+              }
+            </div>
+            <div class="field">
+              <label for="edit-address">Dirección</label>
+              <input id="edit-address" class="control" formControlName="address" autocomplete="off" [attr.aria-invalid]="editInvalid('address')" [attr.aria-describedby]="editInvalid('address') ? 'edit-address-error' : null" />
+              @if (editInvalid('address')) {
+                <p class="field-error" id="edit-address-error">Escribe la dirección donde se recoge.</p>
+              }
+            </div>
+            <div class="field">
+              <label for="edit-district">Distrito</label>
+              <app-district-select
+                inputId="edit-district"
+                formControlName="districtUbigeo"
+                [invalid]="editInvalid('districtUbigeo')"
+                [describedBy]="editInvalid('districtUbigeo') ? 'edit-district-error' : null"
+              />
+              @if (editInvalid('districtUbigeo')) {
+                <p class="field-error" id="edit-district-error">Elige el distrito del vecino (Lima Metropolitana o Callao).</p>
+              }
+            </div>
+            <div class="field">
+              <label for="edit-phone">Teléfono <span class="optional">(opcional; vacío lo borra)</span></label>
+              <input id="edit-phone" class="control mono" formControlName="phone" type="tel" inputmode="tel" autocomplete="off" />
+            </div>
+          </div>
+          @if (editError(); as message) {
+            <p class="problem" role="alert">{{ message }}</p>
+          }
+          <div class="edit-actions">
+            <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar cambios' }}</button>
+            <button type="button" class="btn" [disabled]="saving()" (click)="cancelEdit()">Descartar cambios</button>
+          </div>
+        </form>
+      } @else {
+        <dl>
+          <div><dt>Dirección</dt><dd>{{ n.address }}</dd></div>
+          <div>
+            <dt>Distrito</dt>
+            @if (districtName(); as district) {
+              <dd>{{ district }}@if (n.districtUbigeo === null) { <span class="legacy"> (sin código: elige el distrito al editar)</span> }</dd>
+            } @else {
+              <dd class="missing">No registrado</dd>
+            }
+          </div>
+          <div>
+            <dt>Teléfono</dt>
+            @if (n.phone?.trim(); as phone) { <dd class="mono">{{ phone }}</dd> } @else { <dd class="missing">No registrado</dd> }
+          </div>
+        </dl>
+      }
+    </section>
+
+    <!-- ======================= Estado del vecino ======================= -->
+    <section class="state-section" aria-labelledby="state-title">
+      <h2 id="state-title" class="sec">Estado del vecino</h2>
+      <div class="state-box" #stateActions tabindex="-1" aria-labelledby="state-title">
+        <p class="state-now">
+          {{ n.status === 'ACTIVE' ? 'Activo: recibe recojos y cronogramas.' : 'Inactivo: no recibe recojos ni cronogramas activos.' }}
+        </p>
+        @if (panel() === null) {
+          <div class="actions start">
+            @if (n.status === 'ACTIVE') {
+              <button type="button" class="btn" data-panel="deactivate" (click)="openPanel('deactivate')">Desactivar vecino</button>
+            } @else {
+              <button type="button" class="btn" data-panel="activate" (click)="openPanel('activate')">Reactivar vecino</button>
+            }
+            @if (!hasRecords()) {
+              <button type="button" class="btn" data-panel="delete" (click)="openPanel('delete')">Eliminar vecino</button>
+            }
+          </div>
+          <p class="hint">
+            @if (hasRecords()) {
+              Este vecino tiene recojos registrados: no se puede eliminar, solo desactivar.
+            } @else {
+              Solo se puede eliminar un vecino sin recojos (por ejemplo, uno registrado por error). Si ya tiene recojos, desactívalo.
+            }
+          </p>
+        } @else if (panel() === 'deactivate') {
+          <app-reason-confirm
+            idPrefix="deactivate"
+            title="Desactivar vecino"
+            explanation="Sus cronogramas activos quedarán pausados y no se le podrán registrar recojos mientras esté inactivo. Se puede reactivar después."
+            confirmLabel="Entiendo que se pausarán sus cronogramas activos"
+            [actionText]="'Desactivar a ' + n.fullName"
+            busyText="Desactivando…"
+            [busy]="panelBusy()"
+            [error]="panelError()"
+            (confirm)="changeStatus('deactivate', $event)"
+            (cancelled)="closePanel()"
+          />
+        } @else if (panel() === 'activate') {
+          <app-reason-confirm
+            idPrefix="activate"
+            title="Reactivar vecino"
+            explanation="Volverá a recibir recojos. Sus cronogramas siguen pausados: después podrás reactivarlos uno por uno."
+            confirmLabel="Revisé que el vecino vuelve a entregar sus residuos"
+            [actionText]="'Reactivar a ' + n.fullName"
+            busyText="Reactivando…"
+            [busy]="panelBusy()"
+            [error]="panelError()"
+            (confirm)="changeStatus('activate', $event)"
+            (cancelled)="closePanel()"
+          />
+        } @else {
+          <app-reason-confirm
+            idPrefix="delete"
+            title="Eliminar vecino"
+            explanation="Solo si no tiene recojos. Deja de aparecer en la lista y sus cronogramas quedan cancelados; el registro y el motivo se conservan. No se puede deshacer desde esta aplicación."
+            confirmLabel="Entiendo que la eliminación no se puede deshacer"
+            [actionText]="'Eliminar a ' + n.fullName"
+            busyText="Eliminando…"
+            [busy]="panelBusy()"
+            [error]="panelError()"
+            (confirm)="deleteNeighbor($event)"
+            (cancelled)="closePanel()"
+          />
+        }
+      </div>
+
+      @if (justReactivated() && n.status === 'ACTIVE' && pausedRows().length > 0) {
+        <div class="paused-callout" role="region" aria-labelledby="paused-title">
+          <h3 id="paused-title">Cronogramas pausados de este vecino</h3>
+          <p>Siguen pausados desde que se desactivó. Reactiva los que correspondan:</p>
+          <ul>
+            @for (s of pausedRows(); track s.id) {
+              <li>
+                <span class="when mono">{{ s.label }}</span>
+                <button type="button" class="btn" [disabled]="busy() !== null" (click)="transition(s, 'reactivate')" [attr.aria-label]="'Reactivar cronograma del ' + s.name">
+                  {{ busy() === s.id ? 'Reactivando…' : 'Reactivar' }}
+                </button>
+              </li>
+            }
+          </ul>
         </div>
-        <div>
-          <dt>Teléfono</dt>
-          @if (n.phone?.trim(); as phone) { <dd class="mono">{{ phone }}</dd> } @else { <dd class="missing">No registrado</dd> }
+      }
+
+      <h3 class="history-title" id="history-title">Historial de estado</h3>
+      @if (statusChanges.hasValue()) {
+        @if (historyRows().length === 0) {
+          <p class="empty-note">Sin cambios de estado: está {{ n.status === 'ACTIVE' ? 'activo' : 'inactivo' }} desde que se registró.</p>
+        } @else {
+          <ol class="history" aria-labelledby="history-title">
+            @for (h of historyRows(); track h.id) {
+              <li>
+                <p class="history-head"><strong>{{ h.what }}</strong> · <span class="mono">{{ h.when }}</span> · {{ h.who }}</p>
+                <p class="history-reason">Motivo: {{ h.reason }}</p>
+              </li>
+            }
+          </ol>
+        }
+      } @else if (statusChanges.error(); as error) {
+        <div class="problem" role="alert">
+          <p>{{ errorText(error, 'el historial de estado') }}</p>
+          <button type="button" class="btn" (click)="statusChanges.reload()">Volver a intentar</button>
         </div>
-      </dl>
+      } @else {
+        <div aria-hidden="true"><span class="skel wide"></span></div>
+      }
     </section>
   } @else if (neighbor.error(); as error) {
     <div class="problem" role="alert">
@@ -76,7 +243,7 @@
                     <button type="button" class="btn" [disabled]="busy() !== null" (click)="transition(s, 'pause')" [attr.aria-label]="'Pausar cronograma del ' + s.name">
                       {{ busy() === s.id ? 'Pausando…' : 'Pausar' }}
                     </button>
-                  } @else {
+                  } @else if (!inactive()) {
                     <button type="button" class="btn" [disabled]="busy() !== null" (click)="transition(s, 'reactivate')" [attr.aria-label]="'Reactivar cronograma del ' + s.name">
                       {{ busy() === s.id ? 'Reactivando…' : 'Reactivar' }}
                     </button>
@@ -102,6 +269,9 @@
       <div aria-hidden="true"><span class="skel wide"></span></div>
     }
 
+    @if (inactive()) {
+      <p class="add sheet-flat inactive-add">Un vecino inactivo no recibe cronogramas activos: para agregar uno o reactivar los pausados, reactiva primero al vecino.</p>
+    } @else {
     <form class="add sheet-flat" [formGroup]="scheduleForm" (ngSubmit)="addSchedule()" novalidate aria-labelledby="add-title">
       <h3 id="add-title">Agregar cronograma</h3>
       <div class="add-row">
@@ -131,6 +301,7 @@
         <p class="problem" role="alert">{{ message }}</p>
       }
     </form>
+    }
   </section>
 
   <!-- ======================= Recojos ======================= -->

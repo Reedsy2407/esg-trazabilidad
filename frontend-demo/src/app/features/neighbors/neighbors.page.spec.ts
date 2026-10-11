@@ -1,21 +1,23 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
 import { Neighbor } from '../../core/api/api.types';
 import { errorInterceptor } from '../../core/http/interceptors';
+import { pickDistrict } from '../../testing/district-select';
 import { NeighborsPage } from './neighbors.page';
 
 const url = `${environment.services.collection}/neighbors`;
-const neighbor = (n: number, district: string | null = 'Comas'): Neighbor => ({
+const neighbor = (n: number, district: string | null = 'Comas', status: Neighbor['status'] = 'ACTIVE'): Neighbor => ({
   id: `n-${n}`,
   fullName: `Vecino ${n}`,
   phone: null,
   address: `Calle ${n}`,
   district,
-  status: 'ACTIVE',
+  districtUbigeo: district === 'Comas' ? '150110' : null,
+  status,
 });
 
 describe('NeighborsPage', () => {
@@ -45,19 +47,49 @@ describe('NeighborsPage', () => {
     await settle();
   };
 
-  it('sends state, exact district (trimmed) and the page to the API', () => {
-    setup({ pagina: 3, estado: 'inactivos', distrito: '  Rímac ' });
+  it('sends state, the district as its ubigeo and the page to the API; the picker shows the district', () => {
+    setup({ pagina: 3, estado: 'inactivos', distrito: '150128' });
     const params = pending().request.params;
     expect(params.get('page')).toBe('2');
     expect(params.get('status')).toBe('INACTIVE');
-    expect(params.get('district')).toBe('Rímac');
+    expect(params.get('districtUbigeo')).toBe('150128');
+    expect(params.has('district')).toBe(false);
+    expect((page.querySelector('#district') as HTMLInputElement).value).toBe('Rímac');
   });
 
-  it('no filters: neither status nor district is sent', () => {
-    setup({ distrito: '   ' });
+  it('an older link with a district name still filters; anything else is no filter', () => {
+    setup({ distrito: '  rimac ' });
+    expect(pending().request.params.get('districtUbigeo')).toBe('150128');
+
+    TestBed.resetTestingModule();
+    setup({ distrito: 'Cercado de Lima' });
     const params = pending().request.params;
+    expect(params.has('districtUbigeo')).toBe(false);
     expect(params.has('status')).toBe(false);
-    expect(params.has('district')).toBe(false);
+    expect((page.querySelector('#district') as HTMLInputElement).value).toBe('Todos los distritos');
+  });
+
+  it('choosing a district navigates with its ubigeo and back to the first page', () => {
+    setup({ pagina: 2 });
+    pending();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    pickDistrict(page, 'district', 'callao');
+    expect(navigate).toHaveBeenCalledWith([], { queryParams: { distrito: '070101', pagina: null }, queryParamsHandling: 'merge' });
+  });
+
+  it('the Inactivos tab explains how to reactivate, and inactive rows link to the neighbour', async () => {
+    setup({ estado: 'inactivos' });
+    await answer([neighbor(1, 'Comas', 'INACTIVE')], 1);
+    expect(page.querySelector('.note')?.textContent).toContain('Para reactivarlo, ábrelo');
+    const link = page.querySelector('td.action a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Reactivar…');
+    expect(link.getAttribute('href')).toBe('/vecinos/n-1');
+  });
+
+  it('no hint asks to type the district exactly', async () => {
+    setup({});
+    await answer([], 0);
+    expect(page.textContent).not.toContain('Escríbelo');
   });
 
   it('a missing district shows a dash, never null', async () => {
@@ -65,7 +97,7 @@ describe('NeighborsPage', () => {
     await answer([neighbor(1, null), neighbor(2, '  ')], 2);
     const cells = [...page.querySelectorAll('table.ledger tbody tr td:nth-child(2)')].map((td) => td.textContent?.trim());
     expect(cells).toEqual(['—', '—']);
-    expect(page.querySelector('[role="status"]')?.textContent).toBe('Mostrando 1–2 de 2 vecinos.');
+    expect(page.querySelector('.announce')?.textContent).toBe('Mostrando 1–2 de 2 vecinos.');
   });
 
   it('three empty cases: none yet, none for the filter, and a page past the end', async () => {
@@ -74,7 +106,7 @@ describe('NeighborsPage', () => {
     expect(page.querySelector('.empty-note')?.textContent).toContain('Todavía no hay vecinos registrados.');
 
     TestBed.resetTestingModule();
-    setup({ distrito: 'Nada' });
+    setup({ distrito: '150110' });
     await answer([], 0);
     expect(page.querySelector('.empty-note')?.textContent).toContain('Ningún vecino coincide con este filtro.');
 

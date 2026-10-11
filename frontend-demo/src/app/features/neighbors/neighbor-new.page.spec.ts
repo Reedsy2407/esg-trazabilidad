@@ -5,6 +5,7 @@ import { Observable, Subject } from 'rxjs';
 import { CreateNeighborRequest, Neighbor } from '../../core/api/api.types';
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
+import { pickDistrict } from '../../testing/district-select';
 import { NEIGHBOR_UNCERTAIN, NeighborNewPage } from './neighbor-new.page';
 
 describe('NeighborNewPage', () => {
@@ -53,24 +54,39 @@ describe('NeighborNewPage', () => {
     expect(sent).toEqual([]);
     expect(el.textContent).toContain('Escribe el nombre del vecino.');
     expect(el.textContent).toContain('Escribe la dirección donde se recoge.');
+    expect(el.textContent).toContain('Elige el distrito del vecino.');
+    expect(el.querySelector('#district')?.getAttribute('aria-invalid')).toBe('true');
+    expect(el.textContent).not.toContain('Escríbelo');
   });
 
-  it('sends trimmed values, blank optionals as null, once, and opens the new neighbour', () => {
+  it('sends trimmed values, the district as its ubigeo, blank phone as null, once, and opens the new neighbour', () => {
     type('fullName', ' Carmen Flores ');
     type('address', ' Jr. Ancash 812 ');
-    type('district', ' Rímac ');
+    pickDistrict(el, 'district', 'rimac');
+    TestBed.tick();
+    expect((el.querySelector('#district') as HTMLInputElement).value).toBe('Rímac');
     type('phone', ' ');
     submit();
     submit(); // a second click while sending is ignored
-    expect(sent).toEqual([{ fullName: 'Carmen Flores', address: 'Jr. Ancash 812', district: 'Rímac', phone: null }]);
+    expect(sent).toEqual([{ fullName: 'Carmen Flores', address: 'Jr. Ancash 812', districtUbigeo: '150128', phone: null }]);
     expect((el.querySelector('button[type="submit"]') as HTMLButtonElement).textContent?.trim()).toBe('Registrando…');
-    answer.next({ id: 'n-9', fullName: 'Carmen Flores', address: 'Jr. Ancash 812', district: 'Rímac', phone: null, status: 'ACTIVE' });
+    answer.next({
+      id: 'n-9',
+      fullName: 'Carmen Flores',
+      address: 'Jr. Ancash 812',
+      district: 'Rímac',
+      districtUbigeo: '150128',
+      phone: null,
+      status: 'ACTIVE',
+    });
     expect(navigate).toHaveBeenCalledWith(['/vecinos', 'n-9'], { state: { registrado: true } });
   });
 
   it('an unknown outcome never says it failed; a rejection says why', () => {
     type('fullName', 'Carmen');
     type('address', 'Jr. Ancash');
+    pickDistrict(el, 'district', 'comas');
+    TestBed.tick();
     submit();
     answer.error(new ApiError(504, null, null, null));
     TestBed.tick();
@@ -81,5 +97,11 @@ describe('NeighborNewPage', () => {
     answer.error(new ApiError(400, 'VALIDATION_ERROR', 'fullName: no debe estar vacío', null));
     TestBed.tick();
     expect(el.querySelector('[role="alert"]')?.textContent?.trim()).toBe('El servicio rechazó los datos enviados. Revisa los campos.');
+
+    answer = new Subject<Neighbor>();
+    submit();
+    answer.error(new ApiError(400, 'COL-010', null, null));
+    TestBed.tick();
+    expect(el.querySelector('[role="alert"]')?.textContent?.trim()).toBe('El distrito no está en la lista de Lima Metropolitana y Callao.');
   });
 });

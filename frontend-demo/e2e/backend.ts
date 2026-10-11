@@ -1,5 +1,7 @@
 import { Page, Route } from '@playwright/test';
 
+import { districtByUbigeo } from '../src/app/shared/districts';
+
 /**
  * Stands in for the four Render services at the network level. Response
  * bodies copy the real DTO shapes field by field (LoginResponse,
@@ -120,6 +122,8 @@ export interface BackendOptions {
   recordsStatus?: number;
   /** POST /neighbors answers this instead of 201 (code null: a bare gateway answer). */
   neighborFailure?: { status: number; code: string | null };
+  /** PATCH /neighbors/{id}, .../deactivate, .../activate and DELETE /neighbors/{id} answer this (code null: a bare gateway answer). */
+  neighborWriteFailure?: { status: number; code: string | null };
   /** POST /tracked-companies answers this instead of 201 (code null: a bare gateway answer). */
   companyFailure?: { status: number; code: string | null };
   /** GET /sigersol-syncs fails with this status (a bare 5xx). */
@@ -145,8 +149,8 @@ export interface BackendOptions {
 
 /** collection-service neighbors (NeighborResponse), sorted by name as the API does. */
 export const NEIGHBORS = [
-  { id: '0192f3a8-a000-7000-8000-000000000002', fullName: 'Luis Ramos Huamán', phone: '912345678', address: 'Av. Perú 455', district: 'San Martín de Porres', status: 'INACTIVE' },
-  { id: '0192f3a8-a000-7000-8000-000000000001', fullName: 'Rosa Quispe Mamani', phone: '987654321', address: 'Jr. Huallaga 120', district: 'Cercado de Lima', status: 'ACTIVE' },
+  { id: '0192f3a8-a000-7000-8000-000000000002', fullName: 'Luis Ramos Huamán', phone: '912345678', address: 'Av. Perú 455', district: 'San Martín de Porres', districtUbigeo: '150135', status: 'INACTIVE' },
+  { id: '0192f3a8-a000-7000-8000-000000000001', fullName: 'Rosa Quispe Mamani', phone: '987654321', address: 'Jr. Huallaga 120', district: 'Lima', districtUbigeo: '150101', status: 'ACTIVE' },
 ] as const;
 
 /** recycler-service associations (AssociationResponse). */
@@ -207,7 +211,17 @@ interface NeighborRow {
   phone: string | null;
   address: string;
   district: string | null;
+  districtUbigeo: string | null;
   status: string;
+}
+interface StatusChangeRow {
+  id: string;
+  fromStatus: string;
+  toStatus: string;
+  reason: string;
+  actorId: string;
+  actorEmail: string | null;
+  changedAt: string;
 }
 interface ScheduleRow {
   id: string;
@@ -227,13 +241,14 @@ interface RecordRow {
 
 /** Generated neighbours up to `count` in all (for paging), each in a district of Lima. */
 function extraNeighbors(count: number = NEIGHBORS.length): NeighborRow[] {
-  const districts = ['Comas', 'Rímac', 'Los Olivos', 'Independencia'];
+  const districts = ['150110', '150128', '150117', '150112'].map((u) => districtByUbigeo(u)!);
   return Array.from({ length: Math.max(0, count - NEIGHBORS.length) }, (_, i) => ({
     id: `0192f3a8-a000-7000-8000-${String(100 + i).padStart(12, '0')}`,
     fullName: `Vecino de prueba ${String(i + 1).padStart(2, '0')}`,
     phone: null,
     address: `Calle ${i + 1}`,
-    district: districts[i % districts.length],
+    district: districts[i % districts.length].name,
+    districtUbigeo: districts[i % districts.length].ubigeo,
     status: 'ACTIVE',
   }));
 }
@@ -398,6 +413,7 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     .flat()
     .map((sc) => ({ ...sc }));
   const records: RecordRow[] = RECORDS.map((r) => ({ ...r }));
+  const statusChanges: Record<string, StatusChangeRow[]> = {};
   let created = 0;
 
   await page.route('**/svc/collection/neighbors**', (route) => {
@@ -437,13 +453,18 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
         if (typeof fullName !== 'string' || fullName.trim() === '' || typeof address !== 'string' || address.trim() === '') {
           return problem(route, 400, 'VALIDATION_ERROR', 'fullName: no debe estar vacío');
         }
+        const district = districtByUbigeo(body['districtUbigeo'] as string | undefined);
+        if (district === undefined) {
+          return problem(route, 400, 'COL-010', 'El distrito no está en la lista de Lima Metropolitana y Callao');
+        }
         created += 1;
         const neighbor: NeighborRow = {
           id: `0192f3a8-a000-7000-8000-${String(900 + created).padStart(12, '0')}`,
           fullName,
           phone: (body['phone'] as string | null) ?? null,
           address,
-          district: (body['district'] as string | null) ?? null,
+          district: district.name,
+          districtUbigeo: district.ubigeo,
           status: 'ACTIVE',
         };
         neighbors.push(neighbor);
@@ -453,17 +474,97 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
         return gatewayError(route, options.neighborsStatus);
       }
       const status = url.searchParams.get('status');
-      const district = url.searchParams.get('district');
-      // The API sorts by fullName; district is an exact, case-sensitive match.
+      const ubigeo = url.searchParams.get('districtUbigeo');
+      if (ubigeo !== null && districtByUbigeo(ubigeo) === undefined) {
+        return problem(route, 400, 'COL-010', 'El distrito no está en la lista de Lima Metropolitana y Callao');
+      }
+      // The API sorts by fullName; the district filter is the ubigeo.
       const all = neighbors
-        .filter((n) => (status === null || n.status === status) && (district === null || n.district === district))
+        .filter((n) => (status === null || n.status === status) && (ubigeo === null || n.districtUbigeo === ubigeo))
         .sort((a, b) => a.fullName.localeCompare(b.fullName));
       return json(200, paged(all));
     }
 
     const neighbor = neighbors.find((n) => n.id === neighborId);
-    if (sub === undefined) {
+    const writeFailure = () => {
+      const failure = options.neighborWriteFailure;
+      if (failure === undefined) {
+        return null;
+      }
+      return failure.code === null ? gatewayError(route, failure.status) : problem(route, failure.status, failure.code, 'Rechazado');
+    };
+    if (sub === undefined && method === 'GET') {
       return neighbor === undefined ? problem(route, 404, 'COL-001', 'Vecino no encontrado') : json(200, neighbor);
+    }
+    if (sub === undefined && method === 'PATCH') {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      options.writes?.push({ method, path: url.pathname, body });
+      const failed = writeFailure();
+      if (failed !== null) {
+        return failed;
+      }
+      if (neighbor === undefined) {
+        return problem(route, 404, 'COL-001', 'Vecino no encontrado');
+      }
+      const district = districtByUbigeo(body['districtUbigeo'] as string | undefined);
+      if (district === undefined) {
+        return problem(route, 400, 'COL-010', 'El distrito no está en la lista de Lima Metropolitana y Callao');
+      }
+      neighbor.fullName = body['fullName'] as string;
+      neighbor.address = body['address'] as string;
+      neighbor.phone = (body['phone'] as string | null) ?? null;
+      neighbor.district = district.name;
+      neighbor.districtUbigeo = district.ubigeo;
+      return json(200, neighbor);
+    }
+    if (sub === undefined && method === 'DELETE') {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      options.writes?.push({ method, path: url.pathname, body });
+      const failed = writeFailure();
+      if (failed !== null) {
+        return failed;
+      }
+      if (neighbor === undefined) {
+        return problem(route, 404, 'COL-001', 'Vecino no encontrado');
+      }
+      if (records.some((r) => r.neighborId === neighborId)) {
+        return problem(route, 409, 'COL-011', 'El vecino tiene recojos registrados: solo se puede desactivar');
+      }
+      neighbors.splice(neighbors.indexOf(neighbor), 1);
+      schedules.filter((sc) => sc.neighborId === neighborId).forEach((sc) => (sc.status = 'CANCELLED'));
+      return route.fulfill({ status: 204 });
+    }
+    if ((sub === 'deactivate' || sub === 'activate') && method === 'PATCH') {
+      const body = request.postDataJSON() as { reason: string };
+      options.writes?.push({ method, path: url.pathname, body });
+      const failed = writeFailure();
+      if (failed !== null) {
+        return failed;
+      }
+      if (neighbor === undefined) {
+        return problem(route, 404, 'COL-001', 'Vecino no encontrado');
+      }
+      const [from, to] = sub === 'deactivate' ? ['ACTIVE', 'INACTIVE'] : ['INACTIVE', 'ACTIVE'];
+      if (neighbor.status !== from) {
+        return problem(route, 409, 'COL-012', 'El vecino ya se encuentra en el estado solicitado');
+      }
+      neighbor.status = to;
+      if (sub === 'deactivate') {
+        schedules.filter((sc) => sc.neighborId === neighborId && sc.status === 'ACTIVE').forEach((sc) => (sc.status = 'PAUSED'));
+      }
+      (statusChanges[neighborId] ??= []).unshift({
+        id: `0192f3a8-f000-7000-8000-${String(Object.values(statusChanges).flat().length + 1).padStart(12, '0')}`,
+        fromStatus: from,
+        toStatus: to,
+        reason: body.reason,
+        actorId: '0192f3a8-0000-7000-8000-00000000a001',
+        actorEmail: 'ana.torres@esg.pe',
+        changedAt: new Date().toISOString(),
+      });
+      return json(200, neighbor);
+    }
+    if (sub === 'status-changes' && method === 'GET') {
+      return neighbor === undefined ? problem(route, 404, 'COL-001', 'Vecino no encontrado') : json(200, statusChanges[neighborId] ?? []);
     }
 
     if (sub === 'schedules') {
@@ -480,6 +581,9 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
         options.writes?.push({ method, path: url.pathname, body });
         if (neighbor === undefined) {
           return problem(route, 404, 'COL-001', 'Vecino no encontrado');
+        }
+        if (neighbor.status !== 'ACTIVE') {
+          return problem(route, 409, 'COL-013', 'El vecino está inactivo');
         }
         if (own.some((sc) => sc.status === 'ACTIVE' && sc.dayOfWeek === body.dayOfWeek)) {
           return problem(route, 409, 'COL-002', 'Conflicto de horario de recojo');
@@ -503,6 +607,9 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
         const allowed: Record<string, string[]> = { pause: ['ACTIVE'], cancel: ['ACTIVE', 'PAUSED'], reactivate: ['PAUSED'] };
         if (!allowed[action]?.includes(schedule.status)) {
           return problem(route, 409, 'COL-008', 'Transición de estado no permitida para esta programación');
+        }
+        if (action === 'reactivate' && neighbor?.status !== 'ACTIVE') {
+          return problem(route, 409, 'COL-013', 'El vecino está inactivo');
         }
         if (
           action === 'reactivate' &&
@@ -537,6 +644,9 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
       const body = request.postDataJSON() as Record<string, unknown>;
       options.collectionPosts?.push({ neighborId, body });
       options.writes?.push({ method, path: url.pathname, body });
+      if (neighbor.status !== 'ACTIVE') {
+        return problem(route, 409, 'COL-013', 'El vecino está inactivo');
+      }
       if (options.collectionFailure !== undefined) {
         const { status, code } = options.collectionFailure;
         if (code === null) {

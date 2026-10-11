@@ -1,0 +1,78 @@
+<div class="combo">
+  <input
+    #field
+    class="control"
+    type="text"
+    role="combobox"
+    autocomplete="off"
+    spellcheck="false"
+    aria-autocomplete="list"
+    [id]="inputId()"
+    [value]="text()"
+    [disabled]="disabled()"
+    [attr.aria-expanded]="open()"
+    [attr.aria-controls]="listboxId"
+    [attr.aria-activedescendant]="activeId()"
+    [attr.aria-describedby]="describedBy()"
+    [attr.aria-invalid]="invalid()"
+    [attr.placeholder]="allowAll() ? null : 'Escribe o elige un distrito'"
+    (input)="onInput($event)"
+    (keydown)="onKeydown($event)"
+    (click)="open() || toggle()"
+  />
+  <button
+    type="button"
+    class="toggle"
+    tabindex="-1"
+    aria-label="Mostrar distritos"
+    [attr.aria-controls]="listboxId"
+    [attr.aria-expanded]="open()"
+    [disabled]="disabled()"
+    (mousedown)="keepFocus($event)"
+    (click)="toggle()"
+  >
+    <svg viewBox="0 0 14 9" width="14" height="9" aria-hidden="true" focusable="false"><path d="M1 1l6 6 6-6" /></svg>
+  </button>
+</div>
+
+<div #listbox class="listbox" role="listbox" [id]="listboxId" aria-label="Distritos" [hidden]="!open()">
+  @if (showAll()) {
+    <!-- Options never take focus: the input keeps it and points at the active one (aria-activedescendant), and the keyboard is handled there (APG combobox). -->
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+    <div
+      class="option all"
+      role="option"
+      [id]="allOption.id"
+      [attr.aria-selected]="value() === null"
+      [class.active]="activeId() === allOption.id"
+      (mousedown)="keepFocus($event)"
+      (click)="choose(allOption)"
+    >
+      Todos los distritos
+    </div>
+  }
+  @for (g of groups(); track g.area) {
+    <div role="group" [attr.aria-labelledby]="g.labelId">
+      <div class="group-label" role="presentation" [id]="g.labelId">{{ g.label }}</div>
+      @for (o of g.options; track o.id) {
+        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+        <div
+          class="option"
+          role="option"
+          [id]="o.id"
+          [attr.aria-selected]="value() === o.ubigeo"
+          [class.active]="activeId() === o.id"
+          (mousedown)="keepFocus($event)"
+          (click)="choose(o)"
+        >
+          {{ o.name }}
+        </div>
+      }
+    </div>
+  }
+  @if (groups().length === 0 && !showAll()) {
+    <div class="none" role="presentation">Ningún distrito coincide. Prueba con otra parte del nombre.</div>
+  }
+</div>
+
+<p class="visually-hidden" role="status">{{ matches() }}</p>

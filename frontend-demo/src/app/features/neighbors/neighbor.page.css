@@ -170,3 +170,123 @@ label {
     flex: 1 1 100%;
   }
 }
+
+/* v3: edit, state, history. */
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.section-head h2 {
+  margin: 0;
+}
+.edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-5);
+}
+.edit .field {
+  min-width: 0;
+}
+.optional {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+.edit .problem {
+  margin-top: var(--space-4);
+}
+.edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+.legacy {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+.inactive-note {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: 4px solid var(--ink);
+  background: var(--paper);
+}
+.state-box {
+  padding: var(--space-4) var(--space-5);
+  background: var(--paper);
+  outline: none;
+}
+.state-box:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.state-now {
+  margin: 0 0 var(--space-3);
+  font-weight: 600;
+}
+.actions.start {
+  margin-left: 0;
+}
+.paused-callout {
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+.paused-callout p {
+  margin: 0 0 var(--space-3);
+}
+.paused-callout ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.paused-callout li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-5);
+  padding: var(--space-2) 0;
+  border-bottom: 2px dotted var(--rule-dots);
+}
+.paused-callout li:last-child {
+  border-bottom: 0;
+}
+.history-title {
+  margin-top: var(--space-6);
+}
+.history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--paper);
+}
+.history li {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 2px dotted var(--rule-dots);
+}
+.history li:last-child {
+  border-bottom: 0;
+}
+.history p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.history-reason {
+  margin-top: var(--space-1) !important;
+  color: var(--ink);
+}
+.inactive-add {
+  color: var(--ink-soft);
+}
+@media (max-width: 639.98px) {
+  .edit-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .state-box,
+  .paused-callout {
+    padding: var(--space-4);
+  }
+}

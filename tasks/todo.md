@@ -531,16 +531,16 @@ Rama y PR por módulo (`v3/mN`). Freno para el OK de Angel antes del merge: M2, 
 - [x] V3-0.6: PR #23 de M0, CI verde y PASS; fusionado por Angel el 2026-10-11
 
 - [x] V3-0.7: respuestas de Angel a M0: D4 descartada, nombres de API en inglés, M5 reducido (plan, ADR y SPEC locales actualizados)
-- [x] V3-0.8: migrar los 4 borradores de ADR de `docs/decisiones-v3/` a `portal/Writerside/topics/decisiones/` con la plantilla del portal (rama `portal/adr-migration`)
+- [x] V3-0.8: migrar los 4 borradores de ADR de `docs/decisiones-v3/` a `portal/Writerside/topics/decisiones/` con la plantilla del portal (rama `portal/adr-migration`) — PR #27, fusionado por Angel el 2026-10-11
 
 ### Portal (tareas propias, fuera de la numeración V3-x.y; detalle y próximas en portal/PLAN.md)
 
-- [x] Task 3 de portal/PLAN.md: specs OpenAPI por servicio (`OpenApiExportIT`/`OpenApiDocsIT`, determinista) + job informativo `openapi-drift` — PR #29 (rama `portal/openapi-export`), checks verdes, **merge pendiente**: ver "Pendiente" abajo. No fusionar antes de que #28 (M2) esté mergeado; regenerar los specs desde `main` antes de fusionar.
-- [x] PR #27 (rama `portal/adr-migration`, V3-0.8): hallazgo de gitleaks en `secrets` corregido — era un falso positivo ajeno a este PR (2 UUID de test en los commits `965dec5`/`17a593a` de `v3/m2`, ya permitidos en `.gitleaks.toml` con la misma política de siempre). Checks verdes. **Merge pendiente**: ver "Pendiente" abajo.
+- [x] Task 3 de portal/PLAN.md: specs OpenAPI por servicio (`OpenApiExportIT`/`OpenApiDocsIT`, determinista) + job informativo `openapi-drift` — PR #29 (rama `portal/openapi-export`), checks verdes, fusionado por Angel a mano el 2026-10-11 (antes que #28)
+- [x] PR #27 (rama `portal/adr-migration`, V3-0.8): hallazgo de gitleaks en `secrets` corregido — era un falso positivo ajeno a este PR (2 UUID de test en los commits `965dec5`/`17a593a` de `v3/m2`, ya permitidos en `.gitleaks.toml` con la misma política de siempre). Checks verdes, fusionado por Angel a mano el 2026-10-11.
 
 #### Pendiente (bloqueo de infraestructura, no de código)
 
-- [ ] `gh pr merge` falla en ambos PR (#27 y #29) con `403 Resource not accessible by personal access token` (confirmado por GraphQL y por REST `pulls/.../merge`), aunque el repo muestra `admin:true` para la cuenta — es el *token* el que no tiene permiso de escritura en pull requests, no el usuario. Angel: habilita "Pull requests: write" en el fine-grained PAT (o usa un token clásico con scope `repo`), o fusiona #27 y #29 a mano desde GitHub. Avisa cuando esté resuelto para reintentar.
+- [x] `gh pr merge` fallaba en ambos PR (#27 y #29) con `403 Resource not accessible by personal access token` (confirmado por GraphQL y por REST `pulls/.../merge`), aunque el repo mostraba `admin:true` para la cuenta — era el *token* el que no tenía permiso de escritura en pull requests, no el usuario. Resuelto: Angel fusionó #27 y #29 a mano desde GitHub el 2026-10-11, sin reintento necesario.
 - [ ] Siguiente en el portal (task 4 de portal/PLAN.md): glosario de estados y catálogo de errores por servicio (`errores-<servicio>.md`, `estados-<servicio>.md`), más el job informativo `catalog-drift` — mismo patrón que `openapi-drift` (informa, no bloquea, mismo filtro de disparo).
 
 ### M1: shared-kernel (rama `v3/m1`) — PR #26, fusionado por Angel el 2026-10-11
@@ -548,5 +548,20 @@ Rama y PR por módulo (`v3/mN`). Freno para el OK de Angel antes del merge: M2, 
 - [x] V3-1.2: catálogo ubigeo INEI (43 Lima Metropolitana + 7 Callao) desde la fuente oficial, verificado con tildes y ñ; normalizador solo para comparar
 - [x] V3-1.3: `CurrentActor` (sub + email del JWT)
 
-### M2–M8
+### M2: collection-service + frontend, vecinos (rama `v3/m2`, worktree `../esg-v3-m2`) — **freno: OK de Angel antes del merge**
+
+Compatibilidad (parcial): el alta acepta `districtUbigeo` o, como respaldo, el `district` en texto si coincide con el catálogo (`UbigeoCatalog.findByName`); si no, COL-010. Ruptura conocida hasta que se despliegue el frontend de V3-2.6: el v2 manda `district: null` cuando el campo queda vacío, o un texto fuera del catálogo ("Surco", "Cercado de Lima"), y eso ahora es COL-010. Por eso backend y frontend de M2 se despliegan juntos.
+
+- [x] V3-2.1: ubigeo del vecino (changeset + backfill, COL-010, filtro por código y por nombre v2) — PASS; ver tasks/LEARNINGS.md#v3-21
+- [x] V3-2.2: editar vecino (PATCH, vía `update()` de Persistable) — PASS
+- [x] V3-2.3: desactivar/reactivar con motivo, historial con actor del JWT, pausa de cronogramas (D8), compare-and-set contra carreras — PASS; ver tasks/LEARNINGS.md#v3-23
+- [x] V3-2.4: COL-013 (recojo, cronograma nuevo o reactivado para vecino INACTIVO), FOR SHARE contra la desactivación concurrente — PASS; ver tasks/LEARNINGS.md#v3-24
+- [x] V3-2.5: eliminación lógica con motivo (COL-011 con recojos, cancela cronogramas, COL-001 en adelante; las lecturas anidadas quedan como auditoría) — PASS; ver tasks/LEARNINGS.md#v3-25
+- [x] V3-2.6: frontend — selector de distrito (combobox agrupado Lima/Callao con búsqueda sin tildes; catálogo TS verificado contra el CSV de shared-kernel), alta y filtro con el selector, sin "Escríbelo…"; editar, desactivar/reactivar con motivo y confirmación, eliminar, cronogramas pausados al reactivar (D8), acciones en "Inactivos" — PASS (501db2e, 6aac591); ver tasks/LEARNINGS.md#v3-26
+- [x] V3-2.7: docs — docs/frontend.md (matriz, reglas, limitaciones), catálogo de errores COL-010..013 — ver tasks/LEARNINGS.md#v3-27
+### Checkpoint V3-M2
+- [x] `mvn -B -pl collection-service verify` en worktree limpio con compose detenido; frontend `npm test` + Playwright verdes — 88 backend (87 + `OpenApiExportIT` traído por el merge de main), 195 unit frontend, 126 Playwright, todo verde; ver tasks/LEARNINGS.md#checkpoint-v3-m2
+- [ ] PR con CI verde; **freno: OK de Angel antes del merge** (migración en Neon al desplegar)
+
+### M3–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

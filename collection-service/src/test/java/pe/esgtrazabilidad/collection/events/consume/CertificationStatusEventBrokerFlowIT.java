@@ -136,7 +136,7 @@ class CertificationStatusEventBrokerFlowIT {
                   "fullName": "%s",
                   "phone": "999999999",
                   "address": "Av. Siempre Viva 123",
-                  "district": "Surco"
+                  "districtUbigeo": "150140"
                 }
                 """.formatted(fullName);
     }

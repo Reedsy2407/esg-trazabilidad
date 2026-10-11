@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -15,7 +16,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
+import pe.esgtrazabilidad.kernel.ubigeo.UbigeoCatalog;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Testcontainers
@@ -35,15 +38,36 @@ class NeighborRepositoryAdapterIT {
     @Autowired
     private NeighborRepository neighborRepository;
 
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
     @Test
     void savingANeighborWithoutAnAddressViolatesTheDatabaseConstraint() {
         // Neighbor.reconstruct() bypasses the domain guard in create() on
         // purpose, so this proves the NOT NULL constraint itself fires at
         // the database level -- not just that the domain check works.
         Neighbor neighborWithoutAddress = Neighbor.reconstruct(
-                UUID.randomUUID(), "Ana Torres", "999999999", null, "Surco", NeighborStatus.ACTIVE);
+                UUID.randomUUID(), "Ana Torres", "999999999", null, "Santiago de Surco", "150140", NeighborStatus.ACTIVE);
 
         assertThatThrownBy(() -> neighborRepository.save(neighborWithoutAddress))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void updateWritesTheContactDataButNeverAStatusReadBeforeAConcurrentTransition() {
+        Neighbor stale = neighborRepository.save(Neighbor.create(
+                "Ana Torres", null, "Jr. 1", UbigeoCatalog.find("150110").orElseThrow()));
+        // Another request deactivated the neighbour after `stale` was read.
+        Boolean changed = transactionTemplate.execute(status ->
+                neighborRepository.changeStatus(stale.getId(), NeighborStatus.ACTIVE, NeighborStatus.INACTIVE));
+        assertThat(changed).isTrue();
+
+        stale.edit("Ana Editada", null, "Jr. 2", UbigeoCatalog.find("150112").orElseThrow());
+        neighborRepository.update(stale);
+
+        Neighbor reloaded = neighborRepository.findById(stale.getId()).orElseThrow();
+        assertThat(reloaded.getFullName()).isEqualTo("Ana Editada");
+        assertThat(reloaded.getDistrictUbigeo()).isEqualTo("150112");
+        assertThat(reloaded.getStatus()).isEqualTo(NeighborStatus.INACTIVE);
     }
 }

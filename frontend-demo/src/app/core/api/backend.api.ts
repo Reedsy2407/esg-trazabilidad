@@ -14,12 +14,15 @@ import {
   CreateCollectionScheduleRequest,
   CreateNeighborRequest,
   CreateStaffUserRequest,
+  EditNeighborRequest,
   EsgCertificate,
   IssueCertificateRequest,
   LoginRequest,
   LoginResponse,
   Neighbor,
   NeighborStatus,
+  NeighborStatusChange,
+  NeighborTransition,
   Page,
   RegisterSigersolSyncRequest,
   RegisterTrackedCompanyRequest,
@@ -123,16 +126,16 @@ export class BackendApi {
   }
 
   /**
-   * The neighbours screen: 20 per page by name. `district` matches exactly (case-sensitive, the
-   * backend's equality filter); there is no search by name in the API.
+   * The neighbours screen: 20 per page by name, filtered by state and by district (its ubigeo;
+   * COL-010 for a code outside the list). There is no search by name in the API.
    */
-  neighborsPage(page: number, status: NeighborStatus | null, district: string | null): Observable<Page<Neighbor>> {
+  neighborsPage(page: number, status: NeighborStatus | null, districtUbigeo: string | null): Observable<Page<Neighbor>> {
     let params = new HttpParams().set('page', page).set('size', 20);
     if (status !== null) {
       params = params.set('status', status);
     }
-    if (district !== null) {
-      params = params.set('district', district);
+    if (districtUbigeo !== null) {
+      params = params.set('districtUbigeo', districtUbigeo);
     }
     return this.http.get<Page<Neighbor>>(`${collection}/neighbors`, { params });
   }
@@ -147,7 +150,33 @@ export class BackendApi {
     return this.http.post<Neighbor>(`${collection}/neighbors`, request);
   }
 
-  /** 201; COL-001 (neighbour), COL-002 (an ACTIVE schedule that day already). */
+  /** Replaces name, address, district and phone (null clears it). COL-001, COL-010, VALIDATION_ERROR. */
+  editNeighbor(id: string, request: EditNeighborRequest): Observable<Neighbor> {
+    return this.http.patch<Neighbor>(`${collection}/neighbors/${encodeURIComponent(id)}`, request);
+  }
+
+  /**
+   * deactivate: ACTIVE → INACTIVE, pausing its active schedules; activate: INACTIVE → ACTIVE,
+   * leaving them paused. The reason is required; who comes from the token. COL-012 (same state).
+   */
+  changeNeighborStatus(id: string, transition: NeighborTransition, reason: string): Observable<Neighbor> {
+    return this.http.patch<Neighbor>(`${collection}/neighbors/${encodeURIComponent(id)}/${transition}`, { reason });
+  }
+
+  /** The neighbour's deactivations and reactivations, newest first. */
+  neighborStatusChanges(id: string): Observable<NeighborStatusChange[]> {
+    return this.http.get<NeighborStatusChange[]>(`${collection}/neighbors/${encodeURIComponent(id)}/status-changes`);
+  }
+
+  /**
+   * Logical deletion, 204. Only without collections: COL-011 otherwise (deactivate instead).
+   * Its schedules are cancelled; afterwards the neighbour answers COL-001.
+   */
+  deleteNeighbor(id: string, reason: string): Observable<void> {
+    return this.http.delete<void>(`${collection}/neighbors/${encodeURIComponent(id)}`, { body: { reason } });
+  }
+
+  /** 201; COL-001 (neighbour), COL-002 (an ACTIVE schedule that day already), COL-013 (inactive neighbour). */
   createSchedule(neighborId: string, request: CreateCollectionScheduleRequest): Observable<CollectionSchedule> {
     return this.http.post<CollectionSchedule>(`${collection}/neighbors/${encodeURIComponent(neighborId)}/schedules`, request);
   }

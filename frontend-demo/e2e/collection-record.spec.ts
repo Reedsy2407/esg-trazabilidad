@@ -71,7 +71,7 @@ test('register a collection with a schedule: the request carries exactly the rea
   await expect(page.getByLabel('Fecha del recojo')).toHaveValue('2026-10-05');
 });
 
-test('without a schedule the request sends scheduleId: null; inactive and suspended entries are labeled', async ({ page }) => {
+test('inactive and suspended entries are labeled; an inactive neighbour is refused (COL-013); no schedule sends null', async ({ page }) => {
   const posts: { neighborId: string; body: unknown }[] = [];
   await openForm(page, { collectionPosts: posts });
   await expect(page.getByLabel('Vecino', { exact: true })).toContainText(`${NEIGHBORS[0].fullName} · ${NEIGHBORS[0].district} (inactivo)`);
@@ -82,9 +82,13 @@ test('without a schedule the request sends scheduleId: null; inactive and suspen
   await page.getByLabel('Asociación').selectOption({ label: ASSOCIATIONS[0].name });
   await page.getByLabel('Peso recolectado (kg)').fill('3');
   await page.getByRole('button', { name: 'Registrar recojo' }).click();
+  await expect(page.getByRole('alert')).toContainText('El vecino está inactivo y no puede recibir recojos.');
 
+  await page.getByLabel('Vecino', { exact: true }).selectOption({ label: `${NEIGHBORS[1].fullName} · ${NEIGHBORS[1].district}` });
+  await page.getByLabel('Peso recolectado (kg)').fill('3');
+  await page.getByRole('button', { name: 'Registrar recojo' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Recojo registrado' })).toContainText('3.00 kg');
-  expect((posts[0].body as { scheduleId: unknown }).scheduleId).toBeNull();
+  expect((posts[1].body as { scheduleId: unknown }).scheduleId).toBeNull();
 });
 
 test('empty and malformed fields are explained next to each field, by keyboard, and nothing is sent', async ({ page }) => {

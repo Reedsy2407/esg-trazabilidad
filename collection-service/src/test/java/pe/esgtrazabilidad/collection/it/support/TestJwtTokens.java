@@ -22,13 +22,19 @@ import com.nimbusds.jwt.SignedJWT;
  */
 public final class TestJwtTokens {
 
+    /** The email claim every test token carries, as auth-service's real tokens do. */
+    public static final String TEST_EMAIL = "staff-it@example.org";
+
     public static final String TEST_SECRET = "collection-service-it-test-secret-at-least-32-bytes!";
+
+    /** The subject (actor id) claim every token from {@link #validToken()} carries. */
+    public static final String SUBJECT = "01a0d8cb-f219-72a2-b006-5150f0e0d685";
 
     private TestJwtTokens() {
     }
 
     public static String validToken() {
-        return signToken(TEST_SECRET, "01a0d8cb-f219-72a2-b006-5150f0e0d685");
+        return signToken(TEST_SECRET, SUBJECT);
     }
 
     public static String signToken(String secret, String subject) {
@@ -36,6 +42,7 @@ public final class TestJwtTokens {
             MACSigner signer = new MACSigner(secret.getBytes(StandardCharsets.UTF_8));
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
                     .subject(subject)
+                    .claim("email", TEST_EMAIL)
                     .expirationTime(new Date(System.currentTimeMillis() + 60_000))
                     .build();
             SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);

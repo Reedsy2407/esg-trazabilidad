@@ -1,6 +1,7 @@
 package pe.esgtrazabilidad.collection.schedule.adapter.out.persistence;
 
 import java.time.DayOfWeek;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,6 +48,20 @@ class CollectionScheduleRepositoryAdapter implements CollectionScheduleRepositor
         return jpaRepository
                 .findByNeighborIdAndDayOfWeekAndStatus(neighborId, dayOfWeek, CollectionScheduleStatus.ACTIVE.name())
                 .map(this::toDomain);
+    }
+
+    @Override
+    public List<CollectionSchedule> findActiveByNeighborId(UUID neighborId) {
+        return jpaRepository.findByNeighborIdAndStatus(neighborId, CollectionScheduleStatus.ACTIVE.name()).stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<CollectionSchedule> findNotCancelledByNeighborId(UUID neighborId) {
+        return jpaRepository.findByNeighborIdAndStatusNot(neighborId, CollectionScheduleStatus.CANCELLED.name()).stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     @Override

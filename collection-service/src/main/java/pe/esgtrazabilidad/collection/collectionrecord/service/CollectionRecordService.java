@@ -18,6 +18,8 @@ import pe.esgtrazabilidad.collection.collectionrecord.port.in.ListCollectionReco
 import pe.esgtrazabilidad.collection.collectionrecord.port.out.CollectionRecordRepository;
 import pe.esgtrazabilidad.collection.events.publish.CollectionRegisteredEventPublisher;
 import pe.esgtrazabilidad.collection.exception.CollectionErrors;
+import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
+import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
 import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
 import pe.esgtrazabilidad.collection.schedule.port.out.CollectionScheduleRepository;
@@ -52,9 +54,14 @@ class CollectionRecordService
     @Override
     @Transactional
     public CollectionRecord create(CreateCollectionRecordCommand command) {
-        neighborRepository
-                .findById(command.neighborId())
+        // Shared row lock until commit: a deactivation can't interleave with
+        // this check (v3, D8: an INACTIVE neighbour gets no new collection).
+        Neighbor neighbor = neighborRepository
+                .findByIdForShare(command.neighborId())
                 .orElseThrow(() -> new ApplicationException(CollectionErrors.NEIGHBOR_NOT_FOUND));
+        if (neighbor.getStatus() != NeighborStatus.ACTIVE) {
+            throw new ApplicationException(CollectionErrors.NEIGHBOR_INACTIVE);
+        }
         if (command.scheduleId() != null) {
             // The FK only guarantees the schedule exists somewhere, not that
             // it belongs to this neighbor -- checked explicitly here. Same

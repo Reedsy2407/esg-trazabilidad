@@ -1865,3 +1865,62 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 - La única diferencia es la clave: `SigersolSync` se registra por asociación + período, el brief habla de "por empresa". Como una `TrackedCompany` apunta a exactamente una asociación y el certificado de la empresa toma el registro de esa asociación (RPT-005), el dato que respalda el certificado de una empresa *es* este registro. Si dos empresas comparten asociación, comparten el registro: es la misma limitación de doble conteo ya documentada en SPEC-reporting-service.md.
 - No hay otro dato SIGERSOL en el sistema, y el dato real por empresa (SIGERSOL No Municipal, con login) no se automatiza. Un segundo registro por empresa duplicaría el mismo número con otra clave, sin regla clara de cuál manda.
 - Decisión (Angel, D1, aprobada): mantener `SigersolSync` y RPT-005 y agregarle `origin` (`DECLARED_BY_OPERATOR` | `REFERENCED_PROOF`), quién (del JWT) y `reference` opcional. Cobertura `UNVERIFIED` ("No verificado") = ningún registro cubre el período.
+
+## V3-2.1
+
+- El backfill de `district_ubigeo` vive en `db/changelog/sql/` (fuera de `changes/`, para que `includeAll` no lo tome como changelog propio) y `NeighborDistrictBackfillIT` corre el mismo archivo contra Postgres real. Su normalización copia la de `TextNormalizer`: tildes fuera (Ñ a N), mayúsculas, espacios colapsados (incluido el NBSP) y recorte al final.
+- El filtro v2 `?district=` se resuelve por catálogo y filtra por ubigeo: un vecino anterior a v3 cuyo texto no entró al backfill ("Surco", "Cercado de Lima") ya no aparece con ese filtro. En producción solo hay vecinos de Comas e Independencia, que sí entran.
+- Ruptura conocida: el frontend v2 manda `district: null` cuando el campo queda vacío, y eso ahora es COL-010. Backend y frontend de M2 se despliegan juntos.
+- `districtUbigeo` en blanco cuenta como ausente.
+
+## V3-2.2
+
+- `PATCH /neighbors/{id}` reemplaza todos los campos editables (un teléfono ausente lo borra) y escribe con `update()` + `NeighborEntity.existing()`. El merge sobrescribe todas las columnas: en V3-2.3/V3-2.5, cualquier columna nueva del vecino (estado, eliminación) tiene que pasar por el dominio y por `existing()`, o cada edición la dejaría en null (mismo precedente que `AssociationEntity` en recycler-service).
+
+## V3-2.3
+
+- La transición de estado del vecino es un compare-and-set (`UPDATE … WHERE id = :id AND status = :from`) dentro de la transacción del servicio. De dos desactivaciones simultáneas pasa una sola y la otra recibe COL-012, sin una segunda fila de historial. El IT de dos hilos falla si se quita la condición (prueba negativa hecha a mano).
+- Se agregó `GET /neighbors/{id}/status-changes` (solo lectura, lo más nuevo primero) para que la pantalla muestre el motivo y quién; quedó anotado en la enmienda local del SPEC.
+- El token de prueba de collection-service ahora lleva el claim `email`, como los tokens reales de auth-service.
+
+## V3-2.4
+
+- Las escrituras que dependen de que el vecino esté ACTIVE (recojo, cronograma nuevo, reactivar cronograma) leen al vecino con `SELECT … FOR SHARE` dentro de su transacción. Una desactivación en curso las hace esperar y después ven INACTIVE (COL-013); si la escritura va primero, la desactivación espera y luego pausa el cronograma recién creado. Hace falta el FOR SHARE explícito: el FOR KEY SHARE que toma la FK no choca con un UPDATE de `status`.
+- `neighbor.status` es `updatable = false`: solo lo cambia el compare-and-set (un UPDATE masivo JPQL ignora ese flag). Así el merge de una edición no puede reescribir un estado leído antes de una transición concurrente.
+- Las dos protecciones tienen IT con prueba negativa hecha a mano: el IT de FOR SHARE usa una transacción JDBC que deja la desactivación sin confirmar, y el IT del adaptador llama a `update()` con un objeto desactualizado.
+- En reactivate, INVALID_SCHEDULE_TRANSITION gana sobre COL-013.
+
+## V3-2.5
+
+- La eliminación marca primero (UPDATE condicional `WHERE deleted_at IS NULL`, que toma el lock de la fila) y recién después revisa si hay recojos. Un recojo que se esté registrando a la vez (con FOR SHARE) confirma antes, el chequeo lo ve y la eliminación se revierte con COL-011. El IT falla si se invierte el orden.
+- Todas las escrituras que dependen del vecino toman FOR SHARE sobre su fila: recojo, cronograma (crear, reactivar, pausar, cancelar) y edición. Así ninguna se intercala con una desactivación o eliminación; si pierden la carrera contra una eliminación, responden COL-001. Cuando el compare-and-set de estado pierde, se vuelve a leer al vecino: si ya no existe es COL-001, no COL-012.
+- Decisión: los cronogramas cancelados de un vecino eliminado (y las lecturas anidadas) siguen siendo legibles como auditoría. Pausar, cancelar o reactivar uno de ellos responde COL-008, porque la validez de la transición se revisa antes que el vecino. COL-001 solo aparece cuando la transición era válida y el vecino desapareció en el medio (una carrera con la eliminación).
+- La edición lee con FOR UPDATE (no FOR SHARE): leer, modificar y escribir la misma fila con lock compartido hacía chocar dos ediciones simultáneas (deadlock). `NeighborLockingApiIT` prueba los locks contra Postgres real con una transacción JDBC sin confirmar.
+- Limitación conocida, anterior a v3: dos escrituras simultáneas sobre el mismo cronograma (por ejemplo cancelar y pausar) no se serializan entre sí; gana la última.
+- Nombres de changeset: `includeAll` ordena alfabéticamente, así que "v0.1.10" quedaría antes de "v0.1.1_". Los de v3 siguen en v0.2.x, y con "v0.2.10" vuelve el mismo problema: al llegar a 10, saltar a v0.3.0.
+
+## V3-2.6
+
+- `district-select`: combobox ARIA propio (no `<select>`) agrupado por Lima Metropolitana / Callao, con búsqueda que ignora tildes y mayúsculas; el catálogo TS (`shared/districts.ts`) se generó a mano desde el CSV de `shared-kernel` y un test (`districts.spec.ts`) verifica que los 50 ubigeos coinciden uno a uno. Se usa igual en alta, edición y el filtro de la lista — ya no hay "Escríbelo…".
+- Editar, desactivar/reactivar y eliminar comparten `reason-confirm.ts`: motivo obligatorio (máx. 500) + casilla + botón que nombra la acción, igual que emitir un certificado. Reactivar ofrece los cronogramas que la desactivación pausó (D8) para reactivarlos uno por uno; eliminar los cancela directamente.
+- El estado del vecino (activo/inactivo) se agrupó en una sola caja con `role="group"` y su propio título, en vez de dejar sueltos los controles de desactivar/reactivar.
+- Al revisar el fix del lock (abajo), apareció que `update()` de `NeighborService` no bloqueaba la fila: se corrigió a `SELECT … FOR UPDATE` (ver V3-2.5 arriba, mismo commit `6aac591`) y se probó contra Postgres real con una transacción JDBC sin confirmar (`NeighborLockingApiIT`).
+- Tests: 87 backend (unit+IT), 195 unit de frontend, 126 Playwright — ver Checkpoint V3-M2 abajo.
+
+## V3-2.7
+
+- `docs/frontend.md`: matriz de endpoints (+5 filas: editar, desactivar, activar, eliminar, bitácora de estado — pasa de 27/44 a 32/49 business endpoints con pantalla), regla de confirmación con motivo documentada junto a la de emitir certificado, limitaciones actualizadas (vecinos ya no están en "no se puede editar/desactivar/eliminar"; el filtro de distrito ya no es sensible a tildes/mayúsculas porque usa el mismo combobox), y una tabla nueva con COL-010..COL-013 (código, HTTP, cuándo ocurre, mensaje en español tal cual lo muestra `shared/error-message.ts`).
+- Los 4 borradores de `docs/decisiones-v3/` se revisaron: ninguno corresponde a M2 (tres son de reporting-service, M4/M5; el de distrito en el evento de recojo es M5). Ninguno cambió de estado.
+
+### Checkpoint V3-M2
+
+- `mvn -B -pl collection-service verify` en worktree limpio (compose propio del worktree, levantado solo para esta corrida): BUILD SUCCESS, 87 tests (unit+IT), 0 fallos.
+- Frontend: `npm test` (Vitest) 195/195 verde; `npx playwright test` 126/126 verde (contra un `ng serve` real, backend mockeado con `page.route` por diseño de la suite).
+- Nada que corregir: los dos commits de V3-2.6 (`501db2e`, `6aac591`) ya dejaron todo verde; este checkpoint solo lo confirmó de nuevo en limpio.
+
+### Checkpoint V3-M2 (segunda corrida, tras sincronizar con main)
+
+- Antes de sincronizar: en `NeighborDeletionApiIT`/`NeighborStatusApiIT` se reemplazó el `TOKEN_SUBJECT` local (literal duplicado del UUID de prueba) por la constante pública nueva `TestJwtTokens.SUBJECT`, para que las tres copias no puedan desalinearse (`c591689`).
+- `main` traía mergeados M0 (#23), M1/#26, el ADR migration (#27) y el export de OpenAPI del portal (#29); merge de `origin/main` en `v3/m2` con un solo conflicto en `tasks/todo.md`, resuelto conservando ambos lados (`4b6a54a`).
+- Spec de collection-service regenerado (`mvn -pl collection-service -am verify -Dit.test=OpenApiExportIT,OpenApiDocsIT` + `node portal/scripts/export-openapi.mjs`) y commiteado; los otros tres specs salieron bit a bit idénticos a lo ya commiteado (`0ae7c45`).
+- Checkpoint repetido completo: backend 88 tests (87 + `OpenApiExportIT`, traído por el merge), 0 fallos; frontend unit 195/195; Playwright 126/126. Todo verde, nada que corregir.

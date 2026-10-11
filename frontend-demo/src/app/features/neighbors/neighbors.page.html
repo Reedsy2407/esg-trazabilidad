@@ -6,6 +6,9 @@
   <a class="btn btn-primary" routerLink="/vecinos/nuevo">Registrar vecino</a>
 </header>
 
+<!-- Always in the DOM (a live region inserted together with its text isn't reliably announced). -->
+<p class="done" role="status" [class.visually-hidden]="deleted === null">{{ deleted === null ? '' : 'Vecino ' + deleted + ' eliminado.' }}</p>
+
 <div class="filters">
   <nav class="state-filter" aria-label="Filtrar por estado">
     @for (f of filters; track f.label) {
@@ -19,17 +22,17 @@
       >
     }
   </nav>
-  <form class="district" role="search" aria-label="Filtrar por distrito" (submit)="searchDistrict($event)">
+  <div class="district" role="search" aria-label="Filtrar por distrito">
     <label for="district">Distrito</label>
-    <div class="district-row">
-      <input id="district" name="distrito" class="control" type="search" [value]="district() ?? ''" aria-describedby="district-hint" />
-      <button type="submit" class="btn">Filtrar</button>
-    </div>
-    <p class="hint" id="district-hint">Escríbelo tal como se registró (mayúsculas y tildes incluidas).</p>
-  </form>
+    <app-district-select inputId="district" [allowAll]="true" [formControl]="districtControl" />
+  </div>
 </div>
 
-<p class="visually-hidden" role="status">{{ neighbors.isLoading() ? 'Cargando vecinos' : announcement() }}</p>
+@if (filter().status === 'INACTIVE') {
+  <p class="note">Un vecino inactivo no recibe recojos ni cronogramas activos. Para reactivarlo, ábrelo: la reactivación pide un motivo.</p>
+}
+
+<p class="visually-hidden announce" role="status">{{ neighbors.isLoading() ? 'Cargando vecinos' : announcement() }}</p>
 
 @if (loadError(); as message) {
   <div class="problem" role="alert">
@@ -60,6 +63,7 @@
             <th scope="col">Distrito</th>
             <th scope="col">Dirección</th>
             <th scope="col">Estado</th>
+            <th scope="col"><span class="visually-hidden">Acción</span></th>
           </tr>
         </thead>
         <tbody>
@@ -69,6 +73,11 @@
               <td>{{ n.district?.trim() || '—' }}</td>
               <td>{{ n.address }}</td>
               <td class="nowrap" [class.inactive]="n.status === 'INACTIVE'">{{ n.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</td>
+              <td class="nowrap action">
+                @if (n.status === 'INACTIVE') {
+                  <a [routerLink]="['/vecinos', n.id]" [attr.aria-label]="'Reactivar a ' + n.fullName + ' desde su ficha'">Reactivar…</a>
+                }
+              </td>
             </tr>
           }
         </tbody>

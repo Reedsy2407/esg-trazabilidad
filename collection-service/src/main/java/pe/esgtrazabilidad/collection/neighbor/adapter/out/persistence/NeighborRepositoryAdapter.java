@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
+import pe.esgtrazabilidad.collection.neighbor.domain.NeighborDeletion;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
 
@@ -26,15 +27,51 @@ class NeighborRepositoryAdapter implements NeighborRepository {
     }
 
     @Override
-    public Optional<Neighbor> findById(UUID id) {
-        return jpaRepository.findById(id).map(this::toDomain);
+    public Optional<Neighbor> findByIdForShare(UUID id) {
+        return jpaRepository.findByIdForShare(id).map(this::toDomain);
     }
 
     @Override
-    public Page<Neighbor> findAll(NeighborStatus status, String district, Pageable pageable) {
+    public Optional<Neighbor> findByIdForUpdate(UUID id) {
+        return jpaRepository.findByIdForUpdate(id).map(this::toDomain);
+    }
+
+    @Override
+    public boolean changeStatus(UUID id, NeighborStatus from, NeighborStatus to) {
+        return jpaRepository.updateStatusIfCurrent(id, from.name(), to.name()) == 1;
+    }
+
+    @Override
+    public boolean markDeleted(UUID id, NeighborDeletion deletion) {
+        return jpaRepository.markDeleted(
+                id, deletion.deletedAt(), deletion.actorId(), deletion.actorEmail(), deletion.reason()) == 1;
+    }
+
+    @Override
+    public Neighbor update(Neighbor neighbor) {
+        NeighborEntity existing = NeighborEntity.existing(
+                neighbor.getId(),
+                neighbor.getFullName(),
+                neighbor.getPhone(),
+                neighbor.getAddress(),
+                neighbor.getDistrict(),
+                neighbor.getDistrictUbigeo(),
+                neighbor.getStatus().name());
+        return toDomain(jpaRepository.save(existing));
+    }
+
+    @Override
+    public Optional<Neighbor> findById(UUID id) {
+        return jpaRepository.findByIdAndDeletedAtIsNull(id).map(this::toDomain);
+    }
+
+    @Override
+    public Page<Neighbor> findAll(NeighborStatus status, String districtUbigeo, Pageable pageable) {
         String statusValue = status == null ? null : status.name();
         return jpaRepository
-                .findAll(NeighborSpecifications.hasStatus(statusValue).and(NeighborSpecifications.hasDistrict(district)), pageable)
+                .findAll(NeighborSpecifications.notDeleted()
+                        .and(NeighborSpecifications.hasStatus(statusValue))
+                        .and(NeighborSpecifications.hasDistrictUbigeo(districtUbigeo)), pageable)
                 .map(this::toDomain);
     }
 
@@ -45,6 +82,7 @@ class NeighborRepositoryAdapter implements NeighborRepository {
                 neighbor.getPhone(),
                 neighbor.getAddress(),
                 neighbor.getDistrict(),
+                neighbor.getDistrictUbigeo(),
                 neighbor.getStatus().name());
     }
 
@@ -55,6 +93,7 @@ class NeighborRepositoryAdapter implements NeighborRepository {
                 entity.getPhone(),
                 entity.getAddress(),
                 entity.getDistrict(),
+                entity.getDistrictUbigeo(),
                 NeighborStatus.valueOf(entity.getStatus()));
     }
 }

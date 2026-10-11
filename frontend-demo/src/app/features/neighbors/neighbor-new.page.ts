@@ -5,26 +5,29 @@ import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { BackendApi } from '../../core/api/backend.api';
+import { DistrictSelect } from '../../shared/district-select/district-select';
 import { writeErrorText } from '../../shared/error-message';
 
 export const NEIGHBOR_UNCERTAIN =
   'No pudimos confirmar si el vecino quedó registrado. Revisa la lista de vecinos antes de volver a intentarlo, para no duplicarlo.';
 
 /** Blank (or only spaces) is empty: the backend's @NotBlank rejects it too. */
-function notBlank(control: { value: string }) {
+export function notBlank(control: { value: string }) {
   return control.value.trim() === '' ? { required: true } : null;
 }
 
 /** "" or spaces → null: optional fields go as null, never as "". */
-const optional = (value: string) => (value.trim() === '' ? null : value.trim());
+export const optional = (value: string) => (value.trim() === '' ? null : value.trim());
 
 /**
- * Registrar vecino (POST /neighbors): name and address required, district and phone optional,
- * exactly CreateNeighborRequest. The new neighbour is created active and opens on its own page.
+ * Registrar vecino (POST /neighbors): name, address and district required, phone optional,
+ * exactly CreateNeighborRequest. The district comes from the closed list of Lima Metropolitana
+ * and Callao (its ubigeo is what is sent). The new neighbour is created active and opens on its
+ * own page.
  */
 @Component({
   selector: 'app-neighbor-new-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, DistrictSelect],
   templateUrl: './neighbor-new.page.html',
 })
 export class NeighborNewPage {
@@ -36,7 +39,7 @@ export class NeighborNewPage {
   protected readonly form = this.fb.group({
     fullName: ['', [Validators.required, notBlank]],
     address: ['', [Validators.required, notBlank]],
-    district: [''],
+    districtUbigeo: this.fb.control<string | null>(null, Validators.required),
     phone: [''],
   });
 
@@ -49,7 +52,7 @@ export class NeighborNewPage {
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.error.set(null));
   }
 
-  protected invalid(name: 'fullName' | 'address'): boolean {
+  protected invalid(name: 'fullName' | 'address' | 'districtUbigeo'): boolean {
     const control = this.form.controls[name];
     return control.invalid && (control.touched || this.submitted());
   }
@@ -70,7 +73,7 @@ export class NeighborNewPage {
       .createNeighbor({
         fullName: v.fullName.trim(),
         address: v.address.trim(),
-        district: optional(v.district),
+        districtUbigeo: v.districtUbigeo as string,
         phone: optional(v.phone),
       })
       .pipe(

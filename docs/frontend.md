@@ -4,7 +4,7 @@ The Angular app in `frontend-demo/` is the staff console for the four services. 
 
 ## Endpoint → screen
 
-27 of the 44 business endpoints have a screen (12 before "Frontend v2: full coverage").
+32 of the 49 business endpoints have a screen (12 before "Frontend v2: full coverage"; 27 of 44 before M2 added the neighbour edit/deactivate/activate/delete/status-changes endpoints).
 
 | Service | Endpoint | Screen |
 |---|---|---|
@@ -17,9 +17,13 @@ The Angular app in `frontend-demo/` is the staff console for the four services. 
 | recycler | `POST /associations`, `PATCH …/suspend`, `PATCH …/activate` | — |
 | recycler | `POST …/certifications`, `GET …/certifications/{id}`, `PATCH …/renew` | — |
 | recycler | `/associations/{id}/recyclers` (create, list, detail, activate, deactivate) | — |
-| collection | `GET /neighbors` | Vecinos; picker in Registrar recojo |
-| collection | `POST /neighbors` | Registrar vecino |
+| collection | `GET /neighbors` | Vecinos (filtro por estado y por distrito, elegido de la lista INEI); picker in Registrar recojo |
+| collection | `POST /neighbors` | Registrar vecino (distrito elegido de la lista INEI) |
 | collection | `GET /neighbors/{id}` | Vecino |
+| collection | `PATCH /neighbors/{id}` | Vecino → Editar |
+| collection | `PATCH /neighbors/{id}/deactivate`, `…/activate` | Vecino (motivo obligatorio; reactivar ofrece los cronogramas pausados, D8) |
+| collection | `DELETE /neighbors/{id}` | Vecino (motivo obligatorio; refused as COL-011 if it has collections) |
+| collection | `GET /neighbors/{id}/status-changes` | Vecino (bitácora de cambios de estado) |
 | collection | `GET /neighbors/{id}/schedules` | Vecino; schedule picker in Registrar recojo |
 | collection | `POST …/schedules`, `PATCH …/pause`, `…/cancel`, `…/reactivate` | Vecino (cancel asks first: it is final) |
 | collection | `GET …/schedules/{id}` | — (the list carries the same fields) |
@@ -48,6 +52,7 @@ The backend doesn't enforce these; the screens do, and say so.
   - A period overlapping a listed certificate is refused before asking (the backend would answer RPT-004).
   - An end before the start is refused before asking (the backend would answer RPT-009).
   - The confirmation is a checkbox plus a button that names the period.
+- **Neighbour deactivate, reactivate and delete** (M2) all require a reason (`reason-confirm.ts`, max 500 characters) plus the same checkbox-and-named-button confirmation used for issuing a certificate; who does it is never asked, the backend takes it from the JWT. Reactivating offers the schedules that deactivation paused (D8) so staff can resume them one by one; deleting cancels the remaining `ACTIVE`/`PAUSED` schedules outright. A delete refused with `COL-011` (the neighbour has collection records) points at "Desactivar" instead.
 - **SIGERSOL** figures are always labelled "ingreso manual": they are typed in from SIGERSOL; nothing integrates with it. The form keeps the columns' precision, and caps the note at 255 characters: a longer one would fail in the database and come back as RPT-006 ("overlap"), which would mislead.
 - **Staff accounts:**
   - The initial password is always generated in the browser (16 characters, `crypto.getRandomValues`, no ambiguous characters). It is never typed.
@@ -61,9 +66,22 @@ The backend doesn't enforce these; the screens do, and say so.
 
 - **No roles.** Any signed-in staff member can issue certificates, create staff accounts, cancel schedules and register companies or SIGERSOL figures. The screens say so and ask for an explicit confirmation before the irreversible or sensitive actions.
 - **Pickers load one page of 100** (the services' `max-page-size`). They say so when there are more. Neighbour search filters only what was loaded.
-- **The district filter is exact.** It is case- and accent-sensitive, because the backend compares with equality.
+- **The district filter** is the same combobox used to register or edit a neighbour (M2): it picks one of the 50 districts by `districtUbigeo`, so it can't miss on case or accents. It still can't match free text, because the backend filters by the ubigeo code, not by name.
 - **The session log (bitácora)** lives in the tab's sessionStorage, tied to one sign-in. It is not a server record.
-- **Neighbours and companies can't be edited, deactivated or deleted**, and associations can't be created from the app, because no screen covers those endpoints or they don't exist.
+- **Companies can't be edited, deactivated or deleted**, and associations can't be created from the app, because no screen covers those endpoints or they don't exist. Neighbours can (M2): edit, deactivate/reactivate with a reason, and delete with a reason (refused with COL-011 if they have collection records — deactivate instead).
+
+## collection-service error catalog: COL-010..COL-013 (M2)
+
+These four codes were added for the neighbour district, lifecycle and deletion work; `CollectionErrors.java` is the source of truth, `shared/error-message.ts` carries the Spanish text the frontend shows.
+
+| Code | HTTP | When | Spanish message shown |
+|---|---|---|---|
+| COL-010 | 400 | `POST /neighbors` or `PATCH /neighbors/{id}` with a district that isn't one of the 50 INEI codes (Lima Metropolitana + Callao) — can't happen through the picker, only via a direct API call | El distrito no está en la lista de Lima Metropolitana y Callao. |
+| COL-011 | 409 | `DELETE /neighbors/{id}` on a neighbour that has at least one collection record | El vecino tiene recojos registrados: no se puede eliminar, solo desactivar. |
+| COL-012 | 409 | `PATCH /neighbors/{id}/deactivate` or `…/activate` when the neighbour is already in that state | El vecino ya está en ese estado. |
+| COL-013 | 409 | A collection record, a new schedule, or reactivating a paused schedule, for an `INACTIVE` neighbour | El vecino está inactivo: no puede recibir recojos ni cronogramas activos. |
+
+`COL-001` (`NEIGHBOR_NOT_FOUND`) also answers a status change or an edit that loses a race against a concurrent deletion — not just a missing id.
 
 ## Overlap: two kinds of "company"
 
@@ -71,7 +89,7 @@ reporting-service's **tracked company** (`/tracked-companies`) is the company ce
 
 ## Pending in the backend
 
-- Edit, deactivate or delete: neighbours, tracked companies, SIGERSOL records, staff accounts.
+- Edit, deactivate or delete: tracked companies, SIGERSOL records, staff accounts. (Neighbours got all three in M2.)
 - Change or reset a staff password. Today the initial password is permanent.
 - Roles or permissions (who may issue certificates or create staff).
 - Refuse certificates for an INACTIVE tracked company (today only the frontend refuses them).

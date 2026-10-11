@@ -6,8 +6,11 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import pe.esgtrazabilidad.collection.exception.CollectionErrors;
+import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
+import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
 import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
 import pe.esgtrazabilidad.collection.schedule.port.in.CancelCollectionScheduleUseCase;
@@ -38,10 +41,9 @@ class CollectionScheduleService
     }
 
     @Override
+    @Transactional
     public CollectionSchedule create(CreateCollectionScheduleCommand command) {
-        neighborRepository
-                .findById(command.neighborId())
-                .orElseThrow(() -> new ApplicationException(CollectionErrors.NEIGHBOR_NOT_FOUND));
+        requireActiveNeighbor(command.neighborId());
         assertNoActiveConflict(command.neighborId(), command.dayOfWeek(), null);
         CollectionSchedule schedule =
                 CollectionSchedule.create(command.neighborId(), command.dayOfWeek(), command.time());
@@ -59,6 +61,7 @@ class CollectionScheduleService
     }
 
     @Override
+    @Transactional
     public CollectionSchedule pause(UUID neighborId, UUID id) {
         CollectionSchedule schedule = findScoped(neighborId, id);
         try {
@@ -66,10 +69,12 @@ class CollectionScheduleService
         } catch (IllegalStateException e) {
             throw new ApplicationException(CollectionErrors.INVALID_SCHEDULE_TRANSITION);
         }
+        lockExistingNeighbor(neighborId);
         return repository.update(schedule);
     }
 
     @Override
+    @Transactional
     public CollectionSchedule cancel(UUID neighborId, UUID id) {
         CollectionSchedule schedule = findScoped(neighborId, id);
         try {
@@ -77,10 +82,12 @@ class CollectionScheduleService
         } catch (IllegalStateException e) {
             throw new ApplicationException(CollectionErrors.INVALID_SCHEDULE_TRANSITION);
         }
+        lockExistingNeighbor(neighborId);
         return repository.update(schedule);
     }
 
     @Override
+    @Transactional
     public CollectionSchedule reactivate(UUID neighborId, UUID id) {
         CollectionSchedule schedule = findScoped(neighborId, id);
         try {
@@ -88,8 +95,35 @@ class CollectionScheduleService
         } catch (IllegalStateException e) {
             throw new ApplicationException(CollectionErrors.INVALID_SCHEDULE_TRANSITION);
         }
+        requireActiveNeighbor(neighborId);
         assertNoActiveConflict(schedule.getNeighborId(), schedule.getDayOfWeek(), schedule.getId());
         return repository.update(schedule);
+    }
+
+    /**
+     * An INACTIVE neighbour gets no ACTIVE schedule (v3, D8): COL-013. Reads
+     * with a shared row lock, so a deactivation running at the same time
+     * either finishes first (and this sees INACTIVE) or waits for this
+     * transaction (and then pauses the schedule it creates).
+     */
+    private void requireActiveNeighbor(UUID neighborId) {
+        Neighbor neighbor = lockExistingNeighbor(neighborId);
+        if (neighbor.getStatus() != NeighborStatus.ACTIVE) {
+            throw new ApplicationException(CollectionErrors.NEIGHBOR_INACTIVE);
+        }
+    }
+
+    /**
+     * Every schedule write holds a shared lock on its neighbour's row until
+     * commit, so it serializes with a deactivation or a deletion of that
+     * neighbour (which UPDATE the row): a write that loses the race sees the
+     * deleted neighbour (COL-001) instead of overwriting the schedule the
+     * deletion just cancelled.
+     */
+    private Neighbor lockExistingNeighbor(UUID neighborId) {
+        return neighborRepository
+                .findByIdForShare(neighborId)
+                .orElseThrow(() -> new ApplicationException(CollectionErrors.NEIGHBOR_NOT_FOUND));
     }
 
     /**

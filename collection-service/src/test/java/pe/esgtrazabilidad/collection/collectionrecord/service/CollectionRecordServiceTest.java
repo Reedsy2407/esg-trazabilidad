@@ -30,12 +30,14 @@ import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
 import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
 import pe.esgtrazabilidad.collection.schedule.port.out.CollectionScheduleRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
+import pe.esgtrazabilidad.kernel.ubigeo.UbigeoCatalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -68,7 +70,7 @@ class CollectionRecordServiceTest {
     }
 
     private Neighbor sampleNeighbor() {
-        return Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", "Surco");
+        return Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", UbigeoCatalog.find("150140").orElseThrow());
     }
 
     private CollectionSchedule scheduleFor(UUID ownerNeighborId) {
@@ -83,7 +85,7 @@ class CollectionRecordServiceTest {
     @Test
     void createsAndSavesARecordLinkedToAScheduleWhenNeighborExists() {
         CollectionSchedule schedule = scheduleFor(neighborId);
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         when(scheduleRepository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
         when(repository.save(any(CollectionRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -96,7 +98,7 @@ class CollectionRecordServiceTest {
 
     @Test
     void createPublishesACollectionRegisteredEventForTheSavedRecord() {
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         when(repository.save(any(CollectionRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CollectionRecord result = service.create(sampleCommand(null));
@@ -115,7 +117,7 @@ class CollectionRecordServiceTest {
     void rejectsCreationWhenScheduleBelongsToADifferentNeighbor() {
         UUID otherNeighborId = UUID.randomUUID();
         CollectionSchedule othersSchedule = scheduleFor(otherNeighborId);
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         when(scheduleRepository.findById(othersSchedule.getId())).thenReturn(Optional.of(othersSchedule));
 
         assertThatThrownBy(() -> service.create(sampleCommand(othersSchedule.getId())))
@@ -130,7 +132,7 @@ class CollectionRecordServiceTest {
     @Test
     void rejectsCreationWhenScheduleDoesNotExistAtAll() {
         UUID missingScheduleId = UUID.randomUUID();
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         when(scheduleRepository.findById(missingScheduleId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(sampleCommand(missingScheduleId)))
@@ -142,7 +144,7 @@ class CollectionRecordServiceTest {
 
     @Test
     void createsAnAdHocRecordWhenScheduleIdIsOmitted() {
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         when(repository.save(any(CollectionRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CollectionRecord result = service.create(sampleCommand(null));
@@ -152,7 +154,7 @@ class CollectionRecordServiceTest {
 
     @Test
     void createSucceedsWithAnUnvalidatedAssociationId() {
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         when(repository.save(any(CollectionRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CollectionRecord result = service.create(sampleCommand(null));
@@ -167,7 +169,7 @@ class CollectionRecordServiceTest {
 
     @Test
     void rejectsCreationWhenTheAssociationIsBlocked() {
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         when(blockedAssociationRepository.isBlocked(associationId)).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(sampleCommand(null)))
@@ -179,7 +181,7 @@ class CollectionRecordServiceTest {
 
     @Test
     void rejectsCreationWhenNeighborDoesNotExist() {
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.empty());
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(sampleCommand(null)))
                 .isInstanceOf(ApplicationException.class)
@@ -234,5 +236,18 @@ class CollectionRecordServiceTest {
         Page<CollectionRecord> result = service.list(neighborId, from, to, pageable);
 
         assertThat(result).isSameAs(expectedPage);
+    }
+
+    @Test
+    void anInactiveNeighborGetsNoNewCollectionAndNoEvent() {
+        Neighbor inactive = sampleNeighbor();
+        inactive.deactivate();
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(inactive));
+
+        assertThatThrownBy(() -> service.create(sampleCommand(null)))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(e -> assertThat(((ApplicationException) e).getError()).isEqualTo(CollectionErrors.NEIGHBOR_INACTIVE));
+        verify(repository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
     }
 }

@@ -23,10 +23,12 @@ import pe.esgtrazabilidad.collection.schedule.domain.CollectionScheduleStatus;
 import pe.esgtrazabilidad.collection.schedule.port.in.CreateCollectionScheduleCommand;
 import pe.esgtrazabilidad.collection.schedule.port.out.CollectionScheduleRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
+import pe.esgtrazabilidad.kernel.ubigeo.UbigeoCatalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -50,7 +52,7 @@ class CollectionScheduleServiceTest {
     }
 
     private Neighbor sampleNeighbor() {
-        return Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", "Surco");
+        return Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", UbigeoCatalog.find("150140").orElseThrow());
     }
 
     private CreateCollectionScheduleCommand sampleCommand() {
@@ -59,7 +61,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void createsAndSavesANewScheduleWhenNeighborExistsAndNoConflict() {
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         when(repository.findActiveByNeighborIdAndDayOfWeek(neighborId, DayOfWeek.MONDAY))
                 .thenReturn(Optional.empty());
         when(repository.save(any(CollectionSchedule.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -73,7 +75,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void rejectsCreationWhenNeighborDoesNotExist() {
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.empty());
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(sampleCommand()))
                 .isInstanceOf(ApplicationException.class)
@@ -85,7 +87,7 @@ class CollectionScheduleServiceTest {
     @Test
     void rejectsCreationWhenAnActiveConflictExistsForTheSameDay() {
         CollectionSchedule existing = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(8, 0));
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         when(repository.findActiveByNeighborIdAndDayOfWeek(neighborId, DayOfWeek.MONDAY))
                 .thenReturn(Optional.of(existing));
 
@@ -143,6 +145,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void pauseMovesAnActiveScheduleToPaused() {
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
         when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
         when(repository.update(schedule)).thenReturn(schedule);
@@ -179,6 +182,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void cancelMovesAnActiveScheduleToCancelled() {
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
         when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
         when(repository.update(schedule)).thenReturn(schedule);
@@ -204,6 +208,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void reactivateMovesAPausedScheduleToActiveWhenNoConflict() {
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
         schedule.pause();
         when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
@@ -231,6 +236,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void reactivatingIntoANewConflictThrowsScheduleConflictAndDoesNotPersist() {
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
         schedule.pause();
         CollectionSchedule conflicting =
@@ -243,6 +249,57 @@ class CollectionScheduleServiceTest {
                 .isInstanceOf(ApplicationException.class)
                 .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
                         .isEqualTo(CollectionErrors.SCHEDULE_CONFLICT));
+        verify(repository, never()).update(any());
+    }
+
+    @Test
+    void anInactiveNeighborGetsNoNewScheduleAndNoReactivatedOne() {
+        Neighbor inactive = sampleNeighbor();
+        inactive.deactivate();
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(inactive));
+
+        assertThatThrownBy(() -> service.create(new CreateCollectionScheduleCommand(neighborId, DayOfWeek.MONDAY, LocalTime.of(8, 0))))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(e -> assertThat(((ApplicationException) e).getError()).isEqualTo(CollectionErrors.NEIGHBOR_INACTIVE));
+
+        CollectionSchedule paused = CollectionSchedule.create(neighborId, DayOfWeek.TUESDAY, LocalTime.of(9, 0));
+        paused.pause();
+        when(repository.findById(paused.getId())).thenReturn(Optional.of(paused));
+        assertThatThrownBy(() -> service.reactivate(neighborId, paused.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(e -> assertThat(((ApplicationException) e).getError()).isEqualTo(CollectionErrors.NEIGHBOR_INACTIVE));
+        verify(repository, never()).save(any());
+        verify(repository, never()).update(any());
+    }
+
+    @Test
+    void reactivatingAnActiveScheduleOfAnInactiveNeighborIsAnInvalidTransitionNotCol013() {
+        Neighbor inactive = sampleNeighbor();
+        inactive.deactivate();
+        lenient().when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(inactive));
+        CollectionSchedule active = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
+        when(repository.findById(active.getId())).thenReturn(Optional.of(active));
+
+        assertThatThrownBy(() -> service.reactivate(neighborId, active.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(e -> assertThat(((ApplicationException) e).getError())
+                        .isEqualTo(CollectionErrors.INVALID_SCHEDULE_TRANSITION));
+    }
+
+    @Test
+    void pausingOrCancellingAScheduleOfADeletedNeighborIsCol001AndWritesNothing() {
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.empty());
+        CollectionSchedule active = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
+        when(repository.findById(active.getId())).thenReturn(Optional.of(active));
+
+        assertThatThrownBy(() -> service.pause(neighborId, active.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(e -> assertThat(((ApplicationException) e).getError()).isEqualTo(CollectionErrors.NEIGHBOR_NOT_FOUND));
+        CollectionSchedule other = CollectionSchedule.create(neighborId, DayOfWeek.TUESDAY, LocalTime.of(9, 0));
+        when(repository.findById(other.getId())).thenReturn(Optional.of(other));
+        assertThatThrownBy(() -> service.cancel(neighborId, other.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(e -> assertThat(((ApplicationException) e).getError()).isEqualTo(CollectionErrors.NEIGHBOR_NOT_FOUND));
         verify(repository, never()).update(any());
     }
 }

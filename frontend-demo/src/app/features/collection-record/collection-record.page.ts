@@ -63,6 +63,8 @@ export function submitErrorText(error: unknown): string {
       return 'El cronograma elegido ya no existe o no es de este vecino. Elige otro o deja "Sin cronograma".';
     case 'COL-009':
       return 'La asociación tiene una certificación vencida y no puede registrar recojos.';
+    case 'COL-013':
+      return 'El vecino está inactivo y no puede recibir recojos. Reactívalo desde su ficha o elige otro.';
     case 'VALIDATION_ERROR':
       return 'El servicio rechazó los datos. Revisa la fecha y el peso.';
   }
@@ -82,7 +84,8 @@ export function submitErrorText(error: unknown): string {
  * weight required, schedule optional. Inactive neighbors, suspended
  * associations and paused or cancelled schedules are listed with their state
  * rather than hidden: the backend decides what it accepts (COL-009 for a
- * blocked association), the form doesn't invent rules.
+ * blocked association, COL-013 for an inactive neighbour), the form doesn't
+ * invent rules.
  */
 @Component({
   selector: 'app-collection-record-page',

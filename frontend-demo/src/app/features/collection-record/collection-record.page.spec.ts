@@ -27,8 +27,8 @@ const page = <T,>(content: T[], totalElements = content.length): Page<T> => ({
 });
 
 const NEIGHBORS: Neighbor[] = [
-  { id: 'n-1', fullName: 'Rosa Quispe', phone: '987654321', address: 'Jr. Huallaga 120', district: 'Cercado de Lima', status: 'ACTIVE' },
-  { id: 'n-2', fullName: 'Luis Ramos', phone: '912345678', address: 'Av. Perú 455', district: 'San Martín de Porres', status: 'INACTIVE' },
+  { id: 'n-1', fullName: 'Rosa Quispe', phone: '987654321', address: 'Jr. Huallaga 120', district: 'Cercado de Lima', districtUbigeo: null, status: 'ACTIVE' },
+  { id: 'n-2', fullName: 'Luis Ramos', phone: '912345678', address: 'Av. Perú 455', district: 'San Martín de Porres', districtUbigeo: '150135', status: 'INACTIVE' },
 ];
 const ASSOCIATIONS: Association[] = [
   {

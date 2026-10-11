@@ -1,6 +1,7 @@
 package pe.esgtrazabilidad.collection.schedule.adapter.out.persistence;
 
 import java.time.DayOfWeek;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,4 +17,8 @@ interface CollectionScheduleJpaRepository
             UUID neighborId, DayOfWeek dayOfWeek, String status);
 
     Page<CollectionScheduleEntity> findByNeighborId(UUID neighborId, Pageable pageable);
+
+    List<CollectionScheduleEntity> findByNeighborIdAndStatus(UUID neighborId, String status);
+
+    List<CollectionScheduleEntity> findByNeighborIdAndStatusNot(UUID neighborId, String status);
 }

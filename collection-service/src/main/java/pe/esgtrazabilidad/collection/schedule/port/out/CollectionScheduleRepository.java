@@ -1,6 +1,7 @@
 package pe.esgtrazabilidad.collection.schedule.port.out;
 
 import java.time.DayOfWeek;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,4 +26,9 @@ public interface CollectionScheduleRepository {
     Optional<CollectionSchedule> findActiveByNeighborIdAndDayOfWeek(UUID neighborId, DayOfWeek dayOfWeek);
 
     Page<CollectionSchedule> findAll(UUID neighborId, Pageable pageable);
+
+    List<CollectionSchedule> findActiveByNeighborId(UUID neighborId);
+
+    /** ACTIVE and PAUSED schedules: the ones a deletion cancels. */
+    List<CollectionSchedule> findNotCancelledByNeighborId(UUID neighborId);
 }

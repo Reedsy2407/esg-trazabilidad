@@ -1855,3 +1855,13 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 - **Reserva 2, v4/empresa-sin-sigersol-\* obsoletas:** they predated V5 (no "Emitir certificado" in the header) and showed the RPT-005 link removed in V4. Retaken; `design/refs/` is gitignored, so they are local only.
 - **Decisión A, empresa INACTIVE:** BLOQUEAR. The issue screen shows the message instead of the form; `review()`/`issue()` refuse too. The form now waits for the company to load (no flash of the form for an inactive one). The company page's "Emitir certificado" link stays: it leads to the message.
 - **Decisión B, scripts/demo-seed:** Node 22, no deps. Reporting gets kilos by event (`CollectionRegisteredEvent`), so the certificate is issued only if the live summary is exactly 66.95 kg / 85.5 %. collection-service only refuses associations on its blocklist, so a brand-new association's collections are accepted. `node --test <dir>` doesn't work on Node 22: name the file. Fake credentials in tests are low-entropy (gitleaks generic-api-key); variables named after keywords (`password = env...`) avoided for the same reason.
+
+
+## v3 D1
+
+¿El "dato SIGERSOL por empresa" del brief v3 es un concepto aparte o el mismo dato manual que `SigersolSync`? **Es el mismo.**
+
+- `SigersolSync` ya es exactamente "un dato copiado a mano de SIGERSOL": porcentaje de cumplimiento, kilos declarados opcionales y una nota libre cuya ayuda en pantalla dice "de qué reporte o pantalla de SIGERSOL salió y quién lo copió". Es decir, origen, quién y referencia, pero en texto libre. "Cuándo" ya existe: `declaredAt` es el instante del registro (`Instant.now()` en `SigersolSync.create`).
+- La única diferencia es la clave: `SigersolSync` se registra por asociación + período, el brief habla de "por empresa". Como una `TrackedCompany` apunta a exactamente una asociación y el certificado de la empresa toma el registro de esa asociación (RPT-005), el dato que respalda el certificado de una empresa *es* este registro. Si dos empresas comparten asociación, comparten el registro: es la misma limitación de doble conteo ya documentada en SPEC-reporting-service.md.
+- No hay otro dato SIGERSOL en el sistema, y el dato real por empresa (SIGERSOL No Municipal, con login) no se automatiza. Un segundo registro por empresa duplicaría el mismo número con otra clave, sin regla clara de cuál manda.
+- Decisión (Angel, D1): mantener `SigersolSync` y RPT-005 y agregarle `origin`, quién (del JWT) y `reference` opcional. `NO_VERIFICADO` = ningún registro cubre el período.

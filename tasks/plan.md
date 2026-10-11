@@ -800,3 +800,64 @@ Task numbering continues from M7 (last was 70); phases from 33, checkpoints from
 ## Open Questions
 
 None outstanding — all seven source specs (`shared-kernel`, `recycler-service`, `collection-service`, `cross-service-events`, `reporting-service`, `ci-pipeline`, `auth-service`) are fully resolved. `SPEC-reporting-service.md`'s own three Open Questions (real SIGERSOL integration timing, PDF template/branding, whether `TrackedCompany` should ever track more than one association) are deliberately deferred, not blocking — none of Tasks 41-57 depend on resolving them. `SPEC-ci-pipeline.md`'s own three Open Questions (README CI badge, Dependabot, branch protection) are likewise deliberately deferred, not blocking — none of Task 58/Checkpoint 29 depend on resolving them. `SPEC-auth-service.md`'s own four Open Questions (login rate limiting, CORS, RBAC, refresh tokens) are likewise deliberately deferred, not blocking — none of Tasks 59-70 depend on resolving them. Any new question that surfaces during implementation should be raised before the task it blocks, not worked around silently. `SPEC-deployment.md`'s six Open Questions are likewise not blocking planning: the Render client-IP header is answered by Task 82, Render build minutes by Checkpoint 42, and startup on 0.1 CPU by Checkpoint 38's measured go/no-go. Bootstrap password handling, CloudAMQP's 28-day idle-queue deletion and a Docker build in CI are accepted demo limitations or follow-ups documented in `docs/deployment.md`, not tasks within 71-84.
+
+
+---
+
+# v3 (brief 2026-10-10, aprobado por Angel con ajustes)
+
+> Alcance A–H + SIGERSOL Municipal. Fuente: el brief v3 y las respuestas D1–D9 de Angel (abajo, "no volver a preguntar"). Tasks y estado en `tasks/todo.md` → "v3". Zona de esta terminal: servicios, `frontend-demo/`, `scripts/demo-seed/`, docs de servicios, y en `portal/` SOLO `Writerside/topics/decisiones/`, `topics/errores/errores-<servicio>.md` y `topics/glosario/estados-<servicio>.md` (cuando exista la plantilla). `ci.yml`/`render.yaml`: avisar antes de tocar.
+
+## Decisiones v3 (no volver a preguntar)
+
+- **D1 SIGERSOL por empresa = el mismo dato manual que `SigersolSync`.** `SigersolSync` y RPT-005 no cambian (siguen por asociación y bloquean la emisión). Se agregan al registro existente: `origin` (`DECLARADO_POR_OPERADOR` | `CONSTANCIA_REFERENCIADA`), quién (`sub` + email del JWT) y `reference` opcional; "cuándo" ya existe (`declaredAt`, instante de registro). Las filas viejas sin origen se muestran "origen no registrado". `NO_VERIFICADO` = no hay registro que cubra el período (visible en empresa y borrador; la emisión ya lo bloquea con RPT-005). Ver tasks/LEARNINGS.md#v3-d1.
+- **D2 Respaldo "no verificada"** con endpoint explícito separado. (a) El servidor reintenta la consulta y rechaza el respaldo si SUNAT responde. (b) Una empresa `NO_VERIFICADA` no recibe certificado hasta verificarse (error de dominio nuevo). (c) `RUC_LOOKUP_PROVIDER=none` solo en desarrollo y pruebas: el perfil de producción lo rechaza al arrancar.
+- **D3** `CollectionRegisteredEvent` gana `districtUbigeo` opcional; test de que recycler-service ignora el campo; filas viejas del ledger = "distrito desconocido".
+- **D4 Plausibilidad**: último task de M5, recortable; se descarta si S1 o S2 fallan; aviso orientativo, no verificación; sin umbral hasta resolver la unidad (kg vs t).
+- **D5 ADR**: mientras no exista la plantilla (`portal/plantillas/adr.md`), borradores en `docs/decisiones-v3/`. Después, directo en `portal/Writerside/topics/decisiones/`. Los ADR "pendiente" de la otra terminal no se duplican: su estado pasa a "Implementada" en el commit que implementa. ADR nuevos solo para: respaldo no verificada, snapshot SIGERSOL, distrito en el evento, plausibilidad.
+- **D6** Demo con 6 a 8 RUC de entidades públicas (no RUC 10), razón social desde SUNAT; Angel aprueba la lista.
+- **D7** Validación local del RUC (módulo 11) en asociaciones, solo en altas y ediciones. `/companies` sigue sin usarse.
+- **D8** Vecino INACTIVO: no recibe recojos nuevos y sus cronogramas activos se pausan; al reactivar, la pantalla muestra los pausados para reactivarlos.
+- **D9** Rama + PR por módulo (`v3/mN`). `ci.yml` corre en `pull_request` a `main` (confirmado). **Freno para el OK de Angel antes del merge: M2, M3, M4, M5, M7.** M0, M1, M6, M8: merge con CI verde + `code-reviewer` PASS.
+- **Proveedor RUC: Decolecta** (token, 1 000 consultas/mes). Angel crea la cuenta y el token al llegar a M4: **freno antes de M4**.
+- **S2** (acceso a SIGERSOL desde una IP de EE. UU.): pedir permiso explícito; solo una ejecución puntual de solo lectura.
+- **Ajuste M4, compatibilidad del POST: tolerar y retirar en dos versiones**, no despliegue conjunto. Motivo: Render despliega cada servicio y el sitio por separado (`buildFilter`, `checksPass`) y reporting-service tarda en arrancar, así que un "despliegue conjunto" igual deja una ventana con el front viejo contra el back nuevo o al revés. Versión N: `name` opcional en el request, ignorado (la razón social sale de SUNAT) y marcado deprecado en OpenAPI; el front nuevo deja de mandarlo. Versión N+1 (PR siguiente, con el front nuevo ya live): `name` presente → 400 "La razón social viene de SUNAT".
+- **Ajuste M1, ubigeo**: catálogo desde la lista oficial del INEI, verificado 43 + 7 con tildes y ñ de la fuente; se normaliza solo para comparar con SIGERSOL.
+- **Ajuste M3**: test de dos anulaciones simultáneas del mismo certificado; el actor sale siempre del JWT, nunca del body.
+
+## Resultado de S1 (2026-10-10, desde una red en Perú)
+
+- `ubigeo/minamlistProvincia` y `minamlistDistrito` funcionan como indicó Angel. LIMA = dep 15, `cod_provincia "01"` (44 filas de distrito: 01–43 más un `"50"` con nombre "-", que se descarta); CALLAO = dep 07, prov 01, 7 distritos.
+- **Los códigos de SIGERSOL coinciden con el sufijo del ubigeo INEI** (La Molina = 15|01|14 = 150114). El mapeo se hace por código; el nombre normalizado queda solo como chequeo cruzado.
+- `ReporteVal` acepta `cod_provincia:"01"` y `cod_distrito:"14"`. Con provincia LIMA, 2024 trae 19 distritos con recicladores (los 33 eran todo el departamento 15, con provincias como Yauyos); Callao 2024 trae 2.
+- Último año con datos: 2024 (2019–2023 tienen filas; 2025 y 2026 = 0). Año por defecto: bajar desde el año actual − 1 hasta encontrar filas.
+- **Unidad NO resuelta**: la respuesta no la declara y las magnitudes se contradicen (La Molina 2024 = 1 389,29 con 31 recicladores sugiere toneladas; la provincia LIMA = 2 428 847,58 sugiere kg). La plausibilidad (D4) queda congelada hasta confirmar la unidad en la pantalla de Acceso Libre; si no se confirma, se descarta.
+- Calidad de datos: hay filas con `cant_asoc_recicladores` igual a `total_recicladores` (ATE 12/12, SJM 58/58). Refuerza rotularlo "datos agregados", nunca "verificado".
+- `listaLugarAprov` responde con un charset distinto de UTF-8 ("Obtenci�n"): el cliente debe respetar el charset declarado, y las respuestas grabadas de prueba lo reproducen.
+
+## Módulos (orden, frenos, estimación en sesiones)
+
+| Módulo | Contenido | Freno | Est. |
+|---|---|---|---|
+| M0 | plan, S1, S2 (permiso), enmiendas de SPEC, borradores de ADR | merge con CI + revisión | 0,5 |
+| M1 shared-kernel | `Ruc` (módulo 11), catálogo ubigeo INEI 43+7, normalizador, `CurrentActor` | merge con CI + revisión | 0,5 |
+| M2 collection-service + front | ubigeo obligatorio, filtro, editar/desactivar/reactivar/eliminar vecino, D8, selector de distrito | **OK de Angel** | 1,5 |
+| M3 reporting-service + front | anular certificado, exclusión parcial, PDF ANULADO + pie, empresa inactiva bloqueada | **OK de Angel** | 1,5 |
+| — | **freno: Angel crea el token de Decolecta** | — | — |
+| M4 reporting-service + front | RUC local + SUNAT (puerto, adaptador, caché), respaldo D2, ciclo de vida de empresa, contacto, compatibilidad N/N+1 | **OK de Angel** (+ aviso antes de `render.yaml`) | 2,5 |
+| M5 reporting + collection + front | cliente SIGERSOL, snapshot, contexto en emisión y PDF, degradación, textos, D1, distrito en el evento; plausibilidad al final | **OK de Angel** | 2,5 |
+| M6 frontend | asociaciones: crear, certificaciones, renovar, suspender/activar; RUC local en recycler (D7) | merge con CI + revisión | 1 |
+| M7 demo-seed | anular + desactivar la empresa demo, RUC públicos (D6) | **OK de Angel** (datos de producción) | 0,5 |
+| M8 docs | frontend.md, security.md, glosario, errores, ADR, flujo "datos erróneos con certificado" | merge con CI + revisión; cierre = human review | 1 |
+
+## Riesgos v3
+
+| Riesgo | Mitigación |
+|---|---|
+| SIGERSOL sin documentar, términos no verificados, posible geobloqueo desde Render | S2 antes de M5; snapshot en BD como "último dato bueno"; degradación "no disponible"; nada bloquea por SIGERSOL |
+| Unidad de SIGERSOL ambigua | Plausibilidad congelada y recortable (D4) |
+| Migraciones en Neon (exclusión parcial, índice de RUC parcial, backfill de ubigeo) | IT con Postgres real + rollback de Liquibase en cada changeset; merge = deploy, con OK de Angel |
+| Ventana de despliegue front/back en M4 | Compatibilidad N/N+1 |
+| Cuota de Decolecta | Caché de 24 h en tabla (Render free duerme a los 15 min) |
+| RUC 10 = nombre de una persona | Anotarlo en `docs/security.md` |
+| Sin roles: cualquiera anula o elimina | Confirmación explícita + motivo obligatorio + actor del JWT |

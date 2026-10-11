@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
+import pe.esgtrazabilidad.collection.neighbor.domain.NeighborDeletion;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
 
@@ -36,6 +37,12 @@ class NeighborRepositoryAdapter implements NeighborRepository {
     }
 
     @Override
+    public boolean markDeleted(UUID id, NeighborDeletion deletion) {
+        return jpaRepository.markDeleted(
+                id, deletion.deletedAt(), deletion.actorId(), deletion.actorEmail(), deletion.reason()) == 1;
+    }
+
+    @Override
     public Neighbor update(Neighbor neighbor) {
         NeighborEntity existing = NeighborEntity.existing(
                 neighbor.getId(),
@@ -50,14 +57,15 @@ class NeighborRepositoryAdapter implements NeighborRepository {
 
     @Override
     public Optional<Neighbor> findById(UUID id) {
-        return jpaRepository.findById(id).map(this::toDomain);
+        return jpaRepository.findByIdAndDeletedAtIsNull(id).map(this::toDomain);
     }
 
     @Override
     public Page<Neighbor> findAll(NeighborStatus status, String districtUbigeo, Pageable pageable) {
         String statusValue = status == null ? null : status.name();
         return jpaRepository
-                .findAll(NeighborSpecifications.hasStatus(statusValue)
+                .findAll(NeighborSpecifications.notDeleted()
+                        .and(NeighborSpecifications.hasStatus(statusValue))
                         .and(NeighborSpecifications.hasDistrictUbigeo(districtUbigeo)), pageable)
                 .map(this::toDomain);
     }

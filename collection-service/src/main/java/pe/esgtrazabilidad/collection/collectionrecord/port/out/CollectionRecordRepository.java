@@ -15,5 +15,7 @@ public interface CollectionRecordRepository {
 
     Optional<CollectionRecord> findById(UUID id);
 
+    boolean existsByNeighborId(UUID neighborId);
+
     Page<CollectionRecord> findAll(UUID neighborId, LocalDate from, LocalDate to, Pageable pageable);
 }

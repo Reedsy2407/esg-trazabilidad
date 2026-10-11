@@ -21,6 +21,11 @@ class CollectionRecordRepositoryAdapter implements CollectionRecordRepository {
     }
 
     @Override
+    public boolean existsByNeighborId(UUID neighborId) {
+        return jpaRepository.existsByNeighborId(neighborId);
+    }
+
+    @Override
     public CollectionRecord save(CollectionRecord record) {
         return toDomain(jpaRepository.save(toEntity(record)));
     }

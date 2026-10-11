@@ -1,0 +1,44 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.2.0-alter-neighbor-add-deletion
+      author: esg-trazabilidad
+      comment: >
+        v3 (brief C): logical deletion of a neighbour with no collection
+        record, with its required reason and who (the JWT's sub and email
+        claim). Named v0.2.0 so includeAll's alphabetical order keeps it after
+        v0.1.9 ("v0.1.10" would sort before "v0.1.1_").
+      changes:
+        - addColumn:
+            tableName: neighbor
+            columns:
+              - column:
+                  name: deleted_at
+                  type: timestamp with time zone
+              - column:
+                  name: deleted_by_id
+                  type: uuid
+              - column:
+                  name: deleted_by_email
+                  type: varchar(255)
+              - column:
+                  name: deletion_reason
+                  type: varchar(500)
+        - sql:
+            sql: >
+              ALTER TABLE neighbor ADD CONSTRAINT ck_neighbor_deletion_complete
+              CHECK ((deleted_at IS NULL AND deleted_by_id IS NULL AND deletion_reason IS NULL)
+                  OR (deleted_at IS NOT NULL AND deleted_by_id IS NOT NULL AND deletion_reason IS NOT NULL))
+      rollback:
+        - sql:
+            sql: ALTER TABLE neighbor DROP CONSTRAINT ck_neighbor_deletion_complete
+        - dropColumn:
+            tableName: neighbor
+            columns:
+              - column:
+                  name: deleted_at
+              - column:
+                  name: deleted_by_id
+              - column:
+                  name: deleted_by_email
+              - column:
+                  name: deletion_reason

@@ -11,6 +11,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -27,6 +28,7 @@ import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.port.in.ChangeNeighborStatusUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborUseCase;
+import pe.esgtrazabilidad.collection.neighbor.port.in.DeleteNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.EditNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.GetNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.ListNeighborsUseCase;
@@ -42,6 +44,7 @@ class NeighborController {
     private final ListNeighborsUseCase listNeighborsUseCase;
     private final EditNeighborUseCase editNeighborUseCase;
     private final ChangeNeighborStatusUseCase changeNeighborStatusUseCase;
+    private final DeleteNeighborUseCase deleteNeighborUseCase;
     private final NeighborMapper mapper;
 
     NeighborController(
@@ -50,12 +53,14 @@ class NeighborController {
             ListNeighborsUseCase listNeighborsUseCase,
             EditNeighborUseCase editNeighborUseCase,
             ChangeNeighborStatusUseCase changeNeighborStatusUseCase,
+            DeleteNeighborUseCase deleteNeighborUseCase,
             NeighborMapper mapper) {
         this.createNeighborUseCase = createNeighborUseCase;
         this.getNeighborUseCase = getNeighborUseCase;
         this.listNeighborsUseCase = listNeighborsUseCase;
         this.editNeighborUseCase = editNeighborUseCase;
         this.changeNeighborStatusUseCase = changeNeighborStatusUseCase;
+        this.deleteNeighborUseCase = deleteNeighborUseCase;
         this.mapper = mapper;
     }
 
@@ -85,6 +90,15 @@ class NeighborController {
             @Valid @RequestBody ChangeNeighborStatusRequest request,
             @AuthenticationPrincipal Jwt jwt) {
         return mapper.toResponse(changeNeighborStatusUseCase.activate(id, request.reason(), CurrentActor.from(jwt)));
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void delete(
+            @PathVariable UUID id,
+            @Valid @RequestBody DeleteNeighborRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        deleteNeighborUseCase.delete(id, request.reason(), CurrentActor.from(jwt));
     }
 
     @GetMapping("/{id}/status-changes")

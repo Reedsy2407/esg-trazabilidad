@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.collection.neighbor.adapter.out.persistence;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -36,6 +37,11 @@ class NeighborEntity implements Persistable<UUID> {
     // write back a status it read before a concurrent transition.
     @Column(nullable = false, updatable = false)
     private String status;
+
+    // Deletion columns: never written by insert or merge, only by the
+    // conditional bulk update in NeighborJpaRepository.markDeleted.
+    @Column(name = "deleted_at", insertable = false, updatable = false)
+    private Instant deletedAt;
 
     @Transient
     private boolean isNew = false;

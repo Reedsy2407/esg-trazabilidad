@@ -19,4 +19,6 @@ interface CollectionScheduleJpaRepository
     Page<CollectionScheduleEntity> findByNeighborId(UUID neighborId, Pageable pageable);
 
     List<CollectionScheduleEntity> findByNeighborIdAndStatus(UUID neighborId, String status);
+
+    List<CollectionScheduleEntity> findByNeighborIdAndStatusNot(UUID neighborId, String status);
 }

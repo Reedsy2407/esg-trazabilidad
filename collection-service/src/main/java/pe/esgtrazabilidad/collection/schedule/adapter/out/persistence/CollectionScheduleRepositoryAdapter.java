@@ -58,6 +58,13 @@ class CollectionScheduleRepositoryAdapter implements CollectionScheduleRepositor
     }
 
     @Override
+    public List<CollectionSchedule> findNotCancelledByNeighborId(UUID neighborId) {
+        return jpaRepository.findByNeighborIdAndStatusNot(neighborId, CollectionScheduleStatus.CANCELLED.name()).stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
     public Page<CollectionSchedule> findAll(UUID neighborId, Pageable pageable) {
         return jpaRepository.findByNeighborId(neighborId, pageable).map(this::toDomain);
     }

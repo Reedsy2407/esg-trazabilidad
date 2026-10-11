@@ -7,6 +7,10 @@ final class NeighborSpecifications {
     private NeighborSpecifications() {
     }
 
+    static Specification<NeighborEntity> notDeleted() {
+        return (root, query, criteriaBuilder) -> criteriaBuilder.isNull(root.get("deletedAt"));
+    }
+
     static Specification<NeighborEntity> hasStatus(String status) {
         return (root, query, criteriaBuilder) ->
                 status == null ? null : criteriaBuilder.equal(root.get("status"), status);

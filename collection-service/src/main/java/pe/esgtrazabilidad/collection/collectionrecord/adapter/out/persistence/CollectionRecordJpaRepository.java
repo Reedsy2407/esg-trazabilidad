@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 interface CollectionRecordJpaRepository
         extends JpaRepository<CollectionRecordEntity, UUID>, JpaSpecificationExecutor<CollectionRecordEntity> {
+
+    boolean existsByNeighborId(UUID neighborId);
 }

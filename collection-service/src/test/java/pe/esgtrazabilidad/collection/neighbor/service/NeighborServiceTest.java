@@ -17,8 +17,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+import pe.esgtrazabilidad.collection.collectionrecord.port.out.CollectionRecordRepository;
 import pe.esgtrazabilidad.collection.exception.CollectionErrors;
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
+import pe.esgtrazabilidad.collection.neighbor.domain.NeighborDeletion;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborCommand;
 import pe.esgtrazabilidad.collection.neighbor.port.in.EditNeighborCommand;
@@ -55,13 +57,16 @@ class NeighborServiceTest {
     @Mock
     private CollectionScheduleRepository scheduleRepository;
 
+    @Mock
+    private CollectionRecordRepository recordRepository;
+
     private NeighborService service;
 
     private final CurrentActor actor = new CurrentActor(UUID.randomUUID(), "ana@example.org");
 
     @BeforeEach
     void setUp() {
-        service = new NeighborService(repository, statusChangeRepository, scheduleRepository);
+        service = new NeighborService(repository, statusChangeRepository, scheduleRepository, recordRepository);
     }
 
     private CreateNeighborCommand commandWith(String districtUbigeo, String district) {
@@ -289,5 +294,53 @@ class NeighborServiceTest {
 
     private Neighbor activeNeighbor() {
         return Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", UbigeoCatalog.find("150140").orElseThrow());
+    }
+
+    @Test
+    void deletingANeighborWithoutCollectionsMarksItWithWhoAndCancelsItsSchedules() {
+        Neighbor neighbor = activeNeighbor();
+        CollectionSchedule active = CollectionSchedule.create(neighbor.getId(), DayOfWeek.MONDAY, LocalTime.of(8, 0));
+        CollectionSchedule paused = CollectionSchedule.create(neighbor.getId(), DayOfWeek.FRIDAY, LocalTime.of(8, 0));
+        paused.pause();
+        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        when(repository.markDeleted(eq(neighbor.getId()), any())).thenReturn(true);
+        when(recordRepository.existsByNeighborId(neighbor.getId())).thenReturn(false);
+        when(scheduleRepository.findNotCancelledByNeighborId(neighbor.getId())).thenReturn(List.of(active, paused));
+
+        service.delete(neighbor.getId(), " Registrado por error ", actor);
+
+        ArgumentCaptor<NeighborDeletion> deletion = ArgumentCaptor.forClass(NeighborDeletion.class);
+        verify(repository).markDeleted(eq(neighbor.getId()), deletion.capture());
+        assertThat(deletion.getValue().reason()).isEqualTo("Registrado por error");
+        assertThat(deletion.getValue().actorId()).isEqualTo(actor.id());
+        assertThat(deletion.getValue().actorEmail()).isEqualTo("ana@example.org");
+        assertThat(active.getStatus()).isEqualTo(CollectionScheduleStatus.CANCELLED);
+        assertThat(paused.getStatus()).isEqualTo(CollectionScheduleStatus.CANCELLED);
+        verify(scheduleRepository).update(active);
+        verify(scheduleRepository).update(paused);
+    }
+
+    @Test
+    void aNeighborWithCollectionsIsCol011AndItsSchedulesAreLeftAlone() {
+        Neighbor neighbor = activeNeighbor();
+        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        when(repository.markDeleted(eq(neighbor.getId()), any())).thenReturn(true);
+        when(recordRepository.existsByNeighborId(neighbor.getId())).thenReturn(true);
+
+        assertError(() -> service.delete(neighbor.getId(), "x", actor), CollectionErrors.NEIGHBOR_HAS_COLLECTIONS);
+        verifyNoInteractions(scheduleRepository);
+    }
+
+    @Test
+    void deletingAMissingOrAlreadyDeletedNeighborIsCol001() {
+        UUID missingId = UUID.randomUUID();
+        when(repository.findById(missingId)).thenReturn(Optional.empty());
+        assertError(() -> service.delete(missingId, "x", actor), CollectionErrors.NEIGHBOR_NOT_FOUND);
+
+        Neighbor neighbor = activeNeighbor();
+        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        when(repository.markDeleted(eq(neighbor.getId()), any())).thenReturn(false);
+        assertError(() -> service.delete(neighbor.getId(), "x", actor), CollectionErrors.NEIGHBOR_NOT_FOUND);
+        verifyNoInteractions(recordRepository, scheduleRepository);
     }
 }

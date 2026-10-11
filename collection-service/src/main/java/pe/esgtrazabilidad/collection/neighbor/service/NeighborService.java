@@ -10,11 +10,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import pe.esgtrazabilidad.collection.exception.CollectionErrors;
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
+import pe.esgtrazabilidad.collection.collectionrecord.port.out.CollectionRecordRepository;
+import pe.esgtrazabilidad.collection.neighbor.domain.NeighborDeletion;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatusChange;
 import pe.esgtrazabilidad.collection.neighbor.port.in.ChangeNeighborStatusUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborCommand;
 import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborUseCase;
+import pe.esgtrazabilidad.collection.neighbor.port.in.DeleteNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.EditNeighborCommand;
 import pe.esgtrazabilidad.collection.neighbor.port.in.EditNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.GetNeighborUseCase;
@@ -34,19 +37,23 @@ class NeighborService
                 GetNeighborUseCase,
                 ListNeighborsUseCase,
                 EditNeighborUseCase,
-                ChangeNeighborStatusUseCase {
+                ChangeNeighborStatusUseCase,
+                DeleteNeighborUseCase {
 
     private final NeighborRepository repository;
     private final NeighborStatusChangeRepository statusChangeRepository;
     private final CollectionScheduleRepository scheduleRepository;
+    private final CollectionRecordRepository recordRepository;
 
     NeighborService(
             NeighborRepository repository,
             NeighborStatusChangeRepository statusChangeRepository,
-            CollectionScheduleRepository scheduleRepository) {
+            CollectionScheduleRepository scheduleRepository,
+            CollectionRecordRepository recordRepository) {
         this.repository = repository;
         this.statusChangeRepository = statusChangeRepository;
         this.scheduleRepository = scheduleRepository;
+        this.recordRepository = recordRepository;
     }
 
     @Override
@@ -104,6 +111,29 @@ class NeighborService
             throw new ApplicationException(CollectionErrors.NEIGHBOR_STATUS_UNCHANGED);
         }
         statusChangeRepository.save(NeighborStatusChange.record(id, from, to, reason, actor));
+    }
+
+    /**
+     * The mark comes first on purpose: it takes the neighbour's row lock, so
+     * a collection being recorded at the same moment (which holds a shared
+     * lock on that row) commits before the existence check below runs, and
+     * then the check sees it and rolls the deletion back.
+     */
+    @Override
+    @Transactional
+    public void delete(UUID id, String reason, CurrentActor actor) {
+        getById(id);
+        NeighborDeletion deletion = NeighborDeletion.of(reason, actor);
+        if (!repository.markDeleted(id, deletion)) {
+            throw new ApplicationException(CollectionErrors.NEIGHBOR_NOT_FOUND);
+        }
+        if (recordRepository.existsByNeighborId(id)) {
+            throw new ApplicationException(CollectionErrors.NEIGHBOR_HAS_COLLECTIONS);
+        }
+        for (CollectionSchedule schedule : scheduleRepository.findNotCancelledByNeighborId(id)) {
+            schedule.cancel();
+            scheduleRepository.update(schedule);
+        }
     }
 
     @Override

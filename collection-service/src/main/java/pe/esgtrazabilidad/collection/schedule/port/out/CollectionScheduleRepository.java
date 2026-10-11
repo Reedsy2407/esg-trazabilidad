@@ -28,4 +28,7 @@ public interface CollectionScheduleRepository {
     Page<CollectionSchedule> findAll(UUID neighborId, Pageable pageable);
 
     List<CollectionSchedule> findActiveByNeighborId(UUID neighborId);
+
+    /** ACTIVE and PAUSED schedules: the ones a deletion cancels. */
+    List<CollectionSchedule> findNotCancelledByNeighborId(UUID neighborId);
 }

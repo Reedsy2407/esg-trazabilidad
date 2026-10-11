@@ -533,7 +533,7 @@ Compatibilidad (parcial): el alta acepta `districtUbigeo` o, como respaldo, el `
 - [x] V3-2.2: editar vecino (PATCH, vía `update()` de Persistable) — PASS
 - [x] V3-2.3: desactivar/reactivar con motivo, historial con actor del JWT, pausa de cronogramas (D8), compare-and-set contra carreras — PASS; ver tasks/LEARNINGS.md#v3-23
 - [x] V3-2.4: COL-013 (recojo, cronograma nuevo o reactivado para vecino INACTIVO), FOR SHARE contra la desactivación concurrente — PASS; ver tasks/LEARNINGS.md#v3-24
-- [ ] V3-2.5: eliminación lógica (`DELETE /neighbors/{id}` con motivo), solo sin recojos (COL-011); cancela sus cronogramas; un vecino eliminado responde COL-001 y sale de las listas
+- [x] V3-2.5: eliminación lógica con motivo (COL-011 con recojos, cancela cronogramas, COL-001 en adelante; las lecturas anidadas quedan como auditoría) — PASS; ver tasks/LEARNINGS.md#v3-25
 - [ ] V3-2.6: frontend — selector de distrito (combobox agrupado Lima/Callao con búsqueda sin tildes; catálogo TS verificado contra el CSV de shared-kernel), alta y filtro con el selector, sin "Escríbelo…"; editar, desactivar/reactivar con motivo y confirmación, eliminar, cronogramas pausados al reactivar (D8), acciones en "Inactivos"
 - [ ] V3-2.7: docs — docs/frontend.md (matriz, reglas, limitaciones), catálogo de errores COL-010..013
 ### Checkpoint V3-M2

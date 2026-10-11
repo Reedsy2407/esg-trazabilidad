@@ -1889,3 +1889,10 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 - `neighbor.status` es `updatable = false`: solo lo cambia el compare-and-set (un UPDATE masivo JPQL ignora ese flag). Así el merge de una edición no puede reescribir un estado leído antes de una transición concurrente.
 - Las dos protecciones tienen IT con prueba negativa hecha a mano: el IT de FOR SHARE usa una transacción JDBC que deja la desactivación sin confirmar, y el IT del adaptador llama a `update()` con un objeto desactualizado.
 - En reactivate, INVALID_SCHEDULE_TRANSITION gana sobre COL-013.
+
+## V3-2.5
+
+- La eliminación marca primero (UPDATE condicional `WHERE deleted_at IS NULL`, que toma el lock de la fila) y recién después revisa si hay recojos. Un recojo que se esté registrando a la vez (con FOR SHARE) confirma antes, el chequeo lo ve y la eliminación se revierte con COL-011. El IT falla si se invierte el orden.
+- Todas las escrituras que dependen del vecino toman FOR SHARE sobre su fila: recojo, cronograma (crear, reactivar, pausar, cancelar) y edición. Así ninguna se intercala con una desactivación o eliminación; si pierden la carrera contra una eliminación, responden COL-001. Cuando el compare-and-set de estado pierde, se vuelve a leer al vecino: si ya no existe es COL-001, no COL-012.
+- Decisión: los cronogramas cancelados de un vecino eliminado (y las lecturas anidadas) siguen siendo legibles como auditoría; toda escritura sobre ellos responde COL-001.
+- Nombres de changeset: `includeAll` ordena alfabéticamente, así que "v0.1.10" quedaría antes de "v0.1.1_". Los de v3 siguen en v0.2.x, y con "v0.2.10" vuelve el mismo problema: al llegar a 10, saltar a v0.3.0.

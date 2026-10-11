@@ -8,9 +8,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import pe.esgtrazabilidad.collection.collectionrecord.port.out.CollectionRecordRepository;
 import pe.esgtrazabilidad.collection.exception.CollectionErrors;
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
-import pe.esgtrazabilidad.collection.collectionrecord.port.out.CollectionRecordRepository;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborDeletion;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatusChange;
@@ -63,9 +63,17 @@ class NeighborService
         return repository.save(neighbor);
     }
 
+    /**
+     * Reads under a shared row lock, so an edit can't interleave with a
+     * deactivation or deletion of the same neighbour: it either goes first,
+     * or sees the result (and a deleted neighbour is COL-001).
+     */
     @Override
+    @Transactional
     public Neighbor edit(EditNeighborCommand command) {
-        Neighbor neighbor = getById(command.id());
+        Neighbor neighbor = repository
+                .findByIdForShare(command.id())
+                .orElseThrow(() -> new ApplicationException(CollectionErrors.NEIGHBOR_NOT_FOUND));
         District district = resolveDistrict(command.districtUbigeo(), null);
         neighbor.edit(command.fullName(), command.phone(), command.address(), district);
         return repository.update(neighbor);
@@ -108,6 +116,9 @@ class NeighborService
      */
     private void transition(UUID id, NeighborStatus from, NeighborStatus to, String reason, CurrentActor actor) {
         if (!repository.changeStatus(id, from, to)) {
+            // Lost to a concurrent request: either it changed the status, or it
+            // deleted the neighbour, which must read as "not found".
+            getById(id);
             throw new ApplicationException(CollectionErrors.NEIGHBOR_STATUS_UNCHANGED);
         }
         statusChangeRepository.save(NeighborStatusChange.record(id, from, to, reason, actor));

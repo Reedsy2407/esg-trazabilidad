@@ -61,6 +61,7 @@ class CollectionScheduleService
     }
 
     @Override
+    @Transactional
     public CollectionSchedule pause(UUID neighborId, UUID id) {
         CollectionSchedule schedule = findScoped(neighborId, id);
         try {
@@ -68,10 +69,12 @@ class CollectionScheduleService
         } catch (IllegalStateException e) {
             throw new ApplicationException(CollectionErrors.INVALID_SCHEDULE_TRANSITION);
         }
+        lockExistingNeighbor(neighborId);
         return repository.update(schedule);
     }
 
     @Override
+    @Transactional
     public CollectionSchedule cancel(UUID neighborId, UUID id) {
         CollectionSchedule schedule = findScoped(neighborId, id);
         try {
@@ -79,6 +82,7 @@ class CollectionScheduleService
         } catch (IllegalStateException e) {
             throw new ApplicationException(CollectionErrors.INVALID_SCHEDULE_TRANSITION);
         }
+        lockExistingNeighbor(neighborId);
         return repository.update(schedule);
     }
 
@@ -103,12 +107,23 @@ class CollectionScheduleService
      * transaction (and then pauses the schedule it creates).
      */
     private void requireActiveNeighbor(UUID neighborId) {
-        Neighbor neighbor = neighborRepository
-                .findByIdForShare(neighborId)
-                .orElseThrow(() -> new ApplicationException(CollectionErrors.NEIGHBOR_NOT_FOUND));
+        Neighbor neighbor = lockExistingNeighbor(neighborId);
         if (neighbor.getStatus() != NeighborStatus.ACTIVE) {
             throw new ApplicationException(CollectionErrors.NEIGHBOR_INACTIVE);
         }
+    }
+
+    /**
+     * Every schedule write holds a shared lock on its neighbour's row until
+     * commit, so it serializes with a deactivation or a deletion of that
+     * neighbour (which UPDATE the row): a write that loses the race sees the
+     * deleted neighbour (COL-001) instead of overwriting the schedule the
+     * deletion just cancelled.
+     */
+    private Neighbor lockExistingNeighbor(UUID neighborId) {
+        return neighborRepository
+                .findByIdForShare(neighborId)
+                .orElseThrow(() -> new ApplicationException(CollectionErrors.NEIGHBOR_NOT_FOUND));
     }
 
     /**

@@ -36,8 +36,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 
 /** Logical deletion of a neighbour (v3, brief C), against real Postgres. */
 @Testcontainers
@@ -89,6 +89,9 @@ class NeighborDeletionApiIT {
                 .body("{\"dayOfWeek\": \"TUESDAY\", \"time\": \"09:00\"}")
                 .when().post("/neighbors/{n}/schedules", id)
                 .then().statusCode(404).body("code", equalTo("COL-001"));
+        createRecord(id).then().statusCode(404).body("code", equalTo("COL-001"));
+        // Decision: the cancelled schedules of a deleted neighbour stay readable
+        // (audit trail); every write on them is refused.
         given().when().get("/neighbors/{n}/schedules", id).then()
                 .body("content", hasSize(2))
                 .body("content.status", everyItem(equalTo("CANCELLED")));

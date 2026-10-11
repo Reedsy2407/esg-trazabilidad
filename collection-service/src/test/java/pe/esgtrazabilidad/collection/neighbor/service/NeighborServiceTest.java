@@ -196,7 +196,7 @@ class NeighborServiceTest {
     void editChangesTheNeighborAndWritesItThroughUpdateNotSave() {
         Neighbor neighbor = Neighbor.create(
                 "Ana Torres", "999999999", "Av. Siempre Viva 123", UbigeoCatalog.find("150140").orElseThrow());
-        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        when(repository.findByIdForShare(neighbor.getId())).thenReturn(Optional.of(neighbor));
         when(repository.update(any(Neighbor.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Neighbor result = service.edit(new EditNeighborCommand(neighbor.getId(), "Ana T.", "988", "Jr. 2", "150112"));
@@ -210,13 +210,13 @@ class NeighborServiceTest {
     @Test
     void editingAMissingNeighborOrToADistrictOutsideTheListIsRefused() {
         UUID missingId = UUID.randomUUID();
-        when(repository.findById(missingId)).thenReturn(Optional.empty());
+        when(repository.findByIdForShare(missingId)).thenReturn(Optional.empty());
         assertError(() -> service.edit(new EditNeighborCommand(missingId, "A", null, "Jr. 1", "150112")),
                 CollectionErrors.NEIGHBOR_NOT_FOUND);
 
         Neighbor neighbor = Neighbor.create(
                 "Ana Torres", "999999999", "Av. Siempre Viva 123", UbigeoCatalog.find("150140").orElseThrow());
-        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        when(repository.findByIdForShare(neighbor.getId())).thenReturn(Optional.of(neighbor));
         assertError(() -> service.edit(new EditNeighborCommand(neighbor.getId(), "A", null, "Jr. 1", "150201")),
                 CollectionErrors.INVALID_DISTRICT);
         verify(repository, never()).update(any());
@@ -342,5 +342,15 @@ class NeighborServiceTest {
         when(repository.markDeleted(eq(neighbor.getId()), any())).thenReturn(false);
         assertError(() -> service.delete(neighbor.getId(), "x", actor), CollectionErrors.NEIGHBOR_NOT_FOUND);
         verifyNoInteractions(recordRepository, scheduleRepository);
+    }
+
+    @Test
+    void losingAStatusChangeToAConcurrentDeletionIsCol001NotCol012() {
+        Neighbor neighbor = activeNeighbor();
+        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor), Optional.empty());
+        when(repository.changeStatus(neighbor.getId(), NeighborStatus.ACTIVE, NeighborStatus.INACTIVE)).thenReturn(false);
+
+        assertError(() -> service.deactivate(neighbor.getId(), "x", actor), CollectionErrors.NEIGHBOR_NOT_FOUND);
+        verifyNoInteractions(statusChangeRepository, scheduleRepository);
     }
 }

@@ -145,6 +145,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void pauseMovesAnActiveScheduleToPaused() {
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
         when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
         when(repository.update(schedule)).thenReturn(schedule);
@@ -181,6 +182,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void cancelMovesAnActiveScheduleToCancelled() {
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
         when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
         when(repository.update(schedule)).thenReturn(schedule);
@@ -282,5 +284,22 @@ class CollectionScheduleServiceTest {
                 .isInstanceOf(ApplicationException.class)
                 .satisfies(e -> assertThat(((ApplicationException) e).getError())
                         .isEqualTo(CollectionErrors.INVALID_SCHEDULE_TRANSITION));
+    }
+
+    @Test
+    void pausingOrCancellingAScheduleOfADeletedNeighborIsCol001AndWritesNothing() {
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.empty());
+        CollectionSchedule active = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
+        when(repository.findById(active.getId())).thenReturn(Optional.of(active));
+
+        assertThatThrownBy(() -> service.pause(neighborId, active.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(e -> assertThat(((ApplicationException) e).getError()).isEqualTo(CollectionErrors.NEIGHBOR_NOT_FOUND));
+        CollectionSchedule other = CollectionSchedule.create(neighborId, DayOfWeek.TUESDAY, LocalTime.of(9, 0));
+        when(repository.findById(other.getId())).thenReturn(Optional.of(other));
+        assertThatThrownBy(() -> service.cancel(neighborId, other.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(e -> assertThat(((ApplicationException) e).getError()).isEqualTo(CollectionErrors.NEIGHBOR_NOT_FOUND));
+        verify(repository, never()).update(any());
     }
 }

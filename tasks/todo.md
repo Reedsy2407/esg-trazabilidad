@@ -525,10 +525,12 @@ Rama y PR por módulo (`v3/mN`). Freno para el OK de Angel antes del merge: M2, 
 ### M0: plan, spikes, specs (rama `v3/m0`)
 - [x] V3-0.1: plan v3 en tasks/plan.md y tasks/todo.md
 - [x] V3-0.2: S1, spike de SIGERSOL Municipal (ubigeo, formato por distrito, último año con datos, unidad) — resultado en tasks/plan.md → "Resultado de S1"; unidad sin resolver
-- [ ] V3-0.3: S2, acceso a SIGERSOL desde una IP de EE. UU. — **espera permiso explícito de Angel** (una ejecución puntual de solo lectura, `workflow_dispatch`)
+- [x] V3-0.3: S2 (con permiso de Angel, una ejecución): 200 desde EE. UU. en los 3 endpoints; rama desechable borrada
 - [x] V3-0.4: enmiendas "Amendment v3" en los 5 SPEC (locales: los SPEC están en .gitignore), con endpoints, campos y códigos nuevos (RPT-010..020, COL-010..013, ASO-004)
 - [x] V3-0.5: 4 borradores de ADR en docs/decisiones-v3/ (respaldo no verificada, snapshot SIGERSOL, distrito en el evento, plausibilidad condicionada)
-- [ ] V3-0.6: PR de M0, CI verde, merge
+- [ ] V3-0.6: PR #23 de M0, CI verde y PASS; lo fusiona Angel a mano
+
+- [x] V3-0.7: respuestas de Angel a M0: D4 descartada, nombres de API en inglés, M5 reducido (plan, ADR y SPEC locales actualizados)
 
 ### M1: shared-kernel (rama `v3/m1`)
 - [ ] V3-1.1: value object `Ruc` (11 dígitos, prefijo 10/15/16/17/20, módulo 11); pruebas con 20131312955 válido, 20999000029 y 20999000037 inválidos

@@ -1,26 +1,28 @@
 # Aviso orientativo de kilos frente al total distrital
 
-- **Estado:** Propuesta, condicionada (2026-10-10). Último task de M5 y recortable.
+- **Estado:** Descartada por calidad de datos (2026-10-10, decisión de Angel).
 - **Servicio:** reporting-service
 
 ## Contexto
 
-El brief pide avisar cuando los kilos declarados sean desproporcionados frente al total del distrito en SIGERSOL Municipal. Hay dos límites:
+El brief v3 pedía avisar, sin bloquear, cuando los kilos declarados de un material fueran desproporcionados frente al total del distrito en SIGERSOL Municipal (`reporteValorizacion/listaRsInorganicos`).
 
-- Los recojos no registran el material, solo el peso total.
-- La API de SIGERSOL no declara la unidad. En el spike S1 las magnitudes se contradicen: La Molina 2024 sugiere toneladas y la provincia de Lima sugiere kilos.
+El spike S1 encontró dos problemas:
 
-## Decisión (si se implementa)
+- **La API no declara la unidad, y sus cifras se contradicen.** La Molina 2024 suma 1 389,29 con 31 recicladores, lo que solo es creíble en toneladas. La provincia de Lima suma 2 428 847,58, lo que solo es creíble en kilos: 2,4 millones de toneladas de inorgánicos valorizados no es una cifra posible.
+- **Los recojos no registran el material**, solo el peso total.
 
-- Se compara el total de kilos trazados del distrito en el período, anualizado, contra el total de inorgánicos valorizados del distrito ese año.
-- Es un **aviso orientativo, nunca un bloqueo ni una verificación**, y la pantalla lo dice así.
-- El umbral no se fija hasta confirmar la unidad. Si no se confirma, o si SIGERSOL no responde desde Render (spike S2), este aviso se descarta y este ADR pasa a "Descartada".
+## Decisión
+
+No hay aviso de plausibilidad. v3 no muestra ni compara toneladas de SIGERSOL: el contexto distrital usa solo los conteos de asociaciones y recicladores.
+
+Las toneladas por material se reconsideran solo si algún día se confirma la unidad de esas cifras.
 
 ## Alternativas descartadas
 
-- **Comparar por material:** el sistema no registra material, y agregarlo queda fuera de v3.
-- **Bloquear la emisión:** los datos de SIGERSOL son agregados municipales con problemas de calidad visibles; no pueden decidir sobre un certificado.
+- **Asumir una unidad y fijar un umbral:** con cifras que se contradicen, el aviso fallaría en ambos sentidos y daría una falsa sensación de control.
+- **Bloquear la emisión:** datos agregados municipales con problemas de calidad visibles no pueden decidir sobre un certificado.
 
 ## Consecuencias
 
-- El aviso puede fallar en ambos sentidos. Es una heurística y se documenta como tal.
+- Los kilos de un certificado no se contrastan con ninguna cifra pública. El certificado y el portal no dicen ni sugieren que el sistema valide contra SIGERSOL.

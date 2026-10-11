@@ -1,5 +1,13 @@
 package pe.esgtrazabilidad.collection.it;
 
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 import io.restassured.http.ContentType;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +25,7 @@ import pe.esgtrazabilidad.collection.it.support.RestAssuredSetup;
 import pe.esgtrazabilidad.collection.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
@@ -57,7 +66,7 @@ class NeighborStatusApiIT {
 
         given().contentType(ContentType.JSON)
                 .body("""
-                        {"reason": "Se mudó a otra ciudad", "actorId": "00000000-0000-0000-0000-000000000001"}
+                        {"reason": "Se mudó a otra ciudad", "actorId": "00000000-0000-0000-0000-000000000001", "actorEmail": "fake@example.org"}
                         """)
                 .when().patch("/neighbors/{id}/deactivate", id)
                 .then()
@@ -74,7 +83,8 @@ class NeighborStatusApiIT {
                 .body("[0].fromStatus", equalTo("ACTIVE"))
                 .body("[0].toStatus", equalTo("INACTIVE"))
                 .body("[0].reason", equalTo("Se mudó a otra ciudad"))
-                .body("[0].actorId", equalTo(TOKEN_SUBJECT));
+                .body("[0].actorId", equalTo(TOKEN_SUBJECT))
+                .body("[0].actorEmail", equalTo(TestJwtTokens.TEST_EMAIL));
     }
 
     @Test
@@ -122,6 +132,32 @@ class NeighborStatusApiIT {
         changeStatus("00000000-0000-0000-0000-000000000000", "deactivate", "x").then()
                 .statusCode(404).body("code", equalTo("COL-001"));
         given().when().get("/neighbors/{id}/status-changes", id).then().body("", hasSize(1));
+    }
+
+    @Test
+    void twoSimultaneousDeactivationsLetExactlyOneThroughAndRecordOneHistoryRow() throws Exception {
+        String id = createNeighbor("Carrera IT");
+        createSchedule(id, "SATURDAY", "09:00");
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Callable<Integer> deactivate = () -> {
+                start.await();
+                return changeStatus(id, "deactivate", "Carrera").then().extract().statusCode();
+            };
+            Future<Integer> first = pool.submit(deactivate);
+            Future<Integer> second = pool.submit(deactivate);
+            start.countDown();
+
+            assertThat(List.of(first.get(30, TimeUnit.SECONDS), second.get(30, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(200, 409);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        given().when().get("/neighbors/{id}/status-changes", id).then().body("", hasSize(1));
+        given().when().get("/neighbors/{id}", id).then().body("status", equalTo("INACTIVE"));
+        given().when().get("/neighbors/{id}/schedules", id).then().body("content.status", contains("PAUSED"));
     }
 
     private io.restassured.response.Response changeStatus(String id, String action, String reason) {

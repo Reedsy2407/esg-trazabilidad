@@ -13,6 +13,12 @@ public interface NeighborRepository {
 
     Neighbor save(Neighbor neighbor);
 
+    /**
+     * Moves the neighbour from one status to another only if it still has
+     * the first one; false when another request changed it first.
+     */
+    boolean changeStatus(UUID id, NeighborStatus from, NeighborStatus to);
+
     /** Writes an already-persisted neighbour (merge, never insert). */
     Neighbor update(Neighbor neighbor);
 

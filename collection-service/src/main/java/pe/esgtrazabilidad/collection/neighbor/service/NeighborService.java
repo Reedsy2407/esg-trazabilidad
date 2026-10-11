@@ -73,13 +73,12 @@ class NeighborService
         } catch (IllegalStateException e) {
             throw new ApplicationException(CollectionErrors.NEIGHBOR_STATUS_UNCHANGED);
         }
-        statusChangeRepository.save(NeighborStatusChange.record(
-                id, NeighborStatus.ACTIVE, NeighborStatus.INACTIVE, reason, actor));
+        transition(id, NeighborStatus.ACTIVE, NeighborStatus.INACTIVE, reason, actor);
         for (CollectionSchedule schedule : scheduleRepository.findActiveByNeighborId(id)) {
             schedule.pause();
             scheduleRepository.update(schedule);
         }
-        return repository.update(neighbor);
+        return neighbor;
     }
 
     @Override
@@ -91,9 +90,20 @@ class NeighborService
         } catch (IllegalStateException e) {
             throw new ApplicationException(CollectionErrors.NEIGHBOR_STATUS_UNCHANGED);
         }
-        statusChangeRepository.save(NeighborStatusChange.record(
-                id, NeighborStatus.INACTIVE, NeighborStatus.ACTIVE, reason, actor));
-        return repository.update(neighbor);
+        transition(id, NeighborStatus.INACTIVE, NeighborStatus.ACTIVE, reason, actor);
+        return neighbor;
+    }
+
+    /**
+     * The in-memory check above gives the common case a clean COL-012; this
+     * compare-and-set closes the race between two concurrent requests, so
+     * the history never gets two rows for one transition.
+     */
+    private void transition(UUID id, NeighborStatus from, NeighborStatus to, String reason, CurrentActor actor) {
+        if (!repository.changeStatus(id, from, to)) {
+            throw new ApplicationException(CollectionErrors.NEIGHBOR_STATUS_UNCHANGED);
+        }
+        statusChangeRepository.save(NeighborStatusChange.record(id, from, to, reason, actor));
     }
 
     @Override

@@ -1876,3 +1876,9 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 ## V3-2.2
 
 - `PATCH /neighbors/{id}` reemplaza todos los campos editables (un teléfono ausente lo borra) y escribe con `update()` + `NeighborEntity.existing()`. El merge sobrescribe todas las columnas: en V3-2.3/V3-2.5, cualquier columna nueva del vecino (estado, eliminación) tiene que pasar por el dominio y por `existing()`, o cada edición la dejaría en null (mismo precedente que `AssociationEntity` en recycler-service).
+
+## V3-2.3
+
+- La transición de estado del vecino es un compare-and-set (`UPDATE … WHERE id = :id AND status = :from`) dentro de la transacción del servicio. De dos desactivaciones simultáneas pasa una sola y la otra recibe COL-012, sin una segunda fila de historial. El IT de dos hilos falla si se quita la condición (prueba negativa hecha a mano).
+- Se agregó `GET /neighbors/{id}/status-changes` (solo lectura, lo más nuevo primero) para que la pantalla muestre el motivo y quién; quedó anotado en la enmienda local del SPEC.
+- El token de prueba de collection-service ahora lleva el claim `email`, como los tokens reales de auth-service.

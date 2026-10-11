@@ -224,7 +224,7 @@ class NeighborServiceTest {
         CollectionSchedule friday = CollectionSchedule.create(neighbor.getId(), DayOfWeek.FRIDAY, LocalTime.of(9, 0));
         when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
         when(scheduleRepository.findActiveByNeighborId(neighbor.getId())).thenReturn(List.of(monday, friday));
-        when(repository.update(any(Neighbor.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(repository.changeStatus(neighbor.getId(), NeighborStatus.ACTIVE, NeighborStatus.INACTIVE)).thenReturn(true);
 
         Neighbor result = service.deactivate(neighbor.getId(), "  Se mudó  ", actor);
 
@@ -248,7 +248,7 @@ class NeighborServiceTest {
         Neighbor neighbor = activeNeighbor();
         neighbor.deactivate();
         when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
-        when(repository.update(any(Neighbor.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(repository.changeStatus(neighbor.getId(), NeighborStatus.INACTIVE, NeighborStatus.ACTIVE)).thenReturn(true);
 
         Neighbor result = service.activate(neighbor.getId(), "Volvió", actor);
 
@@ -266,7 +266,17 @@ class NeighborServiceTest {
         neighbor.deactivate();
         assertError(() -> service.deactivate(neighbor.getId(), "x", actor), CollectionErrors.NEIGHBOR_STATUS_UNCHANGED);
         verifyNoInteractions(statusChangeRepository, scheduleRepository);
-        verify(repository, never()).update(any());
+        verify(repository, never()).changeStatus(any(), any(), any());
+    }
+
+    @Test
+    void losingTheRaceToAnotherRequestIsCol012WithoutHistoryOrPausedSchedules() {
+        Neighbor neighbor = activeNeighbor();
+        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        when(repository.changeStatus(neighbor.getId(), NeighborStatus.ACTIVE, NeighborStatus.INACTIVE)).thenReturn(false);
+
+        assertError(() -> service.deactivate(neighbor.getId(), "x", actor), CollectionErrors.NEIGHBOR_STATUS_UNCHANGED);
+        verifyNoInteractions(statusChangeRepository, scheduleRepository);
     }
 
     @Test

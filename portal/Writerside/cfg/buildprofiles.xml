@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<buildprofiles xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/build-profiles.xsd"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <variables>
+        <enable-browser-edits>false</enable-browser-edits>
+        <showDownloadButton>false</showDownloadButton>
+        <!-- Empaqueta JS, CSS, fuentes y favicons en el sitio: nada se carga del
+             CDN de JetBrains en tiempo de ejecución. -->
+        <offline-docs>true</offline-docs>
+    </variables>
+
+    <build-profile instance="esg">
+        <variables>
+            <!-- URL de GitHub Pages: canonical, OG y el índice de búsqueda. -->
+            <web-root>https://reedsy2407.github.io/esg-trazabilidad/</web-root>
+            <noindex-content>false</noindex-content>
+        </variables>
+    </build-profile>
+</buildprofiles>

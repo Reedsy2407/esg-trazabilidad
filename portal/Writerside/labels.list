@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE labels SYSTEM "https://resources.jetbrains.com/writerside/1.0/labels-list.dtd">
+<labels xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/labels.xsd">
+
+    <!-- Servicio dueño del topic (label principal). -->
+    <primary-label id="auth" name="auth-service" short-name="auth">Acceso del personal y emisión de tokens.</primary-label>
+    <primary-label id="recycler" name="recycler-service" short-name="recycler">Asociaciones, recicladores y certificaciones.</primary-label>
+    <primary-label id="collection" name="collection-service" short-name="collection">Vecinos, empresas, cronogramas y recojos.</primary-label>
+    <primary-label id="reporting" name="reporting-service" short-name="reporting">Certificados ESG y contexto SIGERSOL.</primary-label>
+
+    <!-- Estado de una decisión (ADR). -->
+    <secondary-label id="adr-implementada" name="Implementada" color="green">La decisión ya está en el código.</secondary-label>
+    <secondary-label id="adr-pendiente" name="Pendiente de implementación" color="tangerine">Decisión aceptada que el código todavía no refleja.</secondary-label>
+    <secondary-label id="adr-reemplazada" name="Reemplazada" color="red">Ya no aplica; ver la decisión que la reemplaza.</secondary-label>
+</labels>

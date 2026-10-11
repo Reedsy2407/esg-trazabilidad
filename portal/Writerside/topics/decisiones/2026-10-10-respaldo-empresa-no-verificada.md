@@ -9,7 +9,8 @@
 ## Contexto
 
 Desde v3, la razón social, el estado y la condición de una empresa vienen de una
-consulta a SUNAT por RUC (proveedor elegido: Decolecta). El registro normal no acepta
+consulta a SUNAT por RUC (proveedor propuesto: Decolecta, a confirmar en M4 al
+revisar sus términos y cuota). El registro normal no acepta
 la razón social del cliente. Pero el proveedor puede no responder (caída, cuota
 agotada, red), y el personal tiene que poder registrar la empresa igual.
 

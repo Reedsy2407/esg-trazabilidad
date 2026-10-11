@@ -23,7 +23,7 @@ con login, y no se automatiza.
 - Un cliente de solo lectura detrás de un puerto, sin credenciales y con timeouts
   cortos. Solo usa los **conteos de asociaciones y recicladores** por distrito. Las
   toneladas no se usan: la API no declara su unidad y sus cifras se contradicen (ver
-  [Aviso orientativo de kilos frente al total distrital](2026-10-10-aviso-de-plausibilidad.md),
+  [No hay aviso de plausibilidad de kilos frente al total distrital](2026-10-10-aviso-de-plausibilidad.md),
   descartada).
 - Cada respuesta útil se guarda en `sigersol_district_snapshot` (año, ubigeo,
   asociaciones, recicladores, fecha de consulta). El snapshot hace de caché larga y de

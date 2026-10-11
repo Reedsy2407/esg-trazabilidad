@@ -1,0 +1,965 @@
+{
+  "components" : {
+    "schemas" : {
+      "CollectionRecordResponse" : {
+        "properties" : {
+          "associationId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "collectionDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "neighborId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "scheduleId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "weightKg" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "CollectionScheduleResponse" : {
+        "properties" : {
+          "dayOfWeek" : {
+            "enum" : [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "neighborId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [
+              "ACTIVE",
+              "PAUSED",
+              "CANCELLED"
+            ],
+            "type" : "string"
+          },
+          "time" : {
+            "$ref" : "#/components/schemas/LocalTime"
+          }
+        },
+        "type" : "object"
+      },
+      "CompanyResponse" : {
+        "properties" : {
+          "address" : {
+            "type" : "string"
+          },
+          "contactEmail" : {
+            "type" : "string"
+          },
+          "contactPhone" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "ruc" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [
+              "ACTIVE",
+              "INACTIVE"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CreateCollectionRecordRequest" : {
+        "properties" : {
+          "associationId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "collectionDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "scheduleId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "weightKg" : {
+            "type" : "number"
+          }
+        },
+        "required" : [
+          "associationId",
+          "collectionDate",
+          "weightKg"
+        ],
+        "type" : "object"
+      },
+      "CreateCollectionScheduleRequest" : {
+        "properties" : {
+          "dayOfWeek" : {
+            "enum" : [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "type" : "string"
+          },
+          "time" : {
+            "$ref" : "#/components/schemas/LocalTime"
+          }
+        },
+        "required" : [
+          "dayOfWeek",
+          "time"
+        ],
+        "type" : "object"
+      },
+      "CreateCompanyRequest" : {
+        "properties" : {
+          "address" : {
+            "type" : "string"
+          },
+          "contactEmail" : {
+            "type" : "string"
+          },
+          "contactPhone" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "ruc" : {
+            "pattern" : "\\d{11}",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "name",
+          "ruc"
+        ],
+        "type" : "object"
+      },
+      "CreateNeighborRequest" : {
+        "properties" : {
+          "address" : {
+            "type" : "string"
+          },
+          "district" : {
+            "type" : "string"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "address",
+          "fullName"
+        ],
+        "type" : "object"
+      },
+      "LocalTime" : {
+        "properties" : {
+          "hour" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "minute" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "nano" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "second" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "NeighborResponse" : {
+        "properties" : {
+          "address" : {
+            "type" : "string"
+          },
+          "district" : {
+            "type" : "string"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [
+              "ACTIVE",
+              "INACTIVE"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseCollectionRecordResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CollectionRecordResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseCollectionScheduleResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CollectionScheduleResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseCompanyResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CompanyResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseNeighborResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/NeighborResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Pageable" : {
+        "properties" : {
+          "page" : {
+            "format" : "int32",
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "sort" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "openapi" : "3.0.1",
+  "paths" : {
+    "/companies" : {
+      "get" : {
+        "operationId" : "list_3",
+        "parameters" : [
+          {
+            "in" : "query",
+            "name" : "status",
+            "required" : false,
+            "schema" : {
+              "enum" : [
+                "ACTIVE",
+                "INACTIVE"
+              ],
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "pageable",
+            "required" : true,
+            "schema" : {
+              "$ref" : "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseCompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "company-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "create_3",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateCompanyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "company-controller"
+        ]
+      }
+    },
+    "/companies/{id}" : {
+      "get" : {
+        "operationId" : "getById_3",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "company-controller"
+        ]
+      }
+    },
+    "/neighbors" : {
+      "get" : {
+        "operationId" : "list",
+        "parameters" : [
+          {
+            "in" : "query",
+            "name" : "status",
+            "required" : false,
+            "schema" : {
+              "enum" : [
+                "ACTIVE",
+                "INACTIVE"
+              ],
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "district",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "pageable",
+            "required" : true,
+            "schema" : {
+              "$ref" : "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseNeighborResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "neighbor-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateNeighborRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NeighborResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "neighbor-controller"
+        ]
+      }
+    },
+    "/neighbors/{id}" : {
+      "get" : {
+        "operationId" : "getById_2",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NeighborResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "neighbor-controller"
+        ]
+      }
+    },
+    "/neighbors/{neighborId}/collection-records" : {
+      "get" : {
+        "operationId" : "list_2",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "neighborId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "from",
+            "required" : false,
+            "schema" : {
+              "format" : "date",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "to",
+            "required" : false,
+            "schema" : {
+              "format" : "date",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "pageable",
+            "required" : true,
+            "schema" : {
+              "$ref" : "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseCollectionRecordResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "collection-record-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "create_2",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "neighborId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateCollectionRecordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CollectionRecordResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "collection-record-controller"
+        ]
+      }
+    },
+    "/neighbors/{neighborId}/collection-records/{id}" : {
+      "get" : {
+        "operationId" : "getById_1",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "neighborId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CollectionRecordResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "collection-record-controller"
+        ]
+      }
+    },
+    "/neighbors/{neighborId}/schedules" : {
+      "get" : {
+        "operationId" : "list_1",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "neighborId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "pageable",
+            "required" : true,
+            "schema" : {
+              "$ref" : "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseCollectionScheduleResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "collection-schedule-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "create_1",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "neighborId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateCollectionScheduleRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CollectionScheduleResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "collection-schedule-controller"
+        ]
+      }
+    },
+    "/neighbors/{neighborId}/schedules/{id}" : {
+      "get" : {
+        "operationId" : "getById",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "neighborId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CollectionScheduleResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "collection-schedule-controller"
+        ]
+      }
+    },
+    "/neighbors/{neighborId}/schedules/{id}/cancel" : {
+      "patch" : {
+        "operationId" : "cancel",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "neighborId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CollectionScheduleResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "collection-schedule-controller"
+        ]
+      }
+    },
+    "/neighbors/{neighborId}/schedules/{id}/pause" : {
+      "patch" : {
+        "operationId" : "pause",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "neighborId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CollectionScheduleResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "collection-schedule-controller"
+        ]
+      }
+    },
+    "/neighbors/{neighborId}/schedules/{id}/reactivate" : {
+      "patch" : {
+        "operationId" : "reactivate",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "neighborId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CollectionScheduleResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "collection-schedule-controller"
+        ]
+      }
+    }
+  }
+}

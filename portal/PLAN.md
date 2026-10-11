@@ -103,11 +103,30 @@ cambio a un job se pruebe con su mismo push.
 5a. ✅ Adelantada por pedido del usuario (la otra terminal tiene borradores esperando):
     plantilla `plantillas/adr.md`, `scripts/gen-adr-toc.mjs` (con tests) e índice de
     decisiones.
-3. Specs OpenAPI y `openapi-drift` (antes, comparar alternativas: ver abajo).
+3. ✅ Specs OpenAPI y `openapi-drift` (rama `portal/openapi-export`).
 4. Glosario de estados y catálogo de errores por servicio, más `catalog-drift`.
 5b. Los 6 ADR del brief y 4 ADR ya implementados.
 6. Visión del producto y páginas de endpoints, un servicio por vez.
 
-## Generación de los specs OpenAPI
+## Generación de los specs OpenAPI (task 3)
 
-_Se completa en la task 3._
+- Cada servicio exporta su propio `/v3/api-docs` (springdoc) con su test
+  `OpenApiExportIT` — en auth-service, un método nuevo en el `OpenApiDocsIT` que ya
+  existía, para no duplicar su arranque (`@Testcontainers` + `@SpringBootTest`
+  + Postgres). El endpoint es público en los 4 servicios (`SecurityConfig`), así
+  que el test no necesita token.
+- El export es determinista: claves JSON ordenadas recursivamente, indentación fija
+  de 2 espacios con `\n` (no el separador del sistema operativo), y sin el campo
+  `servers` (springdoc lo llena con el puerto aleatorio del test, nunca el mismo dos
+  veces). El propio test compara dos exports independientes y falla si no son
+  idénticos — la prueba de que es determinista vive en el test, no solo en la
+  documentación. Queda en `<servicio>/target/openapi/<servicio>.json`.
+- `portal/scripts/export-openapi.mjs` copia esos 4 JSON a
+  `portal/Writerside/specs/<servicio>.json`. Quien cambia un endpoint corre el test
+  + el script en su propio PR y commitea el resultado (ver `portal/README.md`).
+- El job `openapi-drift` de `portal.yml` corre lo mismo para los 4 servicios y
+  compara contra lo commiteado con `git diff --exit-code`; **informa, no bloquea**
+  (`continue-on-error: true`, consistente con la fila "Jobs de desfase" de arriba).
+  Usa el mismo filtro de disparo que el resto de `portal.yml` (`portal/**`, cron
+  semanal, `workflow_dispatch`): nunca corre en un push a `*-service/src`, así que
+  nunca entra al `checksPass` de Render tampoco.

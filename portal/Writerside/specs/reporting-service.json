@@ -1,0 +1,749 @@
+{
+  "components" : {
+    "schemas" : {
+      "CertificateSummaryResponse" : {
+        "properties" : {
+          "hierarchyCompliancePercent" : {
+            "type" : "number"
+          },
+          "kilosTrazados" : {
+            "type" : "number"
+          },
+          "periodEnd" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "periodStart" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "trackedCompanyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "EsgCertificateResponse" : {
+        "properties" : {
+          "associationId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "companyName" : {
+            "type" : "string"
+          },
+          "companyRuc" : {
+            "type" : "string"
+          },
+          "hierarchyCompliancePercent" : {
+            "type" : "number"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "issuedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "kilosTrazados" : {
+            "type" : "number"
+          },
+          "periodEnd" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "periodStart" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "trackedCompanyId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "IssueCertificateRequest" : {
+        "properties" : {
+          "periodEnd" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "periodStart" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "periodEnd",
+          "periodStart"
+        ],
+        "type" : "object"
+      },
+      "PageResponseEsgCertificateResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EsgCertificateResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseSigersolSyncResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SigersolSyncResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PageResponseTrackedCompanyResponse" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TrackedCompanyResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalElements" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Pageable" : {
+        "properties" : {
+          "page" : {
+            "format" : "int32",
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "sort" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "RegisterSigersolSyncRequest" : {
+        "properties" : {
+          "associationId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "hierarchyCompliancePercent" : {
+            "exclusiveMaximum" : false,
+            "exclusiveMinimum" : false,
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "number"
+          },
+          "officialKilosDeclared" : {
+            "type" : "number"
+          },
+          "periodEnd" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "periodStart" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "sourceNote" : {
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "associationId",
+          "hierarchyCompliancePercent",
+          "periodEnd",
+          "periodStart"
+        ],
+        "type" : "object"
+      },
+      "RegisterTrackedCompanyRequest" : {
+        "properties" : {
+          "associationId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "ruc" : {
+            "pattern" : "\\d{11}",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "associationId",
+          "name",
+          "ruc"
+        ],
+        "type" : "object"
+      },
+      "SigersolSyncResponse" : {
+        "properties" : {
+          "associationId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "declaredAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "hierarchyCompliancePercent" : {
+            "type" : "number"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "officialKilosDeclared" : {
+            "type" : "number"
+          },
+          "periodEnd" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "periodStart" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "sourceNote" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TrackedCompanyResponse" : {
+        "properties" : {
+          "associationId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "ruc" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [
+              "ACTIVE",
+              "INACTIVE"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "openapi" : "3.0.1",
+  "paths" : {
+    "/sigersol-syncs" : {
+      "get" : {
+        "operationId" : "list_2",
+        "parameters" : [
+          {
+            "in" : "query",
+            "name" : "associationId",
+            "required" : false,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "pageable",
+            "required" : true,
+            "schema" : {
+              "$ref" : "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseSigersolSyncResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "sigersol-sync-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "register_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterSigersolSyncRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SigersolSyncResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "sigersol-sync-controller"
+        ]
+      }
+    },
+    "/sigersol-syncs/{id}" : {
+      "get" : {
+        "operationId" : "getById_2",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SigersolSyncResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "sigersol-sync-controller"
+        ]
+      }
+    },
+    "/tracked-companies" : {
+      "get" : {
+        "operationId" : "list",
+        "parameters" : [
+          {
+            "in" : "query",
+            "name" : "pageable",
+            "required" : true,
+            "schema" : {
+              "$ref" : "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseTrackedCompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "tracked-company-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "register",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterTrackedCompanyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TrackedCompanyResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "tracked-company-controller"
+        ]
+      }
+    },
+    "/tracked-companies/{companyId}/certificate-summary" : {
+      "get" : {
+        "operationId" : "previewSummary",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "companyId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "periodStart",
+            "required" : true,
+            "schema" : {
+              "format" : "date",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "periodEnd",
+            "required" : true,
+            "schema" : {
+              "format" : "date",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CertificateSummaryResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "certificate-controller"
+        ]
+      }
+    },
+    "/tracked-companies/{companyId}/certificates" : {
+      "get" : {
+        "operationId" : "list_1",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "companyId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "pageable",
+            "required" : true,
+            "schema" : {
+              "$ref" : "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseEsgCertificateResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "certificate-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "issue",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "companyId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/IssueCertificateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EsgCertificateResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "certificate-controller"
+        ]
+      }
+    },
+    "/tracked-companies/{companyId}/certificates/{id}" : {
+      "get" : {
+        "operationId" : "getById_1",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "companyId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EsgCertificateResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "certificate-controller"
+        ]
+      }
+    },
+    "/tracked-companies/{companyId}/certificates/{id}/csv" : {
+      "get" : {
+        "operationId" : "exportCsv",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "companyId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "certificate-controller"
+        ]
+      }
+    },
+    "/tracked-companies/{companyId}/certificates/{id}/pdf" : {
+      "get" : {
+        "operationId" : "exportPdf",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "companyId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "certificate-controller"
+        ]
+      }
+    },
+    "/tracked-companies/{id}" : {
+      "get" : {
+        "operationId" : "getById",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TrackedCompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "tracked-company-controller"
+        ]
+      }
+    }
+  }
+}

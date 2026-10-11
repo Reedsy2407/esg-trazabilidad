@@ -12,7 +12,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import pe.esgtrazabilidad.auth.it.support.OpenApiExport;
+
+import java.nio.file.Path;
+
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasItems;
@@ -97,5 +102,24 @@ class OpenApiDocsIT {
                 .then()
                 .statusCode(302);
         given().when().get("/swagger-ui/index.html").then().statusCode(200);
+    }
+
+    // Reuses this class's own Testcontainers/SpringBootTest startup instead
+    // of a near-duplicate OpenApiExportIT, the way the other three services
+    // export theirs (they have no equivalent pre-existing OpenApiDocsIT).
+    // Two independent fetches, normalized separately: proves the export is
+    // deterministic (same bytes every run), not just that it happened once.
+    @Test
+    void exportsADeterministicOpenApiDocument() {
+        String normalizedFirst = OpenApiExport.normalize(fetchApiDocs());
+        String normalizedSecond = OpenApiExport.normalize(fetchApiDocs());
+
+        assertThat(normalizedSecond).isEqualTo(normalizedFirst);
+
+        OpenApiExport.writeTo(Path.of("target", "openapi", "auth-service.json"), normalizedFirst);
+    }
+
+    private String fetchApiDocs() {
+        return given().when().get("/v3/api-docs").then().statusCode(200).extract().asString();
     }
 }

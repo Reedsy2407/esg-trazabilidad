@@ -64,15 +64,15 @@ class NeighborService
     }
 
     /**
-     * Reads under a shared row lock, so an edit can't interleave with a
-     * deactivation or deletion of the same neighbour: it either goes first,
-     * or sees the result (and a deleted neighbour is COL-001).
+     * Reads under an exclusive row lock, so an edit can't interleave with a
+     * deactivation, a deletion or another edit of the same neighbour: it
+     * either goes first, or sees the result (a deleted neighbour is COL-001).
      */
     @Override
     @Transactional
     public Neighbor edit(EditNeighborCommand command) {
         Neighbor neighbor = repository
-                .findByIdForShare(command.id())
+                .findByIdForUpdate(command.id())
                 .orElseThrow(() -> new ApplicationException(CollectionErrors.NEIGHBOR_NOT_FOUND));
         District district = resolveDistrict(command.districtUbigeo(), null);
         neighbor.edit(command.fullName(), command.phone(), command.address(), district);

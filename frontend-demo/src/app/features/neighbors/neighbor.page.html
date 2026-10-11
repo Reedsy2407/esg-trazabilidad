@@ -90,7 +90,7 @@
     <!-- ======================= Estado del vecino ======================= -->
     <section class="state-section" aria-labelledby="state-title">
       <h2 id="state-title" class="sec">Estado del vecino</h2>
-      <div class="state-box" #stateActions tabindex="-1" aria-labelledby="state-title">
+      <div class="state-box" role="group" #stateActions tabindex="-1" aria-labelledby="state-title">
         <p class="state-now">
           {{ n.status === 'ACTIVE' ? 'Activo: recibe recojos y cronogramas.' : 'Inactivo: no recibe recojos ni cronogramas activos.' }}
         </p>

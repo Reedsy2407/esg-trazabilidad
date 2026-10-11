@@ -25,6 +25,13 @@ interface NeighborJpaRepository
 
     Optional<NeighborEntity> findByIdAndDeletedAtIsNull(UUID id);
 
+    // SELECT ... FOR UPDATE: for a read-modify-write of the row itself (an
+    // edit). A shared lock there would deadlock two concurrent edits, each
+    // waiting for the other's share lock before its own UPDATE.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT n FROM NeighborEntity n WHERE n.id = :id AND n.deletedAt IS NULL")
+    Optional<NeighborEntity> findByIdForUpdate(@Param("id") UUID id);
+
     // Compare-and-set on the status column: of two concurrent transitions the
     // second blocks on the row lock, then matches 0 rows. Runs inside the
     // caller's transaction (NeighborService's @Transactional methods).

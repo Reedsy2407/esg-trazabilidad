@@ -44,5 +44,8 @@ public interface NeighborRepository {
      */
     Optional<Neighbor> findByIdForShare(UUID id);
 
+    /** Reads the neighbour holding an exclusive row lock until commit: for an edit of the row itself. */
+    Optional<Neighbor> findByIdForUpdate(UUID id);
+
     Page<Neighbor> findAll(NeighborStatus status, String districtUbigeo, Pageable pageable);
 }

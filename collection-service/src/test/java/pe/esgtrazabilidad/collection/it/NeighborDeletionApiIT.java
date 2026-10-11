@@ -91,10 +91,12 @@ class NeighborDeletionApiIT {
                 .then().statusCode(404).body("code", equalTo("COL-001"));
         createRecord(id).then().statusCode(404).body("code", equalTo("COL-001"));
         // Decision: the cancelled schedules of a deleted neighbour stay readable
-        // (audit trail); every write on them is refused.
+        // (audit trail). Writing to them is an invalid transition (COL-008).
         given().when().get("/neighbors/{n}/schedules", id).then()
                 .body("content", hasSize(2))
                 .body("content.status", everyItem(equalTo("CANCELLED")));
+        given().when().patch("/neighbors/{n}/schedules/{s}/reactivate", id, scheduleId)
+                .then().statusCode(409).body("code", equalTo("COL-008"));
 
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement select = connection.prepareStatement(

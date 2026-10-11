@@ -196,7 +196,7 @@ class NeighborServiceTest {
     void editChangesTheNeighborAndWritesItThroughUpdateNotSave() {
         Neighbor neighbor = Neighbor.create(
                 "Ana Torres", "999999999", "Av. Siempre Viva 123", UbigeoCatalog.find("150140").orElseThrow());
-        when(repository.findByIdForShare(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        when(repository.findByIdForUpdate(neighbor.getId())).thenReturn(Optional.of(neighbor));
         when(repository.update(any(Neighbor.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Neighbor result = service.edit(new EditNeighborCommand(neighbor.getId(), "Ana T.", "988", "Jr. 2", "150112"));
@@ -210,13 +210,13 @@ class NeighborServiceTest {
     @Test
     void editingAMissingNeighborOrToADistrictOutsideTheListIsRefused() {
         UUID missingId = UUID.randomUUID();
-        when(repository.findByIdForShare(missingId)).thenReturn(Optional.empty());
+        when(repository.findByIdForUpdate(missingId)).thenReturn(Optional.empty());
         assertError(() -> service.edit(new EditNeighborCommand(missingId, "A", null, "Jr. 1", "150112")),
                 CollectionErrors.NEIGHBOR_NOT_FOUND);
 
         Neighbor neighbor = Neighbor.create(
                 "Ana Torres", "999999999", "Av. Siempre Viva 123", UbigeoCatalog.find("150140").orElseThrow());
-        when(repository.findByIdForShare(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        when(repository.findByIdForUpdate(neighbor.getId())).thenReturn(Optional.of(neighbor));
         assertError(() -> service.edit(new EditNeighborCommand(neighbor.getId(), "A", null, "Jr. 1", "150201")),
                 CollectionErrors.INVALID_DISTRICT);
         verify(repository, never()).update(any());

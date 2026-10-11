@@ -32,6 +32,11 @@ class NeighborRepositoryAdapter implements NeighborRepository {
     }
 
     @Override
+    public Optional<Neighbor> findByIdForUpdate(UUID id) {
+        return jpaRepository.findByIdForUpdate(id).map(this::toDomain);
+    }
+
+    @Override
     public boolean changeStatus(UUID id, NeighborStatus from, NeighborStatus to) {
         return jpaRepository.updateStatusIfCurrent(id, from.name(), to.name()) == 1;
     }

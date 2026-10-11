@@ -35,6 +35,22 @@ paths = ['''^reporting-service/src/test/java/pe/esgtrazabilidad/reporting/it/sup
 regexTarget = "line"
 regexes = ['''^\s*return signToken\(TEST_SECRET, "01a0d8cb-f219-72a2-b006-5150f0e0d685"\);\s*$''']
 
+[[allowlists]]
+description = "collection-service IT token subject (UUID), NeighborDeletionApiIT"
+condition = "AND"
+commits = ["965dec518b84d9949940f5724838073902e8be07"]
+paths = ['''^collection-service/src/test/java/pe/esgtrazabilidad/collection/it/NeighborDeletionApiIT\.java$''']
+regexTarget = "line"
+regexes = ['''^\s*private static final String TOKEN_SUBJECT = "01a0d8cb-f219-72a2-b006-5150f0e0d685";\s*$''']
+
+[[allowlists]]
+description = "collection-service IT token subject (UUID), NeighborStatusApiIT"
+condition = "AND"
+commits = ["17a593af392a2d4b08f8a4db62a7bd003b6928a3"]
+paths = ['''^collection-service/src/test/java/pe/esgtrazabilidad/collection/it/NeighborStatusApiIT\.java$''']
+regexTarget = "line"
+regexes = ['''^\s*private static final String TOKEN_SUBJECT = "01a0d8cb-f219-72a2-b006-5150f0e0d685";\s*$''']
+
 # The alphabet the browser draws initial staff passwords from (public by design).
 [[allowlists]]
 description = "frontend-demo initial-password alphabet"

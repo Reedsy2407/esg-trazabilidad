@@ -9,8 +9,10 @@
     <primary-label id="collection" name="collection-service" short-name="collection">Vecinos, empresas, cronogramas y recojos.</primary-label>
     <primary-label id="reporting" name="reporting-service" short-name="reporting">Certificados ESG y contexto SIGERSOL.</primary-label>
 
-    <!-- Estado de una decisión (ADR). -->
+    <!-- Estado de una decisión (ADR). No se escribe a mano: gen-adr-toc.mjs lo deriva
+         de la línea "Estado" de cada ADR al construir. -->
+    <secondary-label id="adr-pendiente" name="Aceptada, pendiente de implementación" color="tangerine">Decisión aceptada que el código todavía no refleja.</secondary-label>
     <secondary-label id="adr-implementada" name="Implementada" color="green">La decisión ya está en el código.</secondary-label>
-    <secondary-label id="adr-pendiente" name="Pendiente de implementación" color="tangerine">Decisión aceptada que el código todavía no refleja.</secondary-label>
+    <secondary-label id="adr-descartada" name="Descartada" color="purple">Se evaluó y no se adopta; queda registrada para no volver a discutirla.</secondary-label>
     <secondary-label id="adr-reemplazada" name="Reemplazada" color="red">Ya no aplica; ver la decisión que la reemplaza.</secondary-label>
 </labels>

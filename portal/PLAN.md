@@ -13,7 +13,8 @@ de esg-trazabilidad explicados en lenguaje de negocio. Este archivo vive fuera d
 | Jobs de desfase | `openapi-drift` y `catalog-drift` **informan, no bloquean** (`continue-on-error: true`). Como el workflow no corre en commits de servicios, tampoco entra en el `checksPass` de Render. |
 | Deploy | `deploy` depende solo de `build` y del checker de Writerside, nunca del desfase. |
 | Catálogos | Un archivo por servicio para errores y para estados, así varias terminales agregan sin conflicto. |
-| ADR | Un archivo por decisión; el árbol y el índice se generan en el build. |
+| ADR | Un archivo por decisión; el árbol, el índice y la etiqueta de estado se generan en el build (`scripts/gen-adr-toc.mjs` sobre la copia `portal/.build/`). Estados: Aceptada, pendiente de implementación · Implementada · Descartada · Reemplazada. Quien implementa una decisión la pasa a "Implementada" en el mismo commit que el código. |
+| Valores de la API | El glosario y los ADR escriben siempre el valor de la API y su etiqueta en español. La etiqueta es **por entidad**, no global: `UNVERIFIED` es "No verificada" para una empresa y "No verificado" para la cobertura. Ejemplos de v3 (todavía no existen en el código de `main`): `ANNULLED` = "Anulado", `ISSUED` = "Emitido", `DECLARED_BY_OPERATOR` = "Declarado por el operador". |
 
 ### Pendiente de endurecer (deuda explícita)
 
@@ -46,7 +47,7 @@ portal/
         ├── glosario/          estados-<servicio>.md
         ├── endpoints/         una página por recurso
         ├── errores/           errores-<servicio>.md
-        └── decisiones/        AAAA-MM-DD-slug.md, uno por ADR
+        └── decisiones/        decisiones.md (índice) + AAAA-MM-DD-slug.md, uno por ADR
 ```
 
 Writerside exige nombres de topic **únicos en todo el proyecto**, sin importar la
@@ -97,11 +98,14 @@ cambio a un job se pruebe con su mismo push.
 
 ## Tasks
 
-1. Esqueleto: cfg, árbol, labels, `inicio.md`, build local con Docker.
-2. `portal.yml`: build, checker y deploy a Pages.
+1. ✅ Esqueleto: cfg, árbol, labels, `inicio.md`, build local con Docker.
+2. ✅ `portal.yml`: build, checker y deploy a Pages.
+5a. ✅ Adelantada por pedido del usuario (la otra terminal tiene borradores esperando):
+    plantilla `plantillas/adr.md`, `scripts/gen-adr-toc.mjs` (con tests) e índice de
+    decisiones.
 3. Specs OpenAPI y `openapi-drift` (antes, comparar alternativas: ver abajo).
 4. Glosario de estados y catálogo de errores por servicio, más `catalog-drift`.
-5. Plantilla, generador de TOC de ADR, los 6 ADR del brief y 4 ADR ya implementados.
+5b. Los 6 ADR del brief y 4 ADR ya implementados.
 6. Visión del producto y páginas de endpoints, un servicio por vez.
 
 ## Generación de los specs OpenAPI

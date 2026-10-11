@@ -26,6 +26,19 @@ else
   MOUNT_SRC="$PORTAL_DIR"
 fi
 
+# Se construye una copia (portal/.build/Writerside), nunca las fuentes: ahí
+# gen-adr-toc.mjs valida los ADR y genera su entrada en el árbol, el índice de
+# decisiones y la etiqueta de estado. Lo commiteado conserva solo los marcadores,
+# así que dos terminales que agregan un ADR cada una no chocan en un archivo común.
+if ! rm -rf "$PORTAL_DIR/.build"; then
+  # Linux: un build cortado antes del chown final deja .build con dueño root.
+  echo "No se pudo borrar portal/.build (¿quedó con dueño root?): sudo rm -rf portal/.build" >&2
+  exit 1
+fi
+mkdir -p "$PORTAL_DIR/.build"
+cp -r "$PORTAL_DIR/Writerside" "$PORTAL_DIR/.build/Writerside"
+node "$PORTAL_DIR/scripts/gen-adr-toc.mjs" "$PORTAL_DIR/.build/Writerside"
+
 # El contenedor corre como root: en Linux, lo que escribe queda con dueño root.
 # Por eso la limpieza se hace dentro del contenedor y al final se devuelve la
 # propiedad al usuario que llamó (en Windows el chown no tiene efecto).
@@ -37,11 +50,10 @@ MSYS_NO_PATHCONV=1 docker run --rm \
   rm -rf /opt/sources/artifacts
   export DISPLAY=:99
   Xvfb :99 &
-  git config --global --add safe.directory /opt/sources
-  /opt/builder/bin/idea.sh helpbuilderinspect -source-dir /opt/sources \
+  /opt/builder/bin/idea.sh helpbuilderinspect -source-dir /opt/sources/.build \
     -product Writerside/esg -lang es-ES --runner other -output-dir /opt/sources/artifacts/
   status=$?
-  chown -R "$HOST_UID:$HOST_GID" /opt/sources/artifacts /opt/sources/.idea 2>/dev/null || true
+  chown -R "$HOST_UID:$HOST_GID" /opt/sources/artifacts /opt/sources/.build 2>/dev/null || true
   exit $status
 '
 

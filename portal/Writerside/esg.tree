@@ -5,4 +5,7 @@
 <instance-profile id="esg" name="ESG Trazabilidad" start-page="inicio.md">
 
     <toc-element topic="inicio.md"/>
+    <toc-element topic="decisiones.md">
+        <!-- ADR-TOC -->
+    </toc-element>
 </instance-profile>

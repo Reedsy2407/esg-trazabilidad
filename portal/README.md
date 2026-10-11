@@ -2,27 +2,67 @@
 
 Sitio estático generado con [JetBrains Writerside](https://www.jetbrains.com/writerside/)
 a partir de `portal/Writerside/`. Explica las decisiones de negocio y los endpoints de
-esg-trazabilidad en lenguaje de negocio. El plan y las decisiones de diseño del portal
-están en [PLAN.md](PLAN.md).
+esg-trazabilidad en lenguaje de negocio. Publicado en
+<https://reedsy2407.github.io/esg-trazabilidad/>. El plan y las decisiones de diseño del
+portal están en [PLAN.md](PLAN.md).
 
 ## Construir en local
 
-Con Rancher Desktop en marcha (`docker info` debe responder):
+Con Rancher Desktop en marcha (`docker info` debe responder) y Node instalado:
 
 ```bash
 bash portal/scripts/build-local.sh
 ```
 
-El sitio queda en `portal/artifacts/webHelpESG2-all.zip`, y los errores del builder en
-`portal/artifacts/report.json`. El job `build` de `.github/workflows/portal.yml` usa la
-misma imagen, con la misma versión fija y los mismos argumentos; si se cambia en un
-lado, se cambia en el otro.
+El script copia `Writerside/` a `portal/.build/`, genera ahí el árbol y el índice de
+decisiones (ver más abajo) y construye esa copia. El sitio queda en
+`portal/artifacts/webHelpESG2-all.zip`, y los errores del builder en
+`portal/artifacts/report.json`. El job `build` de `.github/workflows/portal.yml` corre
+este mismo script, así que la versión del builder y sus argumentos están en un solo
+lugar.
 
-También se puede previsualizar con el plugin de Writerside en IntelliJ IDEA, abriendo
-la carpeta `portal/`.
+La vista previa del plugin de Writerside en IntelliJ IDEA lee las fuentes sin generar
+nada: ahí la sección Decisiones aparece vacía. Para verla completa, usa el script.
 
 ## Reglas para editar
 
 - **Los nombres de topic son únicos en todo el proyecto**, aunque estén en carpetas
   distintas. Usa un prefijo: `errores-auth.md`, `estados-auth.md`.
-- Todo topic nuevo debe estar en `Writerside/esg.tree`; si no, el build lo reporta.
+- Todo topic nuevo (salvo los ADR) debe estar en `Writerside/esg.tree`; si no, el build
+  lo reporta.
+- Estados y valores de la API: se escribe siempre el valor de la API, tal cual, y su
+  etiqueta en español: `ANNULLED` = "Anulado", `UNVERIFIED` = "No verificada".
+
+## Agregar una decisión (ADR)
+
+Un archivo por decisión, sin tocar ningún archivo compartido, así varias terminales
+agregan decisiones a la vez sin conflictos de git.
+
+1. Copia [plantillas/adr.md](plantillas/adr.md) a
+   `Writerside/topics/decisiones/AAAA-MM-DD-slug.md` (fecha de la decisión, slug en
+   minúsculas con guiones) y llénala. La plantilla explica cada campo.
+2. **No edites `esg.tree` ni `decisiones.md`.** Tienen marcadores (`ADR-TOC`,
+   `ADR-INDEX`) que `scripts/gen-adr-toc.mjs` reemplaza al construir: la entrada en el
+   árbol, la fila del índice y la etiqueta de estado salen del propio archivo.
+3. Valida antes de commitear:
+
+   ```bash
+   node portal/scripts/gen-adr-toc.mjs --check
+   ```
+
+   El build hace la misma validación y se detiene si un ADR está mal formado.
+
+### Estados
+
+La línea `- **Estado:**` empieza con uno de estos valores, tal cual; después puede ir
+un detalle (`Implementada (v2)`, `Aceptada, pendiente de implementación. Se implementa en M5.`).
+
+| Estado | Cuándo |
+|---|---|
+| Aceptada, pendiente de implementación | Decidida, pero el código todavía no la refleja. |
+| Implementada | Ya está en el código. |
+| Descartada | Se evaluó y no se adopta. |
+| Reemplazada | Ya no aplica; `Reemplazada por` enlaza la que la reemplaza. |
+
+**Quien implementa una decisión cambia su estado a "Implementada" en el mismo commit
+que el código**, y agrega en "Dónde se aplica" un enlace al código o a `docs/`.

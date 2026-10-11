@@ -40,6 +40,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The runner's preinstalled Node is enough: the scripts use builtins only.
+      - name: Portal script tests
+        run: node --test portal/scripts/gen-adr-toc.test.mjs
+
+      # build-local.sh also validates every ADR (gen-adr-toc.mjs) and stops on
+      # an invalid one before the builder runs.
       - name: Build the portal (Writerside builder in Docker)
         run: bash portal/scripts/build-local.sh
 

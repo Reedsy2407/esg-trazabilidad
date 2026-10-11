@@ -28,14 +28,27 @@ public final class TestJwtTokens {
     }
 
     public static String validToken() {
-        return signToken(TEST_SECRET, "01a0d8cb-f219-72a2-b006-5150f0e0d685");
+        return signToken(TEST_SECRET, TEST_SUBJECT);
+    }
+
+    public static final String TEST_SUBJECT = "01a0d8cb-f219-72a2-b006-5150f0e0d685";
+    public static final String TEST_EMAIL = "staff@example.com";
+
+    /** A valid token for a specific staff user, to tell two actors apart. */
+    public static String validTokenFor(String subject, String email) {
+        return sign(TEST_SECRET, subject, email);
     }
 
     public static String signToken(String secret, String subject) {
+        return sign(secret, subject, TEST_EMAIL);
+    }
+
+    private static String sign(String secret, String subject, String email) {
         try {
             MACSigner signer = new MACSigner(secret.getBytes(StandardCharsets.UTF_8));
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
                     .subject(subject)
+                    .claim("email", email)
                     .expirationTime(new Date(System.currentTimeMillis() + 60_000))
                     .build();
             SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);

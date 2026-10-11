@@ -1,6 +1,7 @@
 package pe.esgtrazabilidad.reporting.certificate.service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -11,11 +12,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
+import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.reporting.certificate.CertificateSummary;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
 import pe.esgtrazabilidad.reporting.certificate.export.CertificateCsvExporter;
 import pe.esgtrazabilidad.reporting.certificate.export.CertificatePdfExporter;
+import pe.esgtrazabilidad.reporting.certificate.port.in.AnnulCertificateUseCase;
 import pe.esgtrazabilidad.reporting.certificate.port.in.ExportCertificateUseCase;
 import pe.esgtrazabilidad.reporting.certificate.port.in.GetCertificateUseCase;
 import pe.esgtrazabilidad.reporting.certificate.port.in.IssueCertificateCommand;
@@ -29,12 +32,14 @@ import pe.esgtrazabilidad.reporting.exception.ReportingErrors;
 import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolSync;
 import pe.esgtrazabilidad.reporting.sigersolsync.port.out.SigersolSyncRepository;
 import pe.esgtrazabilidad.reporting.trackedcompany.domain.TrackedCompany;
+import pe.esgtrazabilidad.reporting.trackedcompany.domain.TrackedCompanyStatus;
 import pe.esgtrazabilidad.reporting.trackedcompany.port.out.TrackedCompanyRepository;
 
 @Service
 class CertificateService
         implements PreviewCertificateSummaryUseCase,
                 IssueCertificateUseCase,
+                AnnulCertificateUseCase,
                 GetCertificateUseCase,
                 ListCertificatesUseCase,
                 ExportCertificateUseCase {
@@ -81,6 +86,9 @@ class CertificateService
     public EsgCertificate issue(IssueCertificateCommand command) {
         requireValidPeriod(command.periodStart(), command.periodEnd());
         TrackedCompany trackedCompany = findTrackedCompany(command.trackedCompanyId());
+        if (trackedCompany.getStatus() == TrackedCompanyStatus.INACTIVE) {
+            throw new ApplicationException(ReportingErrors.INACTIVE_TRACKED_COMPANY);
+        }
 
         // Service-level fast check first (clean 409 without ever reaching
         // the database's own rejection) -- the EXCLUDE USING gist
@@ -112,6 +120,21 @@ class CertificateService
                 .toList();
 
         return esgCertificateRepository.save(certificate, lineItems);
+    }
+
+    @Override
+    @Transactional
+    public EsgCertificate annul(UUID trackedCompanyId, UUID id, String reason, CurrentActor actor) {
+        EsgCertificate certificate = getById(trackedCompanyId, id);
+        if (certificate.isAnnulled()) {
+            throw new ApplicationException(ReportingErrors.CERTIFICATE_ALREADY_ANNULLED);
+        }
+        // The read above is only the fast path; the conditional UPDATE decides
+        // when two annulments race.
+        if (!esgCertificateRepository.annul(id, reason.strip(), actor, Instant.now())) {
+            throw new ApplicationException(ReportingErrors.CERTIFICATE_ALREADY_ANNULLED);
+        }
+        return getById(trackedCompanyId, id);
     }
 
     @Override

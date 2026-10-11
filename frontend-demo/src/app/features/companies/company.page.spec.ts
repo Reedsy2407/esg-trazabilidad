@@ -22,6 +22,11 @@ function certificate(periodStart: string, periodEnd: string, kg: number): EsgCer
     kilosTrazados: kg,
     hierarchyCompliancePercent: 90,
     issuedAt: '2025-01-05T15:00:00Z',
+    status: 'ISSUED',
+      annulledAt: null,
+      annulledById: null,
+      annulledByEmail: null,
+      annulmentReason: null,
   };
 }
 
@@ -105,5 +110,33 @@ describe('CompanyPage, Resumen del período', () => {
     expect(text).toContain('01/12/2024 – 15/12/2024');
     expect(text).toContain('Sin registro SIGERSOL');
     expect(text).not.toContain('0 %');
+  });
+
+  it('lists an annulled certificate marked Anulado, and keeps it out of the summary and the chart', async () => {
+    const annulled: EsgCertificate = {
+      ...certificate('2024-12-01', '2024-12-31', 99000),
+      status: 'ANNULLED',
+      annulledAt: '2025-02-01T10:00:00Z',
+      annulledById: 'staff-1',
+      annulledByEmail: 'ana@example.com',
+      annulmentReason: 'Datos erróneos',
+    };
+    await answerCertificates([annulled, certificate('2024-11-01', '2024-11-30', 13420.1)]);
+
+    // The latest certified period is November: the annulled December is history.
+    const request = backend.expectOne((r) => r.url === `${base}/certificate-summary`);
+    expect(request.request.params.get('periodStart')).toBe('2024-11-01');
+    await answer(request, {
+      trackedCompanyId: 'c-1', periodStart: '2024-11-01', periodEnd: '2024-11-30',
+      kilosTrazados: 13420.1, hierarchyCompliancePercent: 87.5,
+    });
+
+    const rows = Array.from(page.querySelectorAll('.table-wide tbody tr'));
+    expect(rows).toHaveLength(2);
+    expect(rows[0].textContent).toContain('Diciembre 2024');
+    expect(rows[0].querySelector('.annulled-tag')?.textContent).toContain('Anulado');
+    expect(rows[1].querySelector('.annulled-tag')).toBeNull();
+    // 99,000 kg would have stretched the chart's axis past 100,000.
+    expect(page.querySelector('app-kilos-chart')?.textContent).not.toContain('99,000');
   });
 });

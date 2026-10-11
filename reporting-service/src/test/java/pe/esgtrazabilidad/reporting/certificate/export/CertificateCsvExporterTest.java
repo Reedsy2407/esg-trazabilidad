@@ -3,6 +3,7 @@ package pe.esgtrazabilidad.reporting.certificate.export;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -16,6 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
+import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateStatus;
 import pe.esgtrazabilidad.reporting.trackedcompany.domain.TrackedCompany;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -110,5 +112,68 @@ class CertificateCsvExporterTest {
 
         assertThat(records.get(0)).containsExactly("Empresa", "Empresa vacia SAC");
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("Fecha de recoleccion", "Peso (kg)"));
+    }
+
+    private EsgCertificate annulled(String reason, String email) {
+        TrackedCompany trackedCompany = TrackedCompany.create("Empresa SAC", "20123456789", UUID.randomUUID());
+        return EsgCertificate.reconstruct(
+                UUID.randomUUID(),
+                trackedCompany.getId(),
+                trackedCompany.getAssociationId(),
+                trackedCompany.getName(),
+                trackedCompany.getRuc(),
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 1, 31),
+                new BigDecimal("120.50"),
+                new BigDecimal("85.00"),
+                Instant.parse("2026-02-01T00:00:00Z"),
+                EsgCertificateStatus.ANNULLED,
+                Instant.parse("2026-03-01T10:00:00Z"),
+                UUID.fromString("01a0d8cb-f219-72a2-b006-5150f0e0d685"),
+                email,
+                reason);
+    }
+
+    private List<CSVRecord> parse(byte[] csvBytes) throws IOException {
+        try (CSVParser parser = CSVParser.parse(new String(csvBytes, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+            return parser.getRecords();
+        }
+    }
+
+    @Test
+    void anIssuedCertificateCarriesEstadoEmitidoAndNoAnnulmentRows() throws IOException {
+        List<CSVRecord> records = export("Empresa SAC");
+
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("estado", "Emitido"));
+        assertThat(records).noneSatisfy(r -> assertThat(r.get(0)).isEqualTo("motivo_anulacion"));
+    }
+
+    @Test
+    void anAnnulledCertificateCarriesEstadoAnuladoWithWhenWhoAndWhy() throws IOException {
+        List<CSVRecord> records = parse(exporter.export(annulled("Datos erróneos, del vecino", "ana@example.com"), List.of()));
+
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("estado", "Anulado"));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("anulado_en", "2026-03-01T10:00:00Z"));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("anulado_por", "ana@example.com"));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("motivo_anulacion", "Datos erróneos, del vecino"));
+        // The frozen numbers are still there.
+        assertThat(records.get(4)).containsExactly("Kilos trazados", "120.50");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"=1+1", "+cmd", "-2", "@SUM(A1)", "\tmotivo", "\rmotivo"})
+    void anAnnulmentReasonStartingWithAFormulaCharacterIsPrefixedSoASpreadsheetReadsItAsText(String reason)
+            throws IOException {
+        List<CSVRecord> records = parse(exporter.export(annulled(reason, "ana@example.com"), List.of()));
+
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("motivo_anulacion", "'" + reason));
+    }
+
+    @Test
+    void anAnnulledCertificateWithoutAnEmailFallsBackToTheStaffUserId() throws IOException {
+        List<CSVRecord> records = parse(exporter.export(annulled("Motivo", null), List.of()));
+
+        assertThat(records)
+                .anySatisfy(r -> assertThat(r).containsExactly("anulado_por", "01a0d8cb-f219-72a2-b006-5150f0e0d685"));
     }
 }

@@ -1,0 +1,74 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.2.0-alter-esg-certificate-add-annulment
+      author: esg-trazabilidad
+      comment: >
+        v3 (brief B, H): a certificate is never deleted, it is annulled. Every
+        existing row becomes ISSUED; the frozen numbers are untouched. The
+        reason, who (from the JWT) and when are required together once the
+        status is ANNULLED.
+      changes:
+        - addColumn:
+            tableName: esg_certificate
+            columns:
+              - column:
+                  name: status
+                  type: varchar(10)
+                  defaultValue: ISSUED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: annulled_at
+                  type: timestamp
+              - column:
+                  name: annulled_by_id
+                  type: uuid
+              - column:
+                  name: annulled_by_email
+                  type: varchar(255)
+              - column:
+                  name: annulment_reason
+                  type: varchar(500)
+        - sql:
+            sql: >
+              ALTER TABLE esg_certificate ADD CONSTRAINT ck_esg_certificate_status
+              CHECK ((status = 'ISSUED' AND annulled_at IS NULL AND annulled_by_id IS NULL AND annulment_reason IS NULL)
+              OR (status = 'ANNULLED' AND annulled_at IS NOT NULL AND annulled_by_id IS NOT NULL
+              AND annulment_reason IS NOT NULL AND length(btrim(annulment_reason)) > 0));
+      rollback:
+        - sql:
+            sql: ALTER TABLE esg_certificate DROP CONSTRAINT ck_esg_certificate_status;
+        - dropColumn:
+            tableName: esg_certificate
+            columns:
+              - column:
+                  name: annulment_reason
+              - column:
+                  name: annulled_by_email
+              - column:
+                  name: annulled_by_id
+              - column:
+                  name: annulled_at
+              - column:
+                  name: status
+  - changeSet:
+      id: v0.2.0-esg-certificate-company-period-exclusion-issued-only
+      author: esg-trazabilidad
+      comment: >
+        An annulled certificate frees its period: RPT-004's backstop now only
+        covers ISSUED rows. Rolling back restores the unconditional constraint
+        and fails if a period was re-issued over an annulled one (the data
+        itself would then violate the old rule) -- resolve those rows first.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE esg_certificate DROP CONSTRAINT excl_esg_certificate_company_period;
+              ALTER TABLE esg_certificate ADD CONSTRAINT excl_esg_certificate_company_period
+              EXCLUDE USING gist (tracked_company_id WITH =, daterange(period_start, period_end, '[]') WITH &&)
+              WHERE (status = 'ISSUED');
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE esg_certificate DROP CONSTRAINT excl_esg_certificate_company_period;
+              ALTER TABLE esg_certificate ADD CONSTRAINT excl_esg_certificate_company_period
+              EXCLUDE USING gist (tracked_company_id WITH =, daterange(period_start, period_end, '[]') WITH &&);

@@ -35,6 +35,11 @@ class CertificateMapper {
                 certificate.getPeriodEnd(),
                 certificate.getKilosTrazados(),
                 certificate.getHierarchyCompliancePercent(),
-                certificate.getIssuedAt());
+                certificate.getIssuedAt(),
+                certificate.getStatus(),
+                certificate.getAnnulledAt(),
+                certificate.getAnnulledById(),
+                certificate.getAnnulledByEmail(),
+                certificate.getAnnulmentReason());
     }
 }

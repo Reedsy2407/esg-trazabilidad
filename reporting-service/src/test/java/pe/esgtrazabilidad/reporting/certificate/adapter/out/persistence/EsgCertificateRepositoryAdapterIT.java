@@ -1,6 +1,7 @@
 package pe.esgtrazabilidad.reporting.certificate.adapter.out.persistence;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -16,8 +17,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
+import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateStatus;
 import pe.esgtrazabilidad.reporting.certificate.port.out.EsgCertificateRepository;
 import pe.esgtrazabilidad.reporting.trackedcompany.domain.TrackedCompany;
 import pe.esgtrazabilidad.reporting.trackedcompany.port.out.TrackedCompanyRepository;
@@ -54,6 +59,11 @@ class EsgCertificateRepositoryAdapterIT {
 
     @Autowired
     private TrackedCompanyRepository trackedCompanyRepository;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    private final CurrentActor actor = new CurrentActor(UUID.randomUUID(), "ana@example.com");
 
     private static final AtomicLong RUC_SEQUENCE = new AtomicLong(20_900_000_000L);
 
@@ -145,5 +155,82 @@ class EsgCertificateRepositoryAdapterIT {
         assertThat(repository.existsOverlapping(
                         trackedCompany.getId(), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28)))
                 .isFalse();
+    }
+
+    private EsgCertificate savedJanuary(TrackedCompany trackedCompany) {
+        EsgCertificate certificate = EsgCertificate.issue(
+                trackedCompany, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), BigDecimal.TEN, BigDecimal.TEN);
+        repository.save(certificate, List.of());
+        return certificate;
+    }
+
+    @Test
+    void annullingStoresTheReasonTheActorAndTheMomentAndLeavesTheFrozenNumbersUntouched() {
+        EsgCertificate certificate = savedJanuary(persistedTrackedCompany());
+        Instant at = Instant.parse("2026-03-01T10:00:00Z");
+
+        assertThat(repository.annul(certificate.getId(), "Datos erróneos", actor, at)).isTrue();
+
+        EsgCertificate stored = repository.findById(certificate.getId()).orElseThrow();
+        assertThat(stored.getStatus()).isEqualTo(EsgCertificateStatus.ANNULLED);
+        assertThat(stored.getAnnulmentReason()).isEqualTo("Datos erróneos");
+        assertThat(stored.getAnnulledById()).isEqualTo(actor.id());
+        assertThat(stored.getAnnulledByEmail()).isEqualTo("ana@example.com");
+        assertThat(stored.getAnnulledAt()).isEqualTo(at);
+        assertThat(stored.getKilosTrazados()).isEqualByComparingTo("10.00");
+        assertThat(stored.getHierarchyCompliancePercent()).isEqualByComparingTo("10.00");
+        assertThat(stored.getCompanyName()).isEqualTo(certificate.getCompanyName());
+        // Postgres keeps (and rounds to) microseconds; the in-memory instant carries nanoseconds.
+        assertThat(stored.getIssuedAt()).isCloseTo(certificate.getIssuedAt(), org.assertj.core.api.Assertions.within(1, java.time.temporal.ChronoUnit.MICROS));
+    }
+
+    @Test
+    void aSecondAnnulmentChangesNothingAndReportsFalse() {
+        EsgCertificate certificate = savedJanuary(persistedTrackedCompany());
+        repository.annul(certificate.getId(), "Primer motivo", actor, Instant.now());
+
+        CurrentActor other = new CurrentActor(UUID.randomUUID(), "otro@example.com");
+        assertThat(repository.annul(certificate.getId(), "Segundo motivo", other, Instant.now())).isFalse();
+
+        EsgCertificate stored = repository.findById(certificate.getId()).orElseThrow();
+        assertThat(stored.getAnnulmentReason()).isEqualTo("Primer motivo");
+        assertThat(stored.getAnnulledById()).isEqualTo(actor.id());
+    }
+
+    @Test
+    void annullingAnUnknownCertificateReportsFalse() {
+        assertThat(repository.annul(UUID.randomUUID(), "Motivo", actor, Instant.now())).isFalse();
+    }
+
+    @Test
+    void anAnnulledCertificateFreesItsPeriodForAnotherOneAndTheOverlapCheckIgnoresIt() {
+        TrackedCompany trackedCompany = persistedTrackedCompany();
+        EsgCertificate first = savedJanuary(trackedCompany);
+        repository.annul(first.getId(), "Datos erróneos", actor, Instant.now());
+
+        assertThat(repository.existsOverlapping(
+                        trackedCompany.getId(), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)))
+                .isFalse();
+        EsgCertificate second = savedJanuary(trackedCompany);
+        assertThat(repository.existsOverlapping(
+                        trackedCompany.getId(), LocalDate.of(2026, 1, 15), LocalDate.of(2026, 1, 20)))
+                .isTrue();
+
+        // Two ISSUED ones over the same period are still impossible, annulled history or not.
+        assertThatThrownBy(() -> savedJanuary(trackedCompany)).isInstanceOf(DataIntegrityViolationException.class);
+        assertThat(repository.findById(first.getId())).isPresent();
+        assertThat(repository.findById(second.getId())).isPresent();
+    }
+
+    @Test
+    void theDatabaseRefusesAnAnnulledRowWithoutItsReasonOrActor() {
+        EsgCertificate certificate = savedJanuary(persistedTrackedCompany());
+
+        assertThatThrownBy(() -> jdbc.update(
+                        "UPDATE esg_certificate SET status = 'ANNULLED' WHERE id = ?", certificate.getId()))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update(
+                        "UPDATE esg_certificate SET status = 'VOIDED' WHERE id = ?", certificate.getId()))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

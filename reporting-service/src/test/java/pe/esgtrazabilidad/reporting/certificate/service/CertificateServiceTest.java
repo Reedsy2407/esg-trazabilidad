@@ -23,9 +23,11 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
+import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.reporting.certificate.CertificateSummary;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
+import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateStatus;
 import pe.esgtrazabilidad.reporting.certificate.export.CertificateCsvExporter;
 import pe.esgtrazabilidad.reporting.certificate.export.CertificatePdfExporter;
 import pe.esgtrazabilidad.reporting.certificate.port.in.IssueCertificateCommand;
@@ -42,6 +44,7 @@ import pe.esgtrazabilidad.reporting.trackedcompany.port.out.TrackedCompanyReposi
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -206,6 +209,111 @@ class CertificateServiceTest {
                 .isInstanceOf(ApplicationException.class)
                 .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
                         .isEqualTo(ReportingErrors.TRACKED_COMPANY_NOT_FOUND));
+    }
+
+    @Test
+    void rejectsIssuingToAnInactiveCompanyBeforeAnyOtherCheck() {
+        TrackedCompany inactive = TrackedCompany.reconstruct(
+                trackedCompanyId, "Empresa", "20123456789", associationId, TrackedCompanyStatus.INACTIVE);
+        when(trackedCompanyRepository.findById(trackedCompanyId)).thenReturn(Optional.of(inactive));
+
+        assertThatThrownBy(() -> service.issue(sampleCommand()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(ReportingErrors.INACTIVE_TRACKED_COMPANY));
+        verify(esgCertificateRepository, never()).existsOverlapping(any(), any(), any());
+        verify(sigersolSyncRepository, never()).findCovering(any(), any(), any());
+        verify(esgCertificateRepository, never()).save(any(), any());
+    }
+
+    @Test
+    void checksThePeriodAndTheCompanyExistBeforeTheInactiveCheck() {
+        // Order of checks: RPT-009, RPT-001, RPT-015, ... -- a backwards period on a
+        // missing company is RPT-009, and a missing company is RPT-001 (never RPT-015).
+        UUID missingId = UUID.randomUUID();
+        when(trackedCompanyRepository.findById(missingId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.issue(new IssueCertificateCommand(missingId, periodEnd, periodStart)))
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(ReportingErrors.INVALID_CERTIFICATE_PERIOD));
+        assertThatThrownBy(() -> service.issue(new IssueCertificateCommand(missingId, periodStart, periodEnd)))
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(ReportingErrors.TRACKED_COMPANY_NOT_FOUND));
+    }
+
+    // --- annul() ---
+
+    private final CurrentActor actor = new CurrentActor(UUID.randomUUID(), "ana@example.com");
+
+    private EsgCertificate issuedCertificate() {
+        return EsgCertificate.issue(sampleTrackedCompany(), periodStart, periodEnd, BigDecimal.TEN, BigDecimal.TEN);
+    }
+
+    private EsgCertificate annulledCopyOf(EsgCertificate certificate) {
+        return EsgCertificate.reconstruct(
+                certificate.getId(),
+                certificate.getTrackedCompanyId(),
+                certificate.getAssociationId(),
+                certificate.getCompanyName(),
+                certificate.getCompanyRuc(),
+                certificate.getPeriodStart(),
+                certificate.getPeriodEnd(),
+                certificate.getKilosTrazados(),
+                certificate.getHierarchyCompliancePercent(),
+                certificate.getIssuedAt(),
+                EsgCertificateStatus.ANNULLED,
+                Instant.now(),
+                actor.id(),
+                actor.email(),
+                "Datos erróneos");
+    }
+
+    @Test
+    void annulsAnIssuedCertificatePassingTheTrimmedReasonAndTheActor() {
+        EsgCertificate issued = issuedCertificate();
+        when(esgCertificateRepository.findById(issued.getId()))
+                .thenReturn(Optional.of(issued), Optional.of(annulledCopyOf(issued)));
+        when(esgCertificateRepository.annul(eq(issued.getId()), eq("Datos erróneos"), eq(actor), any(Instant.class)))
+                .thenReturn(true);
+
+        EsgCertificate result = service.annul(trackedCompanyId, issued.getId(), "  Datos erróneos ", actor);
+
+        assertThat(result.isAnnulled()).isTrue();
+        assertThat(result.getKilosTrazados()).isEqualByComparingTo(issued.getKilosTrazados());
+    }
+
+    @Test
+    void annullingAnAlreadyAnnulledCertificateIsRpt019WithoutTouchingTheRepositoryAgain() {
+        EsgCertificate issued = issuedCertificate();
+        when(esgCertificateRepository.findById(issued.getId())).thenReturn(Optional.of(annulledCopyOf(issued)));
+
+        assertThatThrownBy(() -> service.annul(trackedCompanyId, issued.getId(), "Otro motivo", actor))
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(ReportingErrors.CERTIFICATE_ALREADY_ANNULLED));
+        verify(esgCertificateRepository, never()).annul(any(), any(), any(), any());
+    }
+
+    @Test
+    void losingTheRaceAgainstAnotherAnnulmentIsRpt019() {
+        // The fast-path read still saw ISSUED; the conditional UPDATE matched nothing.
+        EsgCertificate issued = issuedCertificate();
+        when(esgCertificateRepository.findById(issued.getId())).thenReturn(Optional.of(issued));
+        when(esgCertificateRepository.annul(any(), any(), any(), any())).thenReturn(false);
+
+        assertThatThrownBy(() -> service.annul(trackedCompanyId, issued.getId(), "Motivo", actor))
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(ReportingErrors.CERTIFICATE_ALREADY_ANNULLED));
+    }
+
+    @Test
+    void annullingACertificateOfADifferentCompanyIsRpt003() {
+        EsgCertificate issued = issuedCertificate();
+        when(esgCertificateRepository.findById(issued.getId())).thenReturn(Optional.of(issued));
+
+        assertThatThrownBy(() -> service.annul(UUID.randomUUID(), issued.getId(), "Motivo", actor))
+                .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                        .isEqualTo(ReportingErrors.CERTIFICATE_NOT_FOUND));
+        verify(esgCertificateRepository, never()).annul(any(), any(), any(), any());
     }
 
     // --- getById() ---

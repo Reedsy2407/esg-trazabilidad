@@ -39,7 +39,10 @@ public enum ReportingErrors implements ApplicationError {
     // Checked by CertificateService before any lookup, so it never reaches
     // EsgCertificate.issue()'s own IllegalArgumentException (which was a 500).
     INVALID_CERTIFICATE_PERIOD(
-            "RPT-009", "El periodo no es válido: la fecha final es anterior a la inicial", HttpStatus.BAD_REQUEST);
+            "RPT-009", "El periodo no es válido: la fecha final es anterior a la inicial", HttpStatus.BAD_REQUEST),
+    INACTIVE_TRACKED_COMPANY(
+            "RPT-015", "La empresa está inactiva: no se pueden emitir certificados", HttpStatus.CONFLICT),
+    CERTIFICATE_ALREADY_ANNULLED("RPT-019", "El certificado ya está anulado", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

@@ -21,6 +21,11 @@ const EXISTING: EsgCertificate = {
   kilosTrazados: 100,
   hierarchyCompliancePercent: 90,
   issuedAt: '2025-01-05T15:00:00Z',
+  status: 'ISSUED',
+    annulledAt: null,
+    annulledById: null,
+    annulledByEmail: null,
+    annulmentReason: null,
 };
 
 describe('CertificateIssuePage', () => {
@@ -32,6 +37,7 @@ describe('CertificateIssuePage', () => {
   let summaryCalls: number;
   let page: CertificateIssuePage;
   let company: typeof COMPANY;
+  let listed: EsgCertificate[];
 
   const settle = async () => {
     TestBed.tick();
@@ -61,6 +67,7 @@ describe('CertificateIssuePage', () => {
     issued = [];
     summaryCalls = 0;
     company = COMPANY;
+    listed = [EXISTING];
     answer = new Subject<EsgCertificate>();
     TestBed.configureTestingModule({
       imports: [CertificateIssuePage],
@@ -71,7 +78,7 @@ describe('CertificateIssuePage', () => {
           useValue: {
             trackedCompany: () => of(company),
             association: () => of({ id: 'a-1', name: 'Asociación Recicla Rímac' }),
-            certificates: () => of({ content: [EXISTING], page: 0, size: 20, totalElements: 1, totalPages: 1 }),
+            certificates: () => of({ content: listed, page: 0, size: 20, totalElements: listed.length, totalPages: 1 }),
             certificateSummary: (_: string, periodStart: string, periodEnd: string) => {
               summaryCalls += 1;
               return of({ trackedCompanyId: 'c-1', periodStart, periodEnd, ...summary });
@@ -197,6 +204,30 @@ describe('CertificateIssuePage', () => {
     await review();
     expect(el.textContent).toContain('ya tiene el certificado de Diciembre 2024');
     expect(el.querySelector('.check')).toBeNull();
+  });
+
+  it('an annulled certificate frees its period: it is not offered as an overlap', async () => {
+    listed = [{ ...EXISTING, status: 'ANNULLED', annulledAt: '2025-02-01T10:00:00Z', annulmentReason: 'Datos erróneos' }];
+    // The list was loaded with the page: ask again now that it holds the annulled one.
+    (page as unknown as { certificates: { reload(): void } }).certificates.reload();
+    await settle();
+    summary = { kilosTrazados: 50, hierarchyCompliancePercent: 90 };
+    await setInput('month', '2024-12');
+    await review();
+
+    expect(el.textContent).not.toContain('ya tiene el certificado de Diciembre 2024');
+    expect(el.querySelector('.check')).toBeTruthy();
+  });
+
+  it('RPT-015 from the backend says the company is inactive', async () => {
+    await setInput('month', '2026-09');
+    await review();
+    await confirm();
+    button(/Emitir certificado de/)!.click();
+    answer.error(new ApiError(409, 'RPT-015', null, null));
+    await settle();
+
+    expect((el.querySelector('.issue-problem') as HTMLElement).textContent).toContain('inactiva: no se pueden emitir certificados');
   });
 
   it('a free range: backwards is refused before asking anything', async () => {

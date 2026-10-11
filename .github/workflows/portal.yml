@@ -6,10 +6,18 @@
 # - build:  the Writerside builder image, run through portal/scripts/build-local.sh
 #           so the builder version and its arguments (-lang es-ES among them)
 #           live in one place for both local and CI builds.
-# - check:  JetBrains' checker fails the run on any builder error
-#           (broken links, topics missing from the tree, bad XML...).
-# - deploy: main only, and only after build and check. The drift jobs added
-#           later only report; deploy never depends on them.
+# - check:        JetBrains' checker fails the run on any builder error
+#                 (broken links, topics missing from the tree, bad XML...).
+# - openapi-drift: exports each service's own OpenAPI document (springdoc's
+#                 /v3/api-docs, via each service's own OpenApiExportIT/
+#                 OpenApiDocsIT test) and compares it against what's
+#                 committed under Writerside/specs/. continue-on-error:
+#                 true on purpose -- it only informs, same as the rest of
+#                 this workflow's path filter: it never runs on a
+#                 *-service/src push, so it can't enter Render's
+#                 checksPass gate either way. See portal/PLAN.md.
+# - deploy:       main only, and only after build and check. openapi-drift
+#                 never gates it.
 name: Portal
 
 on:
@@ -42,7 +50,7 @@ jobs:
 
       # The runner's preinstalled Node is enough: the scripts use builtins only.
       - name: Portal script tests
-        run: node --test portal/scripts/gen-adr-toc.test.mjs
+        run: node --test portal/scripts/gen-adr-toc.test.mjs portal/scripts/export-openapi.test.mjs
 
       # build-local.sh also validates every ADR (gen-adr-toc.mjs) and stops on
       # an invalid one before the builder runs.
@@ -75,6 +83,44 @@ jobs:
         uses: JetBrains/writerside-checker-action@v1
         with:
           instance: Writerside/esg
+
+  # Informational only (see the header comment): never blocks deploy, and
+  # never runs on a *-service/src push -- same path filter as the rest of
+  # this workflow (portal/**, weekly cron, workflow_dispatch).
+  openapi-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # One mvn call for all four services: -Dit.test with both class names
+      # means a module that has neither name still fails the build (see
+      # -DfailIfNoSpecifiedTests=false), while each service only runs the
+      # one IT that actually exists in it. surefire.skip=true skips the
+      # (slow) unit tests -- only the export itself is needed here.
+      - name: Export every service's OpenAPI document
+        run: >
+          mvn -B -pl recycler-service,collection-service,reporting-service,auth-service -am verify
+          -Dsurefire.skip=true -Dit.test=OpenApiExportIT,OpenApiDocsIT -DfailIfNoSpecifiedTests=false
+
+      - name: Copy the exports into Writerside/specs/
+        run: node portal/scripts/export-openapi.mjs
+
+      - name: Compare against what's committed
+        run: |
+          if git diff --exit-code -- portal/Writerside/specs/; then
+            echo "No hay desfase: las specs commiteadas coinciden con el código."
+          else
+            echo "::warning::Las specs OpenAPI commiteadas están desfasadas del código. Corre 'node portal/scripts/export-openapi.mjs' (tras un 'mvn verify' por servicio) y commitea el resultado."
+            exit 1
+          fi
 
   deploy:
     needs: [build, check]

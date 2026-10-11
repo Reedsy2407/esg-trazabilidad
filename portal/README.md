@@ -66,3 +66,27 @@ un detalle (`Implementada (v2)`, `Aceptada, pendiente de implementación. Se imp
 
 **Quien implementa una decisión cambia su estado a "Implementada" en el mismo commit
 que el código**, y agrega en "Dónde se aplica" un enlace al código o a `docs/`.
+
+## Specs OpenAPI (`Writerside/specs/`)
+
+Un JSON por servicio, generado siempre desde el código real (nunca a mano): cada
+servicio expone su propio `/v3/api-docs` vía springdoc, y su test
+`OpenApiExportIT` (en auth-service, el mismo `OpenApiDocsIT` que ya prueba sus
+endpoints) lo exporta en forma determinista (claves ordenadas, indentación fija,
+sin `servers`) a `<servicio>/target/openapi/<servicio>.json`.
+
+**Quien cambia un endpoint corre esto en su mismo PR**, para que el spec
+commiteado nunca quede desfasado del código que lo generó:
+
+```bash
+mvn -pl <servicio> -am verify -Dsurefire.skip=true \
+  -Dit.test=OpenApiExportIT,OpenApiDocsIT -DfailIfNoSpecifiedTests=false
+node portal/scripts/export-openapi.mjs
+```
+
+y commitea el `.json` resultante bajo `Writerside/specs/`.
+
+El job `openapi-drift` de `.github/workflows/portal.yml` corre lo mismo para los
+4 servicios y compara contra lo commiteado, pero **solo informa**
+(`continue-on-error: true`): un desfase no bloquea el deploy. No es un sustituto
+de este paso manual, es su red de seguridad.

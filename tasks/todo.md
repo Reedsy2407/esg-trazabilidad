@@ -528,14 +528,15 @@ Rama y PR por módulo (`v3/mN`). Freno para el OK de Angel antes del merge: M2, 
 - [x] V3-0.3: S2 (con permiso de Angel, una ejecución): 200 desde EE. UU. en los 3 endpoints; rama desechable borrada
 - [x] V3-0.4: enmiendas "Amendment v3" en los 5 SPEC (locales: los SPEC están en .gitignore), con endpoints, campos y códigos nuevos (RPT-010..020, COL-010..013, ASO-004)
 - [x] V3-0.5: 4 borradores de ADR en docs/decisiones-v3/ (respaldo no verificada, snapshot SIGERSOL, distrito en el evento, plausibilidad condicionada)
-- [ ] V3-0.6: PR #23 de M0, CI verde y PASS; lo fusiona Angel a mano
+- [x] V3-0.6: PR #23 de M0, CI verde y PASS; fusionado por Angel el 2026-10-11
 
 - [x] V3-0.7: respuestas de Angel a M0: D4 descartada, nombres de API en inglés, M5 reducido (plan, ADR y SPEC locales actualizados)
+- [x] V3-0.8: migrar los 4 borradores de ADR de `docs/decisiones-v3/` a `portal/Writerside/topics/decisiones/` con la plantilla del portal (rama `portal/adr-migration`)
 
-### M1: shared-kernel (rama `v3/m1`)
-- [ ] V3-1.1: value object `Ruc` (11 dígitos, prefijo 10/15/16/17/20, módulo 11); pruebas con 20131312955 válido, 20999000029 y 20999000037 inválidos
-- [ ] V3-1.2: catálogo ubigeo INEI (43 Lima Metropolitana + 7 Callao) desde la fuente oficial, verificado con tildes y ñ; normalizador solo para comparar
-- [ ] V3-1.3: `CurrentActor` (sub + email del JWT)
+### M1: shared-kernel (rama `v3/m1`) — PR #26, fusionado por Angel el 2026-10-11
+- [x] V3-1.1: value object `Ruc` (11 dígitos, prefijo 10/15/16/17/20, módulo 11); pruebas con 20131312955 válido, 20999000029 y 20999000037 inválidos
+- [x] V3-1.2: catálogo ubigeo INEI (43 Lima Metropolitana + 7 Callao) desde la fuente oficial, verificado con tildes y ñ; normalizador solo para comparar
+- [x] V3-1.3: `CurrentActor` (sub + email del JWT)
 
 ### M2–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

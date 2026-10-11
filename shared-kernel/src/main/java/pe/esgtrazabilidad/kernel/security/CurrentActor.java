@@ -9,13 +9,15 @@ import org.springframework.security.oauth2.jwt.Jwt;
  * claim of the token auth-service issued. Controllers build it from
  * {@code @AuthenticationPrincipal Jwt} and pass it down in the command, so
  * every "who" column (annulment, deletion, status change, SIGERSOL record) comes
- * from the validated token and never from a request body.
+ * from the validated token and never from a request body. The id identifies
+ * the actor; the email is a convenience copy and may be missing from a token,
+ * so every "who" email column is nullable.
  */
 public record CurrentActor(UUID id, String email) {
 
     public CurrentActor {
         if (id == null) {
-            throw new IllegalArgumentException("El actor es obligatorio");
+            throw new IllegalArgumentException("The actor id is required");
         }
     }
 

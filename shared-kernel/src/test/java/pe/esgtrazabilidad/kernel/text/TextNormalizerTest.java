@@ -19,6 +19,11 @@ class TextNormalizerTest {
     }
 
     @Test
+    void treatsANonBreakingSpaceLikeAnyOtherSpace() {
+        assertThat(TextNormalizer.normalize("SAN BORJA ")).isEqualTo("SAN BORJA");
+    }
+
+    @Test
     void keepsNull() {
         assertThat(TextNormalizer.normalize(null)).isNull();
     }

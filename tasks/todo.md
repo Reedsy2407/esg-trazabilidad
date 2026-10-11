@@ -522,8 +522,31 @@ No se propone crear cuentas del personal de demo: la contraseña sería permanen
 
 Rama y PR por módulo (`v3/mN`). Freno para el OK de Angel antes del merge: M2, M3, M4, M5, M7. Freno antes de M4: Angel crea el token de Decolecta.
 
-- [x] M0: plan, S1, S2, enmiendas de SPEC, borradores de ADR — PR #23, fusionado por Angel; ver tasks/plan.md "v3"
-- [x] M1: shared-kernel `Ruc`, `UbigeoCatalog` (INEI 43+7), `TextNormalizer`, `CurrentActor` — PR #26, fusionado
+### M0: plan, spikes, specs (rama `v3/m0`)
+- [x] V3-0.1: plan v3 en tasks/plan.md y tasks/todo.md
+- [x] V3-0.2: S1, spike de SIGERSOL Municipal (ubigeo, formato por distrito, último año con datos, unidad) — resultado en tasks/plan.md → "Resultado de S1"; unidad sin resolver
+- [x] V3-0.3: S2 (con permiso de Angel, una ejecución): 200 desde EE. UU. en los 3 endpoints; rama desechable borrada
+- [x] V3-0.4: enmiendas "Amendment v3" en los 5 SPEC (locales: los SPEC están en .gitignore), con endpoints, campos y códigos nuevos (RPT-010..020, COL-010..013, ASO-004)
+- [x] V3-0.5: 4 borradores de ADR en docs/decisiones-v3/ (respaldo no verificada, snapshot SIGERSOL, distrito en el evento, plausibilidad condicionada)
+- [x] V3-0.6: PR #23 de M0, CI verde y PASS; fusionado por Angel el 2026-10-11
+
+- [x] V3-0.7: respuestas de Angel a M0: D4 descartada, nombres de API en inglés, M5 reducido (plan, ADR y SPEC locales actualizados)
+- [x] V3-0.8: migrar los 4 borradores de ADR de `docs/decisiones-v3/` a `portal/Writerside/topics/decisiones/` con la plantilla del portal (rama `portal/adr-migration`) — PR #27, fusionado por Angel el 2026-10-11
+
+### Portal (tareas propias, fuera de la numeración V3-x.y; detalle y próximas en portal/PLAN.md)
+
+- [x] Task 3 de portal/PLAN.md: specs OpenAPI por servicio (`OpenApiExportIT`/`OpenApiDocsIT`, determinista) + job informativo `openapi-drift` — PR #29 (rama `portal/openapi-export`), checks verdes, fusionado por Angel a mano el 2026-10-11 (antes que #28)
+- [x] PR #27 (rama `portal/adr-migration`, V3-0.8): hallazgo de gitleaks en `secrets` corregido — era un falso positivo ajeno a este PR (2 UUID de test en los commits `965dec5`/`17a593a` de `v3/m2`, ya permitidos en `.gitleaks.toml` con la misma política de siempre). Checks verdes, fusionado por Angel a mano el 2026-10-11.
+
+#### Pendiente (bloqueo de infraestructura, no de código)
+
+- [x] `gh pr merge` fallaba en ambos PR (#27 y #29) con `403 Resource not accessible by personal access token` (confirmado por GraphQL y por REST `pulls/.../merge`), aunque el repo mostraba `admin:true` para la cuenta — era el *token* el que no tenía permiso de escritura en pull requests, no el usuario. Resuelto: Angel fusionó #27 y #29 a mano desde GitHub el 2026-10-11, sin reintento necesario.
+- [ ] Siguiente en el portal (task 4 de portal/PLAN.md): glosario de estados y catálogo de errores por servicio (`errores-<servicio>.md`, `estados-<servicio>.md`), más el job informativo `catalog-drift` — mismo patrón que `openapi-drift` (informa, no bloquea, mismo filtro de disparo).
+
+### M1: shared-kernel (rama `v3/m1`) — PR #26, fusionado por Angel el 2026-10-11
+- [x] V3-1.1: value object `Ruc` (11 dígitos, prefijo 10/15/16/17/20, módulo 11); pruebas con 20131312955 válido, 20999000029 y 20999000037 inválidos
+- [x] V3-1.2: catálogo ubigeo INEI (43 Lima Metropolitana + 7 Callao) desde la fuente oficial, verificado con tildes y ñ; normalizador solo para comparar
+- [x] V3-1.3: `CurrentActor` (sub + email del JWT)
 
 ### M2: collection-service + frontend, vecinos (rama `v3/m2`, worktree `../esg-v3-m2`) — **freno: OK de Angel antes del merge**
 

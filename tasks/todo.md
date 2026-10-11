@@ -532,7 +532,7 @@ Compatibilidad (parcial): el alta acepta `districtUbigeo` o, como respaldo, el `
 - [x] V3-2.1: ubigeo del vecino (changeset + backfill, COL-010, filtro por código y por nombre v2) — PASS; ver tasks/LEARNINGS.md#v3-21
 - [x] V3-2.2: editar vecino (PATCH, vía `update()` de Persistable) — PASS
 - [x] V3-2.3: desactivar/reactivar con motivo, historial con actor del JWT, pausa de cronogramas (D8), compare-and-set contra carreras — PASS; ver tasks/LEARNINGS.md#v3-23
-- [ ] V3-2.4: COL-013 — recojo nuevo, cronograma nuevo o reactivación de cronograma para un vecino INACTIVO
+- [x] V3-2.4: COL-013 (recojo, cronograma nuevo o reactivado para vecino INACTIVO), FOR SHARE contra la desactivación concurrente — PASS; ver tasks/LEARNINGS.md#v3-24
 - [ ] V3-2.5: eliminación lógica (`DELETE /neighbors/{id}` con motivo), solo sin recojos (COL-011); cancela sus cronogramas; un vecino eliminado responde COL-001 y sale de las listas
 - [ ] V3-2.6: frontend — selector de distrito (combobox agrupado Lima/Callao con búsqueda sin tildes; catálogo TS verificado contra el CSV de shared-kernel), alta y filtro con el selector, sin "Escríbelo…"; editar, desactivar/reactivar con motivo y confirmación, eliminar, cronogramas pausados al reactivar (D8), acciones en "Inactivos"
 - [ ] V3-2.7: docs — docs/frontend.md (matriz, reglas, limitaciones), catálogo de errores COL-010..013

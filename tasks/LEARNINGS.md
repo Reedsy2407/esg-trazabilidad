@@ -1882,3 +1882,10 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 - La transición de estado del vecino es un compare-and-set (`UPDATE … WHERE id = :id AND status = :from`) dentro de la transacción del servicio. De dos desactivaciones simultáneas pasa una sola y la otra recibe COL-012, sin una segunda fila de historial. El IT de dos hilos falla si se quita la condición (prueba negativa hecha a mano).
 - Se agregó `GET /neighbors/{id}/status-changes` (solo lectura, lo más nuevo primero) para que la pantalla muestre el motivo y quién; quedó anotado en la enmienda local del SPEC.
 - El token de prueba de collection-service ahora lleva el claim `email`, como los tokens reales de auth-service.
+
+## V3-2.4
+
+- Las escrituras que dependen de que el vecino esté ACTIVE (recojo, cronograma nuevo, reactivar cronograma) leen al vecino con `SELECT … FOR SHARE` dentro de su transacción. Una desactivación en curso las hace esperar y después ven INACTIVE (COL-013); si la escritura va primero, la desactivación espera y luego pausa el cronograma recién creado. Hace falta el FOR SHARE explícito: el FOR KEY SHARE que toma la FK no choca con un UPDATE de `status`.
+- `neighbor.status` es `updatable = false`: solo lo cambia el compare-and-set (un UPDATE masivo JPQL ignora ese flag). Así el merge de una edición no puede reescribir un estado leído antes de una transición concurrente.
+- Las dos protecciones tienen IT con prueba negativa hecha a mano: el IT de FOR SHARE usa una transacción JDBC que deja la desactivación sin confirmar, y el IT del adaptador llama a `update()` con un objeto desactualizado.
+- En reactivate, INVALID_SCHEDULE_TRANSITION gana sobre COL-013.

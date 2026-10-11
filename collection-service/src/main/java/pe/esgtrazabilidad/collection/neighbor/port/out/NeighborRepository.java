@@ -19,7 +19,10 @@ public interface NeighborRepository {
      */
     boolean changeStatus(UUID id, NeighborStatus from, NeighborStatus to);
 
-    /** Writes an already-persisted neighbour (merge, never insert). */
+    /**
+     * Writes an already-persisted neighbour's contact data (merge, never
+     * insert). Never the status: that only changes through changeStatus().
+     */
     Neighbor update(Neighbor neighbor);
 
     Optional<Neighbor> findById(UUID id);

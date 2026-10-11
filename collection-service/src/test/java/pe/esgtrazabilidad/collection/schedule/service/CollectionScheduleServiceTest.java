@@ -28,6 +28,7 @@ import pe.esgtrazabilidad.kernel.ubigeo.UbigeoCatalog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -267,5 +268,19 @@ class CollectionScheduleServiceTest {
                 .satisfies(e -> assertThat(((ApplicationException) e).getError()).isEqualTo(CollectionErrors.NEIGHBOR_INACTIVE));
         verify(repository, never()).save(any());
         verify(repository, never()).update(any());
+    }
+
+    @Test
+    void reactivatingAnActiveScheduleOfAnInactiveNeighborIsAnInvalidTransitionNotCol013() {
+        Neighbor inactive = sampleNeighbor();
+        inactive.deactivate();
+        lenient().when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(inactive));
+        CollectionSchedule active = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
+        when(repository.findById(active.getId())).thenReturn(Optional.of(active));
+
+        assertThatThrownBy(() -> service.reactivate(neighborId, active.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(e -> assertThat(((ApplicationException) e).getError())
+                        .isEqualTo(CollectionErrors.INVALID_SCHEDULE_TRANSITION));
     }
 }

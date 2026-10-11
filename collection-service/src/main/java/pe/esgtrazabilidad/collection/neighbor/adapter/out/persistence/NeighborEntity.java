@@ -30,7 +30,11 @@ class NeighborEntity implements Persistable<UUID> {
     @Column(name = "district_ubigeo")
     private String districtUbigeo;
 
-    @Column(nullable = false)
+    // Written on insert only: after that, only the compare-and-set in
+    // NeighborJpaRepository.updateStatusIfCurrent changes it (a JPQL bulk
+    // update ignores updatable=false). An edit's full-row merge must never
+    // write back a status it read before a concurrent transition.
+    @Column(nullable = false, updatable = false)
     private String status;
 
     @Transient

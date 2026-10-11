@@ -1,5 +1,7 @@
 package pe.esgtrazabilidad.collection.it;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -8,11 +10,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import javax.sql.DataSource;
 
 import io.restassured.http.ContentType;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -27,6 +33,7 @@ import pe.esgtrazabilidad.collection.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
@@ -53,6 +60,9 @@ class NeighborStatusApiIT {
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private DataSource dataSource;
 
     @BeforeEach
     void setUpRestAssured() {
@@ -159,6 +169,38 @@ class NeighborStatusApiIT {
         given().when().get("/neighbors/{id}/status-changes", id).then().body("", hasSize(1));
         given().when().get("/neighbors/{id}", id).then().body("status", equalTo("INACTIVE"));
         given().when().get("/neighbors/{id}/schedules", id).then().body("content.status", contains("PAUSED"));
+    }
+
+    @Test
+    void aNewScheduleWaitsForAnUncommittedDeactivationAndThenGetsCol013() throws Exception {
+        String id = createNeighbor("Bloqueo FOR SHARE IT");
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try (Connection deactivation = dataSource.getConnection()) {
+            // A deactivation in flight: the status UPDATE is done, the commit isn't.
+            deactivation.setAutoCommit(false);
+            try (PreparedStatement update = deactivation.prepareStatement(
+                    "UPDATE neighbor SET status = 'INACTIVE' WHERE id = ?::uuid AND status = 'ACTIVE'")) {
+                update.setString(1, id);
+                assertThat(update.executeUpdate()).isEqualTo(1);
+            }
+
+            Future<io.restassured.response.Response> newSchedule = pool.submit(() -> given()
+                    .contentType(ContentType.JSON)
+                    .body("{\"dayOfWeek\": \"SUNDAY\", \"time\": \"10:00\"}")
+                    .when().post("/neighbors/{neighborId}/schedules", id));
+
+            // Without FOR SHARE the request reads the committed ACTIVE row and
+            // answers 201 right away; with it, it waits for the deactivation.
+            assertThatThrownBy(() -> newSchedule.get(2, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
+            deactivation.commit();
+
+            io.restassured.response.Response response = newSchedule.get(30, TimeUnit.SECONDS);
+            assertThat(response.statusCode()).isEqualTo(409);
+            assertThat(response.jsonPath().getString("code")).isEqualTo("COL-013");
+        } finally {
+            pool.shutdownNow();
+        }
+        given().when().get("/neighbors/{id}/schedules", id).then().body("content", hasSize(0));
     }
 
     private io.restassured.response.Response changeStatus(String id, String action, String reason) {

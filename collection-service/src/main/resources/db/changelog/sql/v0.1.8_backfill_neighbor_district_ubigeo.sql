@@ -60,5 +60,12 @@ FROM (VALUES
 ) AS c(ubigeo, normalized_name)
 WHERE n.district_ubigeo IS NULL
   AND n.district IS NOT NULL
-  AND upper(regexp_replace(trim(translate(n.district, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNAEIOUUN')), '[[:space:]]+', ' ', 'g'))
+  -- Same folding as shared-kernel's TextNormalizer: accents off (Ñ -> N),
+  -- upper case, any run of whitespace (non-breaking space included) to one
+  -- space, then trimmed.
+  AND btrim(regexp_replace(
+          upper(translate(n.district,
+              'ÀÁÂÄÈÉÊËÌÍÎÏÒÓÔÖÙÚÛÜÑàáâäèéêëìíîïòóôöùúûüñ',
+              'AAAAEEEEIIIIOOOOUUUUNaaaaeeeeiiiioooouuuun')),
+          '[[:space:] ]+', ' ', 'g'))
       = c.normalized_name;

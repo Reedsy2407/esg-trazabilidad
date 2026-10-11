@@ -1865,3 +1865,10 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 - La única diferencia es la clave: `SigersolSync` se registra por asociación + período, el brief habla de "por empresa". Como una `TrackedCompany` apunta a exactamente una asociación y el certificado de la empresa toma el registro de esa asociación (RPT-005), el dato que respalda el certificado de una empresa *es* este registro. Si dos empresas comparten asociación, comparten el registro: es la misma limitación de doble conteo ya documentada en SPEC-reporting-service.md.
 - No hay otro dato SIGERSOL en el sistema, y el dato real por empresa (SIGERSOL No Municipal, con login) no se automatiza. Un segundo registro por empresa duplicaría el mismo número con otra clave, sin regla clara de cuál manda.
 - Decisión (Angel, D1, aprobada): mantener `SigersolSync` y RPT-005 y agregarle `origin` (`DECLARED_BY_OPERATOR` | `REFERENCED_PROOF`), quién (del JWT) y `reference` opcional. Cobertura `UNVERIFIED` ("No verificado") = ningún registro cubre el período.
+
+## V3-2.1
+
+- El backfill de `district_ubigeo` vive en `db/changelog/sql/` (fuera de `changes/`, para que `includeAll` no lo tome como changelog propio) y `NeighborDistrictBackfillIT` corre el mismo archivo contra Postgres real. Su normalización copia la de `TextNormalizer`: tildes fuera (Ñ a N), mayúsculas, espacios colapsados (incluido el NBSP) y recorte al final.
+- El filtro v2 `?district=` se resuelve por catálogo y filtra por ubigeo: un vecino anterior a v3 cuyo texto no entró al backfill ("Surco", "Cercado de Lima") ya no aparece con ese filtro. En producción solo hay vecinos de Comas e Independencia, que sí entran.
+- Ruptura conocida: el frontend v2 manda `district: null` cuando el campo queda vacío, y eso ahora es COL-010. Backend y frontend de M2 se despliegan juntos.
+- `districtUbigeo` en blanco cuenta como ausente.

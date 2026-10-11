@@ -43,4 +43,6 @@ databaseChangeLog:
             splitStatements: false
       rollback:
         - sql:
+            # Clears every ubigeo, v3 rows included; running the backfill again
+            # restores them, since every catalog name normalizes to its INEI name.
             sql: UPDATE neighbor SET district_ubigeo = NULL

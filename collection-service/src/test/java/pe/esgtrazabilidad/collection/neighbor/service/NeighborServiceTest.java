@@ -73,6 +73,15 @@ class NeighborServiceTest {
     }
 
     @Test
+    void aBlankUbigeoCountsAsMissingSoTheFreeTextDistrictStillApplies() {
+        when(repository.save(any(Neighbor.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Neighbor result = service.create(commandWith(" ", "Independencia"));
+
+        assertThat(result.getDistrictUbigeo()).isEqualTo("150112");
+    }
+
+    @Test
     void acceptsTheV2FreeTextDistrictWhenItNamesACatalogDistrictIgnoringCaseAndAccents() {
         when(repository.save(any(Neighbor.class))).thenAnswer(invocation -> invocation.getArgument(0));
 

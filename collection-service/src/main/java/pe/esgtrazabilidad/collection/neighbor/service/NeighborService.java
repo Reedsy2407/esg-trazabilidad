@@ -41,7 +41,7 @@ class NeighborService implements CreateNeighborUseCase, GetNeighborUseCase, List
 
     @Override
     public Page<Neighbor> list(NeighborStatus status, String districtUbigeo, String district, Pageable pageable) {
-        if (districtUbigeo != null) {
+        if (districtUbigeo != null && !districtUbigeo.isBlank()) {
             if (!UbigeoCatalog.contains(districtUbigeo)) {
                 throw new ApplicationException(CollectionErrors.INVALID_DISTRICT);
             }
@@ -57,7 +57,7 @@ class NeighborService implements CreateNeighborUseCase, GetNeighborUseCase, List
 
     /** The code wins; the name is the v2 fallback. Neither in the catalog: COL-010. */
     District resolveDistrict(String districtUbigeo, String district) {
-        if (districtUbigeo != null) {
+        if (districtUbigeo != null && !districtUbigeo.isBlank()) {
             return UbigeoCatalog.find(districtUbigeo)
                     .orElseThrow(() -> new ApplicationException(CollectionErrors.INVALID_DISTRICT));
         }

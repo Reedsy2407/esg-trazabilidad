@@ -45,10 +45,15 @@ class NeighborDistrictBackfillIT {
         UUID smp = insertPreV3("  san   martin de porres ");
         UUID brena = insertPreV3("breña");
         UUID callao = insertPreV3("Mi Peru");
+        UUID oddSpacing = insertPreV3("\tla perla\n");
+        UUID otherAccents = insertPreV3("Lurìn");
         UUID surco = insertPreV3("Surco");
         UUID none = insertPreV3(null);
 
         runBackfill();
+
+        assertThat(ubigeoOf(oddSpacing)).isEqualTo("070104");
+        assertThat(ubigeoOf(otherAccents)).isEqualTo("150119");
 
         assertThat(ubigeoOf(comas)).isEqualTo("150110");
         assertThat(ubigeoOf(rimac)).isEqualTo("150128");

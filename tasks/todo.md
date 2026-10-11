@@ -528,14 +528,25 @@ Rama y PR por módulo (`v3/mN`). Freno para el OK de Angel antes del merge: M2, 
 - [x] V3-0.3: S2 (con permiso de Angel, una ejecución): 200 desde EE. UU. en los 3 endpoints; rama desechable borrada
 - [x] V3-0.4: enmiendas "Amendment v3" en los 5 SPEC (locales: los SPEC están en .gitignore), con endpoints, campos y códigos nuevos (RPT-010..020, COL-010..013, ASO-004)
 - [x] V3-0.5: 4 borradores de ADR en docs/decisiones-v3/ (respaldo no verificada, snapshot SIGERSOL, distrito en el evento, plausibilidad condicionada)
-- [ ] V3-0.6: PR #23 de M0, CI verde y PASS; lo fusiona Angel a mano
+- [x] V3-0.6: PR #23 de M0, CI verde y PASS; fusionado por Angel el 2026-10-11
 
 - [x] V3-0.7: respuestas de Angel a M0: D4 descartada, nombres de API en inglés, M5 reducido (plan, ADR y SPEC locales actualizados)
+- [x] V3-0.8: migrar los 4 borradores de ADR de `docs/decisiones-v3/` a `portal/Writerside/topics/decisiones/` con la plantilla del portal (rama `portal/adr-migration`)
 
-### M1: shared-kernel (rama `v3/m1`)
-- [ ] V3-1.1: value object `Ruc` (11 dígitos, prefijo 10/15/16/17/20, módulo 11); pruebas con 20131312955 válido, 20999000029 y 20999000037 inválidos
-- [ ] V3-1.2: catálogo ubigeo INEI (43 Lima Metropolitana + 7 Callao) desde la fuente oficial, verificado con tildes y ñ; normalizador solo para comparar
-- [ ] V3-1.3: `CurrentActor` (sub + email del JWT)
+### Portal (tareas propias, fuera de la numeración V3-x.y; detalle y próximas en portal/PLAN.md)
+
+- [x] Task 3 de portal/PLAN.md: specs OpenAPI por servicio (`OpenApiExportIT`/`OpenApiDocsIT`, determinista) + job informativo `openapi-drift` — PR #29 (rama `portal/openapi-export`), checks verdes, **merge pendiente**: ver "Pendiente" abajo. No fusionar antes de que #28 (M2) esté mergeado; regenerar los specs desde `main` antes de fusionar.
+- [x] PR #27 (rama `portal/adr-migration`, V3-0.8): hallazgo de gitleaks en `secrets` corregido — era un falso positivo ajeno a este PR (2 UUID de test en los commits `965dec5`/`17a593a` de `v3/m2`, ya permitidos en `.gitleaks.toml` con la misma política de siempre). Checks verdes. **Merge pendiente**: ver "Pendiente" abajo.
+
+#### Pendiente (bloqueo de infraestructura, no de código)
+
+- [ ] `gh pr merge` falla en ambos PR (#27 y #29) con `403 Resource not accessible by personal access token` (confirmado por GraphQL y por REST `pulls/.../merge`), aunque el repo muestra `admin:true` para la cuenta — es el *token* el que no tiene permiso de escritura en pull requests, no el usuario. Angel: habilita "Pull requests: write" en el fine-grained PAT (o usa un token clásico con scope `repo`), o fusiona #27 y #29 a mano desde GitHub. Avisa cuando esté resuelto para reintentar.
+- [ ] Siguiente en el portal (task 4 de portal/PLAN.md): glosario de estados y catálogo de errores por servicio (`errores-<servicio>.md`, `estados-<servicio>.md`), más el job informativo `catalog-drift` — mismo patrón que `openapi-drift` (informa, no bloquea, mismo filtro de disparo).
+
+### M1: shared-kernel (rama `v3/m1`) — PR #26, fusionado por Angel el 2026-10-11
+- [x] V3-1.1: value object `Ruc` (11 dígitos, prefijo 10/15/16/17/20, módulo 11); pruebas con 20131312955 válido, 20999000029 y 20999000037 inválidos
+- [x] V3-1.2: catálogo ubigeo INEI (43 Lima Metropolitana + 7 Callao) desde la fuente oficial, verificado con tildes y ñ; normalizador solo para comparar
+- [x] V3-1.3: `CurrentActor` (sub + email del JWT)
 
 ### M2–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

@@ -571,7 +571,13 @@ Compatibilidad (parcial): el alta acepta `districtUbigeo` o, como respaldo, el `
 - [x] V3-3.4: frontend — anular con motivo y confirmación, sello, etiqueta en la lista, anulados fuera de resumen/gráfica/solape; docs/frontend.md — PASS; ver tasks/LEARNINGS.md#v3-34
 ### Checkpoint V3-M3
 - [x] `mvn -B -pl reporting-service -am verify`: 79 unit + 80 IT, 0 fallos; frontend 205 unit, 134 Playwright, lint — ver tasks/LEARNINGS.md#checkpoint-v3-m3
-- [ ] PR con CI verde; **freno: OK de Angel antes del merge** (migración v0.2.0 en Neon al desplegar)
+- [x] PR #30 con CI verde, mergeado (squash, 3964c8a); desplegados reporting-service y frontend sirviendo 3964c8a (`scripts/verify-deploy.sh`); la migración v0.2.0 se aplicó al arrancar reporting-service (liveness 200)
+
+### Handoff M4 (corto)
+- Entra: RUC local + SUNAT (puerto, adaptador, caché; proveedor Decolecta), respaldo D2, **ciclo de vida de empresa** (desactivar/eliminar, `RPT-016/017/018`; el orden de errores al emitir ya reserva `RPT-016` entre `RPT-015` y `RPT-004`), contacto, compatibilidad N/N+1 del POST.
+- Hecho en M3 y reutilizable: `ReportingErrors` RPT-015/019, `reason-confirm.ts` en `shared/`, `CurrentActor.from(jwt)`, patrón de UPDATE condicional + CHECK. Hoy ninguna ruta deja una empresa en INACTIVE (las ITs lo hacen por SQL): al llegar el PATCH, cambiar esas ITs para usar la ruta.
+- **Frenos antes de arrancar:** Angel crea la cuenta y el token de Decolecta; aviso antes de tocar `render.yaml`; OK de Angel antes del merge.
+- Ruido conocido: las ITs de reporting muestran un intento de conexión a RabbitMQ en localhost:5672 pese a `auto-startup=false`; no falla nada.
 
 ### M4–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

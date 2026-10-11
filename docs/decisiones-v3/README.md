@@ -9,4 +9,4 @@ Solo hay ADR para decisiones nuevas de v3. Los que la otra terminal redacta como
 | `2026-10-10-respaldo-empresa-no-verificada.md` | Registro de empresa "no verificada" cuando SUNAT no responde | Aceptada |
 | `2026-10-10-snapshot-sigersol-municipal.md` | Datos agregados de SIGERSOL Municipal guardados como snapshot por año y distrito | Aceptada |
 | `2026-10-10-distrito-en-el-evento-de-recojo.md` | El evento de recojo lleva el ubigeo del vecino | Aceptada |
-| `2026-10-10-aviso-de-plausibilidad.md` | Aviso orientativo de kilos frente al total distrital | Propuesta, condicionada |
+| `2026-10-10-aviso-de-plausibilidad.md` | Aviso orientativo de kilos frente al total distrital | Descartada por calidad de datos |

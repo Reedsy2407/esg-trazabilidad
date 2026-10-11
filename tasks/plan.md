@@ -810,17 +810,18 @@ None outstanding — all seven source specs (`shared-kernel`, `recycler-service`
 
 ## Decisiones v3 (no volver a preguntar)
 
-- **D1 SIGERSOL por empresa = el mismo dato manual que `SigersolSync`.** `SigersolSync` y RPT-005 no cambian (siguen por asociación y bloquean la emisión). Se agregan al registro existente: `origin` (`DECLARADO_POR_OPERADOR` | `CONSTANCIA_REFERENCIADA`), quién (`sub` + email del JWT) y `reference` opcional; "cuándo" ya existe (`declaredAt`, instante de registro). Las filas viejas sin origen se muestran "origen no registrado". `NO_VERIFICADO` = no hay registro que cubra el período (visible en empresa y borrador; la emisión ya lo bloquea con RPT-005). Ver tasks/LEARNINGS.md#v3-d1.
-- **D2 Respaldo "no verificada"** con endpoint explícito separado. (a) El servidor reintenta la consulta y rechaza el respaldo si SUNAT responde. (b) Una empresa `NO_VERIFICADA` no recibe certificado hasta verificarse (error de dominio nuevo). (c) `RUC_LOOKUP_PROVIDER=none` solo en desarrollo y pruebas: el servicio no arranca con ese valor cuando `RENDER=true` (variable que Render pone sola; el proyecto no tiene perfil de producción).
+- **Nombres (Angel, 2026-10-10):** en la API, en inglés y consistentes con `ACTIVE`/`INACTIVE`: `ISSUED`/`ANNULLED`, `VERIFIED`/`UNVERIFIED`, `DECLARED_BY_OPERATOR`/`REFERENCED_PROOF`; endpoint `…/annul`. Lo visible (pantalla, PDF, portal) en español; tabla de equivalencias en el glosario del portal. Abajo, los nombres en español de D1/D2 son las etiquetas visibles.
+- **D1 SIGERSOL por empresa = el mismo dato manual que `SigersolSync`** (aprobado). `SigersolSync` y RPT-005 no cambian (siguen por asociación y bloquean la emisión). Se agregan al registro existente: `origin` (`DECLARED_BY_OPERATOR` | `REFERENCED_PROOF`), quién (`sub` + email del JWT) y `reference` opcional; "cuándo" ya existe (`declaredAt`, instante de registro). Las filas viejas sin origen se muestran "origen no registrado". Cobertura `UNVERIFIED` ("No verificado") = no hay registro que cubra el período (visible en empresa y borrador; la emisión ya lo bloquea con RPT-005). Ver tasks/LEARNINGS.md#v3-d1.
+- **D2 Respaldo "no verificada"** con endpoint explícito separado. (a) El servidor reintenta la consulta y rechaza el respaldo si SUNAT responde. (b) Una empresa `UNVERIFIED` no recibe certificado hasta verificarse (error de dominio nuevo). (c) `RUC_LOOKUP_PROVIDER=none` solo en desarrollo y pruebas: el servicio no arranca con ese valor cuando `RENDER=true` (variable que Render pone sola; el proyecto no tiene perfil de producción).
 - **D3** `CollectionRegisteredEvent` gana `districtUbigeo` opcional; test de que recycler-service ignora el campo; filas viejas del ledger = "distrito desconocido".
-- **D4 Plausibilidad**: último task de M5, recortable; se descarta si S1 o S2 fallan; aviso orientativo, no verificación; sin umbral hasta resolver la unidad (kg vs t).
-- **D5 ADR**: mientras no exista la plantilla (`portal/plantillas/adr.md`), borradores en `docs/decisiones-v3/`. Después, directo en `portal/Writerside/topics/decisiones/`. Los ADR "pendiente" de la otra terminal no se duplican: su estado pasa a "Implementada" en el commit que implementa. ADR nuevos solo para: respaldo no verificada, snapshot SIGERSOL, distrito en el evento, plausibilidad.
+- **D4 Plausibilidad: DESCARTADA** (Angel, 2026-10-10) por calidad de datos: las cifras públicas son inconsistentes en unidades (S1). M5 no muestra ni compara toneladas; las toneladas por material vuelven solo si algún día se confirma la unidad. ADR "descartada por calidad de datos".
+- **D5 ADR**: mientras no exista la plantilla (`portal/plantillas/adr.md`), borradores en `docs/decisiones-v3/`. Después, directo en `portal/Writerside/topics/decisiones/`. Los ADR "pendiente" de la otra terminal no se duplican: su estado pasa a "Implementada" en el commit que implementa. ADR nuevos solo para: respaldo no verificada, snapshot SIGERSOL, distrito en el evento, plausibilidad (descartada).
 - **D6** Demo con 6 a 8 RUC de entidades públicas (no RUC 10), razón social desde SUNAT; Angel aprueba la lista. Candidatos (de memoria, dígito verificador comprobado; entidad y razón social se confirman con SUNAT en M4 antes de pedir aprobación): 20131312955 SUNAT, 20492966658 MINAM, 20131380951 Municipalidad Metropolitana de Lima, 20295613620 RENIEC, 20131370645 MEF, 20521286769 OEFA, 20131373237 MINSA, 20504794637 PRODUCE.
 - **D7** Validación local del RUC (módulo 11) en asociaciones, solo en altas y ediciones. `/companies` sigue sin usarse.
 - **D8** Vecino INACTIVO: no recibe recojos nuevos, cronogramas nuevos ni reactivaciones de cronograma (COL-013) y sus cronogramas activos se pausan; al reactivar, la pantalla muestra los pausados para reactivarlos.
 - **D9** Rama + PR por módulo (`v3/mN`). `ci.yml` corre en `pull_request` a `main` (confirmado). **Freno para el OK de Angel antes del merge: M2, M3, M4, M5, M7.** M0, M1, M6, M8: merge con CI verde + `code-reviewer` PASS.
 - **Proveedor RUC: Decolecta** (token, 1 000 consultas/mes). Angel crea la cuenta y el token al llegar a M4: **freno antes de M4**.
-- **S2** (acceso a SIGERSOL desde una IP de EE. UU.): pedir permiso explícito; solo una ejecución puntual de solo lectura.
+- **S2** hecho (2026-10-10, con permiso de Angel, una ejecución, rama desechable borrada): desde un runner de GitHub en EE. UU., los 3 endpoints responden 200 (19, 15 y 41 filas). No se repite ni se programa.
 - **Ajuste M4, compatibilidad del POST: tolerar y retirar en dos versiones**, no despliegue conjunto. Motivo: Render despliega cada servicio y el sitio por separado (`buildFilter`, `checksPass`) y reporting-service tarda en arrancar, así que un "despliegue conjunto" igual deja una ventana con el front viejo contra el back nuevo o al revés. Versión N: `name` opcional en el request, ignorado (la razón social sale de SUNAT) y marcado deprecado en OpenAPI; el front nuevo deja de mandarlo. Versión N+1 (PR siguiente, con el front nuevo ya live): `name` presente → 400 "La razón social viene de SUNAT".
 - **Ajuste M1, ubigeo**: catálogo desde la lista oficial del INEI, verificado 43 + 7 con tildes y ñ de la fuente; se normaliza solo para comparar con SIGERSOL.
 - **Ajuste M3**: test de dos anulaciones simultáneas del mismo certificado; el actor sale siempre del JWT, nunca del body.
@@ -831,7 +832,7 @@ None outstanding — all seven source specs (`shared-kernel`, `recycler-service`
 - **Los códigos de SIGERSOL coinciden con el sufijo del ubigeo INEI** (La Molina = 15|01|14 = 150114). El mapeo se hace por código; el nombre normalizado queda solo como chequeo cruzado.
 - `ReporteVal` acepta `cod_provincia:"01"` y `cod_distrito:"14"`. Con provincia LIMA, 2024 trae 19 distritos con recicladores (los 33 eran todo el departamento 15, con provincias como Yauyos); Callao 2024 trae 2.
 - Último año con datos: 2024 (2019–2023 tienen filas; 2025 y 2026 = 0). Año por defecto: bajar desde el año actual − 1 hasta encontrar filas.
-- **Unidad NO resuelta**: la respuesta no la declara y las magnitudes se contradicen (La Molina 2024 = 1 389,29 con 31 recicladores sugiere toneladas; la provincia LIMA = 2 428 847,58 sugiere kg). La plausibilidad (D4) queda congelada hasta confirmar la unidad en la pantalla de Acceso Libre; si no se confirma, se descarta.
+- **Unidad NO resuelta**: la respuesta no la declara y las magnitudes se contradicen (La Molina 2024 = 1 389,29 con 31 recicladores sugiere toneladas; la provincia LIMA = 2 428 847,58 sugiere kg). Por eso la plausibilidad (D4) quedó descartada.
 - Calidad de datos: hay filas con `cant_asoc_recicladores` igual a `total_recicladores` (ATE 12/12, SJM 58/58). Refuerza rotularlo "datos agregados", nunca "verificado".
 - `listaLugarAprov` responde con un charset distinto de UTF-8 ("Obtenci�n"): el cliente debe respetar el charset declarado, y las respuestas grabadas de prueba lo reproducen.
 
@@ -845,7 +846,7 @@ None outstanding — all seven source specs (`shared-kernel`, `recycler-service`
 | M3 reporting-service + front | anular certificado, exclusión parcial, PDF ANULADO + pie, empresa inactiva bloqueada | **OK de Angel** | 1,5 |
 | — | **freno: Angel crea el token de Decolecta** | — | — |
 | M4 reporting-service + front | RUC local + SUNAT (puerto, adaptador, caché), respaldo D2, ciclo de vida de empresa, contacto, compatibilidad N/N+1 | **OK de Angel** (+ aviso antes de `render.yaml`) | 2,5 |
-| M5 reporting + collection + front | cliente SIGERSOL, snapshot, contexto en emisión y PDF, degradación, textos, D1, distrito en el evento; plausibilidad al final | **OK de Angel** | 2,5 |
+| M5 reporting + collection + front | cliente SIGERSOL (solo conteos de asociaciones y recicladores), snapshot por año y distrito, contexto en emisión y PDF, degradación, textos del certificado, origen en `SigersolSync` (D1), distrito en el evento (D3) | **OK de Angel** | 2 |
 | M6 frontend | asociaciones: crear, certificaciones, renovar, suspender/activar; RUC local en recycler (D7) | merge con CI + revisión | 1 |
 | M7 demo-seed | anular + desactivar la empresa demo, RUC públicos (D6) | **OK de Angel** (datos de producción) | 0,5 |
 | M8 docs | frontend.md, security.md, glosario, errores, ADR, flujo "datos erróneos con certificado" | merge con CI + revisión; cierre = human review | 1 |
@@ -854,8 +855,8 @@ None outstanding — all seven source specs (`shared-kernel`, `recycler-service`
 
 | Riesgo | Mitigación |
 |---|---|
-| SIGERSOL sin documentar, términos no verificados, posible geobloqueo desde Render | S2 antes de M5; snapshot en BD como "último dato bueno"; degradación "no disponible"; nada bloquea por SIGERSOL |
-| Unidad de SIGERSOL ambigua | Plausibilidad congelada y recortable (D4) |
+| SIGERSOL sin documentar, términos no verificados | S2 pasó desde EE. UU.; snapshot en BD como "último dato bueno"; degradación "no disponible"; nada bloquea por SIGERSOL |
+| Unidad de SIGERSOL ambigua | Sin toneladas en v3; plausibilidad descartada (D4) |
 | Migraciones en Neon (exclusión parcial, índice de RUC parcial, backfill de ubigeo) | IT con Postgres real + rollback de Liquibase en cada changeset; merge = deploy, con OK de Angel |
 | Ventana de despliegue front/back en M4 | Compatibilidad N/N+1 |
 | Cuota de Decolecta | Caché de 24 h en tabla (Render free duerme a los 15 min) |

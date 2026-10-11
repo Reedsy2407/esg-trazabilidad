@@ -9,9 +9,9 @@ Desde v3, la razón social, el estado y la condición de una empresa vienen de u
 
 ## Decisión
 
-- Un endpoint aparte, `POST /tracked-companies/unverified`, recibe la razón social escrita a mano y guarda la empresa como `NO_VERIFICADA`.
+- Un endpoint aparte, `POST /tracked-companies/unverified`, recibe la razón social escrita a mano y guarda la empresa como `UNVERIFIED` (en pantalla, "No verificada").
 - Antes de aceptar, el servidor vuelve a consultar al proveedor. Si responde, rechaza el respaldo (RPT-014) y hay que usar el registro normal. Nadie puede saltarse la consulta solo porque lo diga.
-- Una empresa `NO_VERIFICADA` no puede recibir certificados (RPT-016) hasta que "Verificar con SUNAT" (`POST /tracked-companies/{id}/sunat-refresh`) funcione y reemplace los datos escritos a mano. Si al verificar SUNAT dice que el RUC no existe (RPT-012), que está en baja definitiva (RPT-013) o sigue sin responder (RPT-011), la empresa no cambia y sigue `NO_VERIFICADA`.
+- Una empresa `UNVERIFIED` no puede recibir certificados (RPT-016) hasta que "Verificar con SUNAT" (`POST /tracked-companies/{id}/sunat-refresh`) funcione y reemplace los datos escritos a mano. Si al verificar SUNAT dice que el RUC no existe (RPT-012), que está en baja definitiva (RPT-013) o sigue sin responder (RPT-011), la empresa no cambia y sigue `UNVERIFIED`.
 - `RUC_LOOKUP_PROVIDER=none`, que hace que toda consulta "no responda", existe solo para desarrollo y pruebas: el servicio no arranca con ese valor en Render (`RENDER=true`).
 
 ## Alternativas descartadas

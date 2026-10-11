@@ -1,0 +1,104 @@
+# Documentation portal (portal/, JetBrains Writerside), published to GitHub
+# Pages. Kept apart from ci.yml on purpose: it never runs on service or
+# frontend changes, so it can't hold up their checks or Render's checksPass
+# deploys. See portal/PLAN.md.
+#
+# - build:  the Writerside builder image, run through portal/scripts/build-local.sh
+#           so the builder version and its arguments (-lang es-ES among them)
+#           live in one place for both local and CI builds.
+# - check:  JetBrains' checker fails the run on any builder error
+#           (broken links, topics missing from the tree, bad XML...).
+# - deploy: main only, and only after build and check. The drift jobs added
+#           later only report; deploy never depends on them.
+name: Portal
+
+on:
+  push:
+    branches: [main]
+    # The workflow file itself too, so a change to a job is exercised by its
+    # own push.
+    paths:
+      - portal/**
+      - .github/workflows/portal.yml
+  pull_request:
+    paths:
+      - portal/**
+      - .github/workflows/portal.yml
+  schedule:
+    # Mondays 11:00 UTC (06:00 in Lima).
+    - cron: "0 11 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the portal (Writerside builder in Docker)
+        run: bash portal/scripts/build-local.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portal
+          # The zip (site) and report.json (what the checker reads). The
+          # Algolia index and report.html aren't used.
+          path: |
+            portal/artifacts/webHelpESG2-all.zip
+            portal/artifacts/report.json
+          if-no-files-found: error
+          retention-days: 7
+
+  check:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # The checker reads artifacts/report.json relative to the workspace.
+      - uses: actions/download-artifact@v4
+        with:
+          name: portal
+          path: artifacts
+
+      - name: Fail on any Writerside error
+        uses: JetBrains/writerside-checker-action@v1
+        with:
+          instance: Writerside/esg
+
+  deploy:
+    needs: [build, check]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # One Pages deploy at a time; a newer run waits instead of cancelling one
+    # that is already publishing.
+    concurrency:
+      group: portal-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: portal
+          path: artifacts
+
+      - name: Unzip the site
+        run: unzip -O UTF-8 -qq artifacts/webHelpESG2-all.zip -d site
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v5

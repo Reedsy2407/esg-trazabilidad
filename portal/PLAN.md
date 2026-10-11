@@ -57,7 +57,8 @@ carpeta. Por eso se usa `errores-auth.md` y `estados-auth.md`, no `errores/auth.
 - Imagen `registry.jetbrains.team/p/writerside/builder/writerside-builder:2026.09.0357`,
   la misma versión fija en `scripts/build-local.sh` y en `portal.yml`. JetBrains
   publica una versión por mes, así que el builder sigue activo.
-- El build local tarda ~12 s una vez descargada la imagen (la descarga sí es grande).
+- La imagen ocupa **8,78 GB** descomprimida (es la misma que usa la action oficial). El
+  build en sí tarda ~12 s; en CI casi todo el tiempo del job `build` es el pull.
 - `offline-docs=true`: el sitio (~7 MB) trae su propio JS, CSS, fuentes y favicons.
   Sin eso, cargaba `app.js`/`app.css` desde `resources.jetbrains.com`.
 - **Idioma de la interfaz:** sin opciones extra, el HTML sale con `lang="en-US"`. El
@@ -65,14 +66,32 @@ carpeta. Por eso se usa `errores-auth.md` y `estados-auth.md`, no `errores/auth.
   del sitio elige su traducción con ese atributo, y el bundle trae `es-ES-translation.js`.
   La action oficial `JetBrains/writerside-github-action@v4` **no expone `-lang`** (su
   `dist/index.js` arma el comando solo con `-product`/`-g`, `-pdf` y `-output-dir`), así
-  que `portal.yml` corre la imagen con `docker run` y los mismos argumentos que
-  `scripts/build-local.sh`. Falta confirmar en el navegador, con el sitio publicado,
+  que el job `build` de `portal.yml` no usa la action: ejecuta
+  `scripts/build-local.sh`, y así la versión y los argumentos del builder están en un
+  solo lugar. Falta confirmar en el navegador, con el sitio publicado,
   que la interfaz se ve en español.
 - Limitación que queda: aun con `-lang es-ES`, los metadatos `og:locale` (`en_US`) e
   `inLanguage` (`en-US`) declaran el sitio en inglés a buscadores y redes. No se
   encontró cómo cambiarlos. La fecha de última modificación de cada página también
   sale en inglés ("11 October 2026").
+- Esa fecha es la del build, no la del último commit del topic: el script monta solo
+  `portal/`, y el `.git` queda fuera del contenedor.
 - Costo: $0 (Actions gratis en repo público, builder gratis, Pages gratis).
+
+## Workflow `portal.yml` (task 2)
+
+| Job | Depende de | Qué hace |
+|---|---|---|
+| `build` | — | `bash portal/scripts/build-local.sh` y sube el zip y `report.json` como artifact `portal`. |
+| `check` | `build` | `JetBrains/writerside-checker-action@v1`: falla si el builder reportó errores. |
+| `deploy` | `build`, `check` | Solo en `main` (no en PR): descomprime el zip y publica en GitHub Pages. |
+
+Disparadores: `portal/**` y el propio `portal.yml` (push a `main` y PR), cron los lunes
+a las 11:00 UTC y `workflow_dispatch`. El propio workflow está en la lista para que un
+cambio a un job se pruebe con su mismo push.
+
+**Paso manual (una sola vez):** Settings → Pages → Build and deployment → Source:
+"GitHub Actions". Sin eso, `deploy` falla al configurar Pages.
 
 ## Tasks
 

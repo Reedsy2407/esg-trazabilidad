@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateStatus;
+
 public record EsgCertificateResponse(
         UUID id,
         UUID trackedCompanyId,
@@ -15,5 +17,10 @@ public record EsgCertificateResponse(
         LocalDate periodEnd,
         BigDecimal kilosTrazados,
         BigDecimal hierarchyCompliancePercent,
-        Instant issuedAt) {
+        Instant issuedAt,
+        EsgCertificateStatus status,
+        Instant annulledAt,
+        UUID annulledById,
+        String annulledByEmail,
+        String annulmentReason) {
 }

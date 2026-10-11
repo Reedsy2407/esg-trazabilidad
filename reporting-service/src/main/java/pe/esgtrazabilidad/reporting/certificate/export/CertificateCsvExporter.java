@@ -41,6 +41,12 @@ public class CertificateCsvExporter {
         };
     }
 
+    /** The e-mail when the token carried one, the staff user id otherwise. */
+    static String annulledBy(EsgCertificate certificate) {
+        String email = certificate.getAnnulledByEmail();
+        return email != null && !email.isBlank() ? email : String.valueOf(certificate.getAnnulledById());
+    }
+
     public byte[] export(EsgCertificate certificate, List<EsgCertificateLineItem> lineItems) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
@@ -53,6 +59,12 @@ public class CertificateCsvExporter {
             printer.printRecord(
                     "Cumplimiento de jerarquia (%)", certificate.getHierarchyCompliancePercent().toPlainString());
             printer.printRecord("Emitido", DateTimeFormatter.ISO_INSTANT.format(certificate.getIssuedAt()));
+            printer.printRecord("estado", certificate.isAnnulled() ? "Anulado" : "Emitido");
+            if (certificate.isAnnulled()) {
+                printer.printRecord("anulado_en", DateTimeFormatter.ISO_INSTANT.format(certificate.getAnnulledAt()));
+                printer.printRecord("anulado_por", text(annulledBy(certificate)));
+                printer.printRecord("motivo_anulacion", text(certificate.getAnnulmentReason()));
+            }
             printer.println();
 
             printer.printRecord("Fecha de recoleccion", "Peso (kg)");

@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.reporting.certificate.adapter.out.persistence;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -10,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
 import pe.esgtrazabilidad.reporting.certificate.port.out.EsgCertificateRepository;
@@ -67,6 +69,12 @@ class EsgCertificateRepositoryAdapter implements EsgCertificateRepository {
         return certificateJpaRepository.existsOverlapping(trackedCompanyId, periodStart, periodEnd);
     }
 
+    @Override
+    @Transactional
+    public boolean annul(UUID id, String reason, CurrentActor actor, Instant at) {
+        return certificateJpaRepository.annulIfIssued(id, reason, actor.id(), actor.email(), at) == 1;
+    }
+
     private EsgCertificateEntity toEntity(EsgCertificate certificate) {
         return new EsgCertificateEntity(
                 certificate.getId(),
@@ -78,7 +86,8 @@ class EsgCertificateRepositoryAdapter implements EsgCertificateRepository {
                 certificate.getPeriodEnd(),
                 certificate.getKilosTrazados(),
                 certificate.getHierarchyCompliancePercent(),
-                certificate.getIssuedAt());
+                certificate.getIssuedAt(),
+                certificate.getStatus());
     }
 
     private EsgCertificate toDomain(EsgCertificateEntity entity) {
@@ -92,6 +101,11 @@ class EsgCertificateRepositoryAdapter implements EsgCertificateRepository {
                 entity.getPeriodEnd(),
                 entity.getKilosTrazados(),
                 entity.getHierarchyCompliancePercent(),
-                entity.getIssuedAt());
+                entity.getIssuedAt(),
+                entity.getStatus(),
+                entity.getAnnulledAt(),
+                entity.getAnnulledById(),
+                entity.getAnnulledByEmail(),
+                entity.getAnnulmentReason());
     }
 }

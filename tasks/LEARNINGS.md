@@ -1924,3 +1924,31 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 - `main` traía mergeados M0 (#23), M1/#26, el ADR migration (#27) y el export de OpenAPI del portal (#29); merge de `origin/main` en `v3/m2` con un solo conflicto en `tasks/todo.md`, resuelto conservando ambos lados (`4b6a54a`).
 - Spec de collection-service regenerado (`mvn -pl collection-service -am verify -Dit.test=OpenApiExportIT,OpenApiDocsIT` + `node portal/scripts/export-openapi.mjs`) y commiteado; los otros tres specs salieron bit a bit idénticos a lo ya commiteado (`0ae7c45`).
 - Checkpoint repetido completo: backend 88 tests (87 + `OpenApiExportIT`, traído por el merge), 0 fallos; frontend unit 195/195; Playwright 126/126. Todo verde, nada que corregir.
+
+## V3-3.1
+
+- Migración `v0.2.0_alter_esg_certificate_add_annulment`: columnas `status` (default ISSUED), `annulled_at`, `annulled_by_id`, `annulled_by_email`, `annulment_reason` y CHECK `ck_esg_certificate_status` (ISSUED exige todo nulo; ANNULLED exige fecha, actor y motivo no vacío). El segundo changeset recrea la exclusión `excl_esg_certificate_company_period` con `WHERE (status = 'ISSUED')`: anular libera el periodo. Su rollback restaura la exclusión incondicional y falla si un periodo se volvió a emitir sobre uno anulado (documentado, es lo correcto).
+- Concurrencia: `UPDATE … WHERE id = ? AND status = 'ISSUED'` como compare-and-set; 0 filas → RPT-019. Sin locks ni versiones.
+- `AnnulmentMigrationRollbackIT` ejecuta update, `rollback(2)` y update de nuevo contra Postgres real.
+
+## V3-3.2
+
+- El actor sale de `CurrentActor.from(jwt)`, nunca del cuerpo (que solo trae `reason`, 1–500). Orden de errores al emitir: RPT-009, RPT-001, RPT-015, RPT-004, RPT-005; una empresa INACTIVE sí puede ver y anular sus certificados.
+- Desvío del brief frente a plan.md (gana plan.md): desactivar/eliminar empresa y sus reglas (RPT-017/018) son de M4. Aquí solo el bloqueo RPT-015; en las ITs la empresa se deja INACTIVE con SQL porque ninguna ruta lo hace todavía.
+- Los tokens de prueba (`TestJwtTokens`) ahora llevan claim `email`; para probar actores distintos hay que usar `RestAssuredSetup.anonymous` + token explícito (el header del spec por defecto gana).
+- Postgres redondea a microsegundos: comparar instantes con tolerancia de 1 µs, no con `isEqualTo`.
+
+## V3-3.3
+
+- PDF: pie "Proyecto académico, sin validez legal" y, si está anulado, sello ANULADO + fecha, email (o id) y motivo con salto de línea; el texto se sanea a WinAnsi (fuentes estándar de PDFBox). CSV: fila `estado` (Emitido/Anulado) y, si aplica, `anulado_en`, `anulado_por`, `motivo_anulacion`, todas con la defensa contra inyección de fórmulas.
+
+## V3-3.4
+
+- `shared/reason-confirm.ts` pasó de `features/neighbors` a `shared` (lo usan vecino y certificado). Los certificados anulados no cuentan para el resumen, la gráfica ni el aviso de solape. Mensajes RPT-015/019 en `error-message.ts`; un 5xx sin código nunca afirma que la anulación falló.
+- Tests: 205 unit, 134 Playwright (incluye `certificate-annul.spec.ts` con AXE a todos los anchos).
+
+### Checkpoint V3-M3
+
+- `mvn -B -pl reporting-service -am verify`: BUILD SUCCESS, 79 unit + 80 IT (anulación, concurrencia con dos hilos, rollback de migración), 0 fallos. Primera corrida: 2 fallos de mis propias ITs (precisión de microsegundos en `issuedAt`; `kilosTrazados` 0 vs 0.0f en JSON), corregidos.
+- Spec OpenAPI de reporting-service regenerado (`node portal/scripts/export-openapi.mjs`): solo agrega el endpoint `/annul` y los campos nuevos.
+- Nota de entorno: el log de ITs muestra un intento de conexión a RabbitMQ en localhost:5672 pese a `auto-startup=false`; es ruido preexistente, no falla nada.

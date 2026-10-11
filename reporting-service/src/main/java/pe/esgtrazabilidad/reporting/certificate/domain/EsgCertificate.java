@@ -10,8 +10,10 @@ import pe.esgtrazabilidad.reporting.trackedcompany.domain.TrackedCompany;
 
 /**
  * An immutable historical fact once issued -- same discipline already
- * applied to CollectionRecord (create + get + list only, no update/delete
- * endpoint). Every value it holds is a COPY frozen at issuance time
+ * applied to CollectionRecord. The only thing that ever happens to it is an
+ * annulment (v3): it is never deleted, and its frozen numbers never change;
+ * the annulment fields are written once, by a conditional UPDATE. Every
+ * value it holds is a COPY frozen at issuance time
  * (company name/RUC, associationId, kilos, compliance %), never a live
  * foreign-key join re-evaluated later -- see SPEC-reporting-service.md's
  * Resolved Decisions. This is what makes "a certificate never silently
@@ -30,6 +32,11 @@ public class EsgCertificate {
     private final BigDecimal kilosTrazados;
     private final BigDecimal hierarchyCompliancePercent;
     private final Instant issuedAt;
+    private final EsgCertificateStatus status;
+    private final Instant annulledAt;
+    private final UUID annulledById;
+    private final String annulledByEmail;
+    private final String annulmentReason;
 
     private EsgCertificate(
             UUID id,
@@ -41,7 +48,12 @@ public class EsgCertificate {
             LocalDate periodEnd,
             BigDecimal kilosTrazados,
             BigDecimal hierarchyCompliancePercent,
-            Instant issuedAt) {
+            Instant issuedAt,
+            EsgCertificateStatus status,
+            Instant annulledAt,
+            UUID annulledById,
+            String annulledByEmail,
+            String annulmentReason) {
         this.id = id;
         this.trackedCompanyId = trackedCompanyId;
         this.associationId = associationId;
@@ -52,6 +64,11 @@ public class EsgCertificate {
         this.kilosTrazados = kilosTrazados;
         this.hierarchyCompliancePercent = hierarchyCompliancePercent;
         this.issuedAt = issuedAt;
+        this.status = status;
+        this.annulledAt = annulledAt;
+        this.annulledById = annulledById;
+        this.annulledByEmail = annulledByEmail;
+        this.annulmentReason = annulmentReason;
     }
 
     public static EsgCertificate issue(
@@ -73,7 +90,12 @@ public class EsgCertificate {
                 periodEnd,
                 kilosTrazados,
                 hierarchyCompliancePercent,
-                Instant.now());
+                Instant.now(),
+                EsgCertificateStatus.ISSUED,
+                null,
+                null,
+                null,
+                null);
     }
 
     public static EsgCertificate reconstruct(
@@ -86,7 +108,12 @@ public class EsgCertificate {
             LocalDate periodEnd,
             BigDecimal kilosTrazados,
             BigDecimal hierarchyCompliancePercent,
-            Instant issuedAt) {
+            Instant issuedAt,
+            EsgCertificateStatus status,
+            Instant annulledAt,
+            UUID annulledById,
+            String annulledByEmail,
+            String annulmentReason) {
         return new EsgCertificate(
                 id,
                 trackedCompanyId,
@@ -97,7 +124,12 @@ public class EsgCertificate {
                 periodEnd,
                 kilosTrazados,
                 hierarchyCompliancePercent,
-                issuedAt);
+                issuedAt,
+                status,
+                annulledAt,
+                annulledById,
+                annulledByEmail,
+                annulmentReason);
     }
 
     public UUID getId() {
@@ -138,5 +170,29 @@ public class EsgCertificate {
 
     public Instant getIssuedAt() {
         return issuedAt;
+    }
+
+    public EsgCertificateStatus getStatus() {
+        return status;
+    }
+
+    public Instant getAnnulledAt() {
+        return annulledAt;
+    }
+
+    public UUID getAnnulledById() {
+        return annulledById;
+    }
+
+    public String getAnnulledByEmail() {
+        return annulledByEmail;
+    }
+
+    public String getAnnulmentReason() {
+        return annulmentReason;
+    }
+
+    public boolean isAnnulled() {
+        return status == EsgCertificateStatus.ANNULLED;
     }
 }

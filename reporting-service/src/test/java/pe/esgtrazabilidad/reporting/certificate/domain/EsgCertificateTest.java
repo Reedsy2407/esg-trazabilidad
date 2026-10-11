@@ -36,6 +36,10 @@ class EsgCertificateTest {
         assertThat(certificate.getKilosTrazados()).isEqualByComparingTo("120.50");
         assertThat(certificate.getHierarchyCompliancePercent()).isEqualByComparingTo("85.00");
         assertThat(certificate.getIssuedAt()).isNotNull();
+        assertThat(certificate.getStatus()).isEqualTo(EsgCertificateStatus.ISSUED);
+        assertThat(certificate.isAnnulled()).isFalse();
+        assertThat(certificate.getAnnulledAt()).isNull();
+        assertThat(certificate.getAnnulmentReason()).isNull();
     }
 
     @Test
@@ -65,10 +69,45 @@ class EsgCertificateTest {
                 LocalDate.of(2026, 1, 31),
                 new BigDecimal("10.00"),
                 new BigDecimal("50.00"),
-                java.time.Instant.parse("2026-02-01T00:00:00Z"));
+                java.time.Instant.parse("2026-02-01T00:00:00Z"),
+                EsgCertificateStatus.ISSUED,
+                null,
+                null,
+                null,
+                null);
 
         assertThat(certificate.getId()).isEqualTo(id);
         assertThat(certificate.getTrackedCompanyId()).isEqualTo(trackedCompanyId);
         assertThat(certificate.getAssociationId()).isEqualTo(associationId);
+    }
+
+    @Test
+    void reconstructRebuildsAnAnnulledCertificateKeepingItsFrozenNumbers() {
+        UUID actorId = UUID.randomUUID();
+        java.time.Instant annulledAt = java.time.Instant.parse("2026-03-01T10:00:00Z");
+
+        EsgCertificate certificate = EsgCertificate.reconstruct(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "Empresa",
+                "20123456789",
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 1, 31),
+                new BigDecimal("10.00"),
+                new BigDecimal("50.00"),
+                java.time.Instant.parse("2026-02-01T00:00:00Z"),
+                EsgCertificateStatus.ANNULLED,
+                annulledAt,
+                actorId,
+                "ana@example.com",
+                "Datos erróneos");
+
+        assertThat(certificate.isAnnulled()).isTrue();
+        assertThat(certificate.getAnnulledAt()).isEqualTo(annulledAt);
+        assertThat(certificate.getAnnulledById()).isEqualTo(actorId);
+        assertThat(certificate.getAnnulledByEmail()).isEqualTo("ana@example.com");
+        assertThat(certificate.getAnnulmentReason()).isEqualTo("Datos erróneos");
+        assertThat(certificate.getKilosTrazados()).isEqualByComparingTo("10.00");
     }
 }

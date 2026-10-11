@@ -1,6 +1,19 @@
 {
   "components" : {
     "schemas" : {
+      "AnnulCertificateRequest" : {
+        "properties" : {
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "reason"
+        ],
+        "type" : "object"
+      },
       "CertificateSummaryResponse" : {
         "properties" : {
           "hierarchyCompliancePercent" : {
@@ -26,6 +39,20 @@
       },
       "EsgCertificateResponse" : {
         "properties" : {
+          "annulledAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "annulledByEmail" : {
+            "type" : "string"
+          },
+          "annulledById" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "annulmentReason" : {
+            "type" : "string"
+          },
           "associationId" : {
             "format" : "uuid",
             "type" : "string"
@@ -56,6 +83,13 @@
           },
           "periodStart" : {
             "format" : "date",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [
+              "ISSUED",
+              "ANNULLED"
+            ],
             "type" : "string"
           },
           "trackedCompanyId" : {
@@ -615,6 +649,56 @@
             }
           }
         ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EsgCertificateResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "certificate-controller"
+        ]
+      }
+    },
+    "/tracked-companies/{companyId}/certificates/{id}/annul" : {
+      "post" : {
+        "operationId" : "annul",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "companyId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AnnulCertificateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
         "responses" : {
           "200" : {
             "content" : {

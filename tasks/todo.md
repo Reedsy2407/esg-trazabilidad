@@ -563,5 +563,15 @@ Compatibilidad (parcial): el alta acepta `districtUbigeo` o, como respaldo, el `
 - [x] `mvn -B -pl collection-service verify` en worktree limpio con compose detenido; frontend `npm test` + Playwright verdes — 88 backend (87 + `OpenApiExportIT` traído por el merge de main), 195 unit frontend, 126 Playwright, todo verde; ver tasks/LEARNINGS.md#checkpoint-v3-m2
 - [ ] PR con CI verde; **freno: OK de Angel antes del merge** (migración en Neon al desplegar)
 
-### M3–M8
+## M3: anulación de certificados (reporting-service + frontend)
+
+- [x] V3-3.1: migración v0.2.0 (estado + datos de anulación, CHECK de coherencia, exclusión de periodo solo para ISSUED, con rollback), dominio y repositorio con UPDATE condicional — PASS; ver tasks/LEARNINGS.md#v3-31
+- [x] V3-3.2: `POST …/certificates/{id}/annul` (actor del JWT, RPT-019), RPT-015 al emitir para empresa INACTIVE — PASS; ver tasks/LEARNINGS.md#v3-32
+- [x] V3-3.3: PDF con pie y sello ANULADO, CSV con estado y datos de anulación — PASS; ver tasks/LEARNINGS.md#v3-33
+- [x] V3-3.4: frontend — anular con motivo y confirmación, sello, etiqueta en la lista, anulados fuera de resumen/gráfica/solape; docs/frontend.md — PASS; ver tasks/LEARNINGS.md#v3-34
+### Checkpoint V3-M3
+- [x] `mvn -B -pl reporting-service -am verify`: 79 unit + 80 IT, 0 fallos; frontend 205 unit, 134 Playwright, lint — ver tasks/LEARNINGS.md#checkpoint-v3-m3
+- [ ] PR con CI verde; **freno: OK de Angel antes del merge** (migración v0.2.0 en Neon al desplegar)
+
+### M4–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

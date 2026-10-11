@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.reporting.certificate.port.out;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -8,6 +9,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
 
@@ -31,4 +33,11 @@ public interface EsgCertificateRepository {
      * as the real backstop" shape as SigersolSync's own existsOverlapping.
      */
     boolean existsOverlapping(UUID trackedCompanyId, LocalDate periodStart, LocalDate periodEnd);
+
+    /**
+     * Conditional ISSUED -> ANNULLED transition. Returns false when the
+     * certificate was no longer ISSUED (already annulled, possibly a moment
+     * ago by someone else), true when this call performed it.
+     */
+    boolean annul(UUID id, String reason, CurrentActor actor, Instant at);
 }

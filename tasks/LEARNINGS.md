@@ -1872,3 +1872,7 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 - El filtro v2 `?district=` se resuelve por catálogo y filtra por ubigeo: un vecino anterior a v3 cuyo texto no entró al backfill ("Surco", "Cercado de Lima") ya no aparece con ese filtro. En producción solo hay vecinos de Comas e Independencia, que sí entran.
 - Ruptura conocida: el frontend v2 manda `district: null` cuando el campo queda vacío, y eso ahora es COL-010. Backend y frontend de M2 se despliegan juntos.
 - `districtUbigeo` en blanco cuenta como ausente.
+
+## V3-2.2
+
+- `PATCH /neighbors/{id}` reemplaza todos los campos editables (un teléfono ausente lo borra) y escribe con `update()` + `NeighborEntity.existing()`. El merge sobrescribe todas las columnas: en V3-2.3/V3-2.5, cualquier columna nueva del vecino (estado, eliminación) tiene que pasar por el dominio y por `existing()`, o cada edición la dejaría en null (mismo precedente que `AssociationEntity` en recycler-service).

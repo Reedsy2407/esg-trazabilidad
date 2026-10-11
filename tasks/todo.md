@@ -530,7 +530,7 @@ Rama y PR por módulo (`v3/mN`). Freno para el OK de Angel antes del merge: M2, 
 Compatibilidad (parcial): el alta acepta `districtUbigeo` o, como respaldo, el `district` en texto si coincide con el catálogo (`UbigeoCatalog.findByName`); si no, COL-010. Ruptura conocida hasta que se despliegue el frontend de V3-2.6: el v2 manda `district: null` cuando el campo queda vacío, o un texto fuera del catálogo ("Surco", "Cercado de Lima"), y eso ahora es COL-010. Por eso backend y frontend de M2 se despliegan juntos.
 
 - [x] V3-2.1: ubigeo del vecino (changeset + backfill, COL-010, filtro por código y por nombre v2) — PASS; ver tasks/LEARNINGS.md#v3-21
-- [ ] V3-2.2: editar vecino (`PATCH /neighbors/{id}`: nombre, teléfono, dirección, distrito) con la vía `update()` de Persistable
+- [x] V3-2.2: editar vecino (PATCH, vía `update()` de Persistable) — PASS
 - [ ] V3-2.3: desactivar/reactivar con motivo (`PATCH …/deactivate`, `…/activate`), historial `neighbor_status_change` con actor del JWT, COL-012; desactivar pausa los cronogramas activos en la misma transacción (D8)
 - [ ] V3-2.4: COL-013 — recojo nuevo, cronograma nuevo o reactivación de cronograma para un vecino INACTIVO
 - [ ] V3-2.5: eliminación lógica (`DELETE /neighbors/{id}` con motivo), solo sin recojos (COL-011); cancela sus cronogramas; un vecino eliminado responde COL-001 y sale de las listas

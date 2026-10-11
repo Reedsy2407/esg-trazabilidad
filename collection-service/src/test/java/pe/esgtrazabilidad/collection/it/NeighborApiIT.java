@@ -231,7 +231,7 @@ class NeighborApiIT {
     void editingANeighborReplacesItsDataAndPersistsIt() {
         String id = given()
                 .contentType(ContentType.JSON)
-                .body(requestWithDistrict("Editar IT", "\"districtUbigeo\": \"150140\""))
+                .body(createNeighborRequest("Editar IT"))
                 .when()
                 .post("/neighbors")
                 .then()
@@ -261,6 +261,7 @@ class NeighborApiIT {
                 .body("fullName", equalTo("Editado IT"))
                 .body("address", equalTo("Jr. Editado 9"))
                 .body("districtUbigeo", equalTo("070102"))
+                .body("phone", nullValue())
                 .body("status", equalTo("ACTIVE"));
     }
 

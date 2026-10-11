@@ -103,12 +103,19 @@ jobs:
       # One mvn call for all four services: -Dit.test with both class names
       # means a module that has neither name still fails the build (see
       # -DfailIfNoSpecifiedTests=false), while each service only runs the
-      # one IT that actually exists in it. surefire.skip=true skips the
-      # (slow) unit tests -- only the export itself is needed here.
+      # one IT that actually exists in it. This still runs every unit test
+      # too (-Dit.test only scopes failsafe) -- surefire-plugin's own `skip`
+      # binds to maven.test.skip (which also skips compiling tests) and its
+      # `skipTests` binds to the same property name failsafe's own
+      # `skipTests` reads, so a flag that skips only surefire while leaving
+      # failsafe's IT running doesn't exist out of the box. Checked directly
+      # against maven-surefire-plugin/maven-failsafe-plugin 3.2.5's own
+      # plugin.xml before writing this -- not worth a custom pom.xml knob
+      # just for this informational job.
       - name: Export every service's OpenAPI document
         run: >
           mvn -B -pl recycler-service,collection-service,reporting-service,auth-service -am verify
-          -Dsurefire.skip=true -Dit.test=OpenApiExportIT,OpenApiDocsIT -DfailIfNoSpecifiedTests=false
+          -Dit.test=OpenApiExportIT,OpenApiDocsIT -DfailIfNoSpecifiedTests=false
 
       - name: Copy the exports into Writerside/specs/
         run: node portal/scripts/export-openapi.mjs

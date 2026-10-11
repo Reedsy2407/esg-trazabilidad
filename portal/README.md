@@ -79,10 +79,14 @@ sin `servers`) a `<servicio>/target/openapi/<servicio>.json`.
 commiteado nunca quede desfasado del código que lo generó:
 
 ```bash
-mvn -pl <servicio> -am verify -Dsurefire.skip=true \
+mvn -pl <servicio> -am verify \
   -Dit.test=OpenApiExportIT,OpenApiDocsIT -DfailIfNoSpecifiedTests=false
 node portal/scripts/export-openapi.mjs
 ```
+
+(`-Dit.test` solo elige qué IT corre; también corren todos los unit tests del
+servicio, porque surefire y failsafe comparten la propiedad `skipTests` y no hay
+una forma estándar de saltar solo los primeros.)
 
 y commitea el `.json` resultante bajo `Writerside/specs/`.
 

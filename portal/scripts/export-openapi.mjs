@@ -8,8 +8,12 @@
 // already exist, written by that service's own OpenApiExportIT (or, for
 // auth-service, OpenApiDocsIT) test:
 //
-//   mvn -pl <service> -am verify -Dsurefire.skip=true \
+//   mvn -pl <service> -am verify \
 //     -Dit.test=OpenApiExportIT,OpenApiDocsIT -DfailIfNoSpecifiedTests=false
+//
+// (this also runs every unit test in <service> -- surefire and failsafe
+// share the skipTests property, so there's no standard flag that skips
+// only the former.)
 //
 // Usage (from anywhere): node portal/scripts/export-openapi.mjs
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';

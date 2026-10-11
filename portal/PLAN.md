@@ -58,7 +58,9 @@ carpeta. Por eso se usa `errores-auth.md` y `estados-auth.md`, no `errores/auth.
   la misma versión fija en `scripts/build-local.sh` y en `portal.yml`. JetBrains
   publica una versión por mes, así que el builder sigue activo.
 - La imagen ocupa **8,78 GB** descomprimida (es la misma que usa la action oficial). El
-  build en sí tarda ~12 s; en CI casi todo el tiempo del job `build` es el pull.
+  build en sí tarda ~12 s; en CI casi todo el tiempo del job `build` es el pull. El
+  runner `ubuntu-latest` tenía 86 GB libres en el primer run, así que no hace falta
+  liberar espacio antes.
 - `offline-docs=true`: el sitio (~7 MB) trae su propio JS, CSS, fuentes y favicons.
   Sin eso, cargaba `app.js`/`app.css` desde `resources.jetbrains.com`.
 - **Idioma de la interfaz:** sin opciones extra, el HTML sale con `lang="en-US"`. El
@@ -82,7 +84,7 @@ carpeta. Por eso se usa `errores-auth.md` y `estados-auth.md`, no `errores/auth.
 
 | Job | Depende de | Qué hace |
 |---|---|---|
-| `build` | — | Libera espacio en el runner (SDKs que no usa), corre `bash portal/scripts/build-local.sh` y sube el zip y `report.json` como artifact `portal`. |
+| `build` | — | `bash portal/scripts/build-local.sh` y sube el zip y `report.json` como artifact `portal`. |
 | `check` | `build` | `JetBrains/writerside-checker-action@v1`: falla si el builder reportó errores. |
 | `deploy` | `build`, `check` | Solo en `main` (no en PR): descomprime el zip y publica en GitHub Pages. |
 

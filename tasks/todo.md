@@ -517,3 +517,23 @@ Desde las pantallas:
 6. Certificado de Setiembre 2026: saldría con 66.95 kg y 85.5 %. Es irreversible, así que pide aprobación aparte.
 
 No se propone crear cuentas del personal de demo: la contraseña sería permanente en producción.
+
+## v3 (brief 2026-10-10; plan y decisiones en tasks/plan.md → "v3")
+
+Rama y PR por módulo (`v3/mN`). Freno para el OK de Angel antes del merge: M2, M3, M4, M5, M7. Freno antes de M4: Angel crea el token de Decolecta.
+
+### M0: plan, spikes, specs (rama `v3/m0`)
+- [x] V3-0.1: plan v3 en tasks/plan.md y tasks/todo.md
+- [x] V3-0.2: S1, spike de SIGERSOL Municipal (ubigeo, formato por distrito, último año con datos, unidad) — resultado en tasks/plan.md → "Resultado de S1"; unidad sin resolver
+- [ ] V3-0.3: S2, acceso a SIGERSOL desde una IP de EE. UU. — **espera permiso explícito de Angel** (una ejecución puntual de solo lectura, `workflow_dispatch`)
+- [ ] V3-0.4: enmiendas de SPEC (reporting, collection, cross-service-events, recycler, shared-kernel) con el alcance v3 y los códigos de error nuevos
+- [ ] V3-0.5: borradores de ADR nuevos en docs/decisiones-v3/ (respaldo no verificada, snapshot SIGERSOL, distrito en el evento, plausibilidad)
+- [ ] V3-0.6: PR de M0, CI verde, merge
+
+### M1: shared-kernel (rama `v3/m1`)
+- [ ] V3-1.1: value object `Ruc` (11 dígitos, prefijo 10/15/16/17/20, módulo 11); pruebas con 20131312955 válido, 20999000029 y 20999000037 inválidos
+- [ ] V3-1.2: catálogo ubigeo INEI (43 Lima Metropolitana + 7 Callao) desde la fuente oficial, verificado con tildes y ñ; normalizador solo para comparar
+- [ ] V3-1.3: `CurrentActor` (sub + email del JWT)
+
+### M2–M8
+- Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

@@ -441,7 +441,7 @@
 
 - [x] Módulo de cobertura completa → ver "Frontend v2" abajo
 
-- [ ] Datos de demo en producción → ver "Frontend v2" abajo (scripts/demo-seed, lo corre Angel)
+- [x] Datos de demo en producción: cargados con scripts/demo-seed → ver "Handoff v2" abajo
 
 ## Frontend v2: cobertura completa (brief 2026-10-10, dirección A, sin cambios de backend)
 
@@ -456,7 +456,7 @@
 - [x] Human review del módulo y aprobación (Angel y Cowork, 2026-10-10): APROBADO con 2 reservas y 2 decisiones, todas cerradas — ver tasks/LEARNINGS.md#cierre-de-v2-reservas-y-decisiones
 - [x] Empresa INACTIVE: se BLOQUEA la emisión (regla del frontend, docs/frontend.md)
 - [x] scripts/demo-seed: script idempotente, simulación por defecto (README en scripts/demo-seed/)
-- [ ] Carga de datos de demo en producción: la corre Angel en su PowerShell con scripts/demo-seed (simulación primero; certificado solo con --apply --emit-certificate)
+- [x] Carga de datos de demo en producción con scripts/demo-seed: 16 altas + certificado de Setiembre 2026 (66,95 kg, 85,5 %)
 
 ## Handoff v2 (2026-10-10)
 
@@ -470,7 +470,9 @@
 - V5 Emitir certificado: `62f5987`
 - V6 Mi sesión y crear cuentas del personal: `f50ba20`
 - Docs de cierre (docs/frontend.md, matriz 27/44): `d9af954`
-- Revisión de seguridad posterior: `bf88db8` (gitleaks, npm audit, dependabot npm), `c419934` (AUTH-005), `171b399` (RPT-009), `87b1853` (frontend AUTH-005/RPT-009), `e941463` (checklist de seguridad), `7d261b6`, `f907739` (CSV formula injection), `c00d66f`
+- Revisión de seguridad: CERRADA y desplegada. `bf88db8` (gitleaks, npm audit, Dependabot npm), `c419934` (AUTH-005), `171b399` (RPT-009), `87b1853` (frontend AUTH-005/RPT-009), `e941463` (checklist de seguridad), `7d261b6`, `f907739` (fix del CSV: formula injection), `c00d66f`
+- Cierre de la revisión de v2: `412a7e4` (scripts/demo-seed + job de CI), `28100be` (docs), `068ded7` (empresa inactiva bloqueada + espacio de "Ingreso manual"); CI verde y verify-deploy 5/5
+- Job `demo-seed` del CI: limitado a cambios en `scripts/` (o en el propio workflow), igual que el job del frontend
 
 ### Decisiones de Angel (no volver a preguntar)
 
@@ -489,11 +491,11 @@
 - [x] scripts/demo-seed: hecho; lo corre Angel en su PowerShell, nunca desde la terminal de Claude.
 - [x] 2 reservas: (1) "Ingreso manual" pegado al "%" a 360 px en el borrador de emisión; (2) capturas v4/empresa-sin-sigersol-* obsoletas, rehechas (locales, gitignored).
 - [x] Human review del módulo v2 y aprobación (Angel y Cowork, 2026-10-10).
-- [ ] Carga de los datos de demo de abajo en producción (Angel, con scripts/demo-seed).
+- [x] Carga de los datos de demo de abajo en producción (Angel, con scripts/demo-seed): 16 altas + certificado de Setiembre 2026 emitido con 66,95 kg y 85,5 %.
 
-### Datos de demo ficticios (lista aprobada por Angel el 2026-10-10; nada escrito en producción todavía)
+### Datos de demo ficticios (lista aprobada por Angel el 2026-10-10; CARGADOS en producción)
 
-Los carga scripts/demo-seed (copia exacta en scripts/demo-seed/data.mjs): 16 altas más el certificado, este último solo con `--apply --emit-certificate`.
+Cargados con scripts/demo-seed (copia exacta en scripts/demo-seed/data.mjs): 16 altas y el certificado de Setiembre 2026 (66,95 kg, 85,5 %), ya emitido e irreversible. Volver a correr el script no duplica nada.
 
 0. Lo que no tiene pantalla, para decidir cómo hacerlo:
    - Asociación: "Asociación de Recicladores Demo Norte (ficticia)", RUC 20999000011. Si ya existe una asociación en producción, se puede usar esa.

@@ -1,6 +1,7 @@
 package pe.esgtrazabilidad.collection.it;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -176,12 +177,43 @@ class NeighborStatusApiIT {
                 .extract().path("id");
     }
 
-    private void createSchedule(String neighborId, String dayOfWeek, String time) {
-        given().contentType(ContentType.JSON)
+    private String createSchedule(String neighborId, String dayOfWeek, String time) {
+        return given().contentType(ContentType.JSON)
                 .body("""
                         {"dayOfWeek": "%s", "time": "%s"}
                         """.formatted(dayOfWeek, time))
                 .when().post("/neighbors/{neighborId}/schedules", neighborId)
-                .then().statusCode(201);
+                .then().statusCode(201)
+                .extract().path("id");
+    }
+
+    @Test
+    void anInactiveNeighborGetsNoNewScheduleNoReactivatedScheduleAndNoNewCollection() {
+        String id = createNeighbor("Inactivo COL-013 IT");
+        String scheduleId = createSchedule(id, "WEDNESDAY", "08:00");
+        changeStatus(id, "deactivate", "Pausa").then().statusCode(200);
+
+        given().contentType(ContentType.JSON)
+                .body("{\"dayOfWeek\": \"FRIDAY\", \"time\": \"09:00\"}")
+                .when().post("/neighbors/{neighborId}/schedules", id)
+                .then().statusCode(409).body("code", equalTo("COL-013"));
+        given().when().patch("/neighbors/{neighborId}/schedules/{sid}/reactivate", id, scheduleId)
+                .then().statusCode(409).body("code", equalTo("COL-013"));
+        given().contentType(ContentType.JSON)
+                .body("""
+                        {"associationId": "%s", "collectionDate": "2026-09-07", "weightKg": 5.5}
+                        """.formatted(UUID.randomUUID()))
+                .when().post("/neighbors/{neighborId}/collection-records", id)
+                .then().statusCode(409).body("code", equalTo("COL-013"));
+        given().when().get("/neighbors/{id}/schedules", id).then()
+                .body("content", hasSize(1))
+                .body("content.status", contains("PAUSED"));
+        given().queryParam("from", "2026-09-01").queryParam("to", "2026-09-30")
+                .when().get("/neighbors/{neighborId}/collection-records", id)
+                .then().statusCode(200).body("content", hasSize(0));
+
+        changeStatus(id, "activate", "Volvió").then().statusCode(200);
+        given().when().patch("/neighbors/{neighborId}/schedules/{sid}/reactivate", id, scheduleId)
+                .then().statusCode(200).body("status", equalTo("ACTIVE"));
     }
 }

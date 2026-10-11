@@ -24,5 +24,13 @@ public interface NeighborRepository {
 
     Optional<Neighbor> findById(UUID id);
 
+    /**
+     * Reads the neighbour holding a shared row lock until the caller's
+     * transaction ends: used by writes that depend on the neighbour being
+     * ACTIVE (new collection, new or reactivated schedule), so they can't
+     * interleave with a deactivation (COL-013).
+     */
+    Optional<Neighbor> findByIdForShare(UUID id);
+
     Page<Neighbor> findAll(NeighborStatus status, String districtUbigeo, Pageable pageable);
 }

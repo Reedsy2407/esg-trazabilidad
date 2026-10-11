@@ -20,7 +20,9 @@ public enum CollectionErrors implements ApplicationError {
             HttpStatus.CONFLICT),
     INVALID_DISTRICT(
             "COL-010", "El distrito no está en la lista de Lima Metropolitana y Callao", HttpStatus.BAD_REQUEST),
-    NEIGHBOR_STATUS_UNCHANGED("COL-012", "El vecino ya se encuentra en el estado solicitado", HttpStatus.CONFLICT);
+    NEIGHBOR_STATUS_UNCHANGED("COL-012", "El vecino ya se encuentra en el estado solicitado", HttpStatus.CONFLICT),
+    NEIGHBOR_INACTIVE(
+            "COL-013", "El vecino está inactivo: no puede recibir recojos ni cronogramas activos", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

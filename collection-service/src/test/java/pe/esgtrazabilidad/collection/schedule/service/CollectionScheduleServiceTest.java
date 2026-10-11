@@ -60,7 +60,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void createsAndSavesANewScheduleWhenNeighborExistsAndNoConflict() {
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         when(repository.findActiveByNeighborIdAndDayOfWeek(neighborId, DayOfWeek.MONDAY))
                 .thenReturn(Optional.empty());
         when(repository.save(any(CollectionSchedule.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -74,7 +74,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void rejectsCreationWhenNeighborDoesNotExist() {
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.empty());
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(sampleCommand()))
                 .isInstanceOf(ApplicationException.class)
@@ -86,7 +86,7 @@ class CollectionScheduleServiceTest {
     @Test
     void rejectsCreationWhenAnActiveConflictExistsForTheSameDay() {
         CollectionSchedule existing = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(8, 0));
-        when(neighborRepository.findById(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         when(repository.findActiveByNeighborIdAndDayOfWeek(neighborId, DayOfWeek.MONDAY))
                 .thenReturn(Optional.of(existing));
 
@@ -205,6 +205,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void reactivateMovesAPausedScheduleToActiveWhenNoConflict() {
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
         schedule.pause();
         when(repository.findById(schedule.getId())).thenReturn(Optional.of(schedule));
@@ -232,6 +233,7 @@ class CollectionScheduleServiceTest {
 
     @Test
     void reactivatingIntoANewConflictThrowsScheduleConflictAndDoesNotPersist() {
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(sampleNeighbor()));
         CollectionSchedule schedule = CollectionSchedule.create(neighborId, DayOfWeek.MONDAY, LocalTime.of(9, 0));
         schedule.pause();
         CollectionSchedule conflicting =
@@ -244,6 +246,26 @@ class CollectionScheduleServiceTest {
                 .isInstanceOf(ApplicationException.class)
                 .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
                         .isEqualTo(CollectionErrors.SCHEDULE_CONFLICT));
+        verify(repository, never()).update(any());
+    }
+
+    @Test
+    void anInactiveNeighborGetsNoNewScheduleAndNoReactivatedOne() {
+        Neighbor inactive = sampleNeighbor();
+        inactive.deactivate();
+        when(neighborRepository.findByIdForShare(neighborId)).thenReturn(Optional.of(inactive));
+
+        assertThatThrownBy(() -> service.create(new CreateCollectionScheduleCommand(neighborId, DayOfWeek.MONDAY, LocalTime.of(8, 0))))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(e -> assertThat(((ApplicationException) e).getError()).isEqualTo(CollectionErrors.NEIGHBOR_INACTIVE));
+
+        CollectionSchedule paused = CollectionSchedule.create(neighborId, DayOfWeek.TUESDAY, LocalTime.of(9, 0));
+        paused.pause();
+        when(repository.findById(paused.getId())).thenReturn(Optional.of(paused));
+        assertThatThrownBy(() -> service.reactivate(neighborId, paused.getId()))
+                .isInstanceOf(ApplicationException.class)
+                .satisfies(e -> assertThat(((ApplicationException) e).getError()).isEqualTo(CollectionErrors.NEIGHBOR_INACTIVE));
+        verify(repository, never()).save(any());
         verify(repository, never()).update(any());
     }
 }

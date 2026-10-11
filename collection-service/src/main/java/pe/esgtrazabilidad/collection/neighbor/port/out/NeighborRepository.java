@@ -13,6 +13,9 @@ public interface NeighborRepository {
 
     Neighbor save(Neighbor neighbor);
 
+    /** Writes an already-persisted neighbour (merge, never insert). */
+    Neighbor update(Neighbor neighbor);
+
     Optional<Neighbor> findById(UUID id);
 
     Page<Neighbor> findAll(NeighborStatus status, String districtUbigeo, Pageable pageable);

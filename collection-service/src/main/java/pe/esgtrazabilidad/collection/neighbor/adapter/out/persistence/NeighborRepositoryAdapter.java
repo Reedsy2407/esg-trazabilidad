@@ -26,6 +26,19 @@ class NeighborRepositoryAdapter implements NeighborRepository {
     }
 
     @Override
+    public Neighbor update(Neighbor neighbor) {
+        NeighborEntity existing = NeighborEntity.existing(
+                neighbor.getId(),
+                neighbor.getFullName(),
+                neighbor.getPhone(),
+                neighbor.getAddress(),
+                neighbor.getDistrict(),
+                neighbor.getDistrictUbigeo(),
+                neighbor.getStatus().name());
+        return toDomain(jpaRepository.save(existing));
+    }
+
+    @Override
     public Optional<Neighbor> findById(UUID id) {
         return jpaRepository.findById(id).map(this::toDomain);
     }

@@ -19,6 +19,7 @@ import pe.esgtrazabilidad.collection.exception.CollectionErrors;
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborCommand;
+import pe.esgtrazabilidad.collection.neighbor.port.in.EditNeighborCommand;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationError;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
@@ -29,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -167,5 +169,35 @@ class NeighborServiceTest {
         assertThatThrownBy(call)
                 .isInstanceOf(ApplicationException.class)
                 .satisfies(exception -> assertThat(((ApplicationException) exception).getError()).isEqualTo(error));
+    }
+
+    @Test
+    void editChangesTheNeighborAndWritesItThroughUpdateNotSave() {
+        Neighbor neighbor = Neighbor.create(
+                "Ana Torres", "999999999", "Av. Siempre Viva 123", UbigeoCatalog.find("150140").orElseThrow());
+        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        when(repository.update(any(Neighbor.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Neighbor result = service.edit(new EditNeighborCommand(neighbor.getId(), "Ana T.", "988", "Jr. 2", "150112"));
+
+        assertThat(result.getFullName()).isEqualTo("Ana T.");
+        assertThat(result.getDistrict()).isEqualTo("Independencia");
+        verify(repository).update(neighbor);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void editingAMissingNeighborOrToADistrictOutsideTheListIsRefused() {
+        UUID missingId = UUID.randomUUID();
+        when(repository.findById(missingId)).thenReturn(Optional.empty());
+        assertError(() -> service.edit(new EditNeighborCommand(missingId, "A", null, "Jr. 1", "150112")),
+                CollectionErrors.NEIGHBOR_NOT_FOUND);
+
+        Neighbor neighbor = Neighbor.create(
+                "Ana Torres", "999999999", "Av. Siempre Viva 123", UbigeoCatalog.find("150140").orElseThrow());
+        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        assertError(() -> service.edit(new EditNeighborCommand(neighbor.getId(), "A", null, "Jr. 1", "150201")),
+                CollectionErrors.INVALID_DISTRICT);
+        verify(repository, never()).update(any());
     }
 }

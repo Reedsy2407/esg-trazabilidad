@@ -11,6 +11,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborUseCase;
+import pe.esgtrazabilidad.collection.neighbor.port.in.EditNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.GetNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.ListNeighborsUseCase;
 import pe.esgtrazabilidad.kernel.web.PageResponse;
@@ -33,16 +35,19 @@ class NeighborController {
     private final CreateNeighborUseCase createNeighborUseCase;
     private final GetNeighborUseCase getNeighborUseCase;
     private final ListNeighborsUseCase listNeighborsUseCase;
+    private final EditNeighborUseCase editNeighborUseCase;
     private final NeighborMapper mapper;
 
     NeighborController(
             CreateNeighborUseCase createNeighborUseCase,
             GetNeighborUseCase getNeighborUseCase,
             ListNeighborsUseCase listNeighborsUseCase,
+            EditNeighborUseCase editNeighborUseCase,
             NeighborMapper mapper) {
         this.createNeighborUseCase = createNeighborUseCase;
         this.getNeighborUseCase = getNeighborUseCase;
         this.listNeighborsUseCase = listNeighborsUseCase;
+        this.editNeighborUseCase = editNeighborUseCase;
         this.mapper = mapper;
     }
 
@@ -51,6 +56,11 @@ class NeighborController {
     ResponseEntity<NeighborResponse> create(@Valid @RequestBody CreateNeighborRequest request) {
         Neighbor neighbor = createNeighborUseCase.create(mapper.toCommand(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(neighbor));
+    }
+
+    @PatchMapping("/{id}")
+    NeighborResponse edit(@PathVariable UUID id, @Valid @RequestBody EditNeighborRequest request) {
+        return mapper.toResponse(editNeighborUseCase.edit(mapper.toCommand(id, request)));
     }
 
     @GetMapping("/{id}")

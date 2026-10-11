@@ -51,6 +51,17 @@ class NeighborEntity implements Persistable<UUID> {
         this.isNew = true;
     }
 
+    /**
+     * Same fields as the constructor but isNew=false, so save() merges
+     * instead of inserting -- see [[persistable_update_path]].
+     */
+    static NeighborEntity existing(
+            UUID id, String fullName, String phone, String address, String district, String districtUbigeo, String status) {
+        NeighborEntity entity = new NeighborEntity(id, fullName, phone, address, district, districtUbigeo, status);
+        entity.isNew = false;
+        return entity;
+    }
+
     @PostLoad
     void markNotNew() {
         isNew = false;

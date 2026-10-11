@@ -9,11 +9,11 @@ import pe.esgtrazabilidad.kernel.ubigeo.UbigeoCatalog;
 public class Neighbor {
 
     private final UUID id;
-    private final String fullName;
-    private final String phone;
-    private final String address;
-    private final String district;
-    private final String districtUbigeo;
+    private String fullName;
+    private String phone;
+    private String address;
+    private String district;
+    private String districtUbigeo;
     private final NeighborStatus status;
 
     private Neighbor(
@@ -39,13 +39,7 @@ public class Neighbor {
      * catalog's display name, accents included.
      */
     public static Neighbor create(String fullName, String phone, String address, District district) {
-        if (address == null || address.isBlank()) {
-            throw new IllegalArgumentException(
-                    "La dirección es obligatoria: sin ella no hay lugar físico donde programar el recojo");
-        }
-        if (district == null) {
-            throw new IllegalArgumentException("El distrito es obligatorio");
-        }
+        requireAddressAndDistrict(address, district);
         return new Neighbor(
                 IdGenerator.generate(),
                 fullName,
@@ -66,6 +60,31 @@ public class Neighbor {
             String districtUbigeo,
             NeighborStatus status) {
         return new Neighbor(id, fullName, phone, address, district, districtUbigeo, status);
+    }
+
+    /**
+     * Replaces the editable contact data. Same guards as create(): an edit
+     * can't leave a neighbour without an address or outside the closed list
+     * of districts. Allowed in any status; the status itself changes only
+     * through deactivate/activate.
+     */
+    public void edit(String fullName, String phone, String address, District district) {
+        requireAddressAndDistrict(address, district);
+        this.fullName = fullName;
+        this.phone = phone;
+        this.address = address;
+        this.district = district.displayName();
+        this.districtUbigeo = district.ubigeo();
+    }
+
+    private static void requireAddressAndDistrict(String address, District district) {
+        if (address == null || address.isBlank()) {
+            throw new IllegalArgumentException(
+                    "La dirección es obligatoria: sin ella no hay lugar físico donde programar el recojo");
+        }
+        if (district == null) {
+            throw new IllegalArgumentException("El distrito es obligatorio");
+        }
     }
 
     public UUID getId() {

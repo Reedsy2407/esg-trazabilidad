@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -224,5 +225,68 @@ class NeighborApiIT {
                   %s
                 }
                 """.formatted(fullName, districtField);
+    }
+
+    @Test
+    void editingANeighborReplacesItsDataAndPersistsIt() {
+        String id = given()
+                .contentType(ContentType.JSON)
+                .body(requestWithDistrict("Editar IT", "\"districtUbigeo\": \"150140\""))
+                .when()
+                .post("/neighbors")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                          "fullName": "Editado IT",
+                          "address": "Jr. Editado 9",
+                          "districtUbigeo": "070102"
+                        }
+                        """)
+                .when()
+                .patch("/neighbors/{id}", id)
+                .then()
+                .statusCode(200)
+                .body("fullName", equalTo("Editado IT"))
+                .body("phone", nullValue())
+                .body("district", equalTo("Bellavista"));
+
+        given().when().get("/neighbors/{id}", id).then()
+                .statusCode(200)
+                .body("fullName", equalTo("Editado IT"))
+                .body("address", equalTo("Jr. Editado 9"))
+                .body("districtUbigeo", equalTo("070102"))
+                .body("status", equalTo("ACTIVE"));
+    }
+
+    @Test
+    void editingWithAMissingFieldADistrictOutsideTheListOrAMissingNeighborIsRefused() {
+        String id = given()
+                .contentType(ContentType.JSON)
+                .body(requestWithDistrict("Editar Mal IT", "\"districtUbigeo\": \"150140\""))
+                .when()
+                .post("/neighbors")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        given().contentType(ContentType.JSON)
+                .body("{\"fullName\": \"X\", \"address\": \"Jr. 1\"}")
+                .when().patch("/neighbors/{id}", id).then()
+                .statusCode(400).body("code", equalTo("VALIDATION_ERROR"));
+        given().contentType(ContentType.JSON)
+                .body("{\"fullName\": \"X\", \"address\": \"Jr. 1\", \"districtUbigeo\": \"150201\"}")
+                .when().patch("/neighbors/{id}", id).then()
+                .statusCode(400).body("code", equalTo("COL-010"));
+        given().contentType(ContentType.JSON)
+                .body("{\"fullName\": \"X\", \"address\": \"Jr. 1\", \"districtUbigeo\": \"150112\"}")
+                .when().patch("/neighbors/{id}", "00000000-0000-0000-0000-000000000000").then()
+                .statusCode(404).body("code", equalTo("COL-001"));
     }
 }

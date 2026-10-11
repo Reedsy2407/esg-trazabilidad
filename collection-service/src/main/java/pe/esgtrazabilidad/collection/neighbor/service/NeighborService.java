@@ -11,6 +11,8 @@ import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborCommand;
 import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborUseCase;
+import pe.esgtrazabilidad.collection.neighbor.port.in.EditNeighborCommand;
+import pe.esgtrazabilidad.collection.neighbor.port.in.EditNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.GetNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.ListNeighborsUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
@@ -19,7 +21,8 @@ import pe.esgtrazabilidad.kernel.ubigeo.District;
 import pe.esgtrazabilidad.kernel.ubigeo.UbigeoCatalog;
 
 @Service
-class NeighborService implements CreateNeighborUseCase, GetNeighborUseCase, ListNeighborsUseCase {
+class NeighborService
+        implements CreateNeighborUseCase, GetNeighborUseCase, ListNeighborsUseCase, EditNeighborUseCase {
 
     private final NeighborRepository repository;
 
@@ -32,6 +35,14 @@ class NeighborService implements CreateNeighborUseCase, GetNeighborUseCase, List
         District district = resolveDistrict(command.districtUbigeo(), command.district());
         Neighbor neighbor = Neighbor.create(command.fullName(), command.phone(), command.address(), district);
         return repository.save(neighbor);
+    }
+
+    @Override
+    public Neighbor edit(EditNeighborCommand command) {
+        Neighbor neighbor = getById(command.id());
+        District district = resolveDistrict(command.districtUbigeo(), null);
+        neighbor.edit(command.fullName(), command.phone(), command.address(), district);
+        return repository.update(neighbor);
     }
 
     @Override

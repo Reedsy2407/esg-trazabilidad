@@ -67,4 +67,27 @@ class NeighborTest {
         assertThat(backfilled.getDistrictDisplayName()).isEqualTo("Rímac");
         assertThat(unmatched.getDistrictDisplayName()).isEqualTo("Surco");
     }
+
+    @Test
+    void editReplacesTheContactDataAndTakesTheCatalogName() {
+        Neighbor neighbor = Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", SURCO);
+
+        neighbor.edit("Ana María Torres", null, "Jr. Nuevo 45", UbigeoCatalog.find("150128").orElseThrow());
+
+        assertThat(neighbor.getFullName()).isEqualTo("Ana María Torres");
+        assertThat(neighbor.getPhone()).isNull();
+        assertThat(neighbor.getAddress()).isEqualTo("Jr. Nuevo 45");
+        assertThat(neighbor.getDistrictUbigeo()).isEqualTo("150128");
+        assertThat(neighbor.getDistrict()).isEqualTo("Rímac");
+        assertThat(neighbor.getStatus()).isEqualTo(NeighborStatus.ACTIVE);
+    }
+
+    @Test
+    void editKeepsTheSameGuardsAsCreate() {
+        Neighbor neighbor = Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", SURCO);
+
+        assertThatThrownBy(() -> neighbor.edit("Ana", null, " ", SURCO)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> neighbor.edit("Ana", null, "Jr. 1", null)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(neighbor.getAddress()).isEqualTo("Av. Siempre Viva 123");
+    }
 }

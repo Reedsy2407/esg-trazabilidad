@@ -15,6 +15,8 @@ import pe.esgtrazabilidad.collection.neighbor.port.in.GetNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.ListNeighborsUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
+import pe.esgtrazabilidad.kernel.ubigeo.District;
+import pe.esgtrazabilidad.kernel.ubigeo.UbigeoCatalog;
 
 @Service
 class NeighborService implements CreateNeighborUseCase, GetNeighborUseCase, ListNeighborsUseCase {
@@ -27,7 +29,8 @@ class NeighborService implements CreateNeighborUseCase, GetNeighborUseCase, List
 
     @Override
     public Neighbor create(CreateNeighborCommand command) {
-        Neighbor neighbor = Neighbor.create(command.fullName(), command.phone(), command.address(), command.district());
+        District district = resolveDistrict(command.districtUbigeo(), command.district());
+        Neighbor neighbor = Neighbor.create(command.fullName(), command.phone(), command.address(), district);
         return repository.save(neighbor);
     }
 
@@ -37,7 +40,28 @@ class NeighborService implements CreateNeighborUseCase, GetNeighborUseCase, List
     }
 
     @Override
-    public Page<Neighbor> list(NeighborStatus status, String district, Pageable pageable) {
-        return repository.findAll(status, district, pageable);
+    public Page<Neighbor> list(NeighborStatus status, String districtUbigeo, String district, Pageable pageable) {
+        if (districtUbigeo != null) {
+            if (!UbigeoCatalog.contains(districtUbigeo)) {
+                throw new ApplicationException(CollectionErrors.INVALID_DISTRICT);
+            }
+            return repository.findAll(status, districtUbigeo, pageable);
+        }
+        if (district != null && !district.isBlank()) {
+            return UbigeoCatalog.findByName(district)
+                    .map(match -> repository.findAll(status, match.ubigeo(), pageable))
+                    .orElseGet(() -> Page.empty(pageable));
+        }
+        return repository.findAll(status, null, pageable);
+    }
+
+    /** The code wins; the name is the v2 fallback. Neither in the catalog: COL-010. */
+    District resolveDistrict(String districtUbigeo, String district) {
+        if (districtUbigeo != null) {
+            return UbigeoCatalog.find(districtUbigeo)
+                    .orElseThrow(() -> new ApplicationException(CollectionErrors.INVALID_DISTRICT));
+        }
+        return UbigeoCatalog.findByName(district)
+                .orElseThrow(() -> new ApplicationException(CollectionErrors.INVALID_DISTRICT));
     }
 }

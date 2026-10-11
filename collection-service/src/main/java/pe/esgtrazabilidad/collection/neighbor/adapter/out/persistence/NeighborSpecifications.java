@@ -12,8 +12,8 @@ final class NeighborSpecifications {
                 status == null ? null : criteriaBuilder.equal(root.get("status"), status);
     }
 
-    static Specification<NeighborEntity> hasDistrict(String district) {
+    static Specification<NeighborEntity> hasDistrictUbigeo(String districtUbigeo) {
         return (root, query, criteriaBuilder) ->
-                district == null ? null : criteriaBuilder.equal(root.get("district"), district);
+                districtUbigeo == null ? null : criteriaBuilder.equal(root.get("districtUbigeo"), districtUbigeo);
     }
 }

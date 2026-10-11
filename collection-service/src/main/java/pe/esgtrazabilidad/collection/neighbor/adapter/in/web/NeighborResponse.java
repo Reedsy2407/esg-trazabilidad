@@ -5,5 +5,11 @@ import java.util.UUID;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 
 public record NeighborResponse(
-        UUID id, String fullName, String phone, String address, String district, NeighborStatus status) {
+        UUID id,
+        String fullName,
+        String phone,
+        String address,
+        String district,
+        String districtUbigeo,
+        NeighborStatus status) {
 }

@@ -17,7 +17,9 @@ public enum CollectionErrors implements ApplicationError {
     ASSOCIATION_BLOCKED(
             "COL-009",
             "La asociación tiene una certificación vencida y no puede registrar recojos",
-            HttpStatus.CONFLICT);
+            HttpStatus.CONFLICT),
+    INVALID_DISTRICT(
+            "COL-010", "El distrito no está en la lista de Lima Metropolitana y Callao", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;

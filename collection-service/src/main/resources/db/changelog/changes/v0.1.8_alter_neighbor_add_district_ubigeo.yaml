@@ -1,0 +1,46 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.8-alter-neighbor-add-district-ubigeo
+      author: esg-trazabilidad
+      comment: >
+        v3 (brief E): the district becomes a closed list keyed by INEI ubigeo
+        (shared-kernel's UbigeoCatalog: 43 Lima Metropolitana + 7 Callao).
+        Nullable at the database level because rows created before v3 hold
+        free text that may not match; the service requires it for every new
+        neighbour (COL-010).
+      changes:
+        - addColumn:
+            tableName: neighbor
+            columns:
+              - column:
+                  name: district_ubigeo
+                  type: varchar(6)
+        - createIndex:
+            tableName: neighbor
+            indexName: ix_neighbor_district_ubigeo
+            columns:
+              - column:
+                  name: district_ubigeo
+      rollback:
+        - dropIndex:
+            tableName: neighbor
+            indexName: ix_neighbor_district_ubigeo
+        - dropColumn:
+            tableName: neighbor
+            columnName: district_ubigeo
+  - changeSet:
+      id: v0.1.8-backfill-neighbor-district-ubigeo
+      author: esg-trazabilidad
+      comment: >
+        Backfills the ubigeo of pre-v3 rows from their free-text district.
+        The SQL lives outside changes/ so includeAll doesn't pick it up as a
+        changelog of its own, and NeighborDistrictBackfillIT runs the same file.
+      changes:
+        - sqlFile:
+            path: ../sql/v0.1.8_backfill_neighbor_district_ubigeo.sql
+            relativeToChangelogFile: true
+            encoding: UTF-8
+            splitStatements: false
+      rollback:
+        - sql:
+            sql: UPDATE neighbor SET district_ubigeo = NULL

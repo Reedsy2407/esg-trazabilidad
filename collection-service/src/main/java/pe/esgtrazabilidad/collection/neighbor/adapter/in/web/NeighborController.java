@@ -61,10 +61,11 @@ class NeighborController {
     @GetMapping
     PageResponse<NeighborResponse> list(
             @RequestParam(required = false) NeighborStatus status,
+            @RequestParam(required = false) String districtUbigeo,
             @RequestParam(required = false) String district,
             @PageableDefault(size = 20, sort = "fullName", direction = Sort.Direction.ASC) Pageable pageable) {
         Page<NeighborResponse> page =
-                listNeighborsUseCase.list(status, district, pageable).map(mapper::toResponse);
+                listNeighborsUseCase.list(status, districtUbigeo, district, pageable).map(mapper::toResponse);
         return PageResponse.from(page);
     }
 }

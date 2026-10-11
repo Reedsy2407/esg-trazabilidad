@@ -30,6 +30,7 @@ import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
 import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
 import pe.esgtrazabilidad.collection.schedule.port.out.CollectionScheduleRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
+import pe.esgtrazabilidad.kernel.ubigeo.UbigeoCatalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -68,7 +69,7 @@ class CollectionRecordServiceTest {
     }
 
     private Neighbor sampleNeighbor() {
-        return Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", "Surco");
+        return Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", UbigeoCatalog.find("150140").orElseThrow());
     }
 
     private CollectionSchedule scheduleFor(UUID ownerNeighborId) {

@@ -27,6 +27,9 @@ class NeighborEntity implements Persistable<UUID> {
 
     private String district;
 
+    @Column(name = "district_ubigeo")
+    private String districtUbigeo;
+
     @Column(nullable = false)
     private String status;
 
@@ -36,12 +39,14 @@ class NeighborEntity implements Persistable<UUID> {
     protected NeighborEntity() {
     }
 
-    NeighborEntity(UUID id, String fullName, String phone, String address, String district, String status) {
+    NeighborEntity(
+            UUID id, String fullName, String phone, String address, String district, String districtUbigeo, String status) {
         this.id = id;
         this.fullName = fullName;
         this.phone = phone;
         this.address = address;
         this.district = district;
+        this.districtUbigeo = districtUbigeo;
         this.status = status;
         this.isNew = true;
     }
@@ -75,6 +80,10 @@ class NeighborEntity implements Persistable<UUID> {
 
     String getDistrict() {
         return district;
+    }
+
+    String getDistrictUbigeo() {
+        return districtUbigeo;
     }
 
     String getStatus() {

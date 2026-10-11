@@ -8,5 +8,10 @@ import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 
 public interface ListNeighborsUseCase {
 
-    Page<Neighbor> list(NeighborStatus status, String district, Pageable pageable);
+    /**
+     * districtUbigeo filters by code (an unknown code is COL-010); district,
+     * the v2 filter, is resolved by name against the catalog without case or
+     * accents, and a name outside the catalog matches nobody.
+     */
+    Page<Neighbor> list(NeighborStatus status, String districtUbigeo, String district, Pageable pageable);
 }

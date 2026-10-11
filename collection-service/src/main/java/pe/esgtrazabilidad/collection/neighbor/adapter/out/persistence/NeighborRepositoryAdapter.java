@@ -31,10 +31,11 @@ class NeighborRepositoryAdapter implements NeighborRepository {
     }
 
     @Override
-    public Page<Neighbor> findAll(NeighborStatus status, String district, Pageable pageable) {
+    public Page<Neighbor> findAll(NeighborStatus status, String districtUbigeo, Pageable pageable) {
         String statusValue = status == null ? null : status.name();
         return jpaRepository
-                .findAll(NeighborSpecifications.hasStatus(statusValue).and(NeighborSpecifications.hasDistrict(district)), pageable)
+                .findAll(NeighborSpecifications.hasStatus(statusValue)
+                        .and(NeighborSpecifications.hasDistrictUbigeo(districtUbigeo)), pageable)
                 .map(this::toDomain);
     }
 
@@ -45,6 +46,7 @@ class NeighborRepositoryAdapter implements NeighborRepository {
                 neighbor.getPhone(),
                 neighbor.getAddress(),
                 neighbor.getDistrict(),
+                neighbor.getDistrictUbigeo(),
                 neighbor.getStatus().name());
     }
 
@@ -55,6 +57,7 @@ class NeighborRepositoryAdapter implements NeighborRepository {
                 entity.getPhone(),
                 entity.getAddress(),
                 entity.getDistrict(),
+                entity.getDistrictUbigeo(),
                 NeighborStatus.valueOf(entity.getStatus()));
     }
 }

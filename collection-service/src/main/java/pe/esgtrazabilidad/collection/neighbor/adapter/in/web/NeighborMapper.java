@@ -9,7 +9,8 @@ import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborCommand;
 class NeighborMapper {
 
     CreateNeighborCommand toCommand(CreateNeighborRequest request) {
-        return new CreateNeighborCommand(request.fullName(), request.phone(), request.address(), request.district());
+        return new CreateNeighborCommand(
+                request.fullName(), request.phone(), request.address(), request.districtUbigeo(), request.district());
     }
 
     NeighborResponse toResponse(Neighbor neighbor) {
@@ -18,7 +19,8 @@ class NeighborMapper {
                 neighbor.getFullName(),
                 neighbor.getPhone(),
                 neighbor.getAddress(),
-                neighbor.getDistrict(),
+                neighbor.getDistrictDisplayName(),
+                neighbor.getDistrictUbigeo(),
                 neighbor.getStatus());
     }
 }

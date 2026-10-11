@@ -15,5 +15,5 @@ public interface NeighborRepository {
 
     Optional<Neighbor> findById(UUID id);
 
-    Page<Neighbor> findAll(NeighborStatus status, String district, Pageable pageable);
+    Page<Neighbor> findAll(NeighborStatus status, String districtUbigeo, Pageable pageable);
 }

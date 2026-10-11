@@ -41,7 +41,7 @@ class NeighborRepositoryAdapterIT {
         // purpose, so this proves the NOT NULL constraint itself fires at
         // the database level -- not just that the domain check works.
         Neighbor neighborWithoutAddress = Neighbor.reconstruct(
-                UUID.randomUUID(), "Ana Torres", "999999999", null, "Surco", NeighborStatus.ACTIVE);
+                UUID.randomUUID(), "Ana Torres", "999999999", null, "Santiago de Surco", "150140", NeighborStatus.ACTIVE);
 
         assertThatThrownBy(() -> neighborRepository.save(neighborWithoutAddress))
                 .isInstanceOf(DataIntegrityViolationException.class);

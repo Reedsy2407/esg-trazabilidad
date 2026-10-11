@@ -522,20 +522,23 @@ No se propone crear cuentas del personal de demo: la contraseña sería permanen
 
 Rama y PR por módulo (`v3/mN`). Freno para el OK de Angel antes del merge: M2, M3, M4, M5, M7. Freno antes de M4: Angel crea el token de Decolecta.
 
-### M0: plan, spikes, specs (rama `v3/m0`)
-- [x] V3-0.1: plan v3 en tasks/plan.md y tasks/todo.md
-- [x] V3-0.2: S1, spike de SIGERSOL Municipal (ubigeo, formato por distrito, último año con datos, unidad) — resultado en tasks/plan.md → "Resultado de S1"; unidad sin resolver
-- [x] V3-0.3: S2 (con permiso de Angel, una ejecución): 200 desde EE. UU. en los 3 endpoints; rama desechable borrada
-- [x] V3-0.4: enmiendas "Amendment v3" en los 5 SPEC (locales: los SPEC están en .gitignore), con endpoints, campos y códigos nuevos (RPT-010..020, COL-010..013, ASO-004)
-- [x] V3-0.5: 4 borradores de ADR en docs/decisiones-v3/ (respaldo no verificada, snapshot SIGERSOL, distrito en el evento, plausibilidad condicionada)
-- [ ] V3-0.6: PR #23 de M0, CI verde y PASS; lo fusiona Angel a mano
+- [x] M0: plan, S1, S2, enmiendas de SPEC, borradores de ADR — PR #23, fusionado por Angel; ver tasks/plan.md "v3"
+- [x] M1: shared-kernel `Ruc`, `UbigeoCatalog` (INEI 43+7), `TextNormalizer`, `CurrentActor` — PR #26, fusionado
 
-- [x] V3-0.7: respuestas de Angel a M0: D4 descartada, nombres de API en inglés, M5 reducido (plan, ADR y SPEC locales actualizados)
+### M2: collection-service + frontend, vecinos (rama `v3/m2`, worktree `../esg-v3-m2`) — **freno: OK de Angel antes del merge**
 
-### M1: shared-kernel (rama `v3/m1`)
-- [ ] V3-1.1: value object `Ruc` (11 dígitos, prefijo 10/15/16/17/20, módulo 11); pruebas con 20131312955 válido, 20999000029 y 20999000037 inválidos
-- [ ] V3-1.2: catálogo ubigeo INEI (43 Lima Metropolitana + 7 Callao) desde la fuente oficial, verificado con tildes y ñ; normalizador solo para comparar
-- [ ] V3-1.3: `CurrentActor` (sub + email del JWT)
+Compatibilidad: el alta acepta `districtUbigeo` o, como respaldo, el `district` en texto si coincide con el catálogo (`UbigeoCatalog.findByName`); si no, COL-010. Así el frontend v2 en producción no se rompe durante el despliegue.
 
-### M2–M8
+- [ ] V3-2.1: ubigeo del vecino — changeset `district_ubigeo` + backfill por nombre normalizado; alta con ubigeo obligatorio (COL-010); respuesta con `districtUbigeo` y nombre del catálogo; filtro `?districtUbigeo=` y `?district=` resuelto por catálogo (sin distinguir mayúsculas ni tildes)
+- [ ] V3-2.2: editar vecino (`PATCH /neighbors/{id}`: nombre, teléfono, dirección, distrito) con la vía `update()` de Persistable
+- [ ] V3-2.3: desactivar/reactivar con motivo (`PATCH …/deactivate`, `…/activate`), historial `neighbor_status_change` con actor del JWT, COL-012; desactivar pausa los cronogramas activos en la misma transacción (D8)
+- [ ] V3-2.4: COL-013 — recojo nuevo, cronograma nuevo o reactivación de cronograma para un vecino INACTIVO
+- [ ] V3-2.5: eliminación lógica (`DELETE /neighbors/{id}` con motivo), solo sin recojos (COL-011); cancela sus cronogramas; un vecino eliminado responde COL-001 y sale de las listas
+- [ ] V3-2.6: frontend — selector de distrito (combobox agrupado Lima/Callao con búsqueda sin tildes; catálogo TS verificado contra el CSV de shared-kernel), alta y filtro con el selector, sin "Escríbelo…"; editar, desactivar/reactivar con motivo y confirmación, eliminar, cronogramas pausados al reactivar (D8), acciones en "Inactivos"
+- [ ] V3-2.7: docs — docs/frontend.md (matriz, reglas, limitaciones), catálogo de errores COL-010..013
+### Checkpoint V3-M2
+- [ ] `mvn -B -pl collection-service verify` en worktree limpio con compose detenido; frontend `npm test` + Playwright verdes
+- [ ] PR con CI verde; **freno: OK de Angel antes del merge** (migración en Neon al desplegar)
+
+### M3–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

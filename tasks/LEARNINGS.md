@@ -1898,3 +1898,22 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 - La edición lee con FOR UPDATE (no FOR SHARE): leer, modificar y escribir la misma fila con lock compartido hacía chocar dos ediciones simultáneas (deadlock). `NeighborLockingApiIT` prueba los locks contra Postgres real con una transacción JDBC sin confirmar.
 - Limitación conocida, anterior a v3: dos escrituras simultáneas sobre el mismo cronograma (por ejemplo cancelar y pausar) no se serializan entre sí; gana la última.
 - Nombres de changeset: `includeAll` ordena alfabéticamente, así que "v0.1.10" quedaría antes de "v0.1.1_". Los de v3 siguen en v0.2.x, y con "v0.2.10" vuelve el mismo problema: al llegar a 10, saltar a v0.3.0.
+
+## V3-2.6
+
+- `district-select`: combobox ARIA propio (no `<select>`) agrupado por Lima Metropolitana / Callao, con búsqueda que ignora tildes y mayúsculas; el catálogo TS (`shared/districts.ts`) se generó a mano desde el CSV de `shared-kernel` y un test (`districts.spec.ts`) verifica que los 50 ubigeos coinciden uno a uno. Se usa igual en alta, edición y el filtro de la lista — ya no hay "Escríbelo…".
+- Editar, desactivar/reactivar y eliminar comparten `reason-confirm.ts`: motivo obligatorio (máx. 500) + casilla + botón que nombra la acción, igual que emitir un certificado. Reactivar ofrece los cronogramas que la desactivación pausó (D8) para reactivarlos uno por uno; eliminar los cancela directamente.
+- El estado del vecino (activo/inactivo) se agrupó en una sola caja con `role="group"` y su propio título, en vez de dejar sueltos los controles de desactivar/reactivar.
+- Al revisar el fix del lock (abajo), apareció que `update()` de `NeighborService` no bloqueaba la fila: se corrigió a `SELECT … FOR UPDATE` (ver V3-2.5 arriba, mismo commit `6aac591`) y se probó contra Postgres real con una transacción JDBC sin confirmar (`NeighborLockingApiIT`).
+- Tests: 87 backend (unit+IT), 195 unit de frontend, 126 Playwright — ver Checkpoint V3-M2 abajo.
+
+## V3-2.7
+
+- `docs/frontend.md`: matriz de endpoints (+5 filas: editar, desactivar, activar, eliminar, bitácora de estado — pasa de 27/44 a 32/49 business endpoints con pantalla), regla de confirmación con motivo documentada junto a la de emitir certificado, limitaciones actualizadas (vecinos ya no están en "no se puede editar/desactivar/eliminar"; el filtro de distrito ya no es sensible a tildes/mayúsculas porque usa el mismo combobox), y una tabla nueva con COL-010..COL-013 (código, HTTP, cuándo ocurre, mensaje en español tal cual lo muestra `shared/error-message.ts`).
+- Los 4 borradores de `docs/decisiones-v3/` se revisaron: ninguno corresponde a M2 (tres son de reporting-service, M4/M5; el de distrito en el evento de recojo es M5). Ninguno cambió de estado.
+
+### Checkpoint V3-M2
+
+- `mvn -B -pl collection-service verify` en worktree limpio (compose propio del worktree, levantado solo para esta corrida): BUILD SUCCESS, 87 tests (unit+IT), 0 fallos.
+- Frontend: `npm test` (Vitest) 195/195 verde; `npx playwright test` 126/126 verde (contra un `ng serve` real, backend mockeado con `page.route` por diseño de la suite).
+- Nada que corregir: los dos commits de V3-2.6 (`501db2e`, `6aac591`) ya dejaron todo verde; este checkpoint solo lo confirmó de nuevo en limpio.

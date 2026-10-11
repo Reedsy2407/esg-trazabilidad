@@ -534,10 +534,10 @@ Compatibilidad (parcial): el alta acepta `districtUbigeo` o, como respaldo, el `
 - [x] V3-2.3: desactivar/reactivar con motivo, historial con actor del JWT, pausa de cronogramas (D8), compare-and-set contra carreras — PASS; ver tasks/LEARNINGS.md#v3-23
 - [x] V3-2.4: COL-013 (recojo, cronograma nuevo o reactivado para vecino INACTIVO), FOR SHARE contra la desactivación concurrente — PASS; ver tasks/LEARNINGS.md#v3-24
 - [x] V3-2.5: eliminación lógica con motivo (COL-011 con recojos, cancela cronogramas, COL-001 en adelante; las lecturas anidadas quedan como auditoría) — PASS; ver tasks/LEARNINGS.md#v3-25
-- [ ] V3-2.6: frontend — selector de distrito (combobox agrupado Lima/Callao con búsqueda sin tildes; catálogo TS verificado contra el CSV de shared-kernel), alta y filtro con el selector, sin "Escríbelo…"; editar, desactivar/reactivar con motivo y confirmación, eliminar, cronogramas pausados al reactivar (D8), acciones en "Inactivos"
-- [ ] V3-2.7: docs — docs/frontend.md (matriz, reglas, limitaciones), catálogo de errores COL-010..013
+- [x] V3-2.6: frontend — selector de distrito (combobox agrupado Lima/Callao con búsqueda sin tildes; catálogo TS verificado contra el CSV de shared-kernel), alta y filtro con el selector, sin "Escríbelo…"; editar, desactivar/reactivar con motivo y confirmación, eliminar, cronogramas pausados al reactivar (D8), acciones en "Inactivos" — PASS (501db2e, 6aac591); ver tasks/LEARNINGS.md#v3-26
+- [x] V3-2.7: docs — docs/frontend.md (matriz, reglas, limitaciones), catálogo de errores COL-010..013 — ver tasks/LEARNINGS.md#v3-27
 ### Checkpoint V3-M2
-- [ ] `mvn -B -pl collection-service verify` en worktree limpio con compose detenido; frontend `npm test` + Playwright verdes
+- [x] `mvn -B -pl collection-service verify` en worktree limpio con compose detenido; frontend `npm test` + Playwright verdes — 87 backend, 195 unit frontend, 126 Playwright, todo verde; ver tasks/LEARNINGS.md#checkpoint-v3-m2
 - [ ] PR con CI verde; **freno: OK de Angel antes del merge** (migración en Neon al desplegar)
 
 ### M3–M8

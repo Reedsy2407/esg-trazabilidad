@@ -70,6 +70,9 @@ public final class UbigeoCatalog {
                     continue;
                 }
                 String[] fields = line.split(";", -1);
+                if (fields.length != 4) {
+                    throw new IllegalStateException("Malformed row in " + RESOURCE + ": " + line);
+                }
                 District district = new District(
                         fields[0], District.Area.valueOf(fields[1]), fields[2], fields[3]);
                 if (districts.put(district.ubigeo(), district) != null) {

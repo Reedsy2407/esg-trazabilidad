@@ -5,7 +5,7 @@ import java.util.Locale;
 
 /**
  * Folds text for comparison only: strips accents (Ñ becomes N), upper-cases
- * and collapses whitespace. "Rímac", "RIMAC" and " rimac " all compare equal.
+ * and collapses whitespace, non-breaking spaces included. "Rímac", "RIMAC" and " rimac " all compare equal.
  * Never use the result for storage or display.
  */
 public final class TextNormalizer {
@@ -18,6 +18,6 @@ public final class TextNormalizer {
             return null;
         }
         String withoutMarks = Normalizer.normalize(text, Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
-        return withoutMarks.toUpperCase(Locale.ROOT).trim().replaceAll("\\s+", " ");
+        return withoutMarks.toUpperCase(Locale.ROOT).replaceAll("[\\s\\p{Z}]+", " ").strip();
     }
 }

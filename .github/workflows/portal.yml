@@ -43,7 +43,7 @@ jobs:
       - name: Build the portal (Writerside builder in Docker)
         run: bash portal/scripts/build-local.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: portal
           # The zip (site) and report.json (what the checker reads). The

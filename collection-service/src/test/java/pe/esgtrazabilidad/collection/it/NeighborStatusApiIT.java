@@ -45,9 +45,6 @@ import static org.hamcrest.Matchers.hasSize;
 @TestPropertySource(properties = "JWT_SECRET=" + TestJwtTokens.TEST_SECRET)
 class NeighborStatusApiIT {
 
-    // The subject TestJwtTokens.validToken() signs, i.e. who RestAssuredSetup acts as.
-    private static final String TOKEN_SUBJECT = "01a0d8cb-f219-72a2-b006-5150f0e0d685";
-
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
 
@@ -94,7 +91,7 @@ class NeighborStatusApiIT {
                 .body("[0].fromStatus", equalTo("ACTIVE"))
                 .body("[0].toStatus", equalTo("INACTIVE"))
                 .body("[0].reason", equalTo("Se mudó a otra ciudad"))
-                .body("[0].actorId", equalTo(TOKEN_SUBJECT))
+                .body("[0].actorId", equalTo(TestJwtTokens.SUBJECT))
                 .body("[0].actorEmail", equalTo(TestJwtTokens.TEST_EMAIL));
     }
 

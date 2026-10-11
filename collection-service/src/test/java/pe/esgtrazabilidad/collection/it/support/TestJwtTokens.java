@@ -27,11 +27,14 @@ public final class TestJwtTokens {
 
     public static final String TEST_SECRET = "collection-service-it-test-secret-at-least-32-bytes!";
 
+    /** The subject (actor id) claim every token from {@link #validToken()} carries. */
+    public static final String SUBJECT = "01a0d8cb-f219-72a2-b006-5150f0e0d685";
+
     private TestJwtTokens() {
     }
 
     public static String validToken() {
-        return signToken(TEST_SECRET, "01a0d8cb-f219-72a2-b006-5150f0e0d685");
+        return signToken(TEST_SECRET, SUBJECT);
     }
 
     public static String signToken(String secret, String subject) {

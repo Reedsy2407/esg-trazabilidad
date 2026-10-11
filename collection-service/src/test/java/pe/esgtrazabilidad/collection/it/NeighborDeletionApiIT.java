@@ -45,8 +45,6 @@ import static org.hamcrest.Matchers.not;
 @TestPropertySource(properties = "JWT_SECRET=" + TestJwtTokens.TEST_SECRET)
 class NeighborDeletionApiIT {
 
-    private static final String TOKEN_SUBJECT = "01a0d8cb-f219-72a2-b006-5150f0e0d685";
-
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
 
@@ -105,7 +103,7 @@ class NeighborDeletionApiIT {
             try (ResultSet row = select.executeQuery()) {
                 assertThat(row.next()).isTrue();
                 assertThat(row.getTimestamp("deleted_at")).isNotNull();
-                assertThat(row.getString("deleted_by_id")).isEqualTo(TOKEN_SUBJECT);
+                assertThat(row.getString("deleted_by_id")).isEqualTo(TestJwtTokens.SUBJECT);
                 assertThat(row.getString("deleted_by_email")).isEqualTo(TestJwtTokens.TEST_EMAIL);
                 assertThat(row.getString("deletion_reason")).isEqualTo("Registrado por error");
             }

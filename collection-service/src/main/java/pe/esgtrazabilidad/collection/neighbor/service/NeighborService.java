@@ -1,14 +1,18 @@
 package pe.esgtrazabilidad.collection.neighbor.service;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import pe.esgtrazabilidad.collection.exception.CollectionErrors;
 import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
+import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatusChange;
+import pe.esgtrazabilidad.collection.neighbor.port.in.ChangeNeighborStatusUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborCommand;
 import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.EditNeighborCommand;
@@ -16,18 +20,33 @@ import pe.esgtrazabilidad.collection.neighbor.port.in.EditNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.GetNeighborUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.in.ListNeighborsUseCase;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
+import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborStatusChangeRepository;
+import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
+import pe.esgtrazabilidad.collection.schedule.port.out.CollectionScheduleRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
+import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.kernel.ubigeo.District;
 import pe.esgtrazabilidad.kernel.ubigeo.UbigeoCatalog;
 
 @Service
 class NeighborService
-        implements CreateNeighborUseCase, GetNeighborUseCase, ListNeighborsUseCase, EditNeighborUseCase {
+        implements CreateNeighborUseCase,
+                GetNeighborUseCase,
+                ListNeighborsUseCase,
+                EditNeighborUseCase,
+                ChangeNeighborStatusUseCase {
 
     private final NeighborRepository repository;
+    private final NeighborStatusChangeRepository statusChangeRepository;
+    private final CollectionScheduleRepository scheduleRepository;
 
-    NeighborService(NeighborRepository repository) {
+    NeighborService(
+            NeighborRepository repository,
+            NeighborStatusChangeRepository statusChangeRepository,
+            CollectionScheduleRepository scheduleRepository) {
         this.repository = repository;
+        this.statusChangeRepository = statusChangeRepository;
+        this.scheduleRepository = scheduleRepository;
     }
 
     @Override
@@ -43,6 +62,44 @@ class NeighborService
         District district = resolveDistrict(command.districtUbigeo(), null);
         neighbor.edit(command.fullName(), command.phone(), command.address(), district);
         return repository.update(neighbor);
+    }
+
+    @Override
+    @Transactional
+    public Neighbor deactivate(UUID id, String reason, CurrentActor actor) {
+        Neighbor neighbor = getById(id);
+        try {
+            neighbor.deactivate();
+        } catch (IllegalStateException e) {
+            throw new ApplicationException(CollectionErrors.NEIGHBOR_STATUS_UNCHANGED);
+        }
+        statusChangeRepository.save(NeighborStatusChange.record(
+                id, NeighborStatus.ACTIVE, NeighborStatus.INACTIVE, reason, actor));
+        for (CollectionSchedule schedule : scheduleRepository.findActiveByNeighborId(id)) {
+            schedule.pause();
+            scheduleRepository.update(schedule);
+        }
+        return repository.update(neighbor);
+    }
+
+    @Override
+    @Transactional
+    public Neighbor activate(UUID id, String reason, CurrentActor actor) {
+        Neighbor neighbor = getById(id);
+        try {
+            neighbor.activate();
+        } catch (IllegalStateException e) {
+            throw new ApplicationException(CollectionErrors.NEIGHBOR_STATUS_UNCHANGED);
+        }
+        statusChangeRepository.save(NeighborStatusChange.record(
+                id, NeighborStatus.INACTIVE, NeighborStatus.ACTIVE, reason, actor));
+        return repository.update(neighbor);
+    }
+
+    @Override
+    public List<NeighborStatusChange> history(UUID id) {
+        getById(id);
+        return statusChangeRepository.findByNeighborIdNewestFirst(id);
     }
 
     @Override

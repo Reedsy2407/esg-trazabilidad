@@ -90,4 +90,17 @@ class NeighborTest {
         assertThatThrownBy(() -> neighbor.edit("Ana", null, "Jr. 1", null)).isInstanceOf(IllegalArgumentException.class);
         assertThat(neighbor.getAddress()).isEqualTo("Av. Siempre Viva 123");
     }
+
+    @Test
+    void deactivatesAnActiveNeighborAndReactivatesAnInactiveOne() {
+        Neighbor neighbor = Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", SURCO);
+
+        neighbor.deactivate();
+        assertThat(neighbor.getStatus()).isEqualTo(NeighborStatus.INACTIVE);
+        assertThatThrownBy(neighbor::deactivate).isInstanceOf(IllegalStateException.class);
+
+        neighbor.activate();
+        assertThat(neighbor.getStatus()).isEqualTo(NeighborStatus.ACTIVE);
+        assertThatThrownBy(neighbor::activate).isInstanceOf(IllegalStateException.class);
+    }
 }

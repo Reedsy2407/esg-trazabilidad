@@ -1,5 +1,7 @@
 package pe.esgtrazabilidad.collection.neighbor.service;
 
+import java.time.DayOfWeek;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,9 +22,15 @@ import pe.esgtrazabilidad.collection.neighbor.domain.Neighbor;
 import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatus;
 import pe.esgtrazabilidad.collection.neighbor.port.in.CreateNeighborCommand;
 import pe.esgtrazabilidad.collection.neighbor.port.in.EditNeighborCommand;
+import pe.esgtrazabilidad.collection.neighbor.domain.NeighborStatusChange;
 import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborRepository;
+import pe.esgtrazabilidad.collection.neighbor.port.out.NeighborStatusChangeRepository;
+import pe.esgtrazabilidad.collection.schedule.domain.CollectionSchedule;
+import pe.esgtrazabilidad.collection.schedule.domain.CollectionScheduleStatus;
+import pe.esgtrazabilidad.collection.schedule.port.out.CollectionScheduleRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationError;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
+import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.kernel.ubigeo.UbigeoCatalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,11 +49,19 @@ class NeighborServiceTest {
     @Mock
     private NeighborRepository repository;
 
+    @Mock
+    private NeighborStatusChangeRepository statusChangeRepository;
+
+    @Mock
+    private CollectionScheduleRepository scheduleRepository;
+
     private NeighborService service;
+
+    private final CurrentActor actor = new CurrentActor(UUID.randomUUID(), "ana@example.org");
 
     @BeforeEach
     void setUp() {
-        service = new NeighborService(repository);
+        service = new NeighborService(repository, statusChangeRepository, scheduleRepository);
     }
 
     private CreateNeighborCommand commandWith(String districtUbigeo, String district) {
@@ -199,5 +215,69 @@ class NeighborServiceTest {
         assertError(() -> service.edit(new EditNeighborCommand(neighbor.getId(), "A", null, "Jr. 1", "150201")),
                 CollectionErrors.INVALID_DISTRICT);
         verify(repository, never()).update(any());
+    }
+
+    @Test
+    void deactivatingRecordsWhyAndWhoAndPausesTheActiveSchedules() {
+        Neighbor neighbor = activeNeighbor();
+        CollectionSchedule monday = CollectionSchedule.create(neighbor.getId(), DayOfWeek.MONDAY, LocalTime.of(8, 0));
+        CollectionSchedule friday = CollectionSchedule.create(neighbor.getId(), DayOfWeek.FRIDAY, LocalTime.of(9, 0));
+        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        when(scheduleRepository.findActiveByNeighborId(neighbor.getId())).thenReturn(List.of(monday, friday));
+        when(repository.update(any(Neighbor.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Neighbor result = service.deactivate(neighbor.getId(), "  Se mudó  ", actor);
+
+        assertThat(result.getStatus()).isEqualTo(NeighborStatus.INACTIVE);
+        assertThat(monday.getStatus()).isEqualTo(CollectionScheduleStatus.PAUSED);
+        assertThat(friday.getStatus()).isEqualTo(CollectionScheduleStatus.PAUSED);
+        verify(scheduleRepository).update(monday);
+        verify(scheduleRepository).update(friday);
+        ArgumentCaptor<NeighborStatusChange> change = ArgumentCaptor.forClass(NeighborStatusChange.class);
+        verify(statusChangeRepository).save(change.capture());
+        assertThat(change.getValue().neighborId()).isEqualTo(neighbor.getId());
+        assertThat(change.getValue().fromStatus()).isEqualTo(NeighborStatus.ACTIVE);
+        assertThat(change.getValue().toStatus()).isEqualTo(NeighborStatus.INACTIVE);
+        assertThat(change.getValue().reason()).isEqualTo("Se mudó");
+        assertThat(change.getValue().actorId()).isEqualTo(actor.id());
+        assertThat(change.getValue().actorEmail()).isEqualTo("ana@example.org");
+    }
+
+    @Test
+    void reactivatingRecordsTheChangeAndLeavesTheSchedulesAlone() {
+        Neighbor neighbor = activeNeighbor();
+        neighbor.deactivate();
+        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
+        when(repository.update(any(Neighbor.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Neighbor result = service.activate(neighbor.getId(), "Volvió", actor);
+
+        assertThat(result.getStatus()).isEqualTo(NeighborStatus.ACTIVE);
+        verify(statusChangeRepository).save(any(NeighborStatusChange.class));
+        verifyNoInteractions(scheduleRepository);
+    }
+
+    @Test
+    void askingForTheStatusItAlreadyHasIsCol012AndChangesNothing() {
+        Neighbor neighbor = activeNeighbor();
+        when(repository.findById(neighbor.getId())).thenReturn(Optional.of(neighbor));
+
+        assertError(() -> service.activate(neighbor.getId(), "x", actor), CollectionErrors.NEIGHBOR_STATUS_UNCHANGED);
+        neighbor.deactivate();
+        assertError(() -> service.deactivate(neighbor.getId(), "x", actor), CollectionErrors.NEIGHBOR_STATUS_UNCHANGED);
+        verifyNoInteractions(statusChangeRepository, scheduleRepository);
+        verify(repository, never()).update(any());
+    }
+
+    @Test
+    void theHistoryOfAMissingNeighborIsCol001() {
+        UUID missingId = UUID.randomUUID();
+        when(repository.findById(missingId)).thenReturn(Optional.empty());
+
+        assertError(() -> service.history(missingId), CollectionErrors.NEIGHBOR_NOT_FOUND);
+    }
+
+    private Neighbor activeNeighbor() {
+        return Neighbor.create("Ana Torres", "999999999", "Av. Siempre Viva 123", UbigeoCatalog.find("150140").orElseThrow());
     }
 }

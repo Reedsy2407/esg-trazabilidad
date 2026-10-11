@@ -14,7 +14,7 @@ public class Neighbor {
     private String address;
     private String district;
     private String districtUbigeo;
-    private final NeighborStatus status;
+    private NeighborStatus status;
 
     private Neighbor(
             UUID id,
@@ -75,6 +75,22 @@ public class Neighbor {
         this.address = address;
         this.district = district.displayName();
         this.districtUbigeo = district.ubigeo();
+    }
+
+    /** ACTIVE -> INACTIVE. The service records why and who, and pauses the schedules. */
+    public void deactivate() {
+        if (status != NeighborStatus.ACTIVE) {
+            throw new IllegalStateException("Solo un vecino activo puede desactivarse");
+        }
+        status = NeighborStatus.INACTIVE;
+    }
+
+    /** INACTIVE -> ACTIVE. Paused schedules stay paused: staff reactivate them one by one (D8). */
+    public void activate() {
+        if (status != NeighborStatus.INACTIVE) {
+            throw new IllegalStateException("Solo un vecino inactivo puede reactivarse");
+        }
+        status = NeighborStatus.ACTIVE;
     }
 
     private static void requireAddressAndDistrict(String address, District district) {

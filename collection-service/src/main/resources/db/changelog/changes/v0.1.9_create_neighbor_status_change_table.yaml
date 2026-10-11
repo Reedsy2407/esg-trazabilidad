@@ -1,0 +1,62 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.1.9-create-neighbor-status-change-table
+      author: esg-trazabilidad
+      comment: >
+        v3 (brief A, D8): every deactivation and reactivation of a neighbour,
+        with its required reason and the staff user who did it (the JWT's sub
+        and email claim, never the request body). Append-only history: a
+        neighbour can be deactivated and reactivated many times.
+      changes:
+        - createTable:
+            tableName: neighbor_status_change
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: neighbor_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_neighbor_status_change_neighbor
+                    references: neighbor(id)
+              - column:
+                  name: from_status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: to_status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reason
+                  type: varchar(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_email
+                  type: varchar(255)
+              - column:
+                  name: changed_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: neighbor_status_change
+            indexName: ix_neighbor_status_change_neighbor_id
+            columns:
+              - column:
+                  name: neighbor_id
+              - column:
+                  name: changed_at

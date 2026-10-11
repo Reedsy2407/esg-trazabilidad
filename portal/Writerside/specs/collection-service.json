@@ -1,6 +1,19 @@
 {
   "components" : {
     "schemas" : {
+      "ChangeNeighborStatusRequest" : {
+        "properties" : {
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "reason"
+        ],
+        "type" : "object"
+      },
       "CollectionRecordResponse" : {
         "properties" : {
           "associationId" : {
@@ -178,6 +191,9 @@
           "district" : {
             "type" : "string"
           },
+          "districtUbigeo" : {
+            "type" : "string"
+          },
           "fullName" : {
             "type" : "string"
           },
@@ -187,6 +203,41 @@
         },
         "required" : [
           "address",
+          "fullName"
+        ],
+        "type" : "object"
+      },
+      "DeleteNeighborRequest" : {
+        "properties" : {
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "reason"
+        ],
+        "type" : "object"
+      },
+      "EditNeighborRequest" : {
+        "properties" : {
+          "address" : {
+            "type" : "string"
+          },
+          "districtUbigeo" : {
+            "type" : "string"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "address",
+          "districtUbigeo",
           "fullName"
         ],
         "type" : "object"
@@ -220,6 +271,9 @@
           "district" : {
             "type" : "string"
           },
+          "districtUbigeo" : {
+            "type" : "string"
+          },
           "fullName" : {
             "type" : "string"
           },
@@ -231,6 +285,43 @@
             "type" : "string"
           },
           "status" : {
+            "enum" : [
+              "ACTIVE",
+              "INACTIVE"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "NeighborStatusChangeResponse" : {
+        "properties" : {
+          "actorEmail" : {
+            "type" : "string"
+          },
+          "actorId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "changedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "fromStatus" : {
+            "enum" : [
+              "ACTIVE",
+              "INACTIVE"
+            ],
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "toStatus" : {
             "enum" : [
               "ACTIVE",
               "INACTIVE"
@@ -496,6 +587,14 @@
           },
           {
             "in" : "query",
+            "name" : "districtUbigeo",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
             "name" : "district",
             "required" : false,
             "schema" : {
@@ -557,6 +656,38 @@
       }
     },
     "/neighbors/{id}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DeleteNeighborRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "neighbor-controller"
+        ]
+      },
       "get" : {
         "operationId" : "getById_2",
         "parameters" : [
@@ -576,6 +707,161 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/NeighborResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "neighbor-controller"
+        ]
+      },
+      "patch" : {
+        "operationId" : "edit",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EditNeighborRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NeighborResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "neighbor-controller"
+        ]
+      }
+    },
+    "/neighbors/{id}/activate" : {
+      "patch" : {
+        "operationId" : "activate",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeNeighborStatusRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NeighborResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "neighbor-controller"
+        ]
+      }
+    },
+    "/neighbors/{id}/deactivate" : {
+      "patch" : {
+        "operationId" : "deactivate",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeNeighborStatusRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NeighborResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "neighbor-controller"
+        ]
+      }
+    },
+    "/neighbors/{id}/status-changes" : {
+      "get" : {
+        "operationId" : "statusChanges",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/NeighborStatusChangeResponse"
+                  },
+                  "type" : "array"
                 }
               }
             },

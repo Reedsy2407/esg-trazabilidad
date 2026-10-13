@@ -1,0 +1,215 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.4.0-traced-collection-entry-district
+      author: esg-trazabilidad
+      comment: >
+        v3 M5 (D3): the neighbour's ubigeo when the collection was recorded.
+        Rows that exist before this change, and events published before v3, stay
+        NULL: "distrito desconocido".
+      changes:
+        - addColumn:
+            tableName: traced_collection_entry
+            columns:
+              - column:
+                  name: district_ubigeo
+                  type: varchar(6)
+        - sql:
+            sql: >
+              ALTER TABLE traced_collection_entry ADD CONSTRAINT ck_traced_collection_entry_district
+              CHECK (district_ubigeo IS NULL OR district_ubigeo ~ '^[0-9]{6}$');
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE traced_collection_entry DROP CONSTRAINT ck_traced_collection_entry_district;
+        - dropColumn:
+            tableName: traced_collection_entry
+            columnName: district_ubigeo
+  - changeSet:
+      id: v0.4.0-sigersol-district-snapshot
+      author: esg-trazabilidad
+      comment: >
+        v3 M5: the aggregated counts SIGERSOL Municipal gives per district and
+        year. It is both the long cache (the data is annual) and the "last good
+        value" when SIGERSOL stops answering. Only associations and recyclers are
+        stored: the tonnes are not used (unknown unit).
+      changes:
+        - createTable:
+            tableName: sigersol_district_snapshot
+            columns:
+              - column:
+                  name: year
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ubigeo
+                  type: varchar(6)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: association_count
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: recycler_count
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fetched_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: sigersol_district_snapshot
+            columnNames: year, ubigeo
+            constraintName: pk_sigersol_district_snapshot
+        - sql:
+            sql: >
+              ALTER TABLE sigersol_district_snapshot ADD CONSTRAINT ck_sigersol_district_snapshot
+              CHECK (ubigeo ~ '^[0-9]{6}$' AND year BETWEEN 2000 AND 2100
+              AND association_count >= 0 AND recycler_count >= 0);
+      rollback:
+        - dropTable:
+            tableName: sigersol_district_snapshot
+  - changeSet:
+      id: v0.4.0-line-item-district
+      author: esg-trazabilidad
+      comment: >
+        v3 M5 (D3): the district each frozen line item came from, copied from the
+        ledger when the certificate is issued. NULL = "distrito desconocido"
+        (ledger rows from before v3 have none).
+      changes:
+        - addColumn:
+            tableName: esg_certificate_line_item
+            columns:
+              - column:
+                  name: district_ubigeo
+                  type: varchar(6)
+        - sql:
+            sql: >
+              ALTER TABLE esg_certificate_line_item ADD CONSTRAINT ck_esg_certificate_line_item_district
+              CHECK (district_ubigeo IS NULL OR district_ubigeo ~ '^[0-9]{6}$');
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE esg_certificate_line_item DROP CONSTRAINT ck_esg_certificate_line_item_district;
+        - dropColumn:
+            tableName: esg_certificate_line_item
+            columnName: district_ubigeo
+  - changeSet:
+      id: v0.4.0-certificate-district-context
+      author: esg-trazabilidad
+      comment: >
+        v3 M5: the SIGERSOL Municipal context of each district of a certificate,
+        frozen when it is issued. Re-exporting never asks SIGERSOL again. A row
+        is AVAILABLE (with the year and the aggregated counts), UNAVAILABLE (SIGERSOL
+        had nothing and there was no snapshot) or UNKNOWN_DISTRICT (kilos whose
+        ledger rows carry no district; no ubigeo).
+      changes:
+        - createTable:
+            tableName: esg_certificate_district_context
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: certificate_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_esg_certificate_district_context_certificate
+                    references: esg_certificate(id)
+              - column:
+                  name: district_ubigeo
+                  type: varchar(6)
+              - column:
+                  name: district_name
+                  type: varchar(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: kilos
+                  type: decimal(14,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: year
+                  type: int
+              - column:
+                  name: association_count
+                  type: int
+              - column:
+                  name: recycler_count
+                  type: int
+        - sql:
+            sql: >
+              ALTER TABLE esg_certificate_district_context ADD CONSTRAINT ck_esg_certificate_district_context
+              CHECK (status IN ('AVAILABLE', 'UNAVAILABLE', 'UNKNOWN_DISTRICT')
+              AND ((status = 'UNKNOWN_DISTRICT') = (district_ubigeo IS NULL))
+              AND (district_ubigeo IS NULL OR district_ubigeo ~ '^[0-9]{6}$')
+              AND ((status = 'AVAILABLE') = (year IS NOT NULL AND association_count IS NOT NULL
+              AND recycler_count IS NOT NULL))
+              AND kilos >= 0);
+        - createIndex:
+            tableName: esg_certificate_district_context
+            indexName: idx_esg_certificate_district_context_certificate
+            columns:
+              - column:
+                  name: certificate_id
+      rollback:
+        - dropTable:
+            tableName: esg_certificate_district_context
+  - changeSet:
+      id: v0.4.0-sigersol-sync-origin
+      author: esg-trazabilidad
+      comment: >
+        v3 M5 (D1): how the operator got the figure, and who registered it (from
+        the JWT). Rows that exist before this change keep every new column NULL
+        and are shown "origen no registrado". A new record carries origin and
+        author together (the CHECK keeps them from drifting apart).
+      changes:
+        - addColumn:
+            tableName: sigersol_sync
+            columns:
+              - column:
+                  name: origin
+                  type: varchar(30)
+              - column:
+                  name: registered_by_id
+                  type: uuid
+              - column:
+                  name: registered_by_email
+                  type: varchar(255)
+              - column:
+                  name: reference
+                  type: varchar(255)
+        - sql:
+            sql: >
+              ALTER TABLE sigersol_sync ADD CONSTRAINT ck_sigersol_sync_origin
+              CHECK ((origin IS NULL AND registered_by_id IS NULL)
+              OR (origin IN ('DECLARED_BY_OPERATOR', 'REFERENCED_PROOF') AND registered_by_id IS NOT NULL));
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE sigersol_sync DROP CONSTRAINT ck_sigersol_sync_origin;
+        - dropColumn:
+            tableName: sigersol_sync
+            columns:
+              - column:
+                  name: reference
+              - column:
+                  name: registered_by_email
+              - column:
+                  name: registered_by_id
+              - column:
+                  name: origin

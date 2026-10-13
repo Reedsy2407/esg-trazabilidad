@@ -62,6 +62,7 @@
             <th scope="col">Asociación</th>
             <th scope="col" class="num">Cumplimiento de jerarquía</th>
             <th scope="col" class="num">Kilos declarados</th>
+            <th scope="col">Origen</th>
             <th scope="col">Ingresado</th>
           </tr>
         </thead>
@@ -77,6 +78,15 @@
               <td>{{ r.association }}</td>
               <td class="num mono nowrap">{{ r.compliance }}</td>
               <td class="num mono nowrap">{{ r.kilos }}</td>
+              <td class="origin">
+                {{ r.origin }}
+                @if (r.reference; as reference) {
+                  <span class="note">Ref.: {{ reference }}</span>
+                }
+                @if (r.author; as author) {
+                  &ngsp;<span class="note">{{ author }}</span>
+                }
+              </td>
               <td class="mono nowrap">{{ r.declared }}</td>
             </tr>
           }
@@ -91,6 +101,12 @@
             <div><dt>Asociación</dt><dd>{{ r.association }}</dd></div>
             <div><dt>Cumplimiento</dt><dd class="mono">{{ r.compliance }}</dd></div>
             <div><dt>Kilos declarados</dt><dd class="mono">{{ r.kilos }}</dd></div>
+            <div>
+              <dt>Origen</dt>
+              <dd>
+                {{ r.origin }}@if (r.reference; as reference) { · Ref.: {{ reference }}}@if (r.author; as author) { · {{ author }}}
+              </dd>
+            </div>
             <div><dt>Ingresado</dt><dd class="mono">{{ r.declared }}</dd></div>
             @if (r.note; as note) {
               <div><dt>Nota</dt><dd>{{ note }}</dd></div>

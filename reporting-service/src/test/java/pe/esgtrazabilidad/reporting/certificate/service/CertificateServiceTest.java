@@ -25,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.reporting.certificate.CertificateSummary;
+import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateStatus;
@@ -35,6 +36,8 @@ import pe.esgtrazabilidad.reporting.certificate.port.out.EsgCertificateRepositor
 import pe.esgtrazabilidad.reporting.events.ledger.TracedCollectionEntryEntity;
 import pe.esgtrazabilidad.reporting.events.ledger.TracedCollectionEntryJpaRepository;
 import pe.esgtrazabilidad.reporting.exception.ReportingErrors;
+import pe.esgtrazabilidad.reporting.sigersolmunicipal.DistrictContext;
+import pe.esgtrazabilidad.reporting.sigersolmunicipal.service.DistrictContextService;
 import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolSync;
 import pe.esgtrazabilidad.reporting.sigersolsync.port.out.SigersolSyncRepository;
 import pe.esgtrazabilidad.reporting.trackedcompany.domain.TrackedCompany;
@@ -47,6 +50,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,8 +68,14 @@ class CertificateServiceTest {
     @Mock
     private EsgCertificateRepository esgCertificateRepository;
 
+    @Mock
+    private DistrictContextService districtContextService;
+
     @Captor
     private ArgumentCaptor<List<EsgCertificateLineItem>> lineItemsCaptor;
+
+    @Captor
+    private ArgumentCaptor<List<DistrictLine>> districtLinesCaptor;
 
     private CertificateService service;
 
@@ -82,7 +92,61 @@ class CertificateServiceTest {
                 sigersolSyncRepository,
                 esgCertificateRepository,
                 new CertificatePdfExporter(),
-                new CertificateCsvExporter());
+                new CertificateCsvExporter(),
+                districtContextService);
+    }
+
+    // --- district context (M5) ---
+
+    private TracedCollectionEntryEntity entry(String kilos, String districtUbigeo) {
+        return new TracedCollectionEntryEntity(
+                UUID.randomUUID(), associationId, periodStart, new BigDecimal(kilos), Instant.now(), districtUbigeo);
+    }
+
+    @Test
+    void issuingFreezesOneLineForEachDistrictWithSigersolsContextAndTheUnknownKilosLast() {
+        when(trackedCompanyRepository.findById(trackedCompanyId)).thenReturn(Optional.of(sampleTrackedCompany()));
+        when(esgCertificateRepository.existsOverlapping(any(), any(), any())).thenReturn(false);
+        when(sigersolSyncRepository.findCovering(associationId, periodStart, periodEnd))
+                .thenReturn(Optional.of(
+                        SigersolSync.create(associationId, periodStart, periodEnd, new BigDecimal("75.00"), null, null)));
+        when(tracedCollectionEntryRepository.findByAssociationIdAndCollectionDateBetween(
+                        associationId, periodStart, periodEnd))
+                .thenReturn(List.of(
+                        entry("10.00", "150131"), entry("5.00", "150114"), entry("2.50", "150131"), entry("1.00", null)));
+        when(districtContextService.contextFor("150131"))
+                .thenReturn(new DistrictContext("150131", DistrictContext.Status.AVAILABLE, 2024, 5, 62, false));
+        when(districtContextService.contextFor("150114")).thenReturn(DistrictContext.unavailable("150114"));
+        when(esgCertificateRepository.save(any(EsgCertificate.class), any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.issue(sampleCommand());
+
+        verify(esgCertificateRepository).save(any(EsgCertificate.class), lineItemsCaptor.capture(), districtLinesCaptor.capture());
+        assertThat(lineItemsCaptor.getValue()).extracting(EsgCertificateLineItem::getDistrictUbigeo)
+                .containsExactlyInAnyOrder("150131", "150114", "150131", null);
+        List<DistrictLine> lines = districtLinesCaptor.getValue();
+        assertThat(lines).extracting(DistrictLine::districtName).containsExactly("La Molina", "San Isidro", DistrictLine.UNKNOWN_NAME);
+        assertThat(lines.get(0)).extracting(DistrictLine::status, DistrictLine::year)
+                .containsExactly(DistrictLine.Status.UNAVAILABLE, null);
+        assertThat(lines.get(1)).extracting(DistrictLine::status, DistrictLine::year, DistrictLine::associationCount)
+                .containsExactly(DistrictLine.Status.AVAILABLE, 2024, 5);
+        assertThat(lines.get(1).kilos()).isEqualByComparingTo("12.50");
+        assertThat(lines.get(2).kilos()).isEqualByComparingTo("1.00");
+    }
+
+    @Test
+    void exportingNeverAsksSigersolAgain() {
+        EsgCertificate certificate = EsgCertificate.issue(
+                sampleTrackedCompany(), periodStart, periodEnd, new BigDecimal("8.00"), new BigDecimal("90.00"));
+        when(esgCertificateRepository.findById(certificate.getId())).thenReturn(Optional.of(certificate));
+        when(esgCertificateRepository.findDistrictLines(certificate.getId()))
+                .thenReturn(List.of(new DistrictLine("150114", "La Molina", new BigDecimal("8.00"),
+                        DistrictLine.Status.AVAILABLE, 2024, 3, 31)));
+
+        service.exportPdf(trackedCompanyId, certificate.getId());
+
+        verifyNoInteractions(districtContextService);
     }
 
     private TrackedCompany sampleTrackedCompany() {
@@ -147,7 +211,7 @@ class CertificateServiceTest {
                 .isInstanceOf(ApplicationException.class)
                 .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
                         .isEqualTo(ReportingErrors.INVALID_CERTIFICATE_PERIOD));
-        verify(esgCertificateRepository, never()).save(any(), any());
+        verify(esgCertificateRepository, never()).save(any(), any(), any());
     }
 
     @Test
@@ -162,14 +226,14 @@ class CertificateServiceTest {
                         associationId, periodStart, periodEnd))
                 .thenReturn(List.of(new TracedCollectionEntryEntity(
                         UUID.randomUUID(), associationId, periodStart, new BigDecimal("12.00"), Instant.now())));
-        when(esgCertificateRepository.save(any(EsgCertificate.class), any()))
+        when(esgCertificateRepository.save(any(EsgCertificate.class), any(), any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         EsgCertificate result = service.issue(sampleCommand());
 
         assertThat(result.getKilosTrazados()).isEqualByComparingTo("12.00");
         assertThat(result.getHierarchyCompliancePercent()).isEqualByComparingTo("75.00");
-        verify(esgCertificateRepository).save(any(EsgCertificate.class), lineItemsCaptor.capture());
+        verify(esgCertificateRepository).save(any(EsgCertificate.class), lineItemsCaptor.capture(), any());
         assertThat(lineItemsCaptor.getValue()).hasSize(1);
         assertThat(lineItemsCaptor.getValue().get(0).getWeightKg()).isEqualByComparingTo("12.00");
     }
@@ -183,7 +247,7 @@ class CertificateServiceTest {
                 .isInstanceOf(ApplicationException.class)
                 .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
                         .isEqualTo(ReportingErrors.OVERLAPPING_CERTIFICATE_PERIOD));
-        verify(esgCertificateRepository, never()).save(any(), any());
+        verify(esgCertificateRepository, never()).save(any(), any(), any());
         verify(sigersolSyncRepository, never()).findCovering(any(), any(), any());
     }
 
@@ -197,7 +261,7 @@ class CertificateServiceTest {
                 .isInstanceOf(ApplicationException.class)
                 .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
                         .isEqualTo(ReportingErrors.MISSING_SIGERSOL_DATA_FOR_PERIOD));
-        verify(esgCertificateRepository, never()).save(any(), any());
+        verify(esgCertificateRepository, never()).save(any(), any(), any());
     }
 
     @Test
@@ -223,7 +287,7 @@ class CertificateServiceTest {
                         .isEqualTo(ReportingErrors.INACTIVE_TRACKED_COMPANY));
         verify(esgCertificateRepository, never()).existsOverlapping(any(), any(), any());
         verify(sigersolSyncRepository, never()).findCovering(any(), any(), any());
-        verify(esgCertificateRepository, never()).save(any(), any());
+        verify(esgCertificateRepository, never()).save(any(), any(), any());
     }
 
     @Test

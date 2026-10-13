@@ -178,6 +178,7 @@
         @if (!s.missingSigersol) {
           <p class="source">El cumplimiento es un dato SIGERSOL de ingreso manual.</p>
         }
+        <p class="source" data-testid="coverage">{{ s.coverage }}</p>
       } @else if (summary.error(); as error) {
         <div class="problem" role="alert">
           <p>{{ errorText(error, 'el resumen del período') }}</p>

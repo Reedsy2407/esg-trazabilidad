@@ -23,6 +23,10 @@ test('the records are always labelled as manual entry, newest period first, filt
   await expect(rows.first()).toContainText('Setiembre 2026');
   await expect(rows.first()).toContainText('91.25 %');
   await expect(rows.first()).toContainText('No declarado');
+  // A record made before v3 has no origin: said plainly, never guessed.
+  await expect(rows.first()).toContainText('Origen no registrado');
+  await expect(rows.nth(1)).toContainText('Con comprobante referenciado');
+  await expect(rows.nth(1)).toContainText('a.paredes@example.com');
   await expect(rows.nth(1)).toContainText('Diciembre 2024');
   await expect(rows.nth(1)).toContainText('12,500.00 kg');
   await expect(rows.nth(1)).toContainText('copiado por A. Paredes');
@@ -53,12 +57,16 @@ test('register a record: the request is exactly the form, and it shows up as man
   await page.getByLabel('Cumplimiento de jerarquía (%)').fill('84.25');
   await page.getByLabel('Kilos declarados (opcional)').fill('3200.5');
   await page.getByLabel('Nota sobre la fuente (opcional)').fill('Reporte mensual de octubre');
+  await page.getByLabel('Origen del dato').selectOption('REFERENCED_PROOF');
+  await page.getByLabel(/Referencia del comprobante/).fill('constancia-octubre.png');
   await page.getByRole('button', { name: 'Registrar dato SIGERSOL' }).click();
 
   await expect(page).toHaveURL(new RegExp(`/sigersol\\?asociacion=${ASSOCIATIONS[1].id}$`));
   await expect(page.getByRole('status').filter({ hasText: 'Dato SIGERSOL registrado como ingreso manual.' })).toBeVisible();
   await expect(page.locator('table.ledger tbody tr')).toHaveCount(1);
   await expect(page.locator('table.ledger tbody tr')).toContainText('Octubre 2026');
+  await expect(page.locator('table.ledger tbody tr')).toContainText('Con comprobante referenciado');
+  await expect(page.locator('table.ledger tbody tr')).toContainText('constancia-octubre.png');
   expect(writes).toEqual([
     {
       method: 'POST',
@@ -70,6 +78,8 @@ test('register a record: the request is exactly the form, and it shows up as man
         hierarchyCompliancePercent: 84.25,
         officialKilosDeclared: 3200.5,
         sourceNote: 'Reporte mensual de octubre',
+        origin: 'REFERENCED_PROOF',
+        reference: 'constancia-octubre.png',
       },
     },
   ]);

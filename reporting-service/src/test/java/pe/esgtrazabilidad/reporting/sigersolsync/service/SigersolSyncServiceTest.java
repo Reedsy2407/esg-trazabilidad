@@ -16,7 +16,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
+import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.reporting.exception.ReportingErrors;
+import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolOrigin;
 import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolSync;
 import pe.esgtrazabilidad.reporting.sigersolsync.port.in.RegisterSigersolSyncCommand;
 import pe.esgtrazabilidad.reporting.sigersolsync.port.out.SigersolSyncRepository;
@@ -48,7 +50,26 @@ class SigersolSyncServiceTest {
                 LocalDate.of(2026, 1, 31),
                 new BigDecimal("80.00"),
                 null,
-                null);
+                null,
+                SigersolOrigin.REFERENCED_PROOF,
+                "constancia-2026-01.png",
+                ACTOR);
+    }
+
+    private static final CurrentActor ACTOR = new CurrentActor(UUID.randomUUID(), "ana@example.com");
+
+    @Test
+    void theOriginTheReferenceAndTheActorOfTheCommandEndUpOnTheRecord() {
+        UUID associationId = UUID.randomUUID();
+        when(repository.existsOverlapping(any(), any(), any())).thenReturn(false);
+        when(repository.save(any(SigersolSync.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SigersolSync result = service.register(sampleCommand(associationId));
+
+        assertThat(result.getOrigin()).isEqualTo(SigersolOrigin.REFERENCED_PROOF);
+        assertThat(result.getReference()).isEqualTo("constancia-2026-01.png");
+        assertThat(result.getRegisteredById()).isEqualTo(ACTOR.id());
+        assertThat(result.getRegisteredByEmail()).isEqualTo("ana@example.com");
     }
 
     @Test
@@ -81,7 +102,15 @@ class SigersolSyncServiceTest {
     void rejectsAnInvalidPeriodWithATypedError() {
         UUID associationId = UUID.randomUUID();
         RegisterSigersolSyncCommand invalidPeriod = new RegisterSigersolSyncCommand(
-                associationId, LocalDate.of(2026, 1, 31), LocalDate.of(2026, 1, 1), new BigDecimal("80"), null, null);
+                associationId,
+                LocalDate.of(2026, 1, 31),
+                LocalDate.of(2026, 1, 1),
+                new BigDecimal("80"),
+                null,
+                null,
+                SigersolOrigin.DECLARED_BY_OPERATOR,
+                null,
+                ACTOR);
         when(repository.existsOverlapping(associationId, LocalDate.of(2026, 1, 31), LocalDate.of(2026, 1, 1)))
                 .thenReturn(false);
 

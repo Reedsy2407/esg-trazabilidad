@@ -85,6 +85,10 @@ services:
         value: decolecta
       - key: RUC_LOOKUP_TOKEN
         sync: false
+      # SIGERSOL Municipal (district context on certificates). No default in code.
+      # none = every district reads "no disponible"; nothing depends on SIGERSOL.
+      - key: SIGERSOL_MUNICIPAL_PROVIDER
+        value: none
 
   - type: web
     name: esg-auth-service

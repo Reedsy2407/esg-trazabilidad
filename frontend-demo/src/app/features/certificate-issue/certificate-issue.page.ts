@@ -5,9 +5,11 @@ import { finalize } from 'rxjs';
 
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
+import { DistrictContext } from '../../shared/district-context';
 import { loadErrorMessage, writeErrorText } from '../../shared/error-message';
 import { formatKg, formatLocalDate, formatPercent, periodLabel, todayInLima } from '../../shared/format';
 import { ManualTag } from '../sigersol/manual-tag';
+import { coverageNote } from '../sigersol/origin-label';
 import { Period, monthPeriod, overlaps, periodProblem, previousMonth } from './issue-period';
 
 export const ISSUE_UNCERTAIN =
@@ -27,7 +29,7 @@ type ErrorKind = 'overlap' | 'sigersol' | 'uncertain' | 'other';
  */
 @Component({
   selector: 'app-certificate-issue-page',
-  imports: [RouterLink, ManualTag],
+  imports: [RouterLink, ManualTag, DistrictContext],
   templateUrl: './certificate-issue.page.html',
   styleUrl: './certificate-issue.page.css',
 })
@@ -117,6 +119,8 @@ export class CertificateIssuePage {
       compliance: formatPercent(s.hierarchyCompliancePercent),
       zero: s.kilosTrazados === 0,
       missingSigersol: s.hierarchyCompliancePercent === null,
+      coverage: coverageNote(s),
+      districts: s.districts ?? [],
       overlapping: overlapping === null ? null : { id: overlapping.id, label: periodLabel(overlapping.periodStart, overlapping.periodEnd) },
     };
   });

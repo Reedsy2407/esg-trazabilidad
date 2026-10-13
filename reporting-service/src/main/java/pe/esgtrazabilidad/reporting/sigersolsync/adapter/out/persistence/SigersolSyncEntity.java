@@ -42,6 +42,18 @@ class SigersolSyncEntity implements Persistable<UUID> {
     @Column(name = "source_note")
     private String sourceNote;
 
+    @Column(name = "origin")
+    private String origin;
+
+    @Column(name = "registered_by_id")
+    private UUID registeredById;
+
+    @Column(name = "registered_by_email")
+    private String registeredByEmail;
+
+    @Column(name = "reference")
+    private String reference;
+
     @Transient
     private boolean isNew = false;
 
@@ -56,7 +68,15 @@ class SigersolSyncEntity implements Persistable<UUID> {
             BigDecimal hierarchyCompliancePercent,
             BigDecimal officialKilosDeclared,
             Instant declaredAt,
-            String sourceNote) {
+            String sourceNote,
+            String origin,
+            UUID registeredById,
+            String registeredByEmail,
+            String reference) {
+        this.origin = origin;
+        this.registeredById = registeredById;
+        this.registeredByEmail = registeredByEmail;
+        this.reference = reference;
         this.id = id;
         this.associationId = associationId;
         this.periodStart = periodStart;
@@ -109,5 +129,21 @@ class SigersolSyncEntity implements Persistable<UUID> {
 
     String getSourceNote() {
         return sourceNote;
+    }
+
+    String getOrigin() {
+        return origin;
+    }
+
+    UUID getRegisteredById() {
+        return registeredById;
+    }
+
+    String getRegisteredByEmail() {
+        return registeredByEmail;
+    }
+
+    String getReference() {
+        return reference;
     }
 }

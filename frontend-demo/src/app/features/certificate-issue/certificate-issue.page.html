@@ -112,7 +112,9 @@
                 <!-- &ngsp;: a real space Angular keeps; a whitespace-only text node before the tag would be dropped. -->
                 <dd><span class="mono">{{ d.compliance }}</span>@if (!d.missingSigersol) {&ngsp;<app-manual-tag />}</dd>
               </div>
+              <div class="leader"><dt>Origen del dato</dt><dd>{{ d.coverage }}</dd></div>
             </dl>
+            <app-district-context [lines]="d.districts" idPrefix="draft-district" />
           </article>
 
           @if (d.overlapping; as o) {

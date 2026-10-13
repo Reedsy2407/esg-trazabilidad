@@ -11,6 +11,10 @@ import java.util.UUID;
  * which reporting-service never depends on. The two are a JSON wire
  * contract, not a shared Java type; Jackson deserializes by field name.
  * Same shape as recycler-service's own independently-defined copy (Task 30).
+ *
+ * v3 (D3): {@code districtUbigeo} is the neighbour's ubigeo when the record was
+ * made. It is absent in events published before v3, which Jackson reads as null
+ * ("distrito desconocido").
  */
 record CollectionRegisteredEvent(
         UUID eventId,
@@ -19,5 +23,6 @@ record CollectionRegisteredEvent(
         UUID neighborId,
         UUID associationId,
         LocalDate collectionDate,
-        BigDecimal weightKg) {
+        BigDecimal weightKg,
+        String districtUbigeo) {
 }

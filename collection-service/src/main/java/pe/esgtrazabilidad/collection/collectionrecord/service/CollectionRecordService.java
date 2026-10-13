@@ -90,7 +90,7 @@ class CollectionRecordService
                 command.collectionDate(),
                 command.weightKg());
         CollectionRecord saved = repository.save(record);
-        eventPublisher.publish(CollectionRegisteredEvent.from(saved));
+        eventPublisher.publish(CollectionRegisteredEvent.from(saved, neighbor.getDistrictUbigeo()));
         return saved;
     }
 

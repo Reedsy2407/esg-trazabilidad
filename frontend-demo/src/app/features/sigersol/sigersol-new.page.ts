@@ -4,12 +4,14 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { finalize, map } from 'rxjs';
 
+import { SigersolOrigin } from '../../core/api/api.types';
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
 import { decimalValidator } from '../../shared/decimal';
 import { loadErrorMessage, writeErrorText } from '../../shared/error-message';
 import { periodLabel } from '../../shared/format';
 import { ManualTag } from './manual-tag';
+import { ORIGIN_OPTIONS } from './origin-label';
 
 export const SIGERSOL_UNCERTAIN =
   'No pudimos confirmar si el dato SIGERSOL quedó registrado. Revisa los registros de la asociación antes de volver a intentarlo.';
@@ -56,7 +58,10 @@ export class SigersolNewPage {
     compliance: ['', [Validators.required, decimalValidator(3, 2, 0, 100)]],
     kilos: ['', decimalValidator(12, 2, 0)],
     note: ['', Validators.maxLength(NOTE_MAX)],
+    origin: ['DECLARED_BY_OPERATOR' as SigersolOrigin, Validators.required],
+    reference: ['', Validators.maxLength(NOTE_MAX)],
   });
+  protected readonly originOptions = ORIGIN_OPTIONS;
 
   protected readonly associations = rxResource({ stream: () => this.api.associations() });
   protected readonly associationsTruncated = computed(
@@ -149,6 +154,8 @@ export class SigersolNewPage {
       hierarchyCompliancePercent: Number(v.compliance.trim()),
       officialKilosDeclared: v.kilos.trim() === '' ? null : Number(v.kilos.trim()),
       sourceNote: v.note.trim() === '' ? null : v.note.trim(),
+      origin: v.origin,
+      ...(v.reference.trim() !== '' && { reference: v.reference.trim() }),
     };
     this.submitting.set(true);
     this.api

@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolOrigin;
 import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolSync;
 import pe.esgtrazabilidad.reporting.sigersolsync.port.out.SigersolSyncRepository;
 
@@ -57,7 +58,11 @@ class SigersolSyncRepositoryAdapter implements SigersolSyncRepository {
                 sigersolSync.getHierarchyCompliancePercent(),
                 sigersolSync.getOfficialKilosDeclared(),
                 sigersolSync.getDeclaredAt(),
-                sigersolSync.getSourceNote());
+                sigersolSync.getSourceNote(),
+                sigersolSync.getOrigin() == null ? null : sigersolSync.getOrigin().name(),
+                sigersolSync.getRegisteredById(),
+                sigersolSync.getRegisteredByEmail(),
+                sigersolSync.getReference());
     }
 
     private SigersolSync toDomain(SigersolSyncEntity entity) {
@@ -69,6 +74,10 @@ class SigersolSyncRepositoryAdapter implements SigersolSyncRepository {
                 entity.getHierarchyCompliancePercent(),
                 entity.getOfficialKilosDeclared(),
                 entity.getDeclaredAt(),
-                entity.getSourceNote());
+                entity.getSourceNote(),
+                entity.getOrigin() == null ? null : SigersolOrigin.valueOf(entity.getOrigin()),
+                entity.getRegisteredById(),
+                entity.getRegisteredByEmail(),
+                entity.getReference());
     }
 }

@@ -87,9 +87,32 @@ class CollectionRegisteredEventBrokerFlowIT {
 
     private String eventJson(UUID eventId, UUID associationId, LocalDate collectionDate, BigDecimal weightKg)
             throws JsonProcessingException {
+        return eventJson(eventId, associationId, collectionDate, weightKg, "150114");
+    }
+
+    private String eventJson(
+            UUID eventId, UUID associationId, LocalDate collectionDate, BigDecimal weightKg, String districtUbigeo)
+            throws JsonProcessingException {
         CollectionRegisteredEvent event = new CollectionRegisteredEvent(
-                eventId, Instant.now(), UUID.randomUUID(), UUID.randomUUID(), associationId, collectionDate, weightKg);
+                eventId,
+                Instant.now(),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                associationId,
+                collectionDate,
+                weightKg,
+                districtUbigeo);
         return objectMapper.writeValueAsString(event);
+    }
+
+    /** A payload as collection-service published it before v3: no districtUbigeo key at all. */
+    private String legacyEventJson(UUID eventId, UUID associationId, LocalDate collectionDate, BigDecimal weightKg)
+            throws JsonProcessingException {
+        com.fasterxml.jackson.databind.node.ObjectNode node =
+                (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.readTree(
+                        eventJson(eventId, associationId, collectionDate, weightKg));
+        node.remove("districtUbigeo");
+        return objectMapper.writeValueAsString(node);
     }
 
     private void publish(String json) {
@@ -133,6 +156,22 @@ class CollectionRegisteredEventBrokerFlowIT {
         BigDecimal sum = awaitNonZeroSum(
                 associationId, collectionDate.withDayOfMonth(1), collectionDate.withDayOfMonth(30), Duration.ofSeconds(30));
         assertThat(sum).isEqualByComparingTo("7.25");
+    }
+
+    @Test
+    void theDistrictTravelsToTheLedgerAndAPreV3PayloadIsStillAcceptedAsUnknownDistrict() throws Exception {
+        UUID associationId = UUID.randomUUID();
+        LocalDate collectionDate = LocalDate.of(2026, 6, 10);
+        UUID withDistrict = UUID.randomUUID();
+        UUID withoutDistrict = UUID.randomUUID();
+
+        publish(eventJson(withDistrict, associationId, collectionDate, new BigDecimal("3.00"), "150131"));
+        publish(legacyEventJson(withoutDistrict, associationId, collectionDate, new BigDecimal("2.00")));
+
+        awaitNonZeroSum(associationId, collectionDate.withDayOfMonth(1), collectionDate.withDayOfMonth(30), Duration.ofSeconds(30));
+        Thread.sleep(2000);
+        assertThat(repository.findById(withDistrict)).get().extracting("districtUbigeo").isEqualTo("150131");
+        assertThat(repository.findById(withoutDistrict)).get().extracting("districtUbigeo").isNull();
     }
 
     @Test

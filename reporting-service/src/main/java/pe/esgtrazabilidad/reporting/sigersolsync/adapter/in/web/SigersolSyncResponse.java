@@ -5,6 +5,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolOrigin;
+
+/** {@code origin} and the author are null for records made before v3 ("origen no registrado"). */
 public record SigersolSyncResponse(
         UUID id,
         UUID associationId,
@@ -13,5 +16,9 @@ public record SigersolSyncResponse(
         BigDecimal hierarchyCompliancePercent,
         BigDecimal officialKilosDeclared,
         Instant declaredAt,
-        String sourceNote) {
+        String sourceNote,
+        SigersolOrigin origin,
+        UUID registeredById,
+        String registeredByEmail,
+        String reference) {
 }

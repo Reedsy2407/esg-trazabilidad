@@ -66,6 +66,7 @@ Tip: the group's creation screen has an **Add from .env** button. It accepts all
 | Key | Value |
 |---|---|
 | `RUC_LOOKUP_PROVIDER` | `decolecta`. The other accepted value, `none` (every lookup "does not answer"), is for development and tests only: the service refuses to start with it when `RENDER=true`, which Render sets itself. |
+| `SIGERSOL_MUNICIPAL_PROVIDER` | `none` for now (declared in `render.yaml`): every district's SIGERSOL context reads "no disponible". It has no default, so the service does not start without it. Unlike the SUNAT lookup it is allowed on Render: nothing depends on SIGERSOL. |
 | `RUC_LOOKUP_TOKEN` | The Decolecta API token (`DECOLECTA_TOKEN` is read as an alias). Free plan: 1 000 lookups a month; answers are cached for 24 hours in `ruc_lookup_cache`. Never paste it in a chat, a commit or a log. |
 
 `PORT` is **not** set: Render injects it, and each service reads `server.port: ${PORT:808x}`.

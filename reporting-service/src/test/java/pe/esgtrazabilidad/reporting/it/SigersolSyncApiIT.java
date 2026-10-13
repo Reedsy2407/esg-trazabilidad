@@ -53,7 +53,7 @@ class SigersolSyncApiIT {
                   "associationId": "%s",
                   "periodStart": "%s",
                   "periodEnd": "%s",
-                  "hierarchyCompliancePercent": 85.5,
+                  "origin": "DECLARED_BY_OPERATOR", "hierarchyCompliancePercent": 85.5,
                   "officialKilosDeclared": 1200.00,
                   "sourceNote": "Declaración manual de prueba IT"
                 }
@@ -223,7 +223,7 @@ class SigersolSyncApiIT {
                   "associationId": "%s",
                   "periodStart": "2026-09-01",
                   "periodEnd": "2026-09-30",
-                  "hierarchyCompliancePercent": 50,
+                  "origin": "DECLARED_BY_OPERATOR", "hierarchyCompliancePercent": 50,
                   "officialKilosDeclared": -1
                 }
                 """.formatted(UUID.randomUUID());
@@ -245,7 +245,7 @@ class SigersolSyncApiIT {
                   "associationId": "%s",
                   "periodStart": "2026-04-01",
                   "periodEnd": "2026-04-30",
-                  "hierarchyCompliancePercent": 150
+                  "origin": "DECLARED_BY_OPERATOR", "hierarchyCompliancePercent": 150
                 }
                 """.formatted(UUID.randomUUID());
 

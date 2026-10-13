@@ -88,7 +88,7 @@ class CertificateAnnulmentApiIT {
                 .contentType(ContentType.JSON)
                 .body("""
                         { "associationId": "%s", "periodStart": "2026-01-01", "periodEnd": "2026-12-31",
-                          "hierarchyCompliancePercent": 80.0 }
+                          "origin": "DECLARED_BY_OPERATOR", "hierarchyCompliancePercent": 80.0 }
                         """.formatted(associationId))
                 .when()
                 .post("/sigersol-syncs")

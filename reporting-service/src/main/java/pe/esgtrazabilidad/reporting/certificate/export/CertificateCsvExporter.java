@@ -12,6 +12,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.springframework.stereotype.Component;
 
+import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
 
@@ -48,6 +49,11 @@ public class CertificateCsvExporter {
     }
 
     public byte[] export(EsgCertificate certificate, List<EsgCertificateLineItem> lineItems) {
+        return export(certificate, lineItems, List.of());
+    }
+
+    public byte[] export(
+            EsgCertificate certificate, List<EsgCertificateLineItem> lineItems, List<DistrictLine> districtLines) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
                 CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
@@ -66,6 +72,34 @@ public class CertificateCsvExporter {
                 printer.printRecord("motivo_anulacion", text(certificate.getAnnulmentReason()));
             }
             printer.println();
+
+            if (!districtLines.isEmpty()) {
+                // SIGERSOL Municipal's aggregated public counts per district, as frozen at issue.
+                printer.printRecord(
+                        "Distrito",
+                        "Ubigeo",
+                        "Kilos trazados",
+                        "Contexto",
+                        "Asociaciones",
+                        "Recicladores",
+                        "Fuente");
+                for (DistrictLine district : districtLines) {
+                    boolean available = district.status() == DistrictLine.Status.AVAILABLE;
+                    printer.printRecord(
+                            text(district.districtName()),
+                            district.districtUbigeo() == null ? "" : district.districtUbigeo(),
+                            district.kilos().toPlainString(),
+                            switch (district.status()) {
+                                case AVAILABLE -> "disponible";
+                                case UNAVAILABLE -> "no disponible";
+                                case UNKNOWN_DISTRICT -> "distrito desconocido";
+                            },
+                            available ? district.associationCount() : "",
+                            available ? district.recyclerCount() : "",
+                            available ? "SIGERSOL Municipal, año " + district.year() + ", datos agregados" : "");
+                }
+                printer.println();
+            }
 
             printer.printRecord("Fecha de recoleccion", "Peso (kg)");
             for (EsgCertificateLineItem lineItem : lineItems) {

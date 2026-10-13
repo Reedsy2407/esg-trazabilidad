@@ -135,6 +135,25 @@
     <p class="counter" id="note-count">{{ noteLength() }} de {{ noteMax }} caracteres</p>
   </div>
 
+  <div class="field">
+    <label for="origin">Origen del dato</label>
+    <select id="origin" class="control" formControlName="origin" aria-describedby="origin-hint">
+      @for (o of originOptions; track o.value) {
+        <option [value]="o.value">{{ o.label }}</option>
+      }
+    </select>
+    <p class="hint" id="origin-hint">
+      Cómo obtuviste la cifra. No significa que SIGERSOL la haya validado: es lo que declara quien la ingresa. Quedará
+      registrado con tu correo.
+    </p>
+  </div>
+
+  <div class="field">
+    <label for="reference">Referencia del comprobante <span class="optional">(opcional)</span></label>
+    <input id="reference" class="control" formControlName="reference" autocomplete="off" [attr.maxlength]="noteMax" />
+    <p class="hint" id="reference-hint">Un nombre de archivo, un número de constancia o un enlace interno.</p>
+  </div>
+
   @if (error(); as message) {
     <div class="problem form-problem" role="alert">
       <p>{{ message }}</p>

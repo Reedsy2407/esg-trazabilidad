@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateStatus;
@@ -25,6 +26,40 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CertificateCsvExporterTest {
 
     private final CertificateCsvExporter exporter = new CertificateCsvExporter();
+
+    @Test
+    void theDistrictTableCarriesSigersolsCountsWithTheirSourceAndAnInjectionSafeName() throws IOException {
+        TrackedCompany trackedCompany = TrackedCompany.create("Empresa", "20123456789", UUID.randomUUID());
+        EsgCertificate certificate = EsgCertificate.issue(
+                trackedCompany, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), new BigDecimal("8.00"), new BigDecimal("85.00"));
+
+        byte[] csv = exporter.export(certificate, List.of(), List.of(
+                new DistrictLine("150114", "La Molina", new BigDecimal("5.00"), DistrictLine.Status.AVAILABLE, 2024, 3, 31),
+                new DistrictLine("150131", "=SUMA(1)", new BigDecimal("2.00"), DistrictLine.Status.UNAVAILABLE, null, null, null),
+                DistrictLine.unknown(new BigDecimal("1.00"))));
+
+        List<CSVRecord> records;
+        try (CSVParser parser = CSVParser.parse(new String(csv, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+            records = parser.getRecords();
+        }
+        assertThat(records).anySatisfy(r -> assertThat(r)
+                .containsExactly("Distrito", "Ubigeo", "Kilos trazados", "Contexto", "Asociaciones", "Recicladores", "Fuente"));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly(
+                "La Molina", "150114", "5.00", "disponible", "3", "31", "SIGERSOL Municipal, año 2024, datos agregados"));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly(
+                "'=SUMA(1)", "150131", "2.00", "no disponible", "", "", ""));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly(
+                "Distrito desconocido", "", "1.00", "distrito desconocido", "", "", ""));
+    }
+
+    @Test
+    void withoutDistrictsTheCsvHasNoDistrictTable() throws IOException {
+        TrackedCompany trackedCompany = TrackedCompany.create("Empresa", "20123456789", UUID.randomUUID());
+        EsgCertificate certificate = EsgCertificate.issue(
+                trackedCompany, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), new BigDecimal("8.00"), new BigDecimal("85.00"));
+
+        assertThat(new String(exporter.export(certificate, List.of()), StandardCharsets.UTF_8)).doesNotContain("Ubigeo");
+    }
 
     @Test
     void producesValidCsvWithSummaryAndLineItemsRoundTripping() throws IOException {

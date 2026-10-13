@@ -80,7 +80,7 @@ class CertificateConcurrencyApiIT {
                   "associationId": "%s",
                   "periodStart": "%s",
                   "periodEnd": "%s",
-                  "hierarchyCompliancePercent": 80.0
+                  "origin": "DECLARED_BY_OPERATOR", "hierarchyCompliancePercent": 80.0
                 }
                 """.formatted(associationId, periodStart, periodEnd);
     }

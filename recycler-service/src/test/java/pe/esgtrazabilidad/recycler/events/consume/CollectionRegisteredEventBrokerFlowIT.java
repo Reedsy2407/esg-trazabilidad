@@ -145,6 +145,31 @@ class CollectionRegisteredEventBrokerFlowIT {
         assertThat(total).isEqualByComparingTo("7.25");
     }
 
+    /**
+     * v3 (D3): collection-service now sends districtUbigeo, which recycler-service doesn't model.
+     * The consumer must ignore it (and any other field a later version adds) and still count the
+     * record exactly once, even when the same message is delivered twice.
+     */
+    @Test
+    void aPayloadWithTheDistrictAndAnUnknownFieldIsAcceptedAndCountedOnce() throws Exception {
+        Association association = associationRepository.save(Association.create(
+                "Asociación broker IT 3", "20144444444", "REG-BRK-3", "Dirección", "a@b.pe", "999999999"));
+        com.fasterxml.jackson.databind.node.ObjectNode payload =
+                (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.readTree(
+                        eventJson(UUID.randomUUID(), association.getId(), new BigDecimal("4.50")));
+        payload.put("districtUbigeo", "150114");
+        payload.put("someFutureField", "ignored");
+        String json = objectMapper.writeValueAsString(payload);
+
+        publish(json);
+        BigDecimal total = awaitNonZeroTotal(association.getId(), Duration.ofSeconds(30));
+        publish(json);
+        Thread.sleep(5000);
+
+        assertThat(total).isEqualByComparingTo("4.50");
+        assertThat(totalKilosCollectedInDb(association.getId())).isEqualByComparingTo("4.50");
+    }
+
     @Test
     void redeliveringTheSameMessageOverTheRealBrokerDoesNotDoubleApplyIt() throws Exception {
         Association association = associationRepository.save(Association.create(

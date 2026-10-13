@@ -1953,6 +1953,16 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 - Spec OpenAPI de reporting-service regenerado (`node portal/scripts/export-openapi.mjs`): solo agrega el endpoint `/annul` y los campos nuevos.
 - Nota de entorno: el log de ITs muestra un intento de conexión a RabbitMQ en localhost:5672 pese a `auto-startup=false`; es ruido preexistente, no falla nada.
 
+### Checkpoint V3-M5
+
+- `mvn -B verify` del monorepo (timeout 900): BUILD SUCCESS en shared-kernel, recycler, collection, reporting, auth y e2e-tests, 0 fallos. Frontend: 223 unit, lint, `tsc` y 140 Playwright verdes.
+- Ninguna llamada real a SIGERSOL: el repositorio no tiene la URL base ni un ejemplo de petición/respuesta de los endpoints (el spike S1 se hizo en otra terminal), así que el adaptador HTTP real y sus respuestas grabadas quedaron pendientes (puerto, snapshot y degradación ya están). `SIGERSOL_MUNICIPAL_PROVIDER=none` en Render.
+- Migración v0.4.0 (5 changesets con rollback, `MigrationCounts.V040` los cuenta para los ITs de rollback); `pre-m5` existía.
+- Lección: los ITs de rollback que deshacen "los últimos N changesets" se rompen al añadir un archivo posterior; contar desde una constante compartida.
+- Lección: una palabra puede estar prohibida por un test del frontend (`/verific/` en el certificado): el aviso del contexto distrital dice "Describen el distrito, no a la empresa", nunca "no verifican".
+- Lección: el store del snapshot usa `REQUIRES_NEW` porque se llama desde dentro de la transacción de emisión; un SQL rechazado abortaría la transacción del certificado.
+- Deuda: calcular el contexto distrital antes de abrir la transacción de emisión cuando exista el adaptador real; caché negativa corta para distritos sin filas.
+
 ### Checkpoint V3-M4
 
 - `mvn -B -pl reporting-service -am verify` (timeout 900): BUILD SUCCESS, 108 IT y 0 fallos. Frontend: 219 unit, lint, `tsc` y 139 Playwright verdes.

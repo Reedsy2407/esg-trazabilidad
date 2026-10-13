@@ -103,6 +103,12 @@ export interface RegisterUnverifiedTrackedCompanyRequest extends RegisterTracked
  * reporting-service SigersolSyncResponse: official figures copied by hand from SIGERSOL (no
  * integration exists). BigDecimals as JSON numbers; declaredAt is the server's Instant.now().
  */
+export type SigersolOrigin = 'DECLARED_BY_OPERATOR' | 'REFERENCED_PROOF';
+
+/**
+ * `origin`, `registeredByEmail` and `reference` are null for records made before v3 ("origen no
+ * registrado"); who registered it comes from the token.
+ */
 export interface SigersolSync {
   readonly id: string;
   readonly associationId: string;
@@ -112,6 +118,9 @@ export interface SigersolSync {
   readonly officialKilosDeclared: number | null;
   readonly declaredAt: string;
   readonly sourceNote: string | null;
+  readonly origin: SigersolOrigin | null;
+  readonly registeredByEmail: string | null;
+  readonly reference: string | null;
 }
 
 /**
@@ -127,6 +136,10 @@ export interface RegisterSigersolSyncRequest {
   readonly hierarchyCompliancePercent: number;
   readonly officialKilosDeclared: number | null;
   readonly sourceNote: string | null;
+  /** Required by the backend (D1): how the operator got the figure. */
+  readonly origin: SigersolOrigin;
+  /** Optional pointer to the operator's proof, 255 characters at most. */
+  readonly reference?: string;
 }
 
 /**
@@ -154,6 +167,8 @@ export interface EsgCertificate {
   readonly annulledById: string | null;
   readonly annulledByEmail: string | null;
   readonly annulmentReason: string | null;
+  /** Frozen at issue; absent in a list page (open the certificate to read it). */
+  readonly districtContext?: readonly DistrictLine[] | null;
 }
 
 /**
@@ -180,6 +195,33 @@ export interface CertificateSummary {
   readonly periodEnd: string;
   readonly kilosTrazados: number;
   readonly hierarchyCompliancePercent: number | null;
+  /** UNVERIFIED ("No verificado") when no SIGERSOL record covers the period; RECORDED otherwise. */
+  readonly sigersolCoverage?: SigersolCoverage;
+  /** Of the covering record; null for a record made before v3 ("origen no registrado"). */
+  readonly sigersolOrigin?: SigersolOrigin | null;
+  readonly sigersolRegisteredByEmail?: string | null;
+  /** Kilos per district with SIGERSOL's context, live (the draft); empty when nothing was traced. */
+  readonly districts?: readonly DistrictLine[];
+}
+
+export type SigersolCoverage = 'RECORDED' | 'UNVERIFIED';
+
+export type DistrictLineStatus = 'AVAILABLE' | 'UNAVAILABLE' | 'UNKNOWN_DISTRICT';
+
+/**
+ * One district of a certificate or of its draft: the kilos traced there and what SIGERSOL Municipal
+ * says about the district (aggregated public counts of associations and recyclers, with their year;
+ * never a claim about the company). UNAVAILABLE = "no disponible"; UNKNOWN_DISTRICT = kilos whose
+ * records carry no district. On a certificate it is frozen when it is issued.
+ */
+export interface DistrictLine {
+  readonly districtUbigeo: string | null;
+  readonly districtName: string;
+  readonly kilos: number;
+  readonly status: DistrictLineStatus;
+  readonly year: number | null;
+  readonly associationCount: number | null;
+  readonly recyclerCount: number | null;
 }
 
 /**

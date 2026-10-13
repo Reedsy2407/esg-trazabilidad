@@ -16,6 +16,12 @@
       },
       "CertificateSummaryResponse" : {
         "properties" : {
+          "districts" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DistrictLine"
+            },
+            "type" : "array"
+          },
           "hierarchyCompliancePercent" : {
             "type" : "number"
           },
@@ -30,9 +36,60 @@
             "format" : "date",
             "type" : "string"
           },
+          "sigersolCoverage" : {
+            "enum" : [
+              "RECORDED",
+              "UNVERIFIED"
+            ],
+            "type" : "string"
+          },
+          "sigersolOrigin" : {
+            "enum" : [
+              "DECLARED_BY_OPERATOR",
+              "REFERENCED_PROOF"
+            ],
+            "type" : "string"
+          },
+          "sigersolRegisteredByEmail" : {
+            "type" : "string"
+          },
           "trackedCompanyId" : {
             "format" : "uuid",
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DistrictLine" : {
+        "properties" : {
+          "associationCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "districtName" : {
+            "type" : "string"
+          },
+          "districtUbigeo" : {
+            "type" : "string"
+          },
+          "kilos" : {
+            "type" : "number"
+          },
+          "recyclerCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [
+              "AVAILABLE",
+              "UNAVAILABLE",
+              "UNKNOWN_DISTRICT"
+            ],
+            "type" : "string"
+          },
+          "year" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -90,6 +147,12 @@
           },
           "companyRuc" : {
             "type" : "string"
+          },
+          "districtContext" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DistrictLine"
+            },
+            "type" : "array"
           },
           "hierarchyCompliancePercent" : {
             "type" : "number"
@@ -275,12 +338,24 @@
           "officialKilosDeclared" : {
             "type" : "number"
           },
+          "origin" : {
+            "enum" : [
+              "DECLARED_BY_OPERATOR",
+              "REFERENCED_PROOF"
+            ],
+            "type" : "string"
+          },
           "periodEnd" : {
             "format" : "date",
             "type" : "string"
           },
           "periodStart" : {
             "format" : "date",
+            "type" : "string"
+          },
+          "reference" : {
+            "maxLength" : 255,
+            "minLength" : 0,
             "type" : "string"
           },
           "sourceNote" : {
@@ -290,6 +365,7 @@
         "required" : [
           "associationId",
           "hierarchyCompliancePercent",
+          "origin",
           "periodEnd",
           "periodStart"
         ],
@@ -390,12 +466,29 @@
           "officialKilosDeclared" : {
             "type" : "number"
           },
+          "origin" : {
+            "enum" : [
+              "DECLARED_BY_OPERATOR",
+              "REFERENCED_PROOF"
+            ],
+            "type" : "string"
+          },
           "periodEnd" : {
             "format" : "date",
             "type" : "string"
           },
           "periodStart" : {
             "format" : "date",
+            "type" : "string"
+          },
+          "reference" : {
+            "type" : "string"
+          },
+          "registeredByEmail" : {
+            "type" : "string"
+          },
+          "registeredById" : {
+            "format" : "uuid",
             "type" : "string"
           },
           "sourceNote" : {

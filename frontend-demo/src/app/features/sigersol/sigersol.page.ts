@@ -8,6 +8,7 @@ import { BackendApi } from '../../core/api/backend.api';
 import { loadErrorMessage } from '../../shared/error-message';
 import { formatInstantDate, formatKg, formatPercentExact, periodLabel } from '../../shared/format';
 import { ManualTag } from './manual-tag';
+import { originLabel } from './origin-label';
 
 /** Was this page opened right after registering a record? Read once, then dropped from history. */
 function justRegistered(): boolean {
@@ -73,6 +74,9 @@ export class SigersolPage {
       kilos: s.officialKilosDeclared === null ? 'No declarado' : formatKg(s.officialKilosDeclared),
       declared: formatInstantDate(s.declaredAt),
       note: s.sourceNote?.trim() || null,
+      origin: originLabel(s.origin ?? null),
+      author: s.registeredByEmail ?? null,
+      reference: s.reference ?? null,
     }));
   });
 

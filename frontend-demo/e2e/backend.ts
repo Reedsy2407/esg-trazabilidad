@@ -292,6 +292,16 @@ export const RECORDS: readonly RecordRow[] = [
   { id: '0192f3a8-d000-7000-8000-000000000103', neighborId: NEIGHBORS[1].id, scheduleId: null, associationId: ASSOCIATIONS[1].id, collectionDate: '2026-08-14', weightKg: 20 },
 ];
 
+/**
+ * The SIGERSOL Municipal context per district (DistrictLine): one district with counts and their
+ * year, one for which SIGERSOL had nothing ("no disponible"), and the kilos with no district.
+ */
+export const DISTRICT_LINES = [
+  { districtUbigeo: '150114', districtName: 'La Molina', kilos: 11000, status: 'AVAILABLE', year: 2024, associationCount: 3, recyclerCount: 31 },
+  { districtUbigeo: '150131', districtName: 'San Isidro', kilos: 1480.5, status: 'UNAVAILABLE', year: null, associationCount: null, recyclerCount: null },
+  { districtUbigeo: null, districtName: 'Distrito desconocido', kilos: 0, status: 'UNKNOWN_DISTRICT', year: null, associationCount: null, recyclerCount: null },
+];
+
 interface SyncRow {
   id: string;
   associationId: string;
@@ -301,12 +311,18 @@ interface SyncRow {
   officialKilosDeclared: number | null;
   declaredAt: string;
   sourceNote: string | null;
+  origin: 'DECLARED_BY_OPERATOR' | 'REFERENCED_PROOF' | null;
+  registeredByEmail: string | null;
+  reference: string | null;
 }
 
-/** SIGERSOL records (SigersolSyncResponse) of ASSOCIATIONS[0], typed in by hand. */
+/**
+ * SIGERSOL records (SigersolSyncResponse) of ASSOCIATIONS[0], typed in by hand. The first has an
+ * origin (v3); the second is a record made before v3: no origin, no author ("origen no registrado").
+ */
 export const SIGERSOL_SYNCS: readonly SyncRow[] = [
-  { id: '0192f3a8-f000-7000-8000-000000000001', associationId: ASSOCIATIONS[0].id, periodStart: '2024-12-01', periodEnd: '2024-12-31', hierarchyCompliancePercent: 87.5, officialKilosDeclared: 12500, declaredAt: '2025-01-03T14:00:00Z', sourceNote: 'Reporte anual SIGERSOL, copiado por A. Paredes' },
-  { id: '0192f3a8-f000-7000-8000-000000000002', associationId: ASSOCIATIONS[0].id, periodStart: '2026-09-01', periodEnd: '2026-09-30', hierarchyCompliancePercent: 91.25, officialKilosDeclared: null, declaredAt: '2026-10-02T15:30:00Z', sourceNote: null },
+  { id: '0192f3a8-f000-7000-8000-000000000001', associationId: ASSOCIATIONS[0].id, periodStart: '2024-12-01', periodEnd: '2024-12-31', hierarchyCompliancePercent: 87.5, officialKilosDeclared: 12500, declaredAt: '2025-01-03T14:00:00Z', sourceNote: 'Reporte anual SIGERSOL, copiado por A. Paredes', origin: 'REFERENCED_PROOF', registeredByEmail: 'a.paredes@example.com', reference: 'reporte-anual-2024.pdf' },
+  { id: '0192f3a8-f000-7000-8000-000000000002', associationId: ASSOCIATIONS[0].id, periodStart: '2026-09-01', periodEnd: '2026-09-30', hierarchyCompliancePercent: 91.25, officialKilosDeclared: null, declaredAt: '2026-10-02T15:30:00Z', sourceNote: null, origin: null, registeredByEmail: null, reference: null },
 ];
 
 export async function fakeBackend(page: Page, options: BackendOptions = {}): Promise<void> {
@@ -720,8 +736,11 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
           ? gatewayError(route, options.sigersolFailure.status)
           : problem(route, options.sigersolFailure.status, options.sigersolFailure.code, 'Rechazado');
       }
-      const { associationId, periodStart, periodEnd, hierarchyCompliancePercent } = body as Record<string, string & number>;
-      if (!associationId || !periodStart || !periodEnd || typeof hierarchyCompliancePercent !== 'number') {
+      const { associationId, periodStart, periodEnd, hierarchyCompliancePercent, origin } = body as Record<string, string & number>;
+      if (
+        !associationId || !periodStart || !periodEnd || typeof hierarchyCompliancePercent !== 'number' ||
+        (origin !== 'DECLARED_BY_OPERATOR' && origin !== 'REFERENCED_PROOF')
+      ) {
         return problem(route, 400, 'VALIDATION_ERROR', 'Faltan campos obligatorios');
       }
       // Bean validation (@DecimalMin/@DecimalMax/@PositiveOrZero) answers first, as VALIDATION_ERROR.
@@ -745,6 +764,10 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
         officialKilosDeclared: (body['officialKilosDeclared'] as number | null) ?? null,
         declaredAt: new Date().toISOString(),
         sourceNote: (body['sourceNote'] as string | null) ?? null,
+        origin,
+        // The author comes from the token, never from the body.
+        registeredByEmail: EMAIL,
+        reference: (body['reference'] as string | undefined) ?? null,
       };
       syncs.push(sync);
       return json(201, sync);
@@ -961,10 +984,11 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
           annulledByEmail: EMAIL,
           annulmentReason: body.reason.trim(),
         });
-        return json(certificate);
+        return json({ ...certificate, districtContext: DISTRICT_LINES });
       }
       if (file === undefined) {
-        return json(certificate);
+        // A single certificate carries the context frozen at issue; a list page does not.
+        return json({ ...certificate, districtContext: DISTRICT_LINES });
       }
       if (options.downloadFailure === 'network') {
         return route.abort('failed');
@@ -1056,12 +1080,20 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
         certified !== undefined
           ? { kilos: certified.kilosTrazados, compliance: certified.hierarchyCompliancePercent }
           : recompute(company.associationId, periodStart ?? '', periodEnd ?? '');
+      const compliance = options.summaryComplianceNull ? null : figures.compliance;
+      const covering = syncs.find(
+        (s) => s.associationId === company.associationId && s.periodStart <= (periodStart ?? '') && s.periodEnd >= (periodEnd ?? ''),
+      );
       return json({
         trackedCompanyId: company.id,
         periodStart,
         periodEnd,
         kilosTrazados: figures.kilos,
-        hierarchyCompliancePercent: options.summaryComplianceNull ? null : figures.compliance,
+        hierarchyCompliancePercent: compliance,
+        sigersolCoverage: compliance === null ? 'UNVERIFIED' : 'RECORDED',
+        sigersolOrigin: compliance === null ? null : (covering?.origin ?? null),
+        sigersolRegisteredByEmail: compliance === null ? null : (covering?.registeredByEmail ?? null),
+        districts: DISTRICT_LINES,
       });
     }
     return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');

@@ -3,7 +3,11 @@ package pe.esgtrazabilidad.reporting.certificate.service;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -14,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.reporting.certificate.CertificateSummary;
+import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
 import pe.esgtrazabilidad.reporting.certificate.export.CertificateCsvExporter;
@@ -29,6 +34,8 @@ import pe.esgtrazabilidad.reporting.certificate.port.out.EsgCertificateRepositor
 import pe.esgtrazabilidad.reporting.events.ledger.TracedCollectionEntryEntity;
 import pe.esgtrazabilidad.reporting.events.ledger.TracedCollectionEntryJpaRepository;
 import pe.esgtrazabilidad.reporting.exception.ReportingErrors;
+import pe.esgtrazabilidad.reporting.sigersolmunicipal.service.DistrictContextService;
+import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolCoverage;
 import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolSync;
 import pe.esgtrazabilidad.reporting.sigersolsync.port.out.SigersolSyncRepository;
 import pe.esgtrazabilidad.reporting.trackedcompany.domain.TrackedCompany;
@@ -50,6 +57,7 @@ class CertificateService
     private final EsgCertificateRepository esgCertificateRepository;
     private final CertificatePdfExporter certificatePdfExporter;
     private final CertificateCsvExporter certificateCsvExporter;
+    private final DistrictContextService districtContextService;
 
     CertificateService(
             TrackedCompanyRepository trackedCompanyRepository,
@@ -57,7 +65,9 @@ class CertificateService
             SigersolSyncRepository sigersolSyncRepository,
             EsgCertificateRepository esgCertificateRepository,
             CertificatePdfExporter certificatePdfExporter,
-            CertificateCsvExporter certificateCsvExporter) {
+            CertificateCsvExporter certificateCsvExporter,
+            DistrictContextService districtContextService) {
+        this.districtContextService = districtContextService;
         this.trackedCompanyRepository = trackedCompanyRepository;
         this.tracedCollectionEntryRepository = tracedCollectionEntryRepository;
         this.sigersolSyncRepository = sigersolSyncRepository;
@@ -71,14 +81,36 @@ class CertificateService
         requireValidPeriod(periodStart, periodEnd);
         TrackedCompany trackedCompany = findTrackedCompany(trackedCompanyId);
 
-        BigDecimal kilosTrazados = sumTracedKilos(trackedCompany.getAssociationId(), periodStart, periodEnd);
+        List<TracedCollectionEntryEntity> entries = tracedCollectionEntryRepository
+                .findByAssociationIdAndCollectionDateBetween(trackedCompany.getAssociationId(), periodStart, periodEnd);
+        BigDecimal kilosTrazados = sumKilos(entries);
+        List<DistrictLine> districts = districtLines(entries);
 
-        BigDecimal hierarchyCompliancePercent = sigersolSyncRepository
+        SigersolSync covering = sigersolSyncRepository
                 .findCovering(trackedCompany.getAssociationId(), periodStart, periodEnd)
-                .map(SigersolSync::getHierarchyCompliancePercent)
                 .orElse(null);
-
-        return new CertificateSummary(trackedCompanyId, periodStart, periodEnd, kilosTrazados, hierarchyCompliancePercent);
+        if (covering == null) {
+            return new CertificateSummary(
+                    trackedCompanyId,
+                    periodStart,
+                    periodEnd,
+                    kilosTrazados,
+                    null,
+                    SigersolCoverage.UNVERIFIED,
+                    null,
+                    null,
+                    districts);
+        }
+        return new CertificateSummary(
+                trackedCompanyId,
+                periodStart,
+                periodEnd,
+                kilosTrazados,
+                covering.getHierarchyCompliancePercent(),
+                SigersolCoverage.RECORDED,
+                covering.getOrigin(),
+                covering.getRegisteredByEmail(),
+                districts);
     }
 
     @Override
@@ -109,8 +141,7 @@ class CertificateService
         List<TracedCollectionEntryEntity> entries = tracedCollectionEntryRepository
                 .findByAssociationIdAndCollectionDateBetween(
                         trackedCompany.getAssociationId(), command.periodStart(), command.periodEnd());
-        BigDecimal kilosTrazados =
-                entries.stream().map(TracedCollectionEntryEntity::getWeightKg).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal kilosTrazados = sumKilos(entries);
 
         EsgCertificate certificate = EsgCertificate.issue(
                 trackedCompany,
@@ -119,10 +150,13 @@ class CertificateService
                 kilosTrazados,
                 sigersolSync.getHierarchyCompliancePercent());
         List<EsgCertificateLineItem> lineItems = entries.stream()
-                .map(entry -> EsgCertificateLineItem.of(certificate.getId(), entry.getCollectionDate(), entry.getWeightKg()))
+                .map(entry -> EsgCertificateLineItem.of(
+                        certificate.getId(), entry.getCollectionDate(), entry.getWeightKg(), entry.getDistrictUbigeo()))
                 .toList();
 
-        return esgCertificateRepository.save(certificate, lineItems);
+        // The SIGERSOL context of each district is frozen with the certificate; it never blocks it
+        // (a district SIGERSOL can't answer for is stored as "no disponible").
+        return esgCertificateRepository.save(certificate, lineItems, districtLines(entries));
     }
 
     @Override
@@ -164,14 +198,16 @@ class CertificateService
     @Override
     public byte[] exportPdf(UUID trackedCompanyId, UUID id) {
         EsgCertificate certificate = getById(trackedCompanyId, id);
-        return certificatePdfExporter.export(certificate);
+        // Frozen at issue: exporting never asks SIGERSOL again.
+        return certificatePdfExporter.export(certificate, esgCertificateRepository.findDistrictLines(certificate.getId()));
     }
 
     @Override
     public byte[] exportCsv(UUID trackedCompanyId, UUID id) {
         EsgCertificate certificate = getById(trackedCompanyId, id);
         List<EsgCertificateLineItem> lineItems = esgCertificateRepository.findLineItems(certificate.getId());
-        return certificateCsvExporter.export(certificate, lineItems);
+        return certificateCsvExporter.export(
+                certificate, lineItems, esgCertificateRepository.findDistrictLines(certificate.getId()));
     }
 
     // Both dates are @NotNull / required params at the HTTP edge; only their order is checked here.
@@ -187,11 +223,39 @@ class CertificateService
                 .orElseThrow(() -> new ApplicationException(ReportingErrors.TRACKED_COMPANY_NOT_FOUND));
     }
 
-    private BigDecimal sumTracedKilos(UUID associationId, LocalDate periodStart, LocalDate periodEnd) {
-        return tracedCollectionEntryRepository
-                .findByAssociationIdAndCollectionDateBetween(associationId, periodStart, periodEnd)
-                .stream()
-                .map(TracedCollectionEntryEntity::getWeightKg)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    private static BigDecimal sumKilos(List<TracedCollectionEntryEntity> entries) {
+        return entries.stream().map(TracedCollectionEntryEntity::getWeightKg).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Kilos per district with what SIGERSOL Municipal says about each one: by district name, the
+     * kilos with no district last. A district's context is one snapshot read, so a certificate
+     * with many districts does not mean many remote calls.
+     */
+    private List<DistrictLine> districtLines(List<TracedCollectionEntryEntity> entries) {
+        Map<String, BigDecimal> kilosByDistrict = new LinkedHashMap<>();
+        BigDecimal unknownKilos = BigDecimal.ZERO;
+        boolean anyUnknown = false;
+        for (TracedCollectionEntryEntity entry : entries) {
+            if (entry.getDistrictUbigeo() == null) {
+                unknownKilos = unknownKilos.add(entry.getWeightKg());
+                anyUnknown = true;
+            } else {
+                kilosByDistrict.merge(entry.getDistrictUbigeo(), entry.getWeightKg(), BigDecimal::add);
+            }
+        }
+        List<DistrictLine> lines = new ArrayList<>();
+        kilosByDistrict.forEach((ubigeo, kilos) ->
+                lines.add(DistrictLine.of(ubigeo, kilos, districtContextService.contextFor(ubigeo))));
+        lines.sort(Comparator.comparing(DistrictLine::districtName));
+        if (anyUnknown) {
+            lines.add(DistrictLine.unknown(unknownKilos));
+        }
+        return lines;
+    }
+
+    @Override
+    public List<DistrictLine> districtLines(UUID trackedCompanyId, UUID id) {
+        return esgCertificateRepository.findDistrictLines(getById(trackedCompanyId, id).getId());
     }
 }

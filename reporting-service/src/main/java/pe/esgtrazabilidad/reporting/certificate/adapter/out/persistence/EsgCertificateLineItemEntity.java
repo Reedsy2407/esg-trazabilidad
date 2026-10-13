@@ -29,13 +29,18 @@ class EsgCertificateLineItemEntity implements Persistable<UUID> {
     @Column(name = "weight_kg", nullable = false)
     private BigDecimal weightKg;
 
+    @Column(name = "district_ubigeo", length = 6)
+    private String districtUbigeo;
+
     @Transient
     private boolean isNew = false;
 
     protected EsgCertificateLineItemEntity() {
     }
 
-    EsgCertificateLineItemEntity(UUID id, UUID certificateId, LocalDate collectionDate, BigDecimal weightKg) {
+    EsgCertificateLineItemEntity(
+            UUID id, UUID certificateId, LocalDate collectionDate, BigDecimal weightKg, String districtUbigeo) {
+        this.districtUbigeo = districtUbigeo;
         this.id = id;
         this.certificateId = certificateId;
         this.collectionDate = collectionDate;
@@ -68,5 +73,9 @@ class EsgCertificateLineItemEntity implements Persistable<UUID> {
 
     BigDecimal getWeightKg() {
         return weightKg;
+    }
+
+    String getDistrictUbigeo() {
+        return districtUbigeo;
     }
 }

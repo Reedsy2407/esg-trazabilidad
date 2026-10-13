@@ -27,10 +27,20 @@ public record CollectionRegisteredEvent(
         UUID neighborId,
         UUID associationId,
         LocalDate collectionDate,
-        BigDecimal weightKg)
+        BigDecimal weightKg,
+        String districtUbigeo)
         implements DomainEvent {
 
+    /** Without a district: what a consumer sees for events published before v3 (D3). */
     public static CollectionRegisteredEvent from(CollectionRecord record) {
+        return from(record, null);
+    }
+
+    /**
+     * {@code districtUbigeo} is the neighbour's ubigeo at the moment of the record (6 digits,
+     * nullable). It stays fixed: a later change of the neighbour's district doesn't rewrite it.
+     */
+    public static CollectionRegisteredEvent from(CollectionRecord record, String districtUbigeo) {
         return new CollectionRegisteredEvent(
                 IdGenerator.generate(),
                 Instant.now(),
@@ -38,7 +48,8 @@ public record CollectionRegisteredEvent(
                 record.getNeighborId(),
                 record.getAssociationId(),
                 record.getCollectionDate(),
-                record.getWeightKg());
+                record.getWeightKg(),
+                districtUbigeo);
     }
 
     @Override

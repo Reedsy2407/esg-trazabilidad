@@ -1,6 +1,6 @@
 # El evento de recojo lleva el ubigeo del vecino
 
-- **Estado:** Aceptada, pendiente de implementación. Se implementa en M5.
+- **Estado:** Implementada en M5 (2026-10-12): collection-service publica `districtUbigeo`, reporting-service lo guarda en `traced_collection_entry.district_ubigeo` y recycler-service lo ignora (prueba con el broker real).
 - **Fecha:** 2026-10-10
 - **Dónde se aplica:** collection-service (publica), reporting-service (consume), recycler-service (consume y lo ignora)
 - **Reemplaza a:** —

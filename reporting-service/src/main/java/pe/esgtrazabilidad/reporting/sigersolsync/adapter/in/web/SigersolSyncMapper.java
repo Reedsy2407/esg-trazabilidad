@@ -2,20 +2,24 @@ package pe.esgtrazabilidad.reporting.sigersolsync.adapter.in.web;
 
 import org.springframework.stereotype.Component;
 
+import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolSync;
 import pe.esgtrazabilidad.reporting.sigersolsync.port.in.RegisterSigersolSyncCommand;
 
 @Component
 class SigersolSyncMapper {
 
-    RegisterSigersolSyncCommand toCommand(RegisterSigersolSyncRequest request) {
+    RegisterSigersolSyncCommand toCommand(RegisterSigersolSyncRequest request, CurrentActor actor) {
         return new RegisterSigersolSyncCommand(
                 request.associationId(),
                 request.periodStart(),
                 request.periodEnd(),
                 request.hierarchyCompliancePercent(),
                 request.officialKilosDeclared(),
-                request.sourceNote());
+                request.sourceNote(),
+                request.origin(),
+                request.reference(),
+                actor);
     }
 
     SigersolSyncResponse toResponse(SigersolSync sigersolSync) {
@@ -27,6 +31,10 @@ class SigersolSyncMapper {
                 sigersolSync.getHierarchyCompliancePercent(),
                 sigersolSync.getOfficialKilosDeclared(),
                 sigersolSync.getDeclaredAt(),
-                sigersolSync.getSourceNote());
+                sigersolSync.getSourceNote(),
+                sigersolSync.getOrigin(),
+                sigersolSync.getRegisteredById(),
+                sigersolSync.getRegisteredByEmail(),
+                sigersolSync.getReference());
     }
 }

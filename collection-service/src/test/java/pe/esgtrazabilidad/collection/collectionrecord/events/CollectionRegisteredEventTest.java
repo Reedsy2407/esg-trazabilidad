@@ -27,5 +27,14 @@ class CollectionRegisteredEventTest {
         assertThat(event.collectionDate()).isEqualTo(record.getCollectionDate());
         assertThat(event.weightKg()).isEqualTo(record.getWeightKg());
         assertThat(event.routingKey()).isEqualTo("collection.record.registered");
+        assertThat(event.districtUbigeo()).as("no district unless the caller gives one").isNull();
+    }
+
+    @Test
+    void fromCarriesTheNeighboursUbigeoWhenGiven() {
+        CollectionRecord record = CollectionRecord.create(
+                UUID.randomUUID(), null, UUID.randomUUID(), LocalDate.now(), new BigDecimal("12.5"));
+
+        assertThat(CollectionRegisteredEvent.from(record, "150114").districtUbigeo()).isEqualTo("150114");
     }
 }

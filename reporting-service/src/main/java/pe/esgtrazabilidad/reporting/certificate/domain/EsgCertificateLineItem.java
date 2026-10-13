@@ -19,21 +19,39 @@ public class EsgCertificateLineItem {
     private final UUID certificateId;
     private final LocalDate collectionDate;
     private final BigDecimal weightKg;
+    private final String districtUbigeo;
 
-    private EsgCertificateLineItem(UUID id, UUID certificateId, LocalDate collectionDate, BigDecimal weightKg) {
+    private EsgCertificateLineItem(
+            UUID id, UUID certificateId, LocalDate collectionDate, BigDecimal weightKg, String districtUbigeo) {
         this.id = id;
         this.certificateId = certificateId;
         this.collectionDate = collectionDate;
         this.weightKg = weightKg;
+        this.districtUbigeo = districtUbigeo;
     }
 
     public static EsgCertificateLineItem of(UUID certificateId, LocalDate collectionDate, BigDecimal weightKg) {
-        return new EsgCertificateLineItem(IdGenerator.generate(), certificateId, collectionDate, weightKg);
+        return of(certificateId, collectionDate, weightKg, null);
+    }
+
+    /** {@code districtUbigeo} is the ledger row's district, copied as it was; null = "distrito desconocido". */
+    public static EsgCertificateLineItem of(
+            UUID certificateId, LocalDate collectionDate, BigDecimal weightKg, String districtUbigeo) {
+        return new EsgCertificateLineItem(IdGenerator.generate(), certificateId, collectionDate, weightKg, districtUbigeo);
     }
 
     public static EsgCertificateLineItem reconstruct(
             UUID id, UUID certificateId, LocalDate collectionDate, BigDecimal weightKg) {
-        return new EsgCertificateLineItem(id, certificateId, collectionDate, weightKg);
+        return reconstruct(id, certificateId, collectionDate, weightKg, null);
+    }
+
+    public static EsgCertificateLineItem reconstruct(
+            UUID id, UUID certificateId, LocalDate collectionDate, BigDecimal weightKg, String districtUbigeo) {
+        return new EsgCertificateLineItem(id, certificateId, collectionDate, weightKg, districtUbigeo);
+    }
+
+    public String getDistrictUbigeo() {
+        return districtUbigeo;
     }
 
     public UUID getId() {

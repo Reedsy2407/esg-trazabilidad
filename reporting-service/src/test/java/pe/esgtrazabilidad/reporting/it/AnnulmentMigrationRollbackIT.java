@@ -15,6 +15,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import pe.esgtrazabilidad.reporting.it.support.MigrationCounts;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -44,8 +46,8 @@ class AnnulmentMigrationRollbackIT {
             assertThat(columnExists(connection, "status")).isTrue();
             assertThat(exclusionIsPartial(connection)).isTrue();
 
-            // The two v0.2.0 changesets sit under the four v0.3.0 ones, so undo all six.
-            liquibase.rollback(2 + 4, null);
+            // The two v0.2.0 changesets sit under the v0.3.0 and v0.4.0 ones: undo all of them.
+            liquibase.rollback(2 + MigrationCounts.V030 + MigrationCounts.V040, null);
             assertThat(columnExists(connection, "status")).isFalse();
             assertThat(columnExists(connection, "annulment_reason")).isFalse();
             assertThat(exclusionIsPartial(connection)).isFalse();

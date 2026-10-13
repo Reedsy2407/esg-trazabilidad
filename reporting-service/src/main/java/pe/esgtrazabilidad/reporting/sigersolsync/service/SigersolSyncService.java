@@ -37,7 +37,11 @@ class SigersolSyncService implements RegisterSigersolSyncUseCase, GetSigersolSyn
                     command.periodEnd(),
                     command.hierarchyCompliancePercent(),
                     command.officialKilosDeclared(),
-                    command.sourceNote());
+                    command.sourceNote(),
+                    command.origin(),
+                    command.actor().id(),
+                    command.actor().email(),
+                    command.reference());
         } catch (IllegalArgumentException e) {
             throw new ApplicationException(ReportingErrors.INVALID_SIGERSOL_SYNC_DATA);
         }

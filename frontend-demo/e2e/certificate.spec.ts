@@ -29,6 +29,22 @@ async function expectNoSidewaysScroll(page: Page): Promise<void> {
 
 const sheet = (page: Page) => page.locator('article.sheet');
 
+test('the certificate shows the SIGERSOL context frozen per district, worded as district figures, not as validation', async ({
+  page,
+}) => {
+  await openCertificate(page);
+  const context = page.getByRole('region', { name: 'Contexto distrital' });
+  await expect(context).toBeVisible();
+  await expect(context).toContainText('Cifras públicas de SIGERSOL Municipal por distrito, agregadas.');
+  await expect(context).toContainText('Describen el distrito, no a la empresa ni a sus proveedores.');
+  await expect(context).toContainText('La Molina');
+  await expect(context).toContainText('Asociaciones: 3; recicladores: 31. Fuente: SIGERSOL Municipal, año 2024, datos agregados.');
+  await expect(context).toContainText('San Isidro');
+  await expect(context).toContainText('Contexto de SIGERSOL Municipal no disponible.');
+  await expect(context).toContainText('Distrito desconocido');
+  await expect(context).not.toContainText(/validad/i);
+});
+
 test('a certificate row on the company page opens its detail, and the detail shows the real fields', async ({ page }) => {
   await signIn(page);
   await page.goto(`/empresas/${COMPANIES[0].id}`);

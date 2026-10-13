@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 import { BackendApi } from '../../core/api/backend.api';
 import { CertificateDownloadService, UnexpectedDownloadError } from '../../core/api/certificate-download.service';
 import { ApiError } from '../../core/http/api-error';
+import { DistrictContext } from '../../shared/district-context';
 import { DownloadKind } from '../../shared/download-filename';
 import { loadErrorMessage, writeErrorText } from '../../shared/error-message';
 import { formatInstantDate, formatKg, formatLocalDate, formatPercent } from '../../shared/format';
@@ -36,7 +37,7 @@ export const ANNUL_UNCERTAIN =
 
 @Component({
   selector: 'app-certificate-page',
-  imports: [RouterLink, ReasonConfirm],
+  imports: [RouterLink, ReasonConfirm, DistrictContext],
   templateUrl: './certificate.page.html',
   styleUrl: './certificate.page.css',
 })
@@ -71,6 +72,7 @@ export class CertificatePage {
       compliance: formatPercent(c.hierarchyCompliancePercent),
       period: `${formatLocalDate(c.periodStart)} – ${formatLocalDate(c.periodEnd)}`,
       issued: formatInstantDate(c.issuedAt),
+      districts: c.districtContext ?? null,
       annulled:
         c.status === 'ANNULLED'
           ? {

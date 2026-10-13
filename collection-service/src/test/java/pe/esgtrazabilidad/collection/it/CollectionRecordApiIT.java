@@ -190,7 +190,9 @@ class CollectionRecordApiIT {
         assertThat(payloadFields.keySet())
                 .containsExactlyInAnyOrder(
                         "eventId", "occurredAt", "recordId", "neighborId", "associationId", "collectionDate",
-                        "weightKg");
+                        "weightKg", "districtUbigeo");
+        // D3: the neighbour's ubigeo at the moment of the record travels in the event.
+        assertThat(payloadFields).containsEntry("districtUbigeo", "150140");
     }
 
     @Test

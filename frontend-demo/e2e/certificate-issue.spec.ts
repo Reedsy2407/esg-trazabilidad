@@ -30,6 +30,9 @@ test('issue a month: draft, checkbox, a button naming the period, one request, t
   await expect(draft).toContainText('91.3 %');
   await expect(draft).toContainText(ASSOCIATIONS[0].name);
   await expect(draft).toHaveCSS('border-top-style', 'dashed');
+  // The draft shows, live, what SIGERSOL says about each district; it is frozen only when issued.
+  await expect(draft.getByRole('region', { name: 'Contexto distrital' })).toContainText('La Molina');
+  await expect(draft.getByRole('region', { name: 'Contexto distrital' })).toContainText('año 2024, datos agregados');
   await expect(page.getByRole('heading', { name: '2. Borrador' })).toBeFocused();
   await expect(page.getByText('Emitir es definitivo')).toBeVisible();
   await expect(page.getByText('Las cifras se recalculan al emitir')).toBeVisible();

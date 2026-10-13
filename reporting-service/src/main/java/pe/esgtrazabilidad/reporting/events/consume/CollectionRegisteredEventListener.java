@@ -35,10 +35,24 @@ class CollectionRegisteredEventListener {
     void handle(CollectionRegisteredEvent event) {
         try {
             repository.saveAndFlush(new TracedCollectionEntryEntity(
-                    event.eventId(), event.associationId(), event.collectionDate(), event.weightKg(), Instant.now()));
+                    event.eventId(),
+                    event.associationId(),
+                    event.collectionDate(),
+                    event.weightKg(),
+                    Instant.now(),
+                    knownDistrict(event.districtUbigeo())));
         } catch (DataIntegrityViolationException exception) {
             // Already processed -- redelivery of the same eventId, ack and
             // move on, not an error.
         }
+    }
+
+    /**
+     * A district that isn't 6 digits is stored as unknown instead of failing the insert: the
+     * handler above reads any integrity violation as a redelivery, so a rejected value would
+     * silently drop the whole record.
+     */
+    private static String knownDistrict(String districtUbigeo) {
+        return districtUbigeo != null && districtUbigeo.matches("\\d{6}") ? districtUbigeo : null;
     }
 }

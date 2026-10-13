@@ -18,6 +18,14 @@
   font-size: 14px;
   font-weight: 600;
 }
+.origin {
+  max-width: 20ch;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.origin .note {
+  max-width: 20ch;
+}
 .note {
   display: block;
   max-width: 32ch;

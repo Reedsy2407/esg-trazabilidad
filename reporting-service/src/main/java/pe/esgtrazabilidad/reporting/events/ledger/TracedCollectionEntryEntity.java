@@ -43,6 +43,10 @@ public class TracedCollectionEntryEntity implements Persistable<UUID> {
     @Column(name = "received_at", nullable = false)
     private Instant receivedAt;
 
+    /** The neighbour's ubigeo when the record was made (D3); null = "distrito desconocido". */
+    @Column(name = "district_ubigeo", length = 6)
+    private String districtUbigeo;
+
     @Transient
     private boolean isNew = false;
 
@@ -51,12 +55,27 @@ public class TracedCollectionEntryEntity implements Persistable<UUID> {
 
     public TracedCollectionEntryEntity(
             UUID eventId, UUID associationId, LocalDate collectionDate, BigDecimal weightKg, Instant receivedAt) {
+        this(eventId, associationId, collectionDate, weightKg, receivedAt, null);
+    }
+
+    public TracedCollectionEntryEntity(
+            UUID eventId,
+            UUID associationId,
+            LocalDate collectionDate,
+            BigDecimal weightKg,
+            Instant receivedAt,
+            String districtUbigeo) {
         this.eventId = eventId;
         this.associationId = associationId;
         this.collectionDate = collectionDate;
         this.weightKg = weightKg;
         this.receivedAt = receivedAt;
+        this.districtUbigeo = districtUbigeo;
         this.isNew = true;
+    }
+
+    public String getDistrictUbigeo() {
+        return districtUbigeo;
     }
 
     @PostLoad

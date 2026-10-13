@@ -78,7 +78,8 @@ class CertificateController {
     ResponseEntity<EsgCertificateResponse> issue(
             @PathVariable UUID companyId, @Valid @RequestBody IssueCertificateRequest request) {
         EsgCertificate certificate = issueCertificateUseCase.issue(mapper.toCommand(companyId, request));
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(certificate));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(mapper.toResponse(certificate, getCertificateUseCase.districtLines(companyId, certificate.getId())));
     }
 
     @PostMapping("/certificates/{id}/annul")
@@ -87,12 +88,14 @@ class CertificateController {
             @PathVariable UUID id,
             @Valid @RequestBody AnnulCertificateRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        return mapper.toResponse(annulCertificateUseCase.annul(companyId, id, request.reason(), CurrentActor.from(jwt)));
+        EsgCertificate annulled = annulCertificateUseCase.annul(companyId, id, request.reason(), CurrentActor.from(jwt));
+        return mapper.toResponse(annulled, getCertificateUseCase.districtLines(companyId, id));
     }
 
     @GetMapping("/certificates/{id}")
     EsgCertificateResponse getById(@PathVariable UUID companyId, @PathVariable UUID id) {
-        return mapper.toResponse(getCertificateUseCase.getById(companyId, id));
+        return mapper.toResponse(
+                getCertificateUseCase.getById(companyId, id), getCertificateUseCase.districtLines(companyId, id));
     }
 
     @GetMapping("/certificates")

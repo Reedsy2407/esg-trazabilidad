@@ -10,6 +10,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.kernel.web.PageResponse;
 import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolSync;
 import pe.esgtrazabilidad.reporting.sigersolsync.port.in.GetSigersolSyncUseCase;
@@ -47,8 +50,10 @@ class SigersolSyncController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    ResponseEntity<SigersolSyncResponse> register(@Valid @RequestBody RegisterSigersolSyncRequest request) {
-        SigersolSync sigersolSync = registerSigersolSyncUseCase.register(mapper.toCommand(request));
+    ResponseEntity<SigersolSyncResponse> register(
+            @Valid @RequestBody RegisterSigersolSyncRequest request, @AuthenticationPrincipal Jwt jwt) {
+        SigersolSync sigersolSync =
+                registerSigersolSyncUseCase.register(mapper.toCommand(request, CurrentActor.from(jwt)));
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(sigersolSync));
     }
 

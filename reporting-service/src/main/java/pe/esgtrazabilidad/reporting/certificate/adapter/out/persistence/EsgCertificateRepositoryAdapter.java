@@ -8,10 +8,13 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import pe.esgtrazabilidad.kernel.id.IdGenerator;
 import pe.esgtrazabilidad.kernel.security.CurrentActor;
+import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
 import pe.esgtrazabilidad.reporting.certificate.port.out.EsgCertificateRepository;
@@ -21,17 +24,21 @@ class EsgCertificateRepositoryAdapter implements EsgCertificateRepository {
 
     private final EsgCertificateJpaRepository certificateJpaRepository;
     private final EsgCertificateLineItemJpaRepository lineItemJpaRepository;
+    private final JdbcTemplate jdbc;
 
     EsgCertificateRepositoryAdapter(
             EsgCertificateJpaRepository certificateJpaRepository,
-            EsgCertificateLineItemJpaRepository lineItemJpaRepository) {
+            EsgCertificateLineItemJpaRepository lineItemJpaRepository,
+            JdbcTemplate jdbc) {
         this.certificateJpaRepository = certificateJpaRepository;
         this.lineItemJpaRepository = lineItemJpaRepository;
+        this.jdbc = jdbc;
     }
 
     @Override
     @Transactional
-    public EsgCertificate save(EsgCertificate certificate, List<EsgCertificateLineItem> lineItems) {
+    public EsgCertificate save(
+            EsgCertificate certificate, List<EsgCertificateLineItem> lineItems, List<DistrictLine> districtLines) {
         // The certificate row is saved (and flushed) FIRST, deliberately:
         // if it's the one that violates the EXCLUDE constraint (RPT-004),
         // the exception fires here, before any line item is ever written --
@@ -40,10 +47,46 @@ class EsgCertificateRepositoryAdapter implements EsgCertificateRepository {
         EsgCertificateEntity savedCertificate = certificateJpaRepository.saveAndFlush(toEntity(certificate));
         List<EsgCertificateLineItemEntity> lineItemEntities = lineItems.stream()
                 .map(lineItem -> new EsgCertificateLineItemEntity(
-                        lineItem.getId(), lineItem.getCertificateId(), lineItem.getCollectionDate(), lineItem.getWeightKg()))
+                        lineItem.getId(),
+                        lineItem.getCertificateId(),
+                        lineItem.getCollectionDate(),
+                        lineItem.getWeightKg(),
+                        lineItem.getDistrictUbigeo()))
                 .toList();
         lineItemJpaRepository.saveAll(lineItemEntities);
+        // Frozen with the certificate (flushed first, so the foreign key holds): re-exporting never asks SIGERSOL.
+        for (DistrictLine line : districtLines) {
+            jdbc.update(
+                    "INSERT INTO esg_certificate_district_context (id, certificate_id, district_ubigeo, district_name, "
+                            + "kilos, status, year, association_count, recycler_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    IdGenerator.generate(),
+                    certificate.getId(),
+                    line.districtUbigeo(),
+                    line.districtName(),
+                    line.kilos(),
+                    line.status().name(),
+                    line.year(),
+                    line.associationCount(),
+                    line.recyclerCount());
+        }
         return toDomain(savedCertificate);
+    }
+
+    @Override
+    public List<DistrictLine> findDistrictLines(UUID certificateId) {
+        return jdbc.query(
+                "SELECT district_ubigeo, district_name, kilos, status, year, association_count, recycler_count "
+                        + "FROM esg_certificate_district_context WHERE certificate_id = ? "
+                        + "ORDER BY (district_ubigeo IS NULL), district_name",
+                (rs, rowNum) -> new DistrictLine(
+                        rs.getString("district_ubigeo"),
+                        rs.getString("district_name"),
+                        rs.getBigDecimal("kilos"),
+                        DistrictLine.Status.valueOf(rs.getString("status")),
+                        (Integer) rs.getObject("year"),
+                        (Integer) rs.getObject("association_count"),
+                        (Integer) rs.getObject("recycler_count")),
+                certificateId);
     }
 
     @Override
@@ -55,7 +98,11 @@ class EsgCertificateRepositoryAdapter implements EsgCertificateRepository {
     public List<EsgCertificateLineItem> findLineItems(UUID certificateId) {
         return lineItemJpaRepository.findByCertificateId(certificateId).stream()
                 .map(entity -> EsgCertificateLineItem.reconstruct(
-                        entity.getId(), entity.getCertificateId(), entity.getCollectionDate(), entity.getWeightKg()))
+                        entity.getId(),
+                        entity.getCertificateId(),
+                        entity.getCollectionDate(),
+                        entity.getWeightKg(),
+                        entity.getDistrictUbigeo()))
                 .toList();
     }
 

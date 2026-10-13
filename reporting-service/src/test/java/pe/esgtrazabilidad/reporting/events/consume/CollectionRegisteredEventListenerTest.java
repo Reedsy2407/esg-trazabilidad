@@ -32,6 +32,10 @@ class CollectionRegisteredEventListenerTest {
     private ArgumentCaptor<TracedCollectionEntryEntity> entityCaptor;
 
     private CollectionRegisteredEvent sampleEvent() {
+        return sampleEvent("150114");
+    }
+
+    private CollectionRegisteredEvent sampleEvent(String districtUbigeo) {
         return new CollectionRegisteredEvent(
                 UUID.randomUUID(),
                 Instant.now(),
@@ -39,7 +43,29 @@ class CollectionRegisteredEventListenerTest {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 LocalDate.now(),
-                new BigDecimal("12.50"));
+                new BigDecimal("12.50"),
+                districtUbigeo);
+    }
+
+    private TracedCollectionEntryEntity handled(String districtUbigeo) {
+        new CollectionRegisteredEventListener(repository).handle(sampleEvent(districtUbigeo));
+        verify(repository).saveAndFlush(entityCaptor.capture());
+        return entityCaptor.getValue();
+    }
+
+    @Test
+    void theDistrictOfTheEventIsStoredOnTheLedgerRow() {
+        assertThat(handled("150114").getDistrictUbigeo()).isEqualTo("150114");
+    }
+
+    @Test
+    void anEventWithoutADistrictIsStoredAsUnknownNotDropped() {
+        assertThat(handled(null).getDistrictUbigeo()).isNull();
+    }
+
+    @Test
+    void aMalformedDistrictIsStoredAsUnknownInsteadOfBeingMistakenForARedelivery() {
+        assertThat(handled("15-114").getDistrictUbigeo()).isNull();
     }
 
     @Test

@@ -128,10 +128,25 @@ describe('SigersolNewPage', () => {
         hierarchyCompliancePercent: 88.5,
         officialKilosDeclared: null,
         sourceNote: 'Reporte de octubre',
+        origin: 'DECLARED_BY_OPERATOR',
       },
     ]);
     answer.next({} as SigersolSync);
     expect(navigate).toHaveBeenCalledWith(['/sigersol'], { queryParams: { asociacion: 'a-1' }, state: { registrado: true } });
+  });
+
+  it('D1: the origin is chosen (never claims SIGERSOL validated it) and the reference is sent only when typed', async () => {
+    await setup();
+    expect(el.querySelector('#origin-hint')?.textContent).toContain('No significa que SIGERSOL la haya validado');
+    expect([...el.querySelectorAll('#origin option')].map((o) => o.textContent?.trim())).toEqual([
+      'Declarado por el operador',
+      'Con comprobante referenciado',
+    ]);
+    fill();
+    set('origin', 'REFERENCED_PROOF');
+    set('reference', '  constancia-octubre.png ');
+    submit();
+    expect(sent[0]).toMatchObject({ origin: 'REFERENCED_PROOF', reference: 'constancia-octubre.png' });
   });
 
   it('the note can\'t pass 255 characters (longer would come back as a misleading RPT-006)', async () => {

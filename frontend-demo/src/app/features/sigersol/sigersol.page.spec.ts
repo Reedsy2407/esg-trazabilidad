@@ -22,6 +22,9 @@ const sync = (id: string, over: Partial<SigersolSync> = {}): SigersolSync => ({
   officialKilosDeclared: null,
   declaredAt: '2026-10-02T15:30:00Z',
   sourceNote: null,
+  origin: null,
+  registeredByEmail: null,
+  reference: null,
   ...over,
 });
 
@@ -57,13 +60,30 @@ describe('SigersolPage', () => {
   };
 
   it('labels the page as manual entry and shows each record with names, not ids', async () => {
-    const el = await setup([sync('s-1'), sync('s-2', { associationId: 'a-x', officialKilosDeclared: 12500, sourceNote: ' Reporte anual ' })]);
+    const el = await setup([
+      sync('s-1'),
+      sync('s-2', {
+        associationId: 'a-x',
+        officialKilosDeclared: 12500,
+        sourceNote: ' Reporte anual ',
+        origin: 'REFERENCED_PROOF',
+        registeredByEmail: 'ana@example.com',
+        reference: 'constancia.png',
+      }),
+    ]);
     expect(el.querySelector('app-manual-tag')?.textContent?.trim()).toBe('Ingreso manual');
     const rows = [...el.querySelectorAll('table.ledger tbody tr')].map((r) =>
       [...r.querySelectorAll('td')].map((td) => td.textContent?.replace(/\s+/g, ' ').trim()),
     );
-    expect(rows[0]).toEqual(['Setiembre 2026', 'Recicla Rímac', '91.25 %', 'No declarado', '02/10/2026']);
-    expect(rows[1]).toEqual(['Setiembre 2026 Reporte anual', 'Asociación no listada', '91.25 %', '12,500.00 kg', '02/10/2026']);
+    expect(rows[0]).toEqual(['Setiembre 2026', 'Recicla Rímac', '91.25 %', 'No declarado', 'Origen no registrado', '02/10/2026']);
+    expect(rows[1]).toEqual([
+      'Setiembre 2026 Reporte anual',
+      'Asociación no listada',
+      '91.25 %',
+      '12,500.00 kg',
+      'Con comprobante referenciado Ref.: constancia.png ana@example.com',
+      '02/10/2026',
+    ]);
   });
 
   it('?asociacion= filters by association, and its empty list says why it matters', async () => {

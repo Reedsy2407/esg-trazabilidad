@@ -70,7 +70,7 @@ class CollectionRegisteredEventListenerIT {
     @Test
     void aFreshEventIncrementsTotalKilosAndARedeliveryOfTheSameEventDoesNotDoubleApplyIt() {
         Association association = associationRepository.save(Association.create(
-                "Asociación evento IT", "20144444444", "REG-EVT-1", "Dirección", "a@b.pe", "999999999"));
+                "Asociación evento IT", "20144444443", "REG-EVT-1", "Dirección", "a@b.pe", "999999999"));
         CollectionRegisteredEvent event = new CollectionRegisteredEvent(
                 UUID.randomUUID(),
                 Instant.now(),
@@ -98,7 +98,7 @@ class CollectionRegisteredEventListenerIT {
         // as close to simultaneously as possible, maximizing the chance of
         // an actual race rather than accidental serialization.
         Association association = associationRepository.save(Association.create(
-                "Asociación concurrente IT", "20111111111", "REG-CONC-1", "Dirección", "a@b.pe", "999999999"));
+                "Asociación concurrente IT", "20111111112", "REG-CONC-1", "Dirección", "a@b.pe", "999999999"));
         CollectionRegisteredEvent first = new CollectionRegisteredEvent(
                 UUID.randomUUID(),
                 Instant.now(),

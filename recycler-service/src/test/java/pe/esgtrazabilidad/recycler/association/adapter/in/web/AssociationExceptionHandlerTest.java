@@ -62,7 +62,7 @@ class AssociationExceptionHandlerTest {
     private static final String VALID_REQUEST = """
             {
               "name": "Asociación",
-              "ruc": "20123456789",
+              "ruc": "20123456786",
               "registrationNumber": "REG-001",
               "address": "Dirección",
               "contactEmail": "a@b.pe",

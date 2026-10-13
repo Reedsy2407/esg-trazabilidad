@@ -1,6 +1,7 @@
 import { Page, Route } from '@playwright/test';
 
 import { districtByUbigeo } from '../src/app/shared/districts';
+import { isValidRuc } from '../src/app/shared/ruc';
 
 /**
  * Stands in for the four Render services at the network level. Response
@@ -407,6 +408,13 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     totalPages: content.length === 0 ? 0 : 1,
   });
 
+  // recycler-service with state: associations and certifications created or changed by a test are
+  // what the next GET answers.
+  const associationRows = allAssociations(options.associationCount).map((a) => ({ ...a }));
+  const certificationRows = CERTIFICATIONS.map((c) => ({ ...c }));
+  let createdAssociations = 0;
+  let createdCertifications = 0;
+
   await page.route('**/svc/recycler/associations**', (route) => {
     if (!authorized(route)) {
       return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
@@ -414,7 +422,31 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     const json = (status: number, body: unknown) =>
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
     const url = new URL(route.request().url());
-    const [, id, sub] = /\/associations(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(url.pathname) ?? [];
+    const method = route.request().method();
+    const [, id, sub, subId, action] =
+      /\/associations(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?$/.exec(url.pathname) ?? [];
+    if (id === undefined && method === 'POST') {
+      const body = route.request().postDataJSON() as { name: string; ruc: string } & Record<string, string | undefined>;
+      if (!isValidRuc(body.ruc)) {
+        return problem(route, 400, 'ASO-004', 'El RUC no es válido');
+      }
+      if (associationRows.some((a) => a.ruc === body.ruc)) {
+        return problem(route, 409, 'ASO-002', 'Ya existe una asociación con ese RUC');
+      }
+      createdAssociations += 1;
+      const row = {
+        id: `0192f3a8-9000-7000-8000-${String(createdAssociations).padStart(12, '0')}`,
+        name: body.name,
+        ruc: body.ruc,
+        registrationNumber: body.registrationNumber ?? null,
+        address: body.address ?? null,
+        contactEmail: body.contactEmail ?? null,
+        contactPhone: body.contactPhone ?? null,
+        status: 'ACTIVE' as const,
+      };
+      associationRows.push(row);
+      return json(201, row);
+    }
     if (id === undefined) {
       if (options.associationsStatus !== undefined) {
         return gatewayError(route, options.associationsStatus);
@@ -423,7 +455,7 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
       if (status !== null && status !== 'ACTIVE' && status !== 'SUSPENDED') {
         return problem(route, 400, 'VALIDATION_ERROR', `status: valor inválido '${status}' para el tipo AssociationStatus`);
       }
-      const all = allAssociations(options.associationCount).filter((a) => status === null || a.status === status);
+      const all = associationRows.filter((a) => status === null || a.status === status);
       const size = Math.min(Number(url.searchParams.get('size') ?? 20), 100);
       const number = Number(url.searchParams.get('page') ?? 0);
       return json(200, {
@@ -437,18 +469,59 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     if (!/^[0-9a-f-]{36}$/.test(id)) {
       return problem(route, 400, 'VALIDATION_ERROR', `id: valor inválido '${id}' para el tipo UUID`);
     }
-    const association = allAssociations(options.associationCount).find((a) => a.id === id);
+    const association = associationRows.find((a) => a.id === id);
     if (sub === 'certifications') {
+      if (method === 'POST') {
+        if (association === undefined) {
+          return problem(route, 404, 'CER-002', 'La asociación indicada no existe');
+        }
+        const body = route.request().postDataJSON() as { certificationType: string; issuedDate: string; expirationDate: string };
+        if (body.issuedDate >= body.expirationDate) {
+          return problem(route, 400, 'CER-003', 'La fecha de emisión debe ser anterior a la fecha de vencimiento');
+        }
+        createdCertifications += 1;
+        const row = {
+          id: `0192f3a8-8000-7000-8000-${String(createdCertifications).padStart(12, '0')}`,
+          associationId: id,
+          certificationType: body.certificationType,
+          issuedDate: body.issuedDate,
+          expirationDate: body.expirationDate,
+          expired: false,
+        };
+        certificationRows.push(row);
+        return json(201, row);
+      }
+      if (method === 'PATCH' && action === 'renew') {
+        const row = certificationRows.find((c) => c.id === subId && c.associationId === id);
+        if (row === undefined) {
+          return problem(route, 404, 'CER-001', 'Certificación no encontrada');
+        }
+        const body = route.request().postDataJSON() as { newExpirationDate: string };
+        if (body.newExpirationDate <= row.issuedDate) {
+          return problem(route, 400, 'CER-003', 'La nueva fecha de vencimiento debe ser posterior a la fecha de emisión');
+        }
+        row.expirationDate = body.newExpirationDate;
+        row.expired = false;
+        return json(200, row);
+      }
       // The backend doesn't check the association here: an unknown one lists nothing.
       if (options.certificationsStatus !== undefined) {
         return gatewayError(route, options.certificationsStatus);
       }
-      return json(200, pageOf(CERTIFICATIONS.filter((c) => c.associationId === id)));
+      return json(200, pageOf(certificationRows.filter((c) => c.associationId === id).sort((x, y) => x.expirationDate.localeCompare(y.expirationDate))));
     }
     if (association === undefined) {
       return problem(route, 404, 'ASO-001', 'Asociación no encontrada');
     }
     if (sub === undefined) {
+      return json(200, association);
+    }
+    if (method === 'PATCH' && (sub === 'suspend' || sub === 'activate')) {
+      const target = sub === 'suspend' ? 'SUSPENDED' : 'ACTIVE';
+      if (association.status === target) {
+        return problem(route, 409, 'ASO-003', 'La asociación ya se encuentra en el estado solicitado');
+      }
+      association.status = target;
       return json(200, association);
     }
     return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');

@@ -275,6 +275,29 @@ export interface Association {
 }
 
 /**
+ * recycler-service CreateAssociationRequest: name and RUC required (ASO-004 when the RUC fails the
+ * local check, ASO-002 when taken); the rest optional, null or omitted.
+ */
+export interface CreateAssociationRequest {
+  readonly name: string;
+  readonly ruc: string;
+  readonly registrationNumber?: string;
+  readonly address?: string;
+  readonly contactEmail?: string;
+  readonly contactPhone?: string;
+}
+
+/** PATCH /associations/{id}/suspend or /activate (ASO-003 when it is already in that state). */
+export type AssociationTransition = 'suspend' | 'activate';
+
+/** recycler-service CreateCertificationRequest: CER-003 unless issuedDate is before expirationDate. */
+export interface CreateCertificationRequest {
+  readonly certificationType: string;
+  readonly issuedDate: string;
+  readonly expirationDate: string;
+}
+
+/**
  * recycler-service CertificationResponse. `expired` is the backend's only state: the
  * expiration date is before the service's today (a certification expiring today is not
  * expired yet). "Por vencer" is not a backend state; the screen derives it (see

@@ -14,8 +14,10 @@ The Angular app in `frontend-demo/` is the staff console for the four services. 
 | recycler | `GET /associations` | Asociaciones (list, state filter); pickers in Registrar recojo, Registrar empresa, SIGERSOL; names on Vecino's collections |
 | recycler | `GET /associations/{id}` | Asociación; Emitir certificado (the draft's association) |
 | recycler | `GET /associations/{id}/certifications` | Asociación (certification chips) |
-| recycler | `POST /associations`, `PATCH …/suspend`, `PATCH …/activate` | — |
-| recycler | `POST …/certifications`, `GET …/certifications/{id}`, `PATCH …/renew` | — |
+| recycler | `POST /associations` | Registrar asociación (the RUC gets the same local check as the backend, D7; ASO-004 / ASO-002 answered on the screen) |
+| recycler | `PATCH …/suspend`, `PATCH …/activate` | Asociación (asks first; ASO-003 reloads the current state) |
+| recycler | `POST …/certifications`, `PATCH …/renew` | Asociación (Registrar certificación; Renovar asks for the new expiration date; CER-003 when the dates are out of order) |
+| recycler | `GET …/certifications/{id}` | — |
 | recycler | `/associations/{id}/recyclers` (create, list, detail, activate, deactivate) | — |
 | collection | `GET /neighbors` | Vecinos (filtro por estado y por distrito, elegido de la lista INEI); picker in Registrar recojo |
 | collection | `POST /neighbors` | Registrar vecino (distrito elegido de la lista INEI) |
@@ -44,6 +46,7 @@ The Angular app in `frontend-demo/` is the staff console for the four services. 
 
 The backend doesn't enforce these; the screens do, and say so.
 
+- **RUC of a new association** (`shared/ruc.ts`): the same local check as the backend (11 digits, prefix 10/15/16/17/20, modulo-11 digit) so the form stops a typo before the request; the backend still answers ASO-004 if it differs. It does not ask SUNAT.
 - **"Por vencer"** (association certifications): an unexpired certification that expires in **less than 30 days**, counted on Lima's calendar. It is not a backend state: the backend only says `expired`. "Vencido" follows that flag, plus any date already past in Lima (a clock-skew guard). The constant is `EXPIRING_SOON_DAYS` in `features/associations/certification-state.ts`. On screen it reads "vence en menos de 30 días (regla de esta aplicación…)". Green, amber and red are used only for these three chips.
 - **Issuing a certificate** (it is never deleted; the only way back is to annul it, see below):
   - An **INACTIVE** company can't be issued any certificate (product owner's decision, 2026-10-10). The backend refuses it too (`RPT-015`); the issue screen shows "Esta empresa está inactiva: no se pueden emitir certificados" instead of the period form, with no issue button. The status comes from `TrackedCompanyResponse.status`.

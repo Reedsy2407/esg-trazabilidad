@@ -66,7 +66,7 @@ class CertificationRepositoryAdapterIT {
     void updatingAnExistingCertificationPersistsTheChangeWithoutDuplicatingTheRow() {
         UUID associationId = associationRepository
                 .save(Association.create(
-                        "Asociación IT", "20144444444", "REG-IT", "Dirección", "it@test.pe", "999999999"))
+                        "Asociación IT", "20144444443", "REG-IT", "Dirección", "it@test.pe", "999999999"))
                 .getId();
         Certification certification = certificationRepository.save(Certification.create(
                 associationId, "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().plusDays(1)));
@@ -86,7 +86,7 @@ class CertificationRepositoryAdapterIT {
     void notifiedExpiredAtRoundTripsThroughUpdateAndIsResetByRenew() {
         UUID associationId = associationRepository
                 .save(Association.create(
-                        "Asociación notificada IT", "20133333333", "REG-NOTIF", "Dirección", "it@test.pe",
+                        "Asociación notificada IT", "20133333330", "REG-NOTIF", "Dirección", "it@test.pe",
                         "999999999"))
                 .getId();
         Certification certification = certificationRepository.save(Certification.create(
@@ -119,15 +119,15 @@ class CertificationRepositoryAdapterIT {
         // Proves the query's WHERE clause, not just that the method exists --
         // a Mockito test can't validate this, only real Postgres can.
         Certification expiredNotNotified = certificationRepository.save(Certification.create(
-                newAssociationId("20111111111"), "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().minusDays(1)));
+                newAssociationId("20111111112"), "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().minusDays(1)));
 
         Certification expiredAlreadyNotified = certificationRepository.save(Certification.create(
-                newAssociationId("20122222222"), "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().minusDays(1)));
+                newAssociationId("20122222226"), "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().minusDays(1)));
         expiredAlreadyNotified.markNotifiedExpired(Instant.now());
         certificationRepository.update(expiredAlreadyNotified);
 
         certificationRepository.save(Certification.create(
-                newAssociationId("20155555555"), "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().plusYears(1)));
+                newAssociationId("20155555557"), "ISO 14001", LocalDate.now().minusDays(30), LocalDate.now().plusYears(1)));
 
         List<Certification> found = certificationRepository.findExpiredAndNotYetNotified();
 

@@ -51,7 +51,7 @@ class RecyclerRepositoryAdapterIT {
 
     @Test
     void savingASecondRecyclerWithTheSameDniViolatesTheUniqueConstraint() {
-        UUID associationId = persistAssociation("20155555555");
+        UUID associationId = persistAssociation("20155555557");
         String sharedDni = "12399999";
         recyclerRepository.save(Recycler.create("Primer reciclador", sharedDni, "999999999", associationId));
 
@@ -84,7 +84,7 @@ class RecyclerRepositoryAdapterIT {
 
     @Test
     void updatingAnExistingRecyclerPersistsTheChangeWithoutDuplicatingTheRow() {
-        UUID associationId = persistAssociation("20166666666");
+        UUID associationId = persistAssociation("20166666661");
         Recycler recycler = recyclerRepository.save(
                 Recycler.create("Reciclador a actualizar", "11122233", "999999999", associationId));
         UUID id = recycler.getId();

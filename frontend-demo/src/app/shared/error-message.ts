@@ -16,6 +16,7 @@ export const CODE_MESSAGES: Readonly<Record<string, string>> = {
   'ASO-001': 'La asociación no existe.',
   'ASO-002': 'Ya hay una asociación registrada con ese RUC.',
   'ASO-003': 'La asociación ya está en ese estado.',
+  'ASO-004': 'El RUC no es válido: revisa los 11 dígitos.',
   'CER-001': 'La certificación no existe o no es de esta asociación.',
   'CER-002': 'La asociación indicada no existe.',
   'CER-003': 'La fecha de emisión debe ser anterior a la de vencimiento.',

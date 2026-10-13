@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,26 +42,40 @@ class AssociationServiceTest {
 
     private CreateAssociationCommand sampleCommand() {
         return new CreateAssociationCommand(
-                "Asociación de prueba", "20123456789", "REG-001", "Dirección 123", "a@b.pe", "999999999");
+                "Asociación de prueba", "20123456786", "REG-001", "Dirección 123", "a@b.pe", "999999999");
     }
 
     @Test
     void createsAndSavesANewAssociationWhenRucIsNotTaken() {
-        when(repository.findByRuc("20123456789")).thenReturn(Optional.empty());
+        when(repository.findByRuc("20123456786")).thenReturn(Optional.empty());
         when(repository.save(any(Association.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Association result = service.create(sampleCommand());
 
-        assertThat(result.getRuc()).isEqualTo("20123456789");
+        assertThat(result.getRuc()).isEqualTo("20123456786");
         assertThat(result.getStatus()).isEqualTo(AssociationStatus.ACTIVE);
         verify(repository).save(any(Association.class));
     }
 
     @Test
+    void rejectsARucWithAWrongCheckDigitOrPrefixWithoutTouchingTheRepository() {
+        for (String ruc : new String[] {"20123456789", "30123456786", "20131312950"}) {
+            CreateAssociationCommand command =
+                    new CreateAssociationCommand("Asociación", ruc, null, null, null, null);
+
+            assertThatThrownBy(() -> service.create(command))
+                    .isInstanceOf(ApplicationException.class)
+                    .satisfies(exception -> assertThat(((ApplicationException) exception).getError())
+                            .isEqualTo(AssociationErrors.INVALID_RUC));
+        }
+        verifyNoInteractions(repository);
+    }
+
+    @Test
     void rejectsCreationWhenRucIsAlreadyTaken() {
         Association existing = Association.create(
-                "Otra asociación", "20123456789", "REG-002", "Otra dirección", "c@d.pe", "888888888");
-        when(repository.findByRuc("20123456789")).thenReturn(Optional.of(existing));
+                "Otra asociación", "20123456786", "REG-002", "Otra dirección", "c@d.pe", "888888888");
+        when(repository.findByRuc("20123456786")).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.create(sampleCommand()))
                 .isInstanceOf(ApplicationException.class)
@@ -72,7 +87,7 @@ class AssociationServiceTest {
     @Test
     void returnsTheAssociationWhenFoundById() {
         Association association = Association.create(
-                "Asociación", "20123456789", "REG-001", "Dirección", "a@b.pe", "999999999");
+                "Asociación", "20123456786", "REG-001", "Dirección", "a@b.pe", "999999999");
         when(repository.findById(association.getId())).thenReturn(Optional.of(association));
 
         Association result = service.getById(association.getId());
@@ -94,7 +109,7 @@ class AssociationServiceTest {
     @Test
     void suspendMovesAnActiveAssociationToSuspended() {
         Association association = Association.create(
-                "Asociación", "20123456789", "REG-001", "Dirección", "a@b.pe", "999999999");
+                "Asociación", "20123456786", "REG-001", "Dirección", "a@b.pe", "999999999");
         when(repository.findById(association.getId())).thenReturn(Optional.of(association));
         when(repository.update(any(Association.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -107,7 +122,7 @@ class AssociationServiceTest {
     @Test
     void suspendingAnAlreadySuspendedAssociationThrowsAConflict() {
         Association association = Association.create(
-                "Asociación", "20123456789", "REG-001", "Dirección", "a@b.pe", "999999999");
+                "Asociación", "20123456786", "REG-001", "Dirección", "a@b.pe", "999999999");
         association.suspend();
         when(repository.findById(association.getId())).thenReturn(Optional.of(association));
 
@@ -132,7 +147,7 @@ class AssociationServiceTest {
     @Test
     void activateMovesASuspendedAssociationToActive() {
         Association association = Association.create(
-                "Asociación", "20123456789", "REG-001", "Dirección", "a@b.pe", "999999999");
+                "Asociación", "20123456786", "REG-001", "Dirección", "a@b.pe", "999999999");
         association.suspend();
         when(repository.findById(association.getId())).thenReturn(Optional.of(association));
         when(repository.update(any(Association.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -146,7 +161,7 @@ class AssociationServiceTest {
     @Test
     void activatingAnAlreadyActiveAssociationThrowsAConflict() {
         Association association = Association.create(
-                "Asociación", "20123456789", "REG-001", "Dirección", "a@b.pe", "999999999");
+                "Asociación", "20123456786", "REG-001", "Dirección", "a@b.pe", "999999999");
         when(repository.findById(association.getId())).thenReturn(Optional.of(association));
 
         assertThatThrownBy(() -> service.activate(association.getId()))

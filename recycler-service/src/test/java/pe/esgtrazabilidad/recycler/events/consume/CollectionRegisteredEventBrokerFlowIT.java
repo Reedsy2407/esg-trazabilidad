@@ -133,7 +133,7 @@ class CollectionRegisteredEventBrokerFlowIT {
     @Test
     void aMessagePublishedToTheRealBrokerIncrementsTotalKilos() throws Exception {
         Association association = associationRepository.save(Association.create(
-                "Asociación broker IT", "20133333333", "REG-BRK-1", "Dirección", "a@b.pe", "999999999"));
+                "Asociación broker IT", "20133333330", "REG-BRK-1", "Dirección", "a@b.pe", "999999999"));
 
         publish(eventJson(UUID.randomUUID(), association.getId(), new BigDecimal("7.25")));
 
@@ -153,7 +153,7 @@ class CollectionRegisteredEventBrokerFlowIT {
     @Test
     void aPayloadWithTheDistrictAndAnUnknownFieldIsAcceptedAndCountedOnce() throws Exception {
         Association association = associationRepository.save(Association.create(
-                "Asociación broker IT 3", "20144444444", "REG-BRK-3", "Dirección", "a@b.pe", "999999999"));
+                "Asociación broker IT 3", "20144444443", "REG-BRK-3", "Dirección", "a@b.pe", "999999999"));
         com.fasterxml.jackson.databind.node.ObjectNode payload =
                 (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.readTree(
                         eventJson(UUID.randomUUID(), association.getId(), new BigDecimal("4.50")));
@@ -173,7 +173,7 @@ class CollectionRegisteredEventBrokerFlowIT {
     @Test
     void redeliveringTheSameMessageOverTheRealBrokerDoesNotDoubleApplyIt() throws Exception {
         Association association = associationRepository.save(Association.create(
-                "Asociación broker IT 2", "20122222222", "REG-BRK-2", "Dirección", "a@b.pe", "999999999"));
+                "Asociación broker IT 2", "20122222226", "REG-BRK-2", "Dirección", "a@b.pe", "999999999"));
         UUID eventId = UUID.randomUUID();
         String json = eventJson(eventId, association.getId(), new BigDecimal("9.00"));
 

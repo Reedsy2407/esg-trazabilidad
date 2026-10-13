@@ -11,6 +11,36 @@
         <a routerLink="/sigersol" [queryParams]="{ asociacion: a.id }">Registros SIGERSOL</a>
       </p>
     </header>
+    <section class="status-actions" aria-label="Estado de la asociación">
+      @if (confirmingStatus()) {
+        <p class="explain" id="status-explain">
+          @if (a.status === 'ACTIVE') {
+            Al suspender la asociación se deja de poder registrar recojos para ella. Sus certificaciones y datos no se tocan.
+          } @else {
+            Al reactivarla se vuelve a poder registrar recojos, si sus certificaciones están vigentes.
+          }
+        </p>
+        <div class="buttons">
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="statusBusy()"
+            aria-describedby="status-explain"
+            (click)="changeStatus(a.status === 'ACTIVE' ? 'suspend' : 'activate')"
+          >
+            {{ statusBusy() ? 'Guardando…' : a.status === 'ACTIVE' ? 'Sí, suspender' : 'Sí, reactivar' }}
+          </button>
+          <button type="button" class="btn" [disabled]="statusBusy()" (click)="cancelStatusChange()">No, volver</button>
+        </div>
+      } @else {
+        <button type="button" class="btn" (click)="askStatusChange()">
+          {{ a.status === 'ACTIVE' ? 'Suspender asociación' : 'Reactivar asociación' }}
+        </button>
+      }
+      @if (statusError(); as message) {
+        <div class="problem" role="alert"><p>{{ message }}</p></div>
+      }
+    </section>
     <section class="sheet-flat details" aria-labelledby="details-title">
       <h2 id="details-title">Datos de la asociación</h2>
       <dl>
@@ -48,6 +78,65 @@
 @if (!association.error()) {
   <section aria-labelledby="certs-title">
     <h2 id="certs-title" class="sec">Certificaciones</h2>
+    @if (!certFormOpen()) {
+      <p><button type="button" class="btn" (click)="openCertForm()">Registrar certificación</button></p>
+    } @else {
+      <form class="form-sheet cert-form" [formGroup]="certForm" (ngSubmit)="submitCertification()" novalidate aria-labelledby="cert-form-title">
+        <h3 id="cert-form-title">Registrar certificación</h3>
+        <div class="field">
+          <label for="certificationType">Tipo de certificación</label>
+          <input
+            id="certificationType"
+            class="control"
+            formControlName="certificationType"
+            autocomplete="off"
+            maxlength="255"
+            [attr.aria-invalid]="certInvalid('certificationType')"
+            [attr.aria-describedby]="certInvalid('certificationType') ? 'certificationType-error' : null"
+          />
+          @if (certInvalid('certificationType')) {
+            <p class="field-error" id="certificationType-error">Escribe el tipo de certificación.</p>
+          }
+        </div>
+        <div class="field">
+          <label for="issuedDate">Fecha de emisión</label>
+          <input
+            id="issuedDate"
+            class="control mono"
+            type="date"
+            formControlName="issuedDate"
+            [attr.aria-invalid]="certInvalid('issuedDate')"
+            [attr.aria-describedby]="certInvalid('issuedDate') ? 'issuedDate-error' : null"
+          />
+          @if (certInvalid('issuedDate')) {
+            <p class="field-error" id="issuedDate-error">Elige la fecha de emisión.</p>
+          }
+        </div>
+        <div class="field">
+          <label for="expirationDate">Fecha de vencimiento</label>
+          <input
+            id="expirationDate"
+            class="control mono"
+            type="date"
+            formControlName="expirationDate"
+            [attr.aria-invalid]="certInvalid('expirationDate') || (certSubmitted() && datesOutOfOrder())"
+            [attr.aria-describedby]="certInvalid('expirationDate') || datesOutOfOrder() ? 'expirationDate-error' : null"
+          />
+          @if (certInvalid('expirationDate')) {
+            <p class="field-error" id="expirationDate-error">Elige la fecha de vencimiento.</p>
+          } @else if (certSubmitted() && datesOutOfOrder()) {
+            <p class="field-error" id="expirationDate-error">El vencimiento debe ser posterior a la emisión.</p>
+          }
+        </div>
+        @if (certError(); as message) {
+          <div class="problem form-problem" role="alert"><p>{{ message }}</p></div>
+        }
+        <div class="buttons">
+          <button type="submit" class="btn btn-primary" [disabled]="certBusy()">{{ certBusy() ? 'Guardando…' : 'Guardar certificación' }}</button>
+          <button type="button" class="btn" [disabled]="certBusy()" (click)="closeCertForm()">Cancelar</button>
+        </div>
+      </form>
+    }
     @if (rows(); as r) {
       @if (r.items.length === 0) {
         <p class="empty-note">Esta asociación todavía no tiene certificaciones registradas.</p>
@@ -61,6 +150,7 @@
                 <th scope="col">Emitida</th>
                 <th scope="col">Vence</th>
                 <th scope="col">Estado</th>
+                <th scope="col"><span class="visually-hidden">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
@@ -74,6 +164,9 @@
                       <app-certification-chip [state]="c.state" />
                       <span class="note">{{ c.note }}</span>
                     </span>
+                  </td>
+                  <td>
+                    <button type="button" class="btn" (click)="startRenew(c.id, c.type)" [attr.aria-label]="'Renovar ' + c.type">Renovar</button>
                   </td>
                 </tr>
               }
@@ -92,9 +185,37 @@
                   <dd class="state"><app-certification-chip [state]="c.state" /><span class="note">{{ c.note }}</span></dd>
                 </div>
               </dl>
+              <button type="button" class="btn" (click)="startRenew(c.id, c.type)" [attr.aria-label]="'Renovar ' + c.type">Renovar</button>
             </li>
           }
         </ul>
+        @if (renewing(); as target) {
+          <form class="form-sheet renew-form" (submit)="$event.preventDefault(); submitRenew()" novalidate aria-labelledby="renew-title">
+            <h3 id="renew-title">Renovar «{{ target.type }}»</h3>
+            <div class="field">
+              <label for="renewDate">Nueva fecha de vencimiento</label>
+              <input
+                id="renewDate"
+                class="control mono"
+                type="date"
+                [value]="renewDate()"
+                (input)="renewDate.set($any($event.target).value)"
+                [attr.aria-invalid]="renewSubmitted() && renewDate() === ''"
+                [attr.aria-describedby]="renewSubmitted() && renewDate() === '' ? 'renewDate-error' : null"
+              />
+              @if (renewSubmitted() && renewDate() === '') {
+                <p class="field-error" id="renewDate-error">Elige la nueva fecha de vencimiento.</p>
+              }
+            </div>
+            @if (renewError(); as message) {
+              <div class="problem form-problem" role="alert"><p>{{ message }}</p></div>
+            }
+            <div class="buttons">
+              <button type="submit" class="btn btn-primary" [disabled]="renewBusy()">{{ renewBusy() ? 'Guardando…' : 'Renovar certificación' }}</button>
+              <button type="button" class="btn" [disabled]="renewBusy()" (click)="cancelRenew()">Cancelar</button>
+            </div>
+          </form>
+        }
         <p class="foot">
           @if (r.total > r.items.length) {
             Se muestran {{ r.items.length }} de {{ r.total }} certificaciones, las que vencen antes.

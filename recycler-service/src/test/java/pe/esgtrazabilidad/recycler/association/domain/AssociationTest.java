@@ -10,7 +10,7 @@ class AssociationTest {
     private Association newAssociation() {
         return Association.create(
                 "Asociación de Recicladores Lima",
-                "20123456789",
+                "20123456786",
                 "REG-001",
                 "Av. Siempre Viva 123",
                 "contacto@asociacion.pe",

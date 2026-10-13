@@ -107,6 +107,84 @@ test('list: a failing service offers a retry', async ({ page }) => {
   expect(unmocked).toEqual([]);
 });
 
+test('register an association: a RUC that fails the check digit is stopped, a good one opens its page', async ({ page }) => {
+  const unmocked = await signedIn(page, '/asociaciones');
+  await page.getByRole('link', { name: 'Registrar asociación' }).click();
+  await expect(page).toHaveURL(/\/asociaciones\/nueva$/);
+
+  await page.getByLabel('Nombre de la asociación').fill('Recicladores del Sur');
+  await page.getByLabel('RUC').fill('20131312950');
+  await page.getByRole('button', { name: 'Registrar asociación' }).click();
+  await expect(page.getByText('Este RUC no es válido: revisa los dígitos.')).toBeVisible();
+  await expect(page).toHaveURL(/\/asociaciones\/nueva$/);
+
+  await page.getByLabel('RUC').fill('20131312955');
+  await page.getByRole('button', { name: 'Registrar asociación' }).click();
+  await expect(page.getByRole('heading', { name: 'Recicladores del Sur', level: 1 })).toBeVisible();
+  await expect(page.getByText('Activa')).toBeVisible();
+  await expect(page.getByText('Esta asociación todavía no tiene certificaciones registradas.')).toBeVisible();
+  expect(unmocked).toEqual([]);
+});
+
+test('suspend and reactivate an association, with a confirmation each time', async ({ page }) => {
+  const unmocked = await signedIn(page, `/asociaciones/${RIMAC.id}`);
+  await expect(page.locator('.meta app-status-label')).toHaveText(/Activa/);
+  await page.getByRole('button', { name: 'Suspender asociación' }).click();
+  await expect(page.getByText('se deja de poder registrar recojos')).toBeVisible();
+  await page.getByRole('button', { name: 'No, volver' }).click();
+  await expect(page.locator('.meta app-status-label')).toHaveText(/Activa/);
+
+  await page.getByRole('button', { name: 'Suspender asociación' }).click();
+  await page.getByRole('button', { name: 'Sí, suspender' }).click();
+  await expect(page.locator('.meta app-status-label')).toHaveText(/Suspendida/);
+  await page.getByRole('button', { name: 'Reactivar asociación' }).click();
+  await page.getByRole('button', { name: 'Sí, reactivar' }).click();
+  await expect(page.locator('.meta app-status-label')).toHaveText(/Activa/);
+  expect(unmocked).toEqual([]);
+});
+
+test('register and renew a certification', async ({ page }) => {
+  const unmocked = await signedIn(page, `/asociaciones/${COMAS.id}`);
+  await page.getByRole('button', { name: 'Registrar certificación' }).click();
+  await page.getByLabel('Tipo de certificación').fill('ISO 14001');
+  await page.getByLabel('Fecha de emisión').fill('2026-05-01');
+  await page.getByLabel('Fecha de vencimiento').fill('2026-04-01');
+  await page.getByRole('button', { name: 'Guardar certificación' }).click();
+  await expect(page.getByText('El vencimiento debe ser posterior a la emisión.')).toBeVisible();
+
+  await page.getByLabel('Fecha de vencimiento').fill('2099-05-01');
+  await page.getByRole('button', { name: 'Guardar certificación' }).click();
+  const rows = page.locator('table.ledger tbody tr');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('ISO 14001');
+
+  await page.getByRole('button', { name: 'Renovar ISO 14001' }).first().click();
+  await page.getByLabel('Nueva fecha de vencimiento').fill('2100-05-01');
+  await page.getByRole('button', { name: 'Renovar certificación' }).click();
+  await expect(rows.first()).toContainText('01/05/2100');
+  expect(unmocked).toEqual([]);
+});
+
+for (const width of WIDTHS) {
+  test(`new association and an association with its forms open at ${width} px: no sideways scroll, axe clean`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const unmocked = await signedIn(page, '/asociaciones/nueva');
+    await expect(page.getByRole('heading', { name: 'Registrar asociación', level: 1 })).toBeVisible();
+    await expectNoSidewaysScroll(page);
+    await checkA11y(page);
+
+    await page.evaluate((target) => {
+      history.pushState({}, '', target);
+      dispatchEvent(new PopStateEvent('popstate'));
+    }, `/asociaciones/${RIMAC.id}`);
+    await page.getByRole('button', { name: 'Registrar certificación' }).click();
+    await page.getByRole('button', { name: 'Renovar Autorización de segregación en fuente' }).first().click();
+    await expectNoSidewaysScroll(page);
+    await checkA11y(page);
+    expect(unmocked).toEqual([]);
+  });
+}
+
 for (const width of WIDTHS) {
   test(`associations at ${width} px: no sideways scroll, axe clean`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });

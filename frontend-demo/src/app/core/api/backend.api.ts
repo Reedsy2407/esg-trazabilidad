@@ -6,7 +6,10 @@ import { environment } from '../../../environments/environment';
 import {
   Association,
   AssociationStatus,
+  AssociationTransition,
   Certification,
+  CreateAssociationRequest,
+  CreateCertificationRequest,
   CertificateSummary,
   CollectionRecord,
   CollectionSchedule,
@@ -280,6 +283,29 @@ export class BackendApi {
   /** ASO-001 (404) when it doesn't exist; VALIDATION_ERROR (400) when the id isn't a UUID. */
   association(id: string): Observable<Association> {
     return this.http.get<Association>(`${recycler}/associations/${encodeURIComponent(id)}`);
+  }
+
+  /** 201 with the association; ASO-004 (invalid RUC), ASO-002 (RUC taken). Not idempotent. */
+  createAssociation(request: CreateAssociationRequest): Observable<Association> {
+    return this.http.post<Association>(`${recycler}/associations`, request);
+  }
+
+  /** suspend: ACTIVE → SUSPENDED; activate: SUSPENDED → ACTIVE. ASO-003 when already there. */
+  changeAssociationStatus(id: string, transition: AssociationTransition): Observable<Association> {
+    return this.http.patch<Association>(`${recycler}/associations/${encodeURIComponent(id)}/${transition}`, null);
+  }
+
+  /** 201 with the certification; CER-003 (issued must be before expiration), CER-002 (no such association). */
+  createCertification(associationId: string, request: CreateCertificationRequest): Observable<Certification> {
+    return this.http.post<Certification>(`${recycler}/associations/${encodeURIComponent(associationId)}/certifications`, request);
+  }
+
+  /** The certification with its new expiration date; CER-001 if it isn't this association's. */
+  renewCertification(associationId: string, id: string, newExpirationDate: string): Observable<Certification> {
+    return this.http.patch<Certification>(
+      `${recycler}/associations/${encodeURIComponent(associationId)}/certifications/${encodeURIComponent(id)}/renew`,
+      { newExpirationDate },
+    );
   }
 
   /** An association's certifications, soonest expiration first (backend sort). */

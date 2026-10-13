@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
+import pe.esgtrazabilidad.kernel.ruc.Ruc;
 import pe.esgtrazabilidad.recycler.association.domain.Association;
 import pe.esgtrazabilidad.recycler.association.domain.AssociationStatus;
 import pe.esgtrazabilidad.recycler.association.exception.AssociationErrors;
@@ -34,6 +35,11 @@ class AssociationService
 
     @Override
     public Association create(CreateAssociationCommand command) {
+        // D7: local check only (prefix and modulo-11 digit); it does not ask SUNAT, and only new
+        // associations are checked, so rows created before this rule are left as they are.
+        if (!Ruc.isValid(command.ruc())) {
+            throw new ApplicationException(AssociationErrors.INVALID_RUC);
+        }
         repository.findByRuc(command.ruc()).ifPresent(existing -> {
             throw new ApplicationException(AssociationErrors.DUPLICATE_RUC);
         });

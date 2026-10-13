@@ -91,7 +91,7 @@ class AssociationRepositoryAdapterIT {
     void savingANewAssociationIssuesOnlyOneInsertWithNoPriorSelect() {
         Association association = Association.create(
                 "Asociación de prueba IT",
-                "20123456789",
+                "20123456786",
                 "REG-IT-001",
                 "Dirección de prueba",
                 "it@test.pe",
@@ -109,7 +109,7 @@ class AssociationRepositoryAdapterIT {
 
     @Test
     void savingASecondAssociationWithTheSameRucViolatesTheUniqueConstraint() {
-        String sharedRuc = "20199999999";
+        String sharedRuc = "20199999991";
         associationRepository.save(Association.create(
                 "Primera asociación", sharedRuc, "REG-001", "Dirección", "a@b.pe", "999999999"));
 
@@ -123,7 +123,7 @@ class AssociationRepositoryAdapterIT {
     @Test
     void updatingAnExistingAssociationPersistsTheChangeWithoutDuplicatingTheRow() {
         Association association = associationRepository.save(Association.create(
-                "Asociación a actualizar", "20177777777", "REG-UPD-1", "Dirección", "a@b.pe", "999999999"));
+                "Asociación a actualizar", "20177777774", "REG-UPD-1", "Dirección", "a@b.pe", "999999999"));
         UUID id = association.getId();
         association.suspend();
 
@@ -147,7 +147,7 @@ class AssociationRepositoryAdapterIT {
     @Test
     void incrementTotalKilosAtomicallyAddsToTheCurrentTotal() {
         Association association = associationRepository.save(Association.create(
-                "Asociación kilos", "20166666666", "REG-KG-1", "Dirección", "a@b.pe", "999999999"));
+                "Asociación kilos", "20166666661", "REG-KG-1", "Dirección", "a@b.pe", "999999999"));
 
         associationRepository.incrementTotalKilos(association.getId(), new BigDecimal("10.50"));
         associationRepository.incrementTotalKilos(association.getId(), new BigDecimal("4.25"));
@@ -165,7 +165,7 @@ class AssociationRepositoryAdapterIT {
         // status change -- it's mapped insertable=false, updatable=false
         // specifically so only incrementTotalKilos ever writes it.
         Association association = associationRepository.save(Association.create(
-                "Asociación kilos 2", "20155555555", "REG-KG-2", "Dirección", "a@b.pe", "999999999"));
+                "Asociación kilos 2", "20155555557", "REG-KG-2", "Dirección", "a@b.pe", "999999999"));
         associationRepository.incrementTotalKilos(association.getId(), new BigDecimal("20.00"));
 
         association.suspend();

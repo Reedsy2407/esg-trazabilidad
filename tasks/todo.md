@@ -606,5 +606,10 @@ Rebanadas (máx. 10 commits en la rama, uno por rebanada vertical con tasks/ y d
 
 **M5b cerrado (2026-10-13):** squash en `main` como `4aa3574`; CI verde y recycler, collection, reporting y frontend sirven `4aa3574` (auth sigue en `8687bd4`, sin cambios). Pendiente de comprobar en producción: que un certificado nuevo muestre cifras reales de SIGERSOL en vez de "no disponible".
 
+## M6: asociaciones en el frontend y RUC local en recycler (D7) (recycler-service + frontend-demo, rama `v3/m6`, sin PR) — **sin freno de OK según el plan (D9): merge con verify completo + revisor PASS**
+
+- [x] V3-6.1: D7 en recycler: `ASO-004` (400) cuando el RUC de una asociación nueva no pasa prefijo + dígito verificador (`Ruc.isValid` de shared-kernel, en `AssociationService.create`; las filas existentes no se revalidan; no hay edición de asociación). RUC de prueba de recycler corregidos. Frontend: Registrar asociación (`/asociaciones/nueva`, validación local con `shared/ruc.ts`, ASO-002/ASO-004), Asociación: suspender/reactivar (con confirmación; ASO-003 recarga), Registrar certificación (CER-003 se avisa antes), Renovar. Mock de Playwright con estado. Sin cambio de contrato (OpenAPI igual); docs/frontend.md.
+- Pendiente de M7: los RUC de `scripts/demo-seed` (20999…) no pasan ASO-004; la siembra de una BD nueva necesita los RUC públicos de D6.
+
 ### M6–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

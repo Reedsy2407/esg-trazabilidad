@@ -166,7 +166,7 @@ class CertificationExpiryPublishFlowIT {
     @Test
     void anExpiredCertificationIsScannedAndPublishedThenItsRenewalPublishesASecondEvent() throws Exception {
         String testQueue = declareThrowawayQueueBoundToCertificationEvents();
-        String associationId = createAssociation("20909090901");
+        String associationId = createAssociation("20909090904");
         String issuedDate = LocalDate.now().minusYears(2).toString();
         String expiredDate = LocalDate.now().minusDays(1).toString();
 
@@ -227,7 +227,7 @@ class CertificationExpiryPublishFlowIT {
         // clause (notifiedExpiredAt IS NULL, Task 33) would never match this
         // certification again, and the second receive() below would time out.
         String testQueue = declareThrowawayQueueBoundToCertificationEvents();
-        String associationId = createAssociation("20909090903");
+        String associationId = createAssociation("20909090912");
         String issuedDate = LocalDate.now().minusYears(2).toString();
         String expiredDate = LocalDate.now().minusDays(1).toString();
 

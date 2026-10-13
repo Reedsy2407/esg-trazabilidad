@@ -41,6 +41,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/associations/associations.page').then((m) => m.AssociationsPage),
       },
       {
+        path: 'asociaciones/nueva',
+        title: 'Registrar asociación · Trazabilidad ESG',
+        loadComponent: () => import('./features/associations/association-new.page').then((m) => m.AssociationNewPage),
+      },
+      {
         path: 'asociaciones/:id',
         title: 'Asociación · Trazabilidad ESG',
         loadComponent: () => import('./features/associations/association.page').then((m) => m.AssociationPage),

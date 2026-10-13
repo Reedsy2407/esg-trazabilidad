@@ -91,7 +91,7 @@ class CertificationApiIT {
 
     @Test
     void createGetAndListACertification() {
-        String associationId = createAssociation("20101010101");
+        String associationId = createAssociation("20101010105");
         String issuedDate = LocalDate.now().minusDays(30).toString();
         String expirationDate = LocalDate.now().plusYears(1).toString();
 
@@ -142,7 +142,7 @@ class CertificationApiIT {
 
     @Test
     void creatingWithAnInvalidDateRangeReturnsBadRequest() {
-        String associationId = createAssociation("20202020202");
+        String associationId = createAssociation("20202020209");
         String sameDay = LocalDate.now().toString();
 
         given()
@@ -157,7 +157,7 @@ class CertificationApiIT {
 
     @Test
     void gettingAMissingCertificationReturnsNotFound() {
-        String associationId = createAssociation("20303030303");
+        String associationId = createAssociation("20303030302");
 
         given()
                 .when()
@@ -172,8 +172,8 @@ class CertificationApiIT {
 
     @Test
     void gettingACertificationThroughAnotherAssociationsPathReturnsNotFound() {
-        String associationAId = createAssociation("20404040404");
-        String associationBId = createAssociation("20505050505");
+        String associationAId = createAssociation("20404040406");
+        String associationBId = createAssociation("20505050500");
         String issuedDate = LocalDate.now().minusDays(30).toString();
         String expirationDate = LocalDate.now().plusYears(1).toString();
 
@@ -248,7 +248,7 @@ class CertificationApiIT {
 
     @Test
     void renewingWithADateNotAfterTheIssuedDateReturnsBadRequest() {
-        String associationId = createAssociation("20808080808");
+        String associationId = createAssociation("20808080801");
         String issuedDate = LocalDate.now().minusDays(30).toString();
         String expirationDate = LocalDate.now().plusYears(1).toString();
 
@@ -280,7 +280,7 @@ class CertificationApiIT {
 
     @Test
     void anExpiredCertificationIsReportedAsExpired() {
-        String associationId = createAssociation("20606060606");
+        String associationId = createAssociation("20606060603");
         String issuedDate = LocalDate.now().minusYears(2).toString();
         String expiredDate = LocalDate.now().minusDays(1).toString();
 

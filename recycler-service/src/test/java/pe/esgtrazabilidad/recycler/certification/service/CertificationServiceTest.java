@@ -53,7 +53,7 @@ class CertificationServiceTest {
     }
 
     private Association existingAssociation() {
-        return Association.create("Asociación", "20123456789", "REG-001", "Dirección", "a@b.pe", "999999999");
+        return Association.create("Asociación", "20123456786", "REG-001", "Dirección", "a@b.pe", "999999999");
     }
 
     private CreateCertificationCommand sampleCommand() {

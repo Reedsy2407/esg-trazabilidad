@@ -1,0 +1,100 @@
+<a class="back-link" routerLink="/asociaciones">Volver a asociaciones</a>
+
+<header class="page-head">
+  <h1>Registrar asociación</h1>
+  <p class="sub">Una asociación de recicladores formalizados. Después podrás registrar sus certificaciones.</p>
+</header>
+
+<form class="form-sheet" [formGroup]="form" (ngSubmit)="submit()" novalidate #formElement>
+  <div class="field">
+    <label for="name">Nombre de la asociación</label>
+    <input
+      id="name"
+      class="control"
+      formControlName="name"
+      autocomplete="off"
+      maxlength="255"
+      [attr.aria-invalid]="invalid('name')"
+      [attr.aria-describedby]="invalid('name') ? 'name-error' : null"
+    />
+    @if (invalid('name')) {
+      <p class="field-error" id="name-error">Escribe el nombre de la asociación.</p>
+    }
+  </div>
+
+  <div class="field ruc">
+    <label for="ruc">RUC</label>
+    <input
+      id="ruc"
+      class="control mono"
+      formControlName="ruc"
+      inputmode="numeric"
+      autocomplete="off"
+      maxlength="14"
+      (blur)="normalizeRuc()"
+      [attr.aria-invalid]="invalid('ruc') || (submitted() && rucFailsCheckDigit())"
+      [attr.aria-describedby]="invalid('ruc') || rucFailsCheckDigit() ? 'ruc-hint ruc-error' : 'ruc-hint'"
+    />
+    <p class="hint" id="ruc-hint">
+      11 dígitos. Se revisa que tenga la forma de un RUC (prefijo y dígito verificador); no se consulta a SUNAT.
+    </p>
+    @if (invalid('ruc')) {
+      <p class="field-error" id="ruc-error">
+        @if (form.controls.ruc.hasError('required')) {
+          Escribe el RUC de la asociación.
+        } @else if (rucHasOtherCharacters()) {
+          El RUC lleva solo números: quita las letras u otros signos.
+        } @else {
+          El RUC debe tener exactamente 11 dígitos (tiene {{ form.controls.ruc.value.length }}).
+        }
+      </p>
+    } @else if (rucFailsCheckDigit() && (form.controls.ruc.touched || submitted())) {
+      <p class="field-error" id="ruc-error">Este RUC no es válido: revisa los dígitos.</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="registrationNumber">N.º de registro <span class="optional">(opcional)</span></label>
+    <input id="registrationNumber" class="control mono" formControlName="registrationNumber" autocomplete="off" maxlength="255" />
+  </div>
+
+  <div class="field">
+    <label for="address">Dirección <span class="optional">(opcional)</span></label>
+    <input id="address" class="control" formControlName="address" autocomplete="off" maxlength="255" />
+  </div>
+
+  <div class="field">
+    <label for="contactEmail">Correo de contacto <span class="optional">(opcional)</span></label>
+    <input
+      id="contactEmail"
+      class="control"
+      type="email"
+      formControlName="contactEmail"
+      autocomplete="off"
+      maxlength="255"
+      [attr.aria-invalid]="invalid('contactEmail')"
+      [attr.aria-describedby]="invalid('contactEmail') ? 'contactEmail-error' : null"
+    />
+    @if (invalid('contactEmail')) {
+      <p class="field-error" id="contactEmail-error">El correo no es válido.</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="contactPhone">Teléfono de contacto <span class="optional">(opcional)</span></label>
+    <input id="contactPhone" class="control" formControlName="contactPhone" inputmode="tel" autocomplete="off" maxlength="30" />
+  </div>
+
+  @if (error(); as message) {
+    <div class="problem form-problem" role="alert">
+      <p>{{ message }}</p>
+      @if (duplicateRuc()) {
+        <p><a routerLink="/asociaciones">Ver la lista de asociaciones</a></p>
+      }
+    </div>
+  }
+
+  <button class="btn btn-primary submit" type="submit" [disabled]="submitting()">
+    {{ submitting() ? 'Registrando…' : 'Registrar asociación' }}
+  </button>
+</form>

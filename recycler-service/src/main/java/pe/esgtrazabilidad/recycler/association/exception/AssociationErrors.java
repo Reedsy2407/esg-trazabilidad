@@ -9,7 +9,8 @@ public enum AssociationErrors implements ApplicationError {
     NOT_FOUND("ASO-001", "Asociación no encontrada", HttpStatus.NOT_FOUND),
     DUPLICATE_RUC("ASO-002", "Ya existe una asociación con ese RUC", HttpStatus.CONFLICT),
     INVALID_STATUS_TRANSITION(
-            "ASO-003", "La asociación ya se encuentra en el estado solicitado", HttpStatus.CONFLICT);
+            "ASO-003", "La asociación ya se encuentra en el estado solicitado", HttpStatus.CONFLICT),
+    INVALID_RUC("ASO-004", "El RUC no es válido", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;

@@ -66,12 +66,12 @@ class AssociationApiIT {
     void createGetAndListAnAssociation() {
         String id = given()
                 .contentType(ContentType.JSON)
-                .body(createAssociationRequest("20111111111"))
+                .body(createAssociationRequest("20111111112"))
                 .when()
                 .post("/associations")
                 .then()
                 .statusCode(201)
-                .body("ruc", equalTo("20111111111"))
+                .body("ruc", equalTo("20111111112"))
                 .body("status", equalTo("ACTIVE"))
                 .body("id", notNullValue())
                 .extract()
@@ -83,7 +83,7 @@ class AssociationApiIT {
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(id))
-                .body("ruc", equalTo("20111111111"));
+                .body("ruc", equalTo("20111111112"));
 
         given()
                 .when()
@@ -97,7 +97,7 @@ class AssociationApiIT {
     void creatingWithADuplicateRucReturnsConflict() {
         given()
                 .contentType(ContentType.JSON)
-                .body(createAssociationRequest("20222222222"))
+                .body(createAssociationRequest("20222222223"))
                 .when()
                 .post("/associations")
                 .then()
@@ -105,7 +105,7 @@ class AssociationApiIT {
 
         given()
                 .contentType(ContentType.JSON)
-                .body(createAssociationRequest("20222222222"))
+                .body(createAssociationRequest("20222222223"))
                 .when()
                 .post("/associations")
                 .then()
@@ -136,11 +136,23 @@ class AssociationApiIT {
     }
 
     @Test
+    void creatingWithARucThatFailsTheCheckDigitReturnsAso004() {
+        given()
+                .contentType(ContentType.JSON)
+                .body(createAssociationRequest("20123456789"))
+                .when()
+                .post("/associations")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("ASO-004"));
+    }
+
+    @Test
     void creatingWithAnInvalidEmailReturnsAValidationError() {
         String requestWithInvalidEmail = """
                 {
                   "name": "Asociación de prueba IT",
-                  "ruc": "20333333333",
+                  "ruc": "20333333334",
                   "registrationNumber": "REG-IT-001",
                   "address": "Dirección de prueba",
                   "contactEmail": "not-an-email",
@@ -162,7 +174,7 @@ class AssociationApiIT {
     void suspendingAndReactivatingAnAssociationChangesItsStatus() {
         String id = given()
                 .contentType(ContentType.JSON)
-                .body(createAssociationRequest("20444444444"))
+                .body(createAssociationRequest("20444444445"))
                 .when()
                 .post("/associations")
                 .then()
@@ -196,7 +208,7 @@ class AssociationApiIT {
     void suspendingAnAlreadySuspendedAssociationReturnsConflict() {
         String id = given()
                 .contentType(ContentType.JSON)
-                .body(createAssociationRequest("20555555555"))
+                .body(createAssociationRequest("20555555556"))
                 .when()
                 .post("/associations")
                 .then()

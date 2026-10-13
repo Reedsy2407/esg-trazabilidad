@@ -604,5 +604,7 @@ Rebanadas (máx. 10 commits en la rama, uno por rebanada vertical con tasks/ y d
 
 - [x] V3-5b.1: `HttpSigersolMunicipal` (`POST reporteValorizacion/listaRecicladores`, timeouts 2 s/4 s, charset declarado, nunca lanza, Found/NoData/Unavailable; varias filas o conteos inválidos = Unavailable), `SIGERSOL_MUNICIPAL_PROVIDER=sigersol` + `SIGERSOL_MUNICIPAL_BASE_URL` (render.yaml, `.env.local.example`, docs/deployment.md), 2 grabaciones reales (2 de 3 llamadas: La Molina 2024 con una fila; 2026 sin filas), caché negativa de 5 min, emisión: contexto distrital fuera de la transacción (`TransactionTemplate` solo para el `save`), ADR del snapshot "Implementada".
 
+**M5b cerrado (2026-10-13):** squash en `main` como `4aa3574`; CI verde y recycler, collection, reporting y frontend sirven `4aa3574` (auth sigue en `8687bd4`, sin cambios). Pendiente de comprobar en producción: que un certificado nuevo muestre cifras reales de SIGERSOL en vez de "no disponible".
+
 ### M6–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

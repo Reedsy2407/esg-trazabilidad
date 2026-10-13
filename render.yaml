@@ -88,7 +88,9 @@ services:
       # SIGERSOL Municipal (district context on certificates). No default in code.
       # none = every district reads "no disponible"; nothing depends on SIGERSOL.
       - key: SIGERSOL_MUNICIPAL_PROVIDER
-        value: none
+        value: sigersol
+      - key: SIGERSOL_MUNICIPAL_BASE_URL
+        value: https://sistemas.minam.gob.pe/srv-sigersol/rest/
 
   - type: web
     name: esg-auth-service

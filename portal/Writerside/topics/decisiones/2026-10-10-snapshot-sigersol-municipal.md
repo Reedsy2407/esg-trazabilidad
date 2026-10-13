@@ -1,6 +1,6 @@
 # Los datos de SIGERSOL Municipal se guardan como snapshot por año y distrito
 
-- **Estado:** Aceptada, pendiente de implementación (parcial: M5 entregó puerto, snapshot, degradación, contexto congelado en el certificado, PDF y CSV; falta el adaptador HTTP real, M5b. Hoy `SIGERSOL_MUNICIPAL_PROVIDER=none`: todo distrito dice "no disponible".)
+- **Estado:** Implementada (M5: puerto, snapshot, degradación, contexto congelado en el certificado, PDF y CSV; M5b: adaptador HTTP real con `SIGERSOL_MUNICIPAL_PROVIDER=sigersol`).
 - **Fecha:** 2026-10-10
 - **Dónde se aplica:** reporting-service, contexto distrital de SIGERSOL Municipal
 - **Reemplaza a:** —
@@ -37,6 +37,11 @@ con login, y no se automatiza.
   Reexportar nunca vuelve a consultar SIGERSOL.
 - Sin datos ni snapshot, la pantalla dice "no disponible". Nada se bloquea por
   SIGERSOL.
+- El adaptador usa `POST reporteValorizacion/listaRecicladores` (una fila por distrito
+  y año), con timeouts de 2 s y 4 s, sin reintentos, y decodifica con el charset que
+  declara la respuesta. Un distrito sin respuesta o sin filas no se vuelve a consultar
+  durante 5 minutos. La consulta ocurre antes de abrir la transacción de emisión, no
+  dentro.
 
 ## Consecuencias
 

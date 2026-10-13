@@ -198,6 +198,18 @@ class CertificateDistrictContextApiIT {
     }
 
     @Test
+    void sigersolIsNeverCalledInsideTheIssueTransaction() {
+        Setup s = companyWithSigersolRecord();
+        sigersol.answer(LAST_YEAR, "150133", new Answer.Found(1, 2));
+        collect(s.associationId(), "4.00", "150133");
+
+        issue(s.companyId());
+
+        assertThat(sigersol.calls()).isPositive();
+        assertThat(sigersol.callsInsideATransaction()).isZero();
+    }
+
+    @Test
     void aLedgerWithoutDistrictsIssuesWithOnlyTheUnknownDistrictLine() {
         Setup s = companyWithSigersolRecord();
         collect(s.associationId(), "7.00", null);

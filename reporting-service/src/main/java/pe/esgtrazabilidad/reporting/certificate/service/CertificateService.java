@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.kernel.security.CurrentActor;
@@ -58,6 +59,7 @@ class CertificateService
     private final CertificatePdfExporter certificatePdfExporter;
     private final CertificateCsvExporter certificateCsvExporter;
     private final DistrictContextService districtContextService;
+    private final TransactionTemplate transactionTemplate;
 
     CertificateService(
             TrackedCompanyRepository trackedCompanyRepository,
@@ -66,8 +68,10 @@ class CertificateService
             EsgCertificateRepository esgCertificateRepository,
             CertificatePdfExporter certificatePdfExporter,
             CertificateCsvExporter certificateCsvExporter,
-            DistrictContextService districtContextService) {
+            DistrictContextService districtContextService,
+            TransactionTemplate transactionTemplate) {
         this.districtContextService = districtContextService;
+        this.transactionTemplate = transactionTemplate;
         this.trackedCompanyRepository = trackedCompanyRepository;
         this.tracedCollectionEntryRepository = tracedCollectionEntryRepository;
         this.sigersolSyncRepository = sigersolSyncRepository;
@@ -113,8 +117,13 @@ class CertificateService
                 districts);
     }
 
+    /**
+     * Not transactional as a whole: the district context may call SIGERSOL over HTTP, and that must
+     * not hold a database transaction open. Everything is read first, the context is computed, and
+     * only the save runs in a transaction; the exclusion constraint on esg_certificate stays the
+     * backstop for two overlapping issues racing.
+     */
     @Override
-    @Transactional
     public EsgCertificate issue(IssueCertificateCommand command) {
         requireValidPeriod(command.periodStart(), command.periodEnd());
         TrackedCompany trackedCompany = findTrackedCompany(command.trackedCompanyId());
@@ -156,7 +165,8 @@ class CertificateService
 
         // The SIGERSOL context of each district is frozen with the certificate; it never blocks it
         // (a district SIGERSOL can't answer for is stored as "no disponible").
-        return esgCertificateRepository.save(certificate, lineItems, districtLines(entries));
+        List<DistrictLine> districts = districtLines(entries);
+        return transactionTemplate.execute(status -> esgCertificateRepository.save(certificate, lineItems, districts));
     }
 
     @Override

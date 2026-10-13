@@ -1,5 +1,7 @@
 package pe.esgtrazabilidad.reporting.sigersolmunicipal.adapter;
 
+import java.time.Duration;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -20,7 +22,12 @@ class SigersolMunicipalConfig {
         String provider = environment.getRequiredProperty("SIGERSOL_MUNICIPAL_PROVIDER");
         return switch (provider) {
             case "none" -> new UnavailableSigersolMunicipal();
-            default -> throw new IllegalStateException("SIGERSOL_MUNICIPAL_PROVIDER must be none, got " + provider);
+            case "sigersol" -> new HttpSigersolMunicipal(
+                    environment.getRequiredProperty("SIGERSOL_MUNICIPAL_BASE_URL"),
+                    Duration.ofSeconds(2),
+                    Duration.ofSeconds(4));
+            default -> throw new IllegalStateException(
+                    "SIGERSOL_MUNICIPAL_PROVIDER must be none or sigersol, got " + provider);
         };
     }
 }

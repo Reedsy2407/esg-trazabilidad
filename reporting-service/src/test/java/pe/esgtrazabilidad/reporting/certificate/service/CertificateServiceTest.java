@@ -21,6 +21,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.kernel.security.CurrentActor;
@@ -93,7 +95,13 @@ class CertificateServiceTest {
                 esgCertificateRepository,
                 new CertificatePdfExporter(),
                 new CertificateCsvExporter(),
-                districtContextService);
+                districtContextService,
+                new TransactionTemplate() {
+                    @Override
+                    public <T> T execute(TransactionCallback<T> action) {
+                        return action.doInTransaction(null);
+                    }
+                });
     }
 
     // --- district context (M5) ---

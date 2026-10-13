@@ -600,5 +600,9 @@ Rebanadas (máx. 10 commits en la rama, uno por rebanada vertical con tasks/ y d
 
 **M5 cerrado (2026-10-12):** squash en `main` como `d38d04c` (5 commits en la rama), ADR corregido en `00c4cc4`. reporting-service sirve `d38d04c`; recycler, collection y frontend esperan Manual Deploy en Render (el push final solo tocaba el portal). Pendiente: adaptador HTTP real de SIGERSOL (M5b).
 
+## M5b: adaptador real de SIGERSOL Municipal (reporting-service, rama `v3/m5b`) — **única parada: OK de merge de Angel**
+
+- [x] V3-5b.1: `HttpSigersolMunicipal` (`POST reporteValorizacion/listaRecicladores`, timeouts 2 s/4 s, charset declarado, nunca lanza, Found/NoData/Unavailable; varias filas o conteos inválidos = Unavailable), `SIGERSOL_MUNICIPAL_PROVIDER=sigersol` + `SIGERSOL_MUNICIPAL_BASE_URL` (render.yaml, `.env.local.example`, docs/deployment.md), 2 grabaciones reales (2 de 3 llamadas: La Molina 2024 con una fila; 2026 sin filas), caché negativa de 5 min, emisión: contexto distrital fuera de la transacción (`TransactionTemplate` solo para el `save`), ADR del snapshot "Implementada".
+
 ### M6–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

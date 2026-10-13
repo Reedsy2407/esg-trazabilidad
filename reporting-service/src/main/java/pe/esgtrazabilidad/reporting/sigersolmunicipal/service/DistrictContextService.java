@@ -4,7 +4,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,12 +33,15 @@ public class DistrictContextService {
      * SIGERSOL has rows from 2019, but the latest year with rows is what matters and it is 2024.
      */
     static final int PROBE_YEARS = 6;
+    /** Short on purpose: it spares slow calls during an outage, not the data's own freshness. */
+    static final Duration NEGATIVE_CACHE = Duration.ofMinutes(5);
 
     private static final Logger log = LoggerFactory.getLogger(DistrictContextService.class);
 
     private final SigersolMunicipalStats provider;
     private final DistrictSnapshotStore store;
     private final Clock clock;
+    private final Map<String, Instant> noAnswerUntil = new ConcurrentHashMap<>();
 
     @Autowired
     DistrictContextService(SigersolMunicipalStats provider, DistrictSnapshotStore store) {
@@ -60,10 +65,11 @@ public class DistrictContextService {
         if (snapshot.isPresent() && isFresh(snapshot.get())) {
             return DistrictContext.of(snapshot.get(), false);
         }
-        Optional<DistrictStats> fetched = fetchLatestYear(ubigeo);
+        Optional<DistrictStats> fetched = recentlyEmpty(ubigeo) ? Optional.empty() : fetchLatestYear(ubigeo);
         if (fetched.isPresent()) {
             return DistrictContext.of(fetched.get(), false);
         }
+        noAnswerUntil.put(ubigeo, clock.instant().plus(NEGATIVE_CACHE));
         // No answer worth keeping: the last good value, marked as such, or nothing.
         return snapshot.map(stats -> DistrictContext.of(stats, true)).orElseGet(() -> DistrictContext.unavailable(ubigeo));
     }
@@ -97,6 +103,12 @@ public class DistrictContextService {
             }
         }
         return Optional.empty();
+    }
+
+    /** A district that just had no answer (or no rows) is not asked again for {@link #NEGATIVE_CACHE}. */
+    private boolean recentlyEmpty(String ubigeo) {
+        Instant until = noAnswerUntil.get(ubigeo);
+        return until != null && until.isAfter(clock.instant());
     }
 
     private boolean isFresh(DistrictStats stats) {

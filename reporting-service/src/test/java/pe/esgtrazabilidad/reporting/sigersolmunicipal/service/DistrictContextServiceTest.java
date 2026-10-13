@@ -120,9 +120,22 @@ class DistrictContextServiceTest {
 
         assertThat(service.contextFor(LA_MOLINA).status()).isEqualTo(DistrictContext.Status.UNAVAILABLE);
 
-        org.mockito.Mockito.doReturn(new Answer.Found(-1, 1)).when(provider).fetch(2025, LA_MOLINA);
+        String otherDistrict = "150131";
+        when(store.latest(otherDistrict)).thenReturn(Optional.empty());
+        org.mockito.Mockito.doReturn(new Answer.Found(-1, 1)).when(provider).fetch(2025, otherDistrict);
         org.mockito.Mockito.doThrow(new IllegalStateException("check violated")).when(store).save(any());
-        assertThat(service.contextFor(LA_MOLINA).status()).isEqualTo(DistrictContext.Status.UNAVAILABLE);
+        assertThat(service.contextFor(otherDistrict).status()).isEqualTo(DistrictContext.Status.UNAVAILABLE);
+    }
+
+    @Test
+    void aDistrictWithoutAnAnswerIsNotAskedAgainDuringTheNegativeCache() {
+        when(store.latest(LA_MOLINA)).thenReturn(Optional.empty());
+        when(provider.fetch(anyInt(), anyString())).thenReturn(new Answer.Unavailable());
+
+        service.contextFor(LA_MOLINA);
+        service.contextFor(LA_MOLINA);
+
+        verify(provider, times(1)).fetch(anyInt(), anyString());
     }
 
     @Test

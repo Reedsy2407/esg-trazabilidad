@@ -1,6 +1,6 @@
 # Los datos de SIGERSOL Municipal se guardan como snapshot por año y distrito
 
-- **Estado:** Aceptada; implementada en M5 (2026-10-12) salvo el adaptador HTTP real y sus respuestas grabadas, que esperan la URL y un ejemplo de cada endpoint (hoy `SIGERSOL_MUNICIPAL_PROVIDER=none`: todo distrito dice "no disponible"). Hecho: puerto, snapshot, degradación, contexto congelado en el certificado, PDF y CSV.
+- **Estado:** Aceptada, pendiente de implementación (parcial: M5 entregó puerto, snapshot, degradación, contexto congelado en el certificado, PDF y CSV; falta el adaptador HTTP real, M5b. Hoy `SIGERSOL_MUNICIPAL_PROVIDER=none`: todo distrito dice "no disponible".)
 - **Fecha:** 2026-10-10
 - **Dónde se aplica:** reporting-service, contexto distrital de SIGERSOL Municipal
 - **Reemplaza a:** —

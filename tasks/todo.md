@@ -611,5 +611,7 @@ Rebanadas (máx. 10 commits en la rama, uno por rebanada vertical con tasks/ y d
 - [x] V3-6.1: D7 en recycler: `ASO-004` (400) cuando el RUC de una asociación nueva no pasa prefijo + dígito verificador (`Ruc.isValid` de shared-kernel, en `AssociationService.create`; las filas existentes no se revalidan; no hay edición de asociación). RUC de prueba de recycler corregidos. Frontend: Registrar asociación (`/asociaciones/nueva`, validación local con `shared/ruc.ts`, ASO-002/ASO-004), Asociación: suspender/reactivar (con confirmación; ASO-003 recarga), Registrar certificación (CER-003 se avisa antes), Renovar. Mock de Playwright con estado. Sin cambio de contrato (OpenAPI igual); docs/frontend.md.
 - Pendiente de M7: los RUC de `scripts/demo-seed` (20999…) no pasan ASO-004; la siembra de una BD nueva necesita los RUC públicos de D6.
 
+**M6 cerrado (2026-10-13):** squash en `main` como `772e81d`; CI verde; recycler y frontend sirven `772e81d` (collection y reporting siguen en `4aa3574` y auth en `8687bd4`: no cambiaron).
+
 ### M6–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

@@ -1,6 +1,6 @@
 # La empresa se registra como no verificada cuando SUNAT no responde
 
-- **Estado:** Aceptada, pendiente de implementación. Se implementa en M4.
+- **Estado:** Implementada en M4 (2026-10-12): `POST /tracked-companies/unverified`, `POST /tracked-companies/{id}/sunat-refresh` y `RPT-014`/`RPT-016`.
 - **Fecha:** 2026-10-10
 - **Dónde se aplica:** reporting-service, alta de empresa no verificada
 - **Reemplaza a:** —

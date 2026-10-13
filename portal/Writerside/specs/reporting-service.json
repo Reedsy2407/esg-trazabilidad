@@ -37,6 +37,34 @@
         },
         "type" : "object"
       },
+      "EditTrackedCompanyRequest" : {
+        "properties" : {
+          "associationId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "contactEmail" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contactName" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contactPhone" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "ruc" : {
+            "pattern" : "\\d{11}",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "EsgCertificateResponse" : {
         "properties" : {
           "annulledAt" : {
@@ -218,6 +246,19 @@
         },
         "type" : "object"
       },
+      "ReasonRequest" : {
+        "properties" : {
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "reason"
+        ],
+        "type" : "object"
+      },
       "RegisterSigersolSyncRequest" : {
         "properties" : {
           "associationId" : {
@@ -260,7 +301,61 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "contactEmail" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contactName" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contactPhone" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
           "name" : {
+            "deprecated" : true,
+            "description" : "Ignorado: la razón social viene de SUNAT",
+            "type" : "string"
+          },
+          "ruc" : {
+            "pattern" : "\\d{11}",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "associationId",
+          "ruc"
+        ],
+        "type" : "object"
+      },
+      "RegisterUnverifiedTrackedCompanyRequest" : {
+        "properties" : {
+          "associationId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "contactEmail" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contactName" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contactPhone" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 255,
+            "minLength" : 0,
             "type" : "string"
           },
           "ruc" : {
@@ -315,6 +410,15 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "contactEmail" : {
+            "type" : "string"
+          },
+          "contactName" : {
+            "type" : "string"
+          },
+          "contactPhone" : {
+            "type" : "string"
+          },
           "id" : {
             "format" : "uuid",
             "type" : "string"
@@ -330,6 +434,26 @@
               "ACTIVE",
               "INACTIVE"
             ],
+            "type" : "string"
+          },
+          "sunatCheckedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "sunatCondicion" : {
+            "type" : "string"
+          },
+          "sunatEstado" : {
+            "type" : "string"
+          },
+          "verification" : {
+            "enum" : [
+              "VERIFIED",
+              "UNVERIFIED"
+            ],
+            "type" : "string"
+          },
+          "warning" : {
             "type" : "string"
           }
         },
@@ -492,6 +616,36 @@
               }
             },
             "description" : "Created"
+          }
+        },
+        "tags" : [
+          "tracked-company-controller"
+        ]
+      }
+    },
+    "/tracked-companies/unverified" : {
+      "post" : {
+        "operationId" : "registerUnverified",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterUnverifiedTrackedCompanyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TrackedCompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
           }
         },
         "tags" : [
@@ -799,8 +953,192 @@
       }
     },
     "/tracked-companies/{id}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReasonRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "tracked-company-controller"
+        ]
+      },
       "get" : {
         "operationId" : "getById",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TrackedCompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "tracked-company-controller"
+        ]
+      },
+      "patch" : {
+        "operationId" : "edit",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EditTrackedCompanyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TrackedCompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "tracked-company-controller"
+        ]
+      }
+    },
+    "/tracked-companies/{id}/activate" : {
+      "patch" : {
+        "operationId" : "activate",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReasonRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TrackedCompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "tracked-company-controller"
+        ]
+      }
+    },
+    "/tracked-companies/{id}/deactivate" : {
+      "patch" : {
+        "operationId" : "deactivate",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReasonRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TrackedCompanyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "tracked-company-controller"
+        ]
+      }
+    },
+    "/tracked-companies/{id}/sunat-refresh" : {
+      "post" : {
+        "operationId" : "refreshFromSunat",
         "parameters" : [
           {
             "in" : "path",

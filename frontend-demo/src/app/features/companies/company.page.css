@@ -41,6 +41,24 @@ h2 {
   padding: var(--space-5) var(--space-6);
   background: var(--paper);
 }
+.sunat {
+  margin-bottom: var(--space-5);
+}
+.sunat .lines {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--space-3) var(--space-5);
+}
+.sunat dt {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.sunat .warning {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-left: 4px solid var(--ink);
+  font-weight: 600;
+}
 .panel.ticket {
   padding-top: calc(var(--tear) + var(--space-5));
   padding-bottom: calc(var(--tear) + var(--space-5));
@@ -279,6 +297,24 @@ tbody tr:has(.row-link:focus-visible) {
 }
 
 /* An annulled certificate stays in the list, marked: the word carries it, the heavy rule only reinforces it. */
+.actions {
+  margin-bottom: var(--space-5);
+}
+.actions:focus {
+  outline: none;
+}
+.actions .buttons,
+.edit-contact .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.edit-contact {
+  margin-top: var(--space-4);
+  max-width: 520px;
+}
+.unverified-tag,
 .annulled-tag {
   display: inline-block;
   margin-left: var(--space-2);

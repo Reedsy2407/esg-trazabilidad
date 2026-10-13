@@ -45,6 +45,10 @@ export class CertificateIssuePage {
   });
   /** An INACTIVE company gets a message instead of the period form (the backend answers RPT-015 as well). */
   protected readonly inactive = computed(() => this.company.hasValue() && this.company.value().status === 'INACTIVE');
+  /** An UNVERIFIED company (SUNAT never confirmed it) gets a message too: the backend answers RPT-016. */
+  protected readonly unverified = computed(
+    () => this.company.hasValue() && this.company.value().verification === 'UNVERIFIED',
+  );
   /** Only for the draft's "Asociación" line; failing leaves the line without a name. */
   protected readonly association = rxResource({
     params: () => (this.company.hasValue() ? this.company.value().associationId : undefined),
@@ -171,7 +175,7 @@ export class CertificateIssuePage {
   protected review(): void {
     this.stepOneTried.set(true);
     const period = this.period();
-    if (period === null || this.problem() !== null || this.inactive()) {
+    if (period === null || this.problem() !== null || this.inactive() || this.unverified()) {
       return;
     }
     this.reset();
@@ -186,7 +190,7 @@ export class CertificateIssuePage {
 
   protected issue(): void {
     const draft = this.draft();
-    if (draft === null || !this.issuable() || !this.confirmed() || this.issuing() || this.done() || this.inactive()) {
+    if (draft === null || !this.issuable() || !this.confirmed() || this.issuing() || this.done() || this.inactive() || this.unverified()) {
       return;
     }
     this.error.set(null);
@@ -215,6 +219,7 @@ export class CertificateIssuePage {
               'RPT-004': `Esta empresa ya tiene un certificado que se superpone con ${draft.label}. Cada día se certifica una sola vez.`,
               'RPT-005': `No hay un registro SIGERSOL de la asociación que cubra todo ${draft.label}. Regístralo y vuelve a revisar el borrador.`,
               'RPT-015': 'Esta empresa está inactiva: no se pueden emitir certificados. Reactívala o registra la empresa correcta.',
+              'RPT-016': 'Esta empresa no está verificada con SUNAT. Verifícala desde su ficha y vuelve a intentarlo.',
               'RPT-009': `El servicio rechazó ${draft.label}: la fecha final es anterior a la inicial. Revisa las fechas del período.`,
             }),
           });

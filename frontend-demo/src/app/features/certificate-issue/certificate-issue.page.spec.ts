@@ -9,7 +9,21 @@ import { todayInLima } from '../../shared/format';
 import { CertificateIssuePage, ISSUE_UNCERTAIN } from './certificate-issue.page';
 import { previousMonth } from './issue-period';
 
-const COMPANY = { id: 'c-1', name: 'Envases del Pacífico S.A.C.', ruc: '20512345678', associationId: 'a-1', status: 'ACTIVE' };
+const COMPANY = {
+  id: 'c-1',
+  name: 'Envases del Pacífico S.A.C.',
+  ruc: '20512345678',
+  associationId: 'a-1',
+  status: 'ACTIVE',
+  verification: 'VERIFIED',
+  sunatEstado: 'ACTIVO',
+  sunatCondicion: 'HABIDO',
+  sunatCheckedAt: '2026-10-01T15:00:00Z',
+  contactName: null,
+  contactEmail: null,
+  contactPhone: null,
+  warning: null,
+};
 const EXISTING: EsgCertificate = {
   id: 'cert-dec',
   trackedCompanyId: 'c-1',
@@ -121,6 +135,18 @@ describe('CertificateIssuePage', () => {
     internals.issue();
     await settle();
     expect(summaryCalls).toBe(0);
+    expect(issued).toEqual([]);
+  });
+
+  it('an UNVERIFIED company: a message pointing at the company page instead of the period form (RPT-016)', async () => {
+    company = { ...COMPANY, verification: 'UNVERIFIED' };
+    (page as unknown as { company: { reload(): void } }).company.reload();
+    await settle();
+    expect(el.textContent).toContain('no está verificada con SUNAT');
+    expect(el.querySelector('#month')).toBeNull();
+    expect(button(/Emitir certificado/)).toBeUndefined();
+    (page as unknown as { issue(): void }).issue();
+    await settle();
     expect(issued).toEqual([]);
   });
 

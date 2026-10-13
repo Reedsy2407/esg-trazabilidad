@@ -1,0 +1,219 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.3.0-ruc-lookup-cache
+      author: esg-trazabilidad
+      comment: >
+        v3 M4: SUNAT answers cached for 24 h in a table (Render free sleeps after
+        15 minutes, so memory would not survive). Only FOUND and NOT_FOUND are
+        stored; an unavailable provider is never cached.
+      changes:
+        - createTable:
+            tableName: ruc_lookup_cache
+            columns:
+              - column:
+                  name: ruc
+                  type: varchar(11)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: outcome
+                  type: varchar(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: legal_name
+                  type: varchar(255)
+              - column:
+                  name: estado
+                  type: varchar(40)
+              - column:
+                  name: condicion
+                  type: varchar(40)
+              - column:
+                  name: ubigeo
+                  type: varchar(6)
+              - column:
+                  name: fetched_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              ALTER TABLE ruc_lookup_cache ADD CONSTRAINT ck_ruc_lookup_cache_outcome
+              CHECK ((outcome = 'FOUND' AND legal_name IS NOT NULL) OR (outcome = 'NOT_FOUND'));
+      rollback:
+        - dropTable:
+            tableName: ruc_lookup_cache
+  - changeSet:
+      id: v0.3.0-tracked-company-sunat-lifecycle-contact
+      author: esg-trazabilidad
+      comment: >
+        v3 M4: SUNAT data and verification, contact, logical deletion. Rows that
+        exist before this change had a hand-typed name, so they become UNVERIFIED
+        until "Verificar con SUNAT" succeeds. A deleted row carries who, why and
+        when together.
+      changes:
+        - addColumn:
+            tableName: tracked_company
+            columns:
+              - column:
+                  name: verification
+                  type: varchar(10)
+                  defaultValue: UNVERIFIED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sunat_estado
+                  type: varchar(40)
+              - column:
+                  name: sunat_condicion
+                  type: varchar(40)
+              - column:
+                  name: sunat_checked_at
+                  type: timestamp
+              - column:
+                  name: contact_name
+                  type: varchar(255)
+              - column:
+                  name: contact_email
+                  type: varchar(255)
+              - column:
+                  name: contact_phone
+                  type: varchar(30)
+              - column:
+                  name: deleted_at
+                  type: timestamp
+              - column:
+                  name: deleted_by_id
+                  type: uuid
+              - column:
+                  name: deleted_by_email
+                  type: varchar(255)
+              - column:
+                  name: deletion_reason
+                  type: varchar(500)
+        - sql:
+            sql: >
+              ALTER TABLE tracked_company ADD CONSTRAINT ck_tracked_company_verification
+              CHECK (verification IN ('VERIFIED', 'UNVERIFIED'));
+              ALTER TABLE tracked_company ADD CONSTRAINT ck_tracked_company_status
+              CHECK (status IN ('ACTIVE', 'INACTIVE'));
+              ALTER TABLE tracked_company ADD CONSTRAINT ck_tracked_company_deletion
+              CHECK ((deleted_at IS NULL AND deleted_by_id IS NULL AND deletion_reason IS NULL)
+              OR (deleted_at IS NOT NULL AND deleted_by_id IS NOT NULL
+              AND deletion_reason IS NOT NULL AND length(btrim(deletion_reason)) > 0));
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE tracked_company DROP CONSTRAINT ck_tracked_company_deletion;
+              ALTER TABLE tracked_company DROP CONSTRAINT ck_tracked_company_status;
+              ALTER TABLE tracked_company DROP CONSTRAINT ck_tracked_company_verification;
+        - dropColumn:
+            tableName: tracked_company
+            columns:
+              - column:
+                  name: deletion_reason
+              - column:
+                  name: deleted_by_email
+              - column:
+                  name: deleted_by_id
+              - column:
+                  name: deleted_at
+              - column:
+                  name: contact_phone
+              - column:
+                  name: contact_email
+              - column:
+                  name: contact_name
+              - column:
+                  name: sunat_checked_at
+              - column:
+                  name: sunat_condicion
+              - column:
+                  name: sunat_estado
+              - column:
+                  name: verification
+  - changeSet:
+      id: v0.3.0-tracked-company-ruc-unique-when-not-deleted
+      author: esg-trazabilidad
+      comment: >
+        A logically deleted company frees its RUC: uniqueness only covers rows
+        that are not deleted. Rolling back restores the plain constraint and fails
+        if a RUC was registered again over a deleted row -- resolve those first.
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE tracked_company DROP CONSTRAINT tracked_company_ruc_key;
+              CREATE UNIQUE INDEX uq_tracked_company_ruc_active ON tracked_company (ruc)
+              WHERE deleted_at IS NULL;
+      rollback:
+        - sql:
+            sql: >
+              DROP INDEX uq_tracked_company_ruc_active;
+              ALTER TABLE tracked_company ADD CONSTRAINT tracked_company_ruc_key UNIQUE (ruc);
+  - changeSet:
+      id: v0.3.0-tracked-company-status-change
+      author: esg-trazabilidad
+      comment: >
+        v3 M4: history of deactivations and reactivations. The reason and the
+        actor (from the JWT) are required.
+      changes:
+        - createTable:
+            tableName: tracked_company_status_change
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tracked_company_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_tracked_company_status_change_company
+                    references: tracked_company(id)
+              - column:
+                  name: from_status
+                  type: varchar(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: to_status
+                  type: varchar(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reason
+                  type: varchar(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_email
+                  type: varchar(255)
+              - column:
+                  name: changed_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              ALTER TABLE tracked_company_status_change ADD CONSTRAINT ck_tracked_company_status_change
+              CHECK (from_status <> to_status AND from_status IN ('ACTIVE', 'INACTIVE')
+              AND to_status IN ('ACTIVE', 'INACTIVE') AND length(btrim(reason)) > 0);
+        - createIndex:
+            tableName: tracked_company_status_change
+            indexName: idx_tracked_company_status_change_company
+            columns:
+              - column:
+                  name: tracked_company_id
+      rollback:
+        - dropTable:
+            tableName: tracked_company_status_change

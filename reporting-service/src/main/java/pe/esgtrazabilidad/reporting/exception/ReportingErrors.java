@@ -40,8 +40,28 @@ public enum ReportingErrors implements ApplicationError {
     // EsgCertificate.issue()'s own IllegalArgumentException (which was a 500).
     INVALID_CERTIFICATE_PERIOD(
             "RPT-009", "El periodo no es válido: la fecha final es anterior a la inicial", HttpStatus.BAD_REQUEST),
+    INVALID_RUC("RPT-010", "El RUC no es válido", HttpStatus.BAD_REQUEST),
+    SUNAT_UNAVAILABLE(
+            "RPT-011",
+            "No se pudo consultar SUNAT. Puede registrar la empresa como no verificada",
+            HttpStatus.SERVICE_UNAVAILABLE),
+    RUC_NOT_FOUND_IN_SUNAT("RPT-012", "SUNAT no tiene registrado ese RUC", HttpStatus.UNPROCESSABLE_ENTITY),
+    RUC_DEREGISTERED_IN_SUNAT(
+            "RPT-013", "El RUC está en baja definitiva en SUNAT", HttpStatus.UNPROCESSABLE_ENTITY),
+    SUNAT_ANSWERED(
+            "RPT-014", "SUNAT respondió: registre la empresa con la consulta normal", HttpStatus.CONFLICT),
     INACTIVE_TRACKED_COMPANY(
             "RPT-015", "La empresa está inactiva: no se pueden emitir certificados", HttpStatus.CONFLICT),
+    UNVERIFIED_TRACKED_COMPANY(
+            "RPT-016",
+            "La empresa no está verificada con SUNAT: verifíquela antes de emitir",
+            HttpStatus.CONFLICT),
+    TRACKED_COMPANY_HAS_CERTIFICATES(
+            "RPT-017",
+            "La empresa tiene certificados: no se puede eliminar ni cambiar su RUC o asociación",
+            HttpStatus.CONFLICT),
+    TRACKED_COMPANY_ALREADY_IN_STATUS(
+            "RPT-018", "La empresa ya se encuentra en el estado solicitado", HttpStatus.CONFLICT),
     CERTIFICATE_ALREADY_ANNULLED("RPT-019", "El certificado ya está anulado", HttpStatus.CONFLICT);
 
     private final String code;

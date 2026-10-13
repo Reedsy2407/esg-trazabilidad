@@ -1,10 +1,11 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
 import { EsgCertificate } from '../../core/api/api.types';
+import { errorInterceptor } from '../../core/http/interceptors';
 import { CompanyPage } from './company.page';
 
 const { reporting } = environment.services;
@@ -46,7 +47,21 @@ describe('CompanyPage, Resumen del período', () => {
     TestBed.tick();
   };
   const answerHeader = () =>
-    answer(backend.expectOne(base), { id: 'c-1', name: 'Envases', ruc: '20512345678', associationId: 'a-1', status: 'ACTIVE' });
+    answer(backend.expectOne(base), {
+      id: 'c-1',
+      name: 'Envases',
+      ruc: '20512345678',
+      associationId: 'a-1',
+      status: 'ACTIVE',
+      verification: 'VERIFIED',
+      sunatEstado: 'ACTIVO',
+      sunatCondicion: 'HABIDO',
+      sunatCheckedAt: '2026-10-01T15:00:00Z',
+      contactName: 'Rosa Quispe',
+      contactEmail: null,
+      contactPhone: null,
+      warning: null,
+    });
   const answerCertificates = (content: EsgCertificate[]) =>
     answer(
       backend.expectOne((r) => r.url === `${base}/certificates`),
@@ -67,6 +82,22 @@ describe('CompanyPage, Resumen del período', () => {
   });
 
   afterEach(() => backend.verify());
+
+  it('shows what SUNAT answered and the contact, with dashes for what is missing', async () => {
+    await answerCertificates([]);
+    const block = page.querySelector('[aria-labelledby="sunat-title"]') as HTMLElement;
+    const lines = Object.fromEntries(
+      [...block.querySelectorAll('dl > div')].map((line) => [
+        line.querySelector('dt')?.textContent?.trim(),
+        line.querySelector('dd')?.textContent?.trim(),
+      ]),
+    );
+    expect(lines['Estado en SUNAT']).toBe('ACTIVO');
+    expect(lines['Condición']).toBe('HABIDO');
+    expect(lines['Contacto']).toBe('Rosa Quispe');
+    expect(lines['Correo']).toBe('—');
+    expect(block.querySelector('.warning')).toBeNull();
+  });
 
   it('summarises the latest certified period, asking the API for exactly that period', async () => {
     await answerCertificates([
@@ -138,5 +169,187 @@ describe('CompanyPage, Resumen del período', () => {
     expect(rows[1].querySelector('.annulled-tag')).toBeNull();
     // 99,000 kg would have stretched the chart's axis past 100,000.
     expect(page.querySelector('app-kilos-chart')?.textContent).not.toContain('99,000');
+  });
+});
+
+describe('CompanyPage, ciclo de vida', () => {
+  let backend: HttpTestingController;
+  let page: HTMLElement;
+  let navigate: ReturnType<typeof vi.spyOn>;
+
+  const active = {
+    id: 'c-1', name: 'Envases', ruc: '20512345678', associationId: 'a-1', status: 'ACTIVE',
+    verification: 'VERIFIED', sunatEstado: 'ACTIVO', sunatCondicion: 'HABIDO', sunatCheckedAt: '2026-10-01T15:00:00Z',
+    contactName: 'Rosa Quispe', contactEmail: 'rosa@example.org', contactPhone: null, warning: null,
+  };
+  const flush = async (request: TestRequest, body: object | null, init?: { status: number; statusText: string }) => {
+    request.flush(body, init);
+    await Promise.resolve();
+    TestBed.tick();
+  };
+  const button = (text: string) => [...page.querySelectorAll('button')].find((b) => b.textContent?.includes(text));
+  const confirmWith = (reason: string) => {
+    const textarea = page.querySelector('app-reason-confirm textarea') as HTMLTextAreaElement;
+    textarea.value = reason;
+    textarea.dispatchEvent(new Event('input'));
+    const check = page.querySelector('app-reason-confirm input[type="checkbox"]') as HTMLInputElement;
+    check.checked = true;
+    check.dispatchEvent(new Event('change'));
+    TestBed.tick();
+    (page.querySelector('app-reason-confirm form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    TestBed.tick();
+  };
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [CompanyPage],
+      providers: [provideRouter([]), provideHttpClient(withInterceptors([errorInterceptor])), provideHttpClientTesting()],
+    });
+    backend = TestBed.inject(HttpTestingController);
+    navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const fixture = TestBed.createComponent(CompanyPage);
+    fixture.componentRef.setInput('id', 'c-1');
+    page = fixture.nativeElement as HTMLElement;
+    TestBed.tick();
+    await flush(backend.expectOne(base), active);
+    await flush(backend.expectOne((r) => r.url === `${base}/certificates`), {
+      content: [], page: 0, size: 20, totalElements: 0, totalPages: 0,
+    });
+  });
+
+  afterEach(() => backend.verify());
+
+  it('deactivating asks for a reason, sends exactly it, then shows the company as inactive', async () => {
+    button('Desactivar empresa')!.click();
+    TestBed.tick();
+    confirmWith('  Cerró el local ');
+    const request = backend.expectOne({ method: 'PATCH', url: `${base}/deactivate` });
+    expect(request.request.body).toEqual({ reason: 'Cerró el local' });
+    await flush(request, { ...active, status: 'INACTIVE' });
+    await flush(backend.expectOne(base), { ...active, status: 'INACTIVE' });
+
+    expect(page.textContent).toContain('Empresa desactivada.');
+    expect(button('Reactivar empresa')).toBeDefined();
+    expect(button('Desactivar empresa')).toBeUndefined();
+  });
+
+  it('RPT-018 says the company was already in that state', async () => {
+    button('Desactivar empresa')!.click();
+    TestBed.tick();
+    confirmWith('otra vez');
+    await flush(
+      backend.expectOne({ method: 'PATCH', url: `${base}/deactivate` }),
+      { code: 'RPT-018', detail: 'x' },
+      { status: 409, statusText: 'Conflict' },
+    );
+    expect(page.querySelector('app-reason-confirm [role="alert"]')?.textContent).toContain('ya estaba en ese estado');
+  });
+
+  it('deleting sends the reason and leaves for the list; RPT-017 explains why it was refused', async () => {
+    button('Eliminar empresa')!.click();
+    TestBed.tick();
+    confirmWith('Duplicada');
+    await flush(
+      backend.expectOne({ method: 'DELETE', url: base }),
+      { code: 'RPT-017', detail: 'x' },
+      { status: 409, statusText: 'Conflict' },
+    );
+    expect(page.querySelector('app-reason-confirm [role="alert"]')?.textContent).toContain('aunque estén anulados');
+    expect(navigate).not.toHaveBeenCalled();
+
+    (page.querySelector('app-reason-confirm form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    TestBed.tick();
+    const retry = backend.expectOne({ method: 'DELETE', url: base });
+    expect(retry.request.body).toEqual({ reason: 'Duplicada' });
+    await flush(retry, null);
+    expect(navigate).toHaveBeenCalledWith(['/empresas']);
+  });
+
+  it('edits the contact: the form starts from the stored values and a blank field is sent blank', async () => {
+    button('Editar contacto')!.click();
+    TestBed.tick();
+    expect((page.querySelector('#contactName') as HTMLInputElement).value).toBe('Rosa Quispe');
+    const email = page.querySelector('#contactEmail') as HTMLInputElement;
+    email.value = '';
+    email.dispatchEvent(new Event('input'));
+    (page.querySelector('.edit-contact') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    TestBed.tick();
+
+    const request = backend.expectOne({ method: 'PATCH', url: base });
+    expect(request.request.body).toEqual({ contactName: 'Rosa Quispe', contactEmail: '', contactPhone: '' });
+    await flush(request, { ...active, contactEmail: null });
+    await flush(backend.expectOne(base), { ...active, contactEmail: null });
+    expect(page.textContent).toContain('Contacto guardado.');
+    expect(page.querySelector('.edit-contact')).toBeNull();
+  });
+});
+
+describe('CompanyPage, empresa no verificada', () => {
+  let backend: HttpTestingController;
+  let page: HTMLElement;
+
+  const unverified = {
+    id: 'c-1', name: 'Escrita a mano', ruc: '20512345678', associationId: 'a-1', status: 'ACTIVE',
+    verification: 'UNVERIFIED', sunatEstado: null, sunatCondicion: null, sunatCheckedAt: null,
+    contactName: null, contactEmail: null, contactPhone: null, warning: null,
+  };
+  const flush = async (request: TestRequest, body: object | null, init?: { status: number; statusText: string }) => {
+    request.flush(body, init);
+    await Promise.resolve();
+    TestBed.tick();
+  };
+  const verifyButton = () =>
+    [...page.querySelectorAll('button')].find((b) => b.textContent?.includes('Verificar con SUNAT'));
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [CompanyPage],
+      // errorInterceptor turns the problem detail into the ApiError the page branches on.
+      providers: [provideRouter([]), provideHttpClient(withInterceptors([errorInterceptor])), provideHttpClientTesting()],
+    });
+    backend = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(CompanyPage);
+    fixture.componentRef.setInput('id', 'c-1');
+    page = fixture.nativeElement as HTMLElement;
+    TestBed.tick();
+    await flush(backend.expectOne(base), unverified);
+    await flush(backend.expectOne((r) => r.url === `${base}/certificates`), {
+      content: [], page: 0, size: 20, totalElements: 0, totalPages: 0,
+    });
+  });
+
+  afterEach(() => backend.verify());
+
+  it('is marked No verificada, explains why, and offers Verificar instead of Emitir', () => {
+    expect(page.querySelector('.unverified-tag')?.textContent).toContain('No verificada');
+    expect(page.querySelector('.sunat .warning')?.textContent).toContain('no se ha comprobado en SUNAT');
+    expect(verifyButton()).toBeDefined();
+    expect(page.textContent).not.toContain('Emitir certificado');
+  });
+
+  it('Verificar con SUNAT posts the refresh and reloads the company, now verified', async () => {
+    verifyButton()!.click();
+    TestBed.tick();
+    const refresh = backend.expectOne({ method: 'POST', url: `${base}/sunat-refresh` });
+    await flush(refresh, { ...unverified, name: 'RAZON SUNAT', verification: 'VERIFIED' });
+    await flush(backend.expectOne(base), { ...unverified, name: 'RAZON SUNAT', verification: 'VERIFIED', sunatEstado: 'ACTIVO' });
+
+    expect(page.querySelector('h1')?.textContent).toContain('RAZON SUNAT');
+    expect(page.querySelector('.unverified-tag')).toBeNull();
+    expect(page.textContent).toContain('Empresa verificada con SUNAT.');
+    expect(page.textContent).toContain('Emitir certificado');
+  });
+
+  it('when SUNAT does not answer it says the company stays unverified', async () => {
+    verifyButton()!.click();
+    TestBed.tick();
+    await flush(
+      backend.expectOne({ method: 'POST', url: `${base}/sunat-refresh` }),
+      { code: 'RPT-011', detail: 'x' },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+
+    expect(page.querySelector('.sunat [role="alert"]')?.textContent).toContain('sigue sin verificar');
+    expect(page.querySelector('.unverified-tag')).not.toBeNull();
   });
 });

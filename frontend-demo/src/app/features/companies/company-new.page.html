@@ -6,21 +6,6 @@
 </header>
 
 <form class="form-sheet" [formGroup]="form" (ngSubmit)="submit()" novalidate #formElement>
-  <div class="field">
-    <label for="name">Razón social</label>
-    <input
-      id="name"
-      class="control"
-      formControlName="name"
-      autocomplete="organization"
-      [attr.aria-invalid]="invalid('name')"
-      [attr.aria-describedby]="invalid('name') ? 'name-error' : null"
-    />
-    @if (invalid('name')) {
-      <p class="field-error" id="name-error">Escribe la razón social de la empresa.</p>
-    }
-  </div>
-
   <div class="field ruc">
     <label for="ruc">RUC</label>
     <input
@@ -34,7 +19,9 @@
       [attr.aria-invalid]="invalid('ruc')"
       [attr.aria-describedby]="invalid('ruc') ? 'ruc-hint ruc-error' : 'ruc-hint'"
     />
-    <p class="hint" id="ruc-hint">11 dígitos. Si lo pegas con espacios, guiones o puntos, se quitan.</p>
+    <p class="hint" id="ruc-hint">
+      11 dígitos. Si lo pegas con espacios, guiones o puntos, se quitan. La razón social se consulta a SUNAT al registrar.
+    </p>
     @if (invalid('ruc')) {
       <p class="field-error" id="ruc-error">
         @if (form.controls.ruc.hasError('required')) {
@@ -80,6 +67,33 @@
     }
   </div>
 
+  <div class="field">
+    <label for="contactName">Persona de contacto <span class="optional">(opcional)</span></label>
+    <input id="contactName" class="control" formControlName="contactName" autocomplete="off" maxlength="255" />
+  </div>
+
+  <div class="field">
+    <label for="contactEmail">Correo de contacto <span class="optional">(opcional)</span></label>
+    <input
+      id="contactEmail"
+      class="control"
+      type="email"
+      formControlName="contactEmail"
+      autocomplete="off"
+      maxlength="255"
+      [attr.aria-invalid]="invalid('contactEmail')"
+      [attr.aria-describedby]="invalid('contactEmail') ? 'contactEmail-error' : null"
+    />
+    @if (invalid('contactEmail')) {
+      <p class="field-error" id="contactEmail-error">El correo no es válido.</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="contactPhone">Teléfono de contacto <span class="optional">(opcional)</span></label>
+    <input id="contactPhone" class="control" formControlName="contactPhone" inputmode="tel" autocomplete="off" maxlength="30" />
+  </div>
+
   @if (error(); as message) {
     <div class="problem form-problem" role="alert">
       <p>{{ message }}</p>
@@ -87,6 +101,32 @@
         <p><a routerLink="/empresas">Ver la lista de empresas</a></p>
       }
     </div>
+  }
+
+  @if (fallbackOffered()) {
+    <fieldset class="field fallback">
+      <legend>Registrar sin SUNAT</legend>
+      <p class="hint">
+        Puedes registrarla como <strong>no verificada</strong> escribiendo su razón social. No podrá recibir
+        certificados hasta que la verifiques con SUNAT desde su ficha.
+      </p>
+      <label for="name">Razón social</label>
+      <input
+        id="name"
+        class="control"
+        formControlName="name"
+        autocomplete="off"
+        maxlength="255"
+        [attr.aria-invalid]="nameMissing()"
+        [attr.aria-describedby]="nameMissing() ? 'name-error' : null"
+      />
+      @if (nameMissing()) {
+        <p class="field-error" id="name-error">Escribe la razón social de la empresa.</p>
+      }
+      <button type="button" class="btn" (click)="submitUnverified()" [disabled]="submitting()">
+        {{ submitting() ? 'Registrando…' : 'Registrar como no verificada' }}
+      </button>
+    </fieldset>
   }
 
   <button class="btn btn-primary submit" type="submit" [disabled]="submitting()">

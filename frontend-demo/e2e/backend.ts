@@ -15,6 +15,14 @@ export const COMPANIES = [
     ruc: '20512345678',
     associationId: '0192f3a8-0000-7000-8000-000000000001',
     status: 'ACTIVE',
+    verification: 'VERIFIED',
+    sunatEstado: 'ACTIVO',
+    sunatCondicion: 'HABIDO',
+    sunatCheckedAt: '2026-10-01T15:00:00Z',
+    contactName: null,
+    contactEmail: null,
+    contactPhone: null,
+    warning: null,
   },
   {
     id: '0192f3a8-2c2d-7e4f-8a9b-0c1d2e3f4a5c',
@@ -22,8 +30,19 @@ export const COMPANIES = [
     ruc: '20603829104',
     associationId: '0192f3a8-0000-7000-8000-000000000002',
     status: 'INACTIVE',
+    verification: 'VERIFIED',
+    sunatEstado: 'ACTIVO',
+    sunatCondicion: 'HABIDO',
+    sunatCheckedAt: '2026-10-01T15:00:00Z',
+    contactName: null,
+    contactEmail: null,
+    contactPhone: null,
+    warning: null,
   },
 ] as const;
+
+/** What the fake SUNAT answers for a RUC the tests register; any other RUC gets a generic name. */
+export const SUNAT_NAMES: Readonly<Record<string, string>> = { '20548712336': 'PLÁSTICOS ANDINOS S.A.C.' };
 
 export const PASSWORD = 'clave-correcta';
 export const EMAIL = 'ana.paredes@asociacion.pe';
@@ -131,6 +150,12 @@ export interface BackendOptions {
   neighborWriteFailure?: { status: number; code: string | null };
   /** POST /tracked-companies answers this instead of 201 (code null: a bare gateway answer). */
   companyFailure?: { status: number; code: string | null };
+  /** PATCH/DELETE on a tracked company (edit, deactivate, activate, delete) answer this (code null: a bare gateway answer). */
+  companyWriteFailure?: { status: number; code: string | null };
+  /** POST /tracked-companies/unverified answers this instead of 201. */
+  unverifiedFailure?: { status: number; code: string | null };
+  /** POST /tracked-companies/{id}/sunat-refresh answers this instead of 200. */
+  refreshFailure?: { status: number; code: string | null };
   /** GET /sigersol-syncs fails with this status (a bare 5xx). */
   sigersolStatus?: number;
   /** POST /sigersol-syncs answers this instead of 201 (code null: a bare gateway answer). */
@@ -759,6 +784,7 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
 
   // Tracked companies with state: one registered by a test is listed and opens afterwards.
   const companies: { id: string; name: string; ruc: string; associationId: string; status: string }[] = COMPANIES.map((c) => ({ ...c }));
+  const sunatNameFor = (ruc: string) => SUNAT_NAMES[ruc] ?? `EMPRESA SUNAT ${ruc}`;
 
   await page.route('**/svc/reporting/tracked-companies**', async (route) => {
     const authorization = route.request().headers()['authorization'];
@@ -777,15 +803,67 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
           ? gatewayError(route, options.companyFailure.status)
           : problem(route, options.companyFailure.status, options.companyFailure.code, 'Rechazado');
       }
-      const { name, ruc, associationId } = body as { name?: unknown; ruc?: unknown; associationId?: unknown };
-      if (typeof name !== 'string' || name.trim() === '' || typeof ruc !== 'string' || !/^\d{11}$/.test(ruc) || typeof associationId !== 'string') {
-        return problem(route, 400, 'VALIDATION_ERROR', 'name, ruc o associationId no válidos');
+      const { ruc, associationId, contactName, contactEmail, contactPhone } = body as {
+        ruc?: unknown;
+        associationId?: unknown;
+        contactName?: string;
+        contactEmail?: string;
+        contactPhone?: string;
+      };
+      if (typeof ruc !== 'string' || !/^\d{11}$/.test(ruc) || typeof associationId !== 'string') {
+        return problem(route, 400, 'VALIDATION_ERROR', 'ruc o associationId no válidos');
       }
       if (companies.some((c) => c.ruc === ruc)) {
         return problem(route, 409, 'RPT-002', 'Ya existe una empresa rastreada con ese RUC');
       }
-      // Like the real service: associationId is not checked against recycler-service.
-      const company = { id: `0192f3a8-9000-7000-8000-${String(companies.length + 1).padStart(12, '0')}`, name, ruc, associationId, status: 'ACTIVE' };
+      // Like the real service: the name comes from SUNAT, and associationId is not checked against recycler-service.
+      const company = {
+        id: `0192f3a8-9000-7000-8000-${String(companies.length + 1).padStart(12, '0')}`,
+        name: sunatNameFor(ruc),
+        ruc,
+        associationId,
+        status: 'ACTIVE',
+        verification: 'VERIFIED',
+        sunatEstado: 'ACTIVO',
+        sunatCondicion: 'HABIDO',
+        sunatCheckedAt: '2026-10-11T15:00:00Z',
+        contactName: contactName ?? null,
+        contactEmail: contactEmail ?? null,
+        contactPhone: contactPhone ?? null,
+        warning: null,
+      };
+      companies.push(company);
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(company) });
+    }
+    if (id === 'unverified' && sub === undefined && route.request().method() === 'POST') {
+      const body = route.request().postDataJSON() as { ruc?: string; name?: string; associationId?: string; contactName?: string };
+      options.writes?.push({ method: 'POST', path: url.pathname, body });
+      if (options.unverifiedFailure !== undefined) {
+        return options.unverifiedFailure.code === null
+          ? gatewayError(route, options.unverifiedFailure.status)
+          : problem(route, options.unverifiedFailure.status, options.unverifiedFailure.code, 'Rechazado');
+      }
+      if (typeof body.name !== 'string' || body.name.trim() === '' || typeof body.ruc !== 'string' || typeof body.associationId !== 'string') {
+        return problem(route, 400, 'VALIDATION_ERROR', 'name: no debe estar vacío');
+      }
+      if (companies.some((c) => c.ruc === body.ruc)) {
+        return problem(route, 409, 'RPT-002', 'Ya existe una empresa rastreada con ese RUC');
+      }
+      const company = {
+        id: `0192f3a8-9000-7000-8000-${String(companies.length + 1).padStart(12, '0')}`,
+        name: body.name.trim(),
+        ruc: body.ruc,
+        associationId: body.associationId,
+        status: 'ACTIVE',
+        verification: 'UNVERIFIED',
+        sunatEstado: null,
+        sunatCondicion: null,
+        sunatCheckedAt: null,
+        contactName: body.contactName ?? null,
+        contactEmail: null,
+        contactPhone: null,
+        warning: null,
+      };
       companies.push(company);
       return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(company) });
     }
@@ -804,7 +882,56 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     if (company === undefined) {
       return problem(route, 404, 'RPT-001', 'Empresa no encontrada en reporting-service');
     }
+    const verb = route.request().method();
+    if ((verb === 'PATCH' || verb === 'DELETE') && (sub === undefined || sub === 'deactivate' || sub === 'activate')) {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      options.writes?.push({ method: verb, path: url.pathname, body });
+      if (options.companyWriteFailure !== undefined) {
+        return options.companyWriteFailure.code === null
+          ? gatewayError(route, options.companyWriteFailure.status)
+          : problem(route, options.companyWriteFailure.status, options.companyWriteFailure.code, 'Rechazado');
+      }
+      if (verb === 'DELETE') {
+        companies.splice(companies.indexOf(company), 1);
+        return route.fulfill({ status: 204 });
+      }
+      if (sub === 'deactivate' || sub === 'activate') {
+        if (typeof body.reason !== 'string' || body.reason.trim() === '') {
+          return problem(route, 400, 'VALIDATION_ERROR', 'reason: no debe estar vacío');
+        }
+        const target = sub === 'deactivate' ? 'INACTIVE' : 'ACTIVE';
+        if (company.status === target) {
+          return problem(route, 409, 'RPT-018', 'La empresa ya se encuentra en el estado solicitado');
+        }
+        company.status = target;
+      } else {
+        // Edit: absent = unchanged, blank = cleared.
+        for (const field of ['contactName', 'contactEmail', 'contactPhone'] as const) {
+          const value = body[field];
+          if (typeof value === 'string') {
+            (company as Record<string, unknown>)[field] = value.trim() === '' ? null : value.trim();
+          }
+        }
+      }
+      return json(company);
+    }
     if (sub === undefined) {
+      return json(company);
+    }
+    if (sub === 'sunat-refresh' && route.request().method() === 'POST') {
+      options.writes?.push({ method: 'POST', path: url.pathname, body: null });
+      if (options.refreshFailure !== undefined) {
+        return options.refreshFailure.code === null
+          ? gatewayError(route, options.refreshFailure.status)
+          : problem(route, options.refreshFailure.status, options.refreshFailure.code, 'Rechazado');
+      }
+      Object.assign(company, {
+        name: sunatNameFor(company.ruc),
+        verification: 'VERIFIED',
+        sunatEstado: 'ACTIVO',
+        sunatCondicion: 'HABIDO',
+        sunatCheckedAt: '2026-10-12T15:00:00Z',
+      });
       return json(company);
     }
     if (sub === 'certificates' && certId !== undefined) {

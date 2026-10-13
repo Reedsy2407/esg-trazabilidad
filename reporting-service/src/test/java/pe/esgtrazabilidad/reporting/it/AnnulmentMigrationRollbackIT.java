@@ -44,8 +44,8 @@ class AnnulmentMigrationRollbackIT {
             assertThat(columnExists(connection, "status")).isTrue();
             assertThat(exclusionIsPartial(connection)).isTrue();
 
-            // The two v0.2.0 changesets are the last two applied.
-            liquibase.rollback(2, null);
+            // The two v0.2.0 changesets sit under the four v0.3.0 ones, so undo all six.
+            liquibase.rollback(2 + 4, null);
             assertThat(columnExists(connection, "status")).isFalse();
             assertThat(columnExists(connection, "annulment_reason")).isFalse();
             assertThat(exclusionIsPartial(connection)).isFalse();

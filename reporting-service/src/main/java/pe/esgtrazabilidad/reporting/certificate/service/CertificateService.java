@@ -89,6 +89,9 @@ class CertificateService
         if (trackedCompany.getStatus() == TrackedCompanyStatus.INACTIVE) {
             throw new ApplicationException(ReportingErrors.INACTIVE_TRACKED_COMPANY);
         }
+        if (!trackedCompany.isVerified()) {
+            throw new ApplicationException(ReportingErrors.UNVERIFIED_TRACKED_COMPANY);
+        }
 
         // Service-level fast check first (clean 409 without ever reaching
         // the database's own rejection) -- the EXCLUDE USING gist

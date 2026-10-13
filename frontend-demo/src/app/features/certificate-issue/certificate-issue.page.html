@@ -22,6 +22,12 @@
       <p>Esta empresa está inactiva: no se pueden emitir certificados.</p>
       <p><a [routerLink]="['/empresas', id()]">Ver los certificados de la empresa</a></p>
     </div>
+  } @else if (unverified()) {
+    <!-- Same for a company SUNAT never confirmed (the backend refuses it too: RPT-016). -->
+    <div class="problem">
+      <p>Esta empresa no está verificada con SUNAT: no se pueden emitir certificados hasta que la verifiques.</p>
+      <p><a [routerLink]="['/empresas', id()]">Ir a la ficha para verificarla</a></p>
+    </div>
   } @else if (company.hasValue()) {
     <!-- ======================= 1. Período ======================= -->
     <section class="sheet-flat step" aria-labelledby="step1-title">

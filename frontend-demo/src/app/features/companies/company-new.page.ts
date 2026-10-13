@@ -4,9 +4,10 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
+import { RegisterTrackedCompanyRequest } from '../../core/api/api.types';
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
-import { loadErrorMessage, writeErrorText } from '../../shared/error-message';
+import { codeMessage, loadErrorMessage, writeErrorText } from '../../shared/error-message';
 
 export const COMPANY_UNCERTAIN =
   'No pudimos confirmar si la empresa quedó registrada. Revisa la lista de empresas antes de volver a intentarlo.';
@@ -15,9 +16,10 @@ export const COMPANY_UNCERTAIN =
 const RUC = /^\d{11}$/;
 
 /**
- * Registrar empresa (reporting-service POST /tracked-companies): name, RUC and the association
- * whose collections will be traced for it. Exactly RegisterTrackedCompanyRequest. The backend
- * doesn't check the association exists, so the screen only offers the ones recycler-service lists.
+ * Registrar empresa (reporting-service POST /tracked-companies): the RUC, the association whose
+ * collections will be traced for it, and an optional contact. The legal name is not typed: the
+ * backend asks SUNAT for it. The backend doesn't check the association exists, so the screen only
+ * offers the ones recycler-service lists.
  */
 @Component({
   selector: 'app-company-new-page',
@@ -26,6 +28,10 @@ const RUC = /^\d{11}$/;
   styles: `
     .ruc .control { max-width: 260px; }
     .load-problem { margin-bottom: var(--space-2); }
+    .optional { color: var(--ink-soft); font-weight: 400; }
+    .fallback { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border: 2px solid var(--ink); }
+    .fallback legend { padding: 0 var(--space-2); font-weight: 700; }
+    .fallback .btn { margin-top: var(--space-3); }
   `,
 })
 export class CompanyNewPage {
@@ -35,9 +41,13 @@ export class CompanyNewPage {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly form = this.fb.group({
-    name: ['', [Validators.required, (c: { value: string }) => (c.value.trim() === '' ? { required: true } : null)]],
     ruc: ['', [Validators.required, Validators.pattern(RUC)]],
     associationId: ['', Validators.required],
+    contactName: ['', Validators.maxLength(255)],
+    contactEmail: ['', [Validators.email, Validators.maxLength(255)]],
+    contactPhone: ['', Validators.maxLength(30)],
+    /** Only used by the fallback after RPT-011; the normal registration never sends it. */
+    name: ['', Validators.maxLength(255)],
   });
 
   protected readonly associations = rxResource({ stream: () => this.api.associations() });
@@ -56,6 +66,9 @@ export class CompanyNewPage {
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
   protected readonly submitted = signal(false);
   protected readonly submitting = signal(false);
+  /** After RPT-011: the screen offers to register the company UNVERIFIED, with a typed name. */
+  protected readonly fallbackOffered = signal(false);
+  protected readonly fallbackTried = signal(false);
   protected readonly error = signal<string | null>(null);
   /** The RUC the backend said is taken, to name it in the message and link to the list. */
   protected readonly duplicateRuc = signal<string | null>(null);
@@ -67,7 +80,11 @@ export class CompanyNewPage {
     });
   }
 
-  protected invalid(name: 'name' | 'ruc' | 'associationId'): boolean {
+  protected nameMissing(): boolean {
+    return this.fallbackTried() && this.form.controls.name.value.trim() === '';
+  }
+
+  protected invalid(name: 'ruc' | 'associationId' | 'contactEmail'): boolean {
     const control = this.form.controls[name];
     return control.invalid && (control.touched || this.submitted());
   }
@@ -101,8 +118,7 @@ export class CompanyNewPage {
       setTimeout(() => this.formElement()?.nativeElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
       return;
     }
-    const v = this.form.getRawValue();
-    const request = { name: v.name.trim(), ruc: v.ruc, associationId: v.associationId };
+    const request = this.request();
     this.submitting.set(true);
     this.api
       .registerTrackedCompany(request)
@@ -113,13 +129,71 @@ export class CompanyNewPage {
       .subscribe({
         next: (company) => void this.router.navigate(['/empresas', company.id], { state: { registrada: true } }),
         error: (error: unknown) => {
+          // RPT-011 is a 503, but a definite one: SUNAT did not answer and nothing was stored.
+          const sunatDown = error instanceof ApiError && error.code === 'RPT-011';
+          this.fallbackOffered.set(sunatDown);
           this.error.set(
-            writeErrorText(error, COMPANY_UNCERTAIN, {
-              'RPT-002': `Ya hay una empresa registrada con el RUC ${request.ruc}. No se puede registrar dos veces: búscala en la lista de empresas.`,
-            }),
+            sunatDown
+              ? (codeMessage(error) ?? COMPANY_UNCERTAIN)
+              : writeErrorText(error, COMPANY_UNCERTAIN, this.overrides(request.ruc)),
           );
           this.duplicateRuc.set(error instanceof ApiError && error.status === 409 && error.code === 'RPT-002' ? request.ruc : null);
         },
       });
+  }
+
+  /**
+   * The fallback after RPT-011: the operator types the name and the company is stored UNVERIFIED.
+   * The server repeats the SUNAT lookup first; if SUNAT answers after all (RPT-014) the offer is
+   * withdrawn and the normal registration is the way.
+   */
+  protected submitUnverified(): void {
+    this.fallbackTried.set(true);
+    if (this.submitting()) {
+      return;
+    }
+    this.normalizeRuc();
+    const name = this.form.controls.name.value.trim();
+    if (this.form.invalid || name === '') {
+      this.form.markAllAsTouched();
+      setTimeout(() => this.formElement()?.nativeElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+      return;
+    }
+    const request = { ...this.request(), name };
+    this.submitting.set(true);
+    this.api
+      .registerUnverifiedTrackedCompany(request)
+      .pipe(
+        finalize(() => this.submitting.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (company) => void this.router.navigate(['/empresas', company.id], { state: { registrada: true } }),
+        error: (error: unknown) => {
+          if (error instanceof ApiError && error.code === 'RPT-014') {
+            this.fallbackOffered.set(false);
+          }
+          this.error.set(writeErrorText(error, COMPANY_UNCERTAIN, this.overrides(request.ruc)));
+          this.duplicateRuc.set(error instanceof ApiError && error.status === 409 && error.code === 'RPT-002' ? request.ruc : null);
+        },
+      });
+  }
+
+  private request(): RegisterTrackedCompanyRequest {
+    const v = this.form.getRawValue();
+    return {
+      ruc: v.ruc,
+      associationId: v.associationId,
+      ...(v.contactName.trim() !== '' && { contactName: v.contactName.trim() }),
+      ...(v.contactEmail.trim() !== '' && { contactEmail: v.contactEmail.trim() }),
+      ...(v.contactPhone.trim() !== '' && { contactPhone: v.contactPhone.trim() }),
+    };
+  }
+
+  private overrides(ruc: string): Record<string, string> {
+    return {
+      'RPT-002': `Ya hay una empresa registrada con el RUC ${ruc}. No se puede registrar dos veces: búscala en la lista de empresas.`,
+      'RPT-014': 'SUNAT sí respondió esta vez. Vuelve a pulsar «Registrar empresa»: el nombre se toma de SUNAT.',
+    };
   }
 }

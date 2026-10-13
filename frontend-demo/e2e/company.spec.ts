@@ -131,6 +131,56 @@ test('if only the certificates fail, the header stays, the blocks that need them
   await expect(page.getByText('La gráfica no está disponible porque no se pudieron cargar los certificados.')).toBeVisible();
 });
 
+test('lifecycle: edit the contact, deactivate with a reason, reactivate, then delete', async ({ page }) => {
+  const writes: NonNullable<BackendOptions['writes']> = [];
+  await openCompany(page, COMPANIES[0].id, { writes });
+  const actions = page.getByRole('region', { name: 'Acciones de la empresa' });
+
+  await actions.getByRole('button', { name: 'Editar contacto' }).click();
+  await page.getByLabel('Persona de contacto').fill('Luis Paredes');
+  await page.getByRole('button', { name: 'Guardar contacto' }).click();
+  await expect(page.getByText('Contacto guardado.')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'SUNAT y contacto' })).toContainText(/Contacto\s*Luis Paredes/);
+
+  await actions.getByRole('button', { name: 'Desactivar empresa' }).click();
+  await page.getByLabel('Motivo').fill('Cerró el local');
+  await page.getByLabel(/Entiendo que no se le podrán emitir certificados/).check();
+  await page.locator('app-reason-confirm').getByRole('button', { name: /^Desactivar / }).click();
+  await expect(page.getByText(/Empresa desactivada\./)).toBeVisible();
+  await expect(page.getByText('Inactiva', { exact: true })).toBeVisible();
+
+  await actions.getByRole('button', { name: 'Reactivar empresa' }).click();
+  await page.getByLabel('Motivo').fill('Reabrió');
+  await page.getByLabel(/Revisé que la empresa vuelve a estar activa/).check();
+  await page.locator('app-reason-confirm').getByRole('button', { name: /^Reactivar / }).click();
+  await expect(page.getByText('Empresa reactivada.')).toBeVisible();
+
+  await actions.getByRole('button', { name: 'Eliminar empresa' }).click();
+  await page.getByLabel('Motivo').fill('Duplicada');
+  await page.getByLabel(/Entiendo que la eliminación no se puede deshacer/).check();
+  await page.locator('app-reason-confirm').getByRole('button', { name: /^Eliminar / }).click();
+  await expect(page).toHaveURL(/\/empresas$/);
+  await expect(page.getByRole('link', { name: new RegExp(COMPANIES[0].name) })).toHaveCount(0);
+
+  expect(writes.map((w) => `${w.method} ${w.path.split('/').slice(4).join('/')}`)).toEqual([
+    `PATCH ${COMPANIES[0].id}`,
+    `PATCH ${COMPANIES[0].id}/deactivate`,
+    `PATCH ${COMPANIES[0].id}/activate`,
+    `DELETE ${COMPANIES[0].id}`,
+  ]);
+  expect(writes[1].body).toEqual({ reason: 'Cerró el local' });
+});
+
+test('deleting a company with certificates (RPT-017) says why and keeps the company', async ({ page }) => {
+  await openCompany(page, COMPANIES[0].id, { companyWriteFailure: { status: 409, code: 'RPT-017' } });
+  await page.getByRole('button', { name: 'Eliminar empresa' }).click();
+  await page.getByLabel('Motivo').fill('Intento');
+  await page.getByLabel(/Entiendo que la eliminación no se puede deshacer/).check();
+  await page.locator('app-reason-confirm').getByRole('button', { name: /^Eliminar / }).click();
+  await expect(page.getByRole('alert')).toContainText('aunque estén anulados');
+  await expect(page.getByRole('heading', { name: COMPANIES[0].name, level: 1 })).toBeVisible();
+});
+
 test('an unknown company (404 RPT-001) shows a clear message instead of an empty page', async ({ page }) => {
   await openCompany(page, '0192f3a8-dead-7000-8000-000000000000');
 

@@ -127,7 +127,7 @@ class CertificateApiIT {
     @Test
     void previewingASummaryWithNoTracedKilosOrSigersolDataReturnsZeroKilosAndNullCompliance() {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20444444444", associationId);
+        String companyId = registerTrackedCompany("20444444445", associationId);
 
         given()
                 .queryParam("periodStart", "2026-01-01")
@@ -143,7 +143,7 @@ class CertificateApiIT {
     @Test
     void previewingASummaryAfterRegisteringSigersolDataIncludesTheCompliancePercent() {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20555555555", associationId);
+        String companyId = registerTrackedCompany("20555555556", associationId);
         registerSigersolSync(associationId, "2026-02-01", "2026-02-28");
 
         given()
@@ -171,7 +171,7 @@ class CertificateApiIT {
     @Test
     void issuingACertificateFreezesTheComputedKilosAndCompliancePercent() {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20666666666", associationId);
+        String companyId = registerTrackedCompany("20666666667", associationId);
         registerSigersolSync(associationId, "2026-03-01", "2026-03-31");
         seedTracedCollection(associationId, LocalDate.of(2026, 3, 10), new BigDecimal("10.00"));
         seedTracedCollection(associationId, LocalDate.of(2026, 3, 20), new BigDecimal("4.50"));
@@ -193,7 +193,7 @@ class CertificateApiIT {
     @Test
     void issuingWithAnOverlappingPeriodReturnsConflict() {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20777777777", associationId);
+        String companyId = registerTrackedCompany("20777777778", associationId);
         registerSigersolSync(associationId, "2026-04-01", "2026-05-31");
         given()
                 .contentType(ContentType.JSON)
@@ -216,7 +216,7 @@ class CertificateApiIT {
     @Test
     void issuingANonOverlappingAdjacentPeriodForTheSameTrackedCompanySucceeds() {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20777777778", associationId);
+        String companyId = registerTrackedCompany("20777777786", associationId);
         registerSigersolSync(associationId, "2026-04-01", "2026-05-31");
         given()
                 .contentType(ContentType.JSON)
@@ -238,7 +238,7 @@ class CertificateApiIT {
     @Test
     void issuingWithoutCoveringSigersolDataReturnsConflict() {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20888888888", associationId);
+        String companyId = registerTrackedCompany("20888888889", associationId);
 
         given()
                 .contentType(ContentType.JSON)
@@ -253,7 +253,7 @@ class CertificateApiIT {
     @Test
     void issuingWithTheEndBeforeTheStartReturnsBadRequestAndIssuesNothing() {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20300000001", associationId);
+        String companyId = registerTrackedCompany("20300000003", associationId);
         // A SIGERSOL record covering both dates, so the only thing wrong is their order.
         registerSigersolSync(associationId, "2026-07-01", "2026-07-31");
 
@@ -276,7 +276,7 @@ class CertificateApiIT {
 
     @Test
     void previewingWithTheEndBeforeTheStartReturnsBadRequest() {
-        String companyId = registerTrackedCompany("20300000002", UUID.randomUUID());
+        String companyId = registerTrackedCompany("20300000011", UUID.randomUUID());
 
         given()
                 .queryParam("periodStart", "2026-01-31")
@@ -303,7 +303,7 @@ class CertificateApiIT {
     @Test
     void gettingAndListingAnIssuedCertificateReturnsIt() {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20999999999", associationId);
+        String companyId = registerTrackedCompany("20999999990", associationId);
         registerSigersolSync(associationId, "2026-07-01", "2026-07-31");
         String certificateId = given()
                 .contentType(ContentType.JSON)
@@ -395,7 +395,7 @@ class CertificateApiIT {
     @Test
     void gettingACertificateThroughADifferentCompanysPathReturnsNotFound() {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20100000001", associationId);
+        String companyId = registerTrackedCompany("20100000009", associationId);
         registerSigersolSync(associationId, "2026-08-01", "2026-08-31");
         String certificateId = given()
                 .contentType(ContentType.JSON)
@@ -406,7 +406,7 @@ class CertificateApiIT {
                 .statusCode(201)
                 .extract()
                 .path("id");
-        String otherCompanyId = registerTrackedCompany("20100000002", UUID.randomUUID());
+        String otherCompanyId = registerTrackedCompany("20100000017", UUID.randomUUID());
 
         given()
                 .when()

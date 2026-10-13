@@ -38,24 +38,65 @@ export interface CreateStaffUserRequest {
 /** reporting-service TrackedCompanyStatus. */
 export type TrackedCompanyStatus = 'ACTIVE' | 'INACTIVE';
 
-/** reporting-service TrackedCompanyResponse (UUIDs arrive as strings). */
+/** Whether the legal name came from SUNAT (VERIFIED) or was typed by hand (UNVERIFIED). */
+export type TrackedCompanyVerification = 'VERIFIED' | 'UNVERIFIED';
+
+/**
+ * reporting-service TrackedCompanyResponse (UUIDs arrive as strings). The SUNAT fields are null for
+ * a company that was never verified; `warning` is set when SUNAT reports the taxpayer NO HABIDO.
+ */
 export interface TrackedCompany {
   readonly id: string;
   readonly name: string;
   readonly ruc: string;
   readonly associationId: string;
   readonly status: TrackedCompanyStatus;
+  readonly verification: TrackedCompanyVerification;
+  readonly sunatEstado: string | null;
+  readonly sunatCondicion: string | null;
+  readonly sunatCheckedAt: string | null;
+  readonly contactName: string | null;
+  readonly contactEmail: string | null;
+  readonly contactPhone: string | null;
+  readonly warning: string | null;
 }
 
 /**
- * reporting-service RegisterTrackedCompanyRequest: name @NotBlank, ruc exactly 11 digits,
- * associationId @NotNull (not checked against recycler-service). RPT-002 (409) for a RUC already
- * registered. Not the same as collection-service's /companies, which this app doesn't use.
+ * reporting-service RegisterTrackedCompanyRequest: ruc exactly 11 digits (RPT-010 if the check digit
+ * fails), associationId @NotNull (not checked against recycler-service), optional contact. The legal
+ * name is not sent: it comes from SUNAT. RPT-002 (409) for a RUC already registered; RPT-011 (503),
+ * RPT-012 and RPT-013 (422) from the SUNAT lookup. Not the same as collection-service's /companies,
+ * which this app doesn't use.
  */
 export interface RegisterTrackedCompanyRequest {
-  readonly name: string;
   readonly ruc: string;
   readonly associationId: string;
+  readonly contactName?: string;
+  readonly contactEmail?: string;
+  readonly contactPhone?: string;
+}
+
+/**
+ * reporting-service EditTrackedCompanyRequest. A field left out stays as it is; a blank contact
+ * field clears it. `ruc`/`associationId` are refused (RPT-017) once the company has a certificate;
+ * this app only edits the contact.
+ */
+export interface EditTrackedCompanyRequest {
+  readonly contactName?: string;
+  readonly contactEmail?: string;
+  readonly contactPhone?: string;
+}
+
+export type TrackedCompanyTransition = 'deactivate' | 'activate';
+
+/**
+ * reporting-service RegisterUnverifiedTrackedCompanyRequest: the fallback for when SUNAT did not
+ * answer (RPT-011). The name is the operator's; the server repeats the lookup and answers RPT-014
+ * (409) if SUNAT answers after all. The company stays UNVERIFIED (no certificates, RPT-016) until
+ * POST .../sunat-refresh succeeds.
+ */
+export interface RegisterUnverifiedTrackedCompanyRequest extends RegisterTrackedCompanyRequest {
+  readonly name: string;
 }
 
 /**

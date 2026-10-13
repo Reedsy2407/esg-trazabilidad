@@ -20,10 +20,8 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
@@ -33,6 +31,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import pe.esgtrazabilidad.reporting.it.support.RestAssuredSetup;
 import pe.esgtrazabilidad.reporting.it.support.TestJwtTokens;
+import pe.esgtrazabilidad.reporting.it.support.TestRucs;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -60,13 +59,10 @@ class CertificateAnnulmentApiIT {
         registry.add("spring.datasource.password", postgres::getPassword);
     }
 
-    private static final AtomicLong RUC_SEQUENCE = new AtomicLong(20_310_000_000L);
+    private static final AtomicLong RUC_SEQUENCE = new AtomicLong(31_000_000L);
 
     @LocalServerPort
     private int port;
-
-    @Autowired
-    private JdbcTemplate jdbc;
 
     @BeforeEach
     void setUpRestAssured() {
@@ -77,8 +73,8 @@ class CertificateAnnulmentApiIT {
         return given()
                 .contentType(ContentType.JSON)
                 .body("""
-                        { "name": "Empresa Anulación IT", "ruc": "%d", "associationId": "%s" }
-                        """.formatted(RUC_SEQUENCE.incrementAndGet(), associationId))
+                        { "ruc": "%s", "associationId": "%s" }
+                        """.formatted(TestRucs.fromSequence(RUC_SEQUENCE.incrementAndGet()), associationId))
                 .when()
                 .post("/tracked-companies")
                 .then()
@@ -264,12 +260,19 @@ class CertificateAnnulmentApiIT {
                 .then().body("content.size()", equalTo(2));
     }
 
+    /** Through the real route, so the status history is written as in production. */
+    private void deactivate(String companyId) {
+        given().contentType(ContentType.JSON).body("{ \"reason\": \"Empresa dada de baja\" }")
+                .when().patch("/tracked-companies/{id}/deactivate", companyId)
+                .then().statusCode(200);
+    }
+
     @Test
     void issuingToAnInactiveCompanyIsRpt015EvenWhenOtherChecksWouldAlsoFail() {
         UUID associationId = UUID.randomUUID();
         String companyId = registerCompany(associationId);
         // No SIGERSOL data at all: RPT-005 would apply, RPT-015 comes first.
-        jdbc.update("UPDATE tracked_company SET status = 'INACTIVE' WHERE id = ?::uuid", companyId);
+        deactivate(companyId);
 
         issue(companyId, "2026-02-01", "2026-02-28")
                 .then()
@@ -287,7 +290,7 @@ class CertificateAnnulmentApiIT {
     @Test
     void anInactiveCompanyKeepsItsCertificatesReadableAndAnnullable() {
         String[] ids = companyWithJanuaryCertificate();
-        jdbc.update("UPDATE tracked_company SET status = 'INACTIVE' WHERE id = ?::uuid", ids[0]);
+        deactivate(ids[0]);
 
         given().when().get("/tracked-companies/{companyId}/certificates/{id}/pdf", ids[0], ids[1])
                 .then().statusCode(200);

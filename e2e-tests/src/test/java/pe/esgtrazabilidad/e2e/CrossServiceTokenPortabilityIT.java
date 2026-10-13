@@ -68,7 +68,7 @@ class CrossServiceTokenPortabilityIT {
         auth = launch("auth-service", Map.of("ADMIN_BOOTSTRAP_EMAIL", BOOTSTRAP_EMAIL));
         recycler = launch("recycler-service", Map.of());
         collection = launch("collection-service", Map.of());
-        reporting = launch("reporting-service", Map.of());
+        reporting = launch("reporting-service", Map.of("RUC_LOOKUP_PROVIDER", "none"));
 
         // Launched together above, awaited one by one here: startup overlaps.
         for (ServiceProcess service : List.of(auth, recycler, collection, reporting)) {

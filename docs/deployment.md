@@ -61,6 +61,13 @@ Tip: the group's creation screen has an **Add from .env** button. It accepts all
 
 `CORS_ALLOWED_ORIGINS` is optional and can be added later. It lists the browser origins allowed to call the APIs, comma separated, e.g. the frontend's `https://<frontend-host>`. Left unset, no origin is allowed. `*` makes every service fail at startup on purpose.
 
+**reporting-service only (since v3 M4):** it asks SUNAT for the legal name of every company, through Decolecta. Two more variables, set on that service in the dashboard (they are not in `esg-shared`, and they have no default, so without them reporting-service does not start):
+
+| Key | Value |
+|---|---|
+| `RUC_LOOKUP_PROVIDER` | `decolecta`. The other accepted value, `none` (every lookup "does not answer"), is for development and tests only: the service refuses to start with it when `RENDER=true`, which Render sets itself. |
+| `RUC_LOOKUP_TOKEN` | The Decolecta API token (`DECOLECTA_TOKEN` is read as an alias). Free plan: 1 000 lookups a month; answers are cached for 24 hours in `ruc_lookup_cache`. Never paste it in a chat, a commit or a log. |
+
 `PORT` is **not** set: Render injects it, and each service reads `server.port: ${PORT:808x}`.
 
 A missing `JWT_SECRET` or `DB_PASSWORD` makes any service fail at startup on purpose, because neither has a default anywhere. A missing `RABBITMQ_PASSWORD` does the same to the three AMQP services; auth-service doesn't read it.

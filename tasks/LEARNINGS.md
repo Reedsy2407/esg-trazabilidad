@@ -1952,3 +1952,12 @@ Human review de Angel y Cowork (2026-10-10): APROBADO con 2 reservas y 2 decisio
 - `mvn -B -pl reporting-service -am verify`: BUILD SUCCESS, 79 unit + 80 IT (anulación, concurrencia con dos hilos, rollback de migración), 0 fallos. Primera corrida: 2 fallos de mis propias ITs (precisión de microsegundos en `issuedAt`; `kilosTrazados` 0 vs 0.0f en JSON), corregidos.
 - Spec OpenAPI de reporting-service regenerado (`node portal/scripts/export-openapi.mjs`): solo agrega el endpoint `/annul` y los campos nuevos.
 - Nota de entorno: el log de ITs muestra un intento de conexión a RabbitMQ en localhost:5672 pese a `auto-startup=false`; es ruido preexistente, no falla nada.
+
+### Checkpoint V3-M4
+
+- `mvn -B -pl reporting-service -am verify` (timeout 900): BUILD SUCCESS, 108 IT y 0 fallos. Frontend: 219 unit, lint, `tsc` y 139 Playwright verdes.
+- Una sola llamada real a Decolecta (RUC 20131312955, HTTP 200); la respuesta quedó como grabación de test. El token solo vive en `.env.local` y en el panel de Render; un test fija que ningún log del adaptador lo contiene.
+- Migración v0.3.0 (4 changesets con rollback) probada en `SunatLifecycleMigrationRollbackIT`; la rama `pre-m4` de Neon ya existía.
+- Lección: `writeErrorText` trata todo 5xx como resultado incierto; `RPT-011` es un 503 definitivo y cada pantalla que lo muestra lo trata aparte.
+- Lección: `-Dtest=X` junto a `-Dit.test=Y` hace que failsafe no corra nada; para una sola IT usar `-Dtest=NoSuchTest -Dit.test=Y`.
+- Límites conocidos (SPEC, "As built slice 3"): `issue` sin bloqueo frente a borrado/edición concurrentes, listado de certificados de empresa eliminada vacío en vez de `RPT-001`, ediciones simultáneas de contacto. `RPT-020` (versión N+1 del POST) queda para un PR posterior.

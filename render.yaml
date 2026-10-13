@@ -79,6 +79,12 @@ services:
         - .dockerignore
     envVars:
       - fromGroup: esg-shared
+      # SUNAT lookup by RUC (Decolecta). The provider has no default in code;
+      # the token's value is typed once in the dashboard, never here.
+      - key: RUC_LOOKUP_PROVIDER
+        value: decolecta
+      - key: RUC_LOOKUP_TOKEN
+        sync: false
 
   - type: web
     name: esg-auth-service

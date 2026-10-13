@@ -144,7 +144,7 @@ class CertificateExportApiIT {
     @Test
     void downloadingThePdfReturnsAValidPdfWithTheCertificatesData() throws IOException {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20200000001", associationId);
+        String companyId = registerTrackedCompany("20200000006", associationId);
         registerSigersolSync(associationId, "2026-10-01", "2026-10-31");
         seedTracedCollection(associationId, LocalDate.of(2026, 10, 5), new BigDecimal("42.00"));
         String certificateId = issueCertificate(companyId, "2026-10-01", "2026-10-31");
@@ -164,8 +164,8 @@ class CertificateExportApiIT {
             extractedText = new PDFTextStripper().getText(document);
         }
 
-        assertThat(extractedText).contains("Empresa Export IT");
-        assertThat(extractedText).contains("20200000001");
+        assertThat(extractedText).contains("Empresa SUNAT 20200000006");
+        assertThat(extractedText).contains("20200000006");
         assertThat(extractedText).contains("2026-10-01");
         assertThat(extractedText).contains("2026-10-31");
         assertThat(extractedText).contains("42.00");
@@ -175,7 +175,7 @@ class CertificateExportApiIT {
     @Test
     void downloadingTheCsvReturnsAValidCsvWithTheSummaryAndLineItems() throws IOException {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20200000002", associationId);
+        String companyId = registerTrackedCompany("20200000014", associationId);
         registerSigersolSync(associationId, "2026-11-01", "2026-11-30");
         seedTracedCollection(associationId, LocalDate.of(2026, 11, 5), new BigDecimal("15.00"));
         seedTracedCollection(associationId, LocalDate.of(2026, 11, 20), new BigDecimal("25.00"));
@@ -196,7 +196,7 @@ class CertificateExportApiIT {
             records = parser.getRecords();
         }
 
-        assertThat(records.get(0)).containsExactly("Empresa", "Empresa Export IT");
+        assertThat(records.get(0)).containsExactly("Empresa", "Empresa SUNAT 20200000014");
         assertThat(records.get(4)).containsExactly("Kilos trazados", "40.00");
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("2026-11-05", "15.00"));
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("2026-11-20", "25.00"));
@@ -205,10 +205,10 @@ class CertificateExportApiIT {
     @Test
     void downloadingAnExportThroughADifferentCompanysPathReturnsNotFound() {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20200000003", associationId);
+        String companyId = registerTrackedCompany("20200000022", associationId);
         registerSigersolSync(associationId, "2026-12-01", "2026-12-31");
         String certificateId = issueCertificate(companyId, "2026-12-01", "2026-12-31");
-        String otherCompanyId = registerTrackedCompany("20200000004", UUID.randomUUID());
+        String otherCompanyId = registerTrackedCompany("20200000031", UUID.randomUUID());
 
         given()
                 .when()

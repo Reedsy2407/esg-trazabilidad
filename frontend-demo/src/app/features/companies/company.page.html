@@ -13,9 +13,16 @@
         <p class="meta">
           <span>RUC <span class="mono">{{ c.ruc }}</span></span>
           <app-status-label [status]="c.status" />
+          @if (c.verification === 'UNVERIFIED') { <span class="unverified-tag">No verificada</span> }
         </p>
       </div>
-      <a class="btn btn-primary" [routerLink]="['/empresas', c.id, 'emitir']">Emitir certificado</a>
+      @if (c.verification === 'UNVERIFIED') {
+        <button type="button" class="btn btn-primary" (click)="verify()" [disabled]="verifying()">
+          {{ verifying() ? 'Consultando SUNAT…' : 'Verificar con SUNAT' }}
+        </button>
+      } @else {
+        <a class="btn btn-primary" [routerLink]="['/empresas', c.id, 'emitir']">Emitir certificado</a>
+      }
     </header>
   } @else if (company.error(); as error) {
     <div class="problem" role="alert">
@@ -35,6 +42,127 @@
     <p class="visually-hidden">Cargando empresa</p>
   }
 </div>
+
+@if (company.hasValue()) {
+  @let c = company.value();
+  <section class="panel sunat" aria-labelledby="sunat-title">
+    <h2 id="sunat-title">SUNAT y contacto</h2>
+    @if (c.verification === 'UNVERIFIED') {
+      <p class="warning" role="note">
+        El nombre de esta empresa lo escribió una persona y no se ha comprobado en SUNAT. No se le pueden emitir
+        certificados hasta que la verifiques.
+      </p>
+    }
+    @if (verifyError(); as message) {
+      <p class="problem" role="alert">{{ message }}</p>
+    }
+    <p class="done" role="status" [class.visually-hidden]="notice() === ''">{{ notice() }}</p>
+    @if (c.warning) {
+      <p class="warning" role="note">{{ c.warning }}.</p>
+    }
+    <dl class="lines">
+      <div><dt>Estado en SUNAT</dt><dd>{{ c.sunatEstado ?? 'Sin consultar' }}</dd></div>
+      <div><dt>Condición</dt><dd>{{ c.sunatCondicion ?? 'Sin consultar' }}</dd></div>
+      <div><dt>Consultado</dt><dd class="mono">{{ c.sunatCheckedAt ? formatDate(c.sunatCheckedAt) : '—' }}</dd></div>
+      <div><dt>Contacto</dt><dd>{{ c.contactName ?? '—' }}</dd></div>
+      <div><dt>Correo</dt><dd>{{ c.contactEmail ?? '—' }}</dd></div>
+      <div><dt>Teléfono</dt><dd class="mono">{{ c.contactPhone ?? '—' }}</dd></div>
+    </dl>
+
+    @if (editing()) {
+      <form class="edit-contact" [formGroup]="contactForm" (ngSubmit)="saveContact()" novalidate>
+        <div class="field">
+          <label for="contactName">Persona de contacto</label>
+          <input id="contactName" class="control" formControlName="contactName" autocomplete="off" maxlength="255" />
+        </div>
+        <div class="field">
+          <label for="contactEmail">Correo de contacto</label>
+          <input
+            id="contactEmail"
+            class="control"
+            type="email"
+            formControlName="contactEmail"
+            autocomplete="off"
+            maxlength="255"
+            [attr.aria-invalid]="contactForm.controls.contactEmail.invalid && contactForm.controls.contactEmail.touched"
+            [attr.aria-describedby]="contactForm.controls.contactEmail.invalid && contactForm.controls.contactEmail.touched ? 'contactEmail-error' : null"
+          />
+          @if (contactForm.controls.contactEmail.invalid && contactForm.controls.contactEmail.touched) {
+            <p class="field-error" id="contactEmail-error">El correo no es válido.</p>
+          }
+        </div>
+        <div class="field">
+          <label for="contactPhone">Teléfono de contacto</label>
+          <input id="contactPhone" class="control" formControlName="contactPhone" inputmode="tel" autocomplete="off" maxlength="30" />
+        </div>
+        @if (editError(); as message) {
+          <p class="problem" role="alert">{{ message }}</p>
+        }
+        <div class="buttons">
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar contacto' }}</button>
+          <button type="button" class="btn" [disabled]="saving()" (click)="cancelEdit()">Cancelar</button>
+        </div>
+      </form>
+    }
+  </section>
+
+  <section class="panel actions" aria-labelledby="actions-title" #actions tabindex="-1">
+    <h2 id="actions-title">Acciones de la empresa</h2>
+    <div class="buttons">
+      <button type="button" class="btn" #editButton data-panel="edit" (click)="startEdit()" [disabled]="editing()">Editar contacto</button>
+      @if (c.status === 'ACTIVE') {
+        <button type="button" class="btn" data-panel="deactivate" (click)="openPanel('deactivate')">Desactivar empresa</button>
+      } @else {
+        <button type="button" class="btn" data-panel="activate" (click)="openPanel('activate')">Reactivar empresa</button>
+      }
+      <button type="button" class="btn" data-panel="delete" (click)="openPanel('delete')">Eliminar empresa</button>
+    </div>
+    @switch (panel()) {
+      @case ('deactivate') {
+        <app-reason-confirm
+          idPrefix="deactivate"
+          title="Desactivar empresa"
+          explanation="Mientras esté inactiva no se le podrán emitir certificados; los que ya tiene siguen visibles. Se puede reactivar después."
+          confirmLabel="Entiendo que no se le podrán emitir certificados"
+          [actionText]="'Desactivar ' + c.name"
+          busyText="Desactivando…"
+          [busy]="panelBusy()"
+          [error]="panelError()"
+          (confirm)="changeStatus('deactivate', $event)"
+          (cancelled)="closePanel()"
+        />
+      }
+      @case ('activate') {
+        <app-reason-confirm
+          idPrefix="activate"
+          title="Reactivar empresa"
+          explanation="Volverá a poder recibir certificados."
+          confirmLabel="Revisé que la empresa vuelve a estar activa"
+          [actionText]="'Reactivar ' + c.name"
+          busyText="Reactivando…"
+          [busy]="panelBusy()"
+          [error]="panelError()"
+          (confirm)="changeStatus('activate', $event)"
+          (cancelled)="closePanel()"
+        />
+      }
+      @case ('delete') {
+        <app-reason-confirm
+          idPrefix="delete"
+          title="Eliminar empresa"
+          explanation="Solo si no tiene ningún certificado, ni siquiera anulado. Deja de aparecer en la lista y su RUC queda libre; el registro y el motivo se conservan. No se puede deshacer desde esta aplicación."
+          confirmLabel="Entiendo que la eliminación no se puede deshacer"
+          [actionText]="'Eliminar ' + c.name"
+          busyText="Eliminando…"
+          [busy]="panelBusy()"
+          [error]="panelError()"
+          (confirm)="deleteCompany($event)"
+          (cancelled)="closePanel()"
+        />
+      }
+    }
+  </section>
+}
 
 @if (!company.error()) {
   <div class="grid">

@@ -25,7 +25,10 @@ import {
   NeighborTransition,
   Page,
   RegisterSigersolSyncRequest,
+  EditTrackedCompanyRequest,
   RegisterTrackedCompanyRequest,
+  RegisterUnverifiedTrackedCompanyRequest,
+  TrackedCompanyTransition,
   SigersolSync,
   StaffUser,
   ScheduleTransition,
@@ -70,9 +73,50 @@ export class BackendApi {
     return this.http.get<TrackedCompany>(`${reporting}/tracked-companies/${encodeURIComponent(id)}`);
   }
 
-  /** 201 with the company, always ACTIVE; RPT-002 for a RUC already registered. Not idempotent. */
+  /**
+   * 201 with the company (ACTIVE, VERIFIED, name from SUNAT); RPT-002 for a RUC already registered,
+   * RPT-010 bad RUC, RPT-011 SUNAT did not answer, RPT-012 SUNAT has no such RUC, RPT-013 baja definitiva.
+   * Not idempotent.
+   */
   registerTrackedCompany(request: RegisterTrackedCompanyRequest): Observable<TrackedCompany> {
     return this.http.post<TrackedCompany>(`${reporting}/tracked-companies`, request);
+  }
+
+  /** 201 with an UNVERIFIED company. RPT-014 when SUNAT answers after all, RPT-002 for a taken RUC. Not idempotent. */
+  registerUnverifiedTrackedCompany(request: RegisterUnverifiedTrackedCompanyRequest): Observable<TrackedCompany> {
+    return this.http.post<TrackedCompany>(`${reporting}/tracked-companies/unverified`, request);
+  }
+
+  /**
+   * "Verificar con SUNAT": 200 with the company, its name and estado/condicion from SUNAT and VERIFIED.
+   * RPT-011/012/013 leave it unchanged. Asks the provider every time (the monthly quota is small).
+   */
+  refreshTrackedCompanySunat(id: string): Observable<TrackedCompany> {
+    return this.http.post<TrackedCompany>(
+      `${reporting}/tracked-companies/${encodeURIComponent(id)}/sunat-refresh`,
+      null,
+    );
+  }
+
+  /** 200 with the company. Contact fields only from this app; RPT-017 would answer a RUC/association change with certificates. */
+  editTrackedCompany(id: string, request: EditTrackedCompanyRequest): Observable<TrackedCompany> {
+    return this.http.patch<TrackedCompany>(`${reporting}/tracked-companies/${encodeURIComponent(id)}`, request);
+  }
+
+  /**
+   * 200 with the company, now INACTIVE (it cannot receive certificates, RPT-015) or ACTIVE again.
+   * The reason is required; who comes from the token. RPT-018 if it already was in that state.
+   */
+  changeTrackedCompanyStatus(id: string, transition: TrackedCompanyTransition, reason: string): Observable<TrackedCompany> {
+    return this.http.patch<TrackedCompany>(
+      `${reporting}/tracked-companies/${encodeURIComponent(id)}/${transition}`,
+      { reason },
+    );
+  }
+
+  /** Logical deletion, 204: only without certificates (RPT-017). Afterwards the company answers RPT-001 and its RUC is free. */
+  deleteTrackedCompany(id: string, reason: string): Observable<void> {
+    return this.http.delete<void>(`${reporting}/tracked-companies/${encodeURIComponent(id)}`, { body: { reason } });
   }
 
   /** Newest period first, 20 per page; `associationId` filters exactly. */

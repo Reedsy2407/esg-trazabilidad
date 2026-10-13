@@ -116,7 +116,7 @@ class CertificateConcurrencyApiIT {
     @Test
     void twoConcurrentIssuancesForTheSameOverlappingPeriodOnlyOneSucceeds() throws Exception {
         UUID associationId = UUID.randomUUID();
-        String companyId = registerTrackedCompany("20200000001", associationId);
+        String companyId = registerTrackedCompany("20200000006", associationId);
         given()
                 .contentType(ContentType.JSON)
                 .body(registerSigersolSyncRequest(associationId, "2026-01-01", "2026-03-31"))

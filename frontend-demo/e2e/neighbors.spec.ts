@@ -1,7 +1,7 @@
 import { Page, expect, test } from '@playwright/test';
 
 import { ASSOCIATIONS, BackendOptions, NEIGHBORS } from './backend';
-import { WIDTHS, checkA11y, expectNoSidewaysScroll, signedIn } from './session';
+import { WIDTHS, checkA11y, chooseNeighbor, expectNoSidewaysScroll, neighborBox, neighborList, signedIn } from './session';
 
 const LUIS = NEIGHBORS[0];
 const ROSA = NEIGHBORS[1];
@@ -233,17 +233,18 @@ test('collection form: from a neighbour, search, remembered association and the 
   const { unmocked } = await open(page, `/vecinos/${ROSA.id}`);
   await page.getByRole('link', { name: 'Registrar recojo de este vecino' }).click();
   await expect(page).toHaveURL(new RegExp(`/recojos/nuevo\\?vecino=${ROSA.id}$`));
-  const neighbor = page.getByLabel('Vecino', { exact: true });
-  await expect(neighbor).toHaveValue(ROSA.id);
+  const neighbor = neighborBox(page);
+  await expect(neighbor).toHaveValue(`${ROSA.fullName} · ${ROSA.district}`);
   await expect(page.getByText('Aún no registras recojos en esta sesión.')).toBeVisible();
 
-  // Search: accents and case don't matter; the chosen neighbour stays in the list.
-  await page.getByLabel('Buscar vecino (por nombre o distrito)').fill('huaman');
+  // One box: typing narrows the list (accents and case don't matter) and withdraws the chosen neighbour.
+  await neighbor.fill('huaman');
   await expect(page.getByRole('status').filter({ hasText: 'coincide' })).toHaveText('1 vecino coincide con «huaman».');
-  await expect(neighbor.locator('option')).toHaveText(['Elige un vecino', `${LUIS.fullName} · ${LUIS.district} (inactivo)`, `${ROSA.fullName} · ${ROSA.district}`]);
-  await page.getByLabel('Buscar vecino (por nombre o distrito)').fill('zzz');
+  await expect(neighborList(page).getByRole('option')).toHaveText([`${LUIS.fullName} · ${LUIS.district} (inactivo)`]);
+  await neighbor.fill('zzz');
   await expect(page.getByRole('status').filter({ hasText: 'coincide' })).toHaveText('Ningún vecino coincide con «zzz».');
-  await page.getByLabel('Buscar vecino (por nombre o distrito)').fill('');
+  await neighbor.fill('');
+  await chooseNeighbor(page, `${ROSA.fullName} · ${ROSA.district}`);
 
   await page.getByLabel('Asociación').selectOption({ label: ASSOCIATIONS[0].name });
   await page.getByLabel('Peso recolectado (kg)').fill('7.75');

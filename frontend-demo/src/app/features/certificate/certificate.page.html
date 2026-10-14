@@ -84,6 +84,7 @@
     </div>
   </div>
 
+  <div class="cert-layout annul-row">
   <section class="annul" aria-labelledby="annul-title">
     <h2 id="annul-title" class="sec">Anular certificado</h2>
     <p class="done" role="status" [class.visually-hidden]="!annulStatus()">{{ annulStatus() }}</p>
@@ -107,6 +108,7 @@
       <button type="button" class="btn" data-panel="annul" (click)="openAnnul()">Anular certificado</button>
     }
   </section>
+  </div>
 } @else if (certificate.error(); as error) {
   <div class="problem" role="alert">
     @if (isNotFound(error)) {

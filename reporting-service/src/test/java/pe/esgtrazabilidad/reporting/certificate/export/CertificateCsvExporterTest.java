@@ -8,7 +8,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.junit.jupiter.api.Test;
@@ -27,6 +26,28 @@ class CertificateCsvExporterTest {
 
     private final CertificateCsvExporter exporter = new CertificateCsvExporter();
 
+    /** Excel needs the UTF-8 mark to read accents; the tests read the file as Excel would, then drop it. */
+    static String decode(byte[] csv) {
+        assertThat(csv).startsWith((byte) 0xEF, (byte) 0xBB, (byte) 0xBF);
+        return new String(csv, 3, csv.length - 3, StandardCharsets.UTF_8);
+    }
+
+    @Test
+    void opensInSpanishExcelWithAccentsAndColumns() {
+        TrackedCompany trackedCompany = TrackedCompany.create("Peña, Núñez S.A.C.", "20123456789", UUID.randomUUID());
+        EsgCertificate certificate = EsgCertificate.issue(
+                trackedCompany, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), new BigDecimal("8.00"), new BigDecimal("85.00"));
+
+        String text = decode(exporter.export(certificate, List.of()));
+
+        // Semicolon-separated (Excel in Spanish), UTF-8 with accents intact, no stray comma-split.
+        assertThat(text).contains("Empresa;Peña, Núñez S.A.C.");
+        assertThat(text).contains("Cumplimiento de jerarquía (%);85.00");
+        assertThat(text).contains("Período inicio;2026-01-01");
+        assertThat(text).contains("Estado;Vigente");
+        assertThat(text).doesNotContain("Ã");
+    }
+
     @Test
     void theDistrictTableCarriesSigersolsCountsWithTheirSourceAndAnInjectionSafeName() throws IOException {
         TrackedCompany trackedCompany = TrackedCompany.create("Empresa", "20123456789", UUID.randomUUID());
@@ -39,17 +60,17 @@ class CertificateCsvExporterTest {
                 DistrictLine.unknown(new BigDecimal("1.00"))));
 
         List<CSVRecord> records;
-        try (CSVParser parser = CSVParser.parse(new String(csv, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+        try (CSVParser parser = CSVParser.parse(decode(csv), CertificateCsvExporter.FORMAT)) {
             records = parser.getRecords();
         }
         assertThat(records).anySatisfy(r -> assertThat(r)
                 .containsExactly("Distrito", "Ubigeo", "Kilos trazados", "Contexto", "Asociaciones", "Recicladores", "Fuente"));
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly(
-                "La Molina", "150114", "5.00", "disponible", "3", "31", "SIGERSOL Municipal, año 2024, datos agregados"));
+                "La Molina", "150114", "5.00", "Disponible", "3", "31", "SIGERSOL Municipal, año 2024, datos agregados"));
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly(
-                "'=SUMA(1)", "150131", "2.00", "no disponible", "", "", ""));
+                "'=SUMA(1)", "150131", "2.00", "No disponible", "", "", ""));
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly(
-                "Distrito desconocido", "", "1.00", "distrito desconocido", "", "", ""));
+                "Distrito desconocido", "", "1.00", "Distrito desconocido", "", "", ""));
     }
 
     @Test
@@ -58,7 +79,7 @@ class CertificateCsvExporterTest {
         EsgCertificate certificate = EsgCertificate.issue(
                 trackedCompany, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), new BigDecimal("8.00"), new BigDecimal("85.00"));
 
-        assertThat(new String(exporter.export(certificate, List.of()), StandardCharsets.UTF_8)).doesNotContain("Ubigeo");
+        assertThat(decode(exporter.export(certificate, List.of()))).doesNotContain("Ubigeo");
     }
 
     @Test
@@ -80,7 +101,7 @@ class CertificateCsvExporterTest {
         assertThat(csvBytes).isNotEmpty();
 
         List<CSVRecord> records;
-        try (CSVParser parser = CSVParser.parse(new String(csvBytes, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+        try (CSVParser parser = CSVParser.parse(decode(csvBytes), CertificateCsvExporter.FORMAT)) {
             records = parser.getRecords();
         }
 
@@ -89,7 +110,7 @@ class CertificateCsvExporterTest {
         assertThat(records.get(0)).containsExactly("Empresa", "Empresa, S.A.C.");
         assertThat(records.get(1)).containsExactly("RUC", "20123456789");
         assertThat(records.get(4)).containsExactly("Kilos trazados", "120.50");
-        assertThat(records.get(5)).containsExactly("Cumplimiento de jerarquia (%)", "85.00");
+        assertThat(records.get(5)).containsExactly("Cumplimiento de jerarquía (%)", "85.00");
 
         // Line items table: every frozen entry must appear as its own row.
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("2026-01-05", "50.00"));
@@ -105,7 +126,7 @@ class CertificateCsvExporterTest {
         assertThat(records.get(0)).containsExactly("Empresa", "'" + name);
         // Numbers are never prefixed: a leading "-" there is a real negative.
         assertThat(records.get(4)).containsExactly("Kilos trazados", "120.50");
-        assertThat(records.get(5)).containsExactly("Cumplimiento de jerarquia (%)", "85.00");
+        assertThat(records.get(5)).containsExactly("Cumplimiento de jerarquía (%)", "85.00");
     }
 
     @ParameterizedTest
@@ -123,7 +144,7 @@ class CertificateCsvExporterTest {
                 new BigDecimal("120.50"),
                 new BigDecimal("85.00"));
         byte[] csvBytes = exporter.export(certificate, List.of());
-        try (CSVParser parser = CSVParser.parse(new String(csvBytes, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+        try (CSVParser parser = CSVParser.parse(decode(csvBytes), CertificateCsvExporter.FORMAT)) {
             return parser.getRecords();
         }
     }
@@ -141,12 +162,12 @@ class CertificateCsvExporterTest {
         byte[] csvBytes = exporter.export(certificate, List.of());
 
         List<CSVRecord> records;
-        try (CSVParser parser = CSVParser.parse(new String(csvBytes, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+        try (CSVParser parser = CSVParser.parse(decode(csvBytes), CertificateCsvExporter.FORMAT)) {
             records = parser.getRecords();
         }
 
         assertThat(records.get(0)).containsExactly("Empresa", "Empresa vacia SAC");
-        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("Fecha de recoleccion", "Peso (kg)"));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("Fecha de recolección", "Peso (kg)"));
     }
 
     private EsgCertificate annulled(String reason, String email) {
@@ -170,27 +191,27 @@ class CertificateCsvExporterTest {
     }
 
     private List<CSVRecord> parse(byte[] csvBytes) throws IOException {
-        try (CSVParser parser = CSVParser.parse(new String(csvBytes, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+        try (CSVParser parser = CSVParser.parse(decode(csvBytes), CertificateCsvExporter.FORMAT)) {
             return parser.getRecords();
         }
     }
 
     @Test
-    void anIssuedCertificateCarriesEstadoEmitidoAndNoAnnulmentRows() throws IOException {
+    void anIssuedCertificateCarriesEstadoVigenteAndNoAnnulmentRows() throws IOException {
         List<CSVRecord> records = export("Empresa SAC");
 
-        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("estado", "Emitido"));
-        assertThat(records).noneSatisfy(r -> assertThat(r.get(0)).isEqualTo("motivo_anulacion"));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("Estado", "Vigente"));
+        assertThat(records).noneSatisfy(r -> assertThat(r.get(0)).isEqualTo("Motivo de anulación"));
     }
 
     @Test
     void anAnnulledCertificateCarriesEstadoAnuladoWithWhenWhoAndWhy() throws IOException {
         List<CSVRecord> records = parse(exporter.export(annulled("Datos erróneos, del vecino", "ana@example.com"), List.of()));
 
-        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("estado", "Anulado"));
-        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("anulado_en", "2026-03-01T10:00:00Z"));
-        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("anulado_por", "ana@example.com"));
-        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("motivo_anulacion", "Datos erróneos, del vecino"));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("Estado", "Anulado"));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("Anulado en (hora de Lima)", "2026-03-01 05:00"));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("Anulado por", "ana@example.com"));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("Motivo de anulación", "Datos erróneos, del vecino"));
         // The frozen numbers are still there.
         assertThat(records.get(4)).containsExactly("Kilos trazados", "120.50");
     }
@@ -201,7 +222,7 @@ class CertificateCsvExporterTest {
             throws IOException {
         List<CSVRecord> records = parse(exporter.export(annulled(reason, "ana@example.com"), List.of()));
 
-        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("motivo_anulacion", "'" + reason));
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("Motivo de anulación", "'" + reason));
     }
 
     @Test
@@ -209,6 +230,6 @@ class CertificateCsvExporterTest {
         List<CSVRecord> records = parse(exporter.export(annulled("Motivo", null), List.of()));
 
         assertThat(records)
-                .anySatisfy(r -> assertThat(r).containsExactly("anulado_por", "01a0d8cb-f219-72a2-b006-5150f0e0d685"));
+                .anySatisfy(r -> assertThat(r).containsExactly("Anulado por", "01a0d8cb-f219-72a2-b006-5150f0e0d685"));
     }
 }

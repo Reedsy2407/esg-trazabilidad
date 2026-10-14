@@ -115,8 +115,15 @@
       } @else {
         <button type="button" class="btn" data-panel="activate" (click)="openPanel('activate')">Reactivar empresa</button>
       }
-      <button type="button" class="btn" data-panel="delete" (click)="openPanel('delete')">Eliminar empresa</button>
+      @if (!hasCertificates()) {
+        <button type="button" class="btn" data-panel="delete" (click)="openPanel('delete')">Eliminar empresa</button>
+      }
     </div>
+    @if (hasCertificates()) {
+      <p class="hint locked">
+        Esta empresa tiene certificados (aunque estén anulados), así que no se puede eliminar. Si ya no debe recibir certificados, desactívala.
+      </p>
+    }
     @switch (panel()) {
       @case ('deactivate') {
         <app-reason-confirm

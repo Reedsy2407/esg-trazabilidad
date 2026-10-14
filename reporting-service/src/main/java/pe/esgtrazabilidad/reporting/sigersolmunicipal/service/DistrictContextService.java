@@ -35,6 +35,8 @@ public class DistrictContextService {
     static final int PROBE_YEARS = 6;
     /** Short on purpose: it spares slow calls during an outage, not the data's own freshness. */
     static final Duration NEGATIVE_CACHE = Duration.ofMinutes(5);
+    /** More districts than Lima has (about 50) with no answer at once would be a bug, not a workload. */
+    static final int NEGATIVE_CACHE_MAX_ENTRIES = 256;
 
     private static final Logger log = LoggerFactory.getLogger(DistrictContextService.class);
 
@@ -65,11 +67,16 @@ public class DistrictContextService {
         if (snapshot.isPresent() && isFresh(snapshot.get())) {
             return DistrictContext.of(snapshot.get(), false);
         }
-        Optional<DistrictStats> fetched = recentlyEmpty(ubigeo) ? Optional.empty() : fetchLatestYear(ubigeo);
+        boolean skipped = recentlyEmpty(ubigeo);
+        Optional<DistrictStats> fetched = skipped ? Optional.empty() : fetchLatestYear(ubigeo);
         if (fetched.isPresent()) {
             return DistrictContext.of(fetched.get(), false);
         }
-        noAnswerUntil.put(ubigeo, clock.instant().plus(NEGATIVE_CACHE));
+        if (!skipped) {
+            // Only a real miss starts the five minutes: serving from the cache must not extend it,
+            // or a district asked for every minute would never be tried again.
+            rememberNoAnswer(ubigeo);
+        }
         // No answer worth keeping: the last good value, marked as such, or nothing.
         return snapshot.map(stats -> DistrictContext.of(stats, true)).orElseGet(() -> DistrictContext.unavailable(ubigeo));
     }
@@ -108,7 +115,34 @@ public class DistrictContextService {
     /** A district that just had no answer (or no rows) is not asked again for {@link #NEGATIVE_CACHE}. */
     private boolean recentlyEmpty(String ubigeo) {
         Instant until = noAnswerUntil.get(ubigeo);
-        return until != null && until.isAfter(clock.instant());
+        if (until == null) {
+            return false;
+        }
+        if (until.isAfter(clock.instant())) {
+            return true;
+        }
+        noAnswerUntil.remove(ubigeo, until);
+        return false;
+    }
+
+    /**
+     * Notes the miss, first purging every entry that already expired and, if live ones still fill
+     * the cap, dropping the one closest to expiring: the map can never grow past the cap.
+     */
+    private void rememberNoAnswer(String ubigeo) {
+        Instant now = clock.instant();
+        noAnswerUntil.values().removeIf(until -> !until.isAfter(now));
+        while (noAnswerUntil.size() >= NEGATIVE_CACHE_MAX_ENTRIES && !noAnswerUntil.containsKey(ubigeo)) {
+            noAnswerUntil.entrySet().stream()
+                    .min(Map.Entry.comparingByValue())
+                    .ifPresent(oldest -> noAnswerUntil.remove(oldest.getKey(), oldest.getValue()));
+        }
+        noAnswerUntil.put(ubigeo, now.plus(NEGATIVE_CACHE));
+    }
+
+    /** Entries currently held, expired or not (tests only). */
+    int negativeCacheSize() {
+        return noAnswerUntil.size();
     }
 
     private boolean isFresh(DistrictStats stats) {

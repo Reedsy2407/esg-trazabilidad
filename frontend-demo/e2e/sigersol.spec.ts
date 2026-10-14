@@ -24,7 +24,7 @@ test('the records are always labelled as manual entry, newest period first, filt
   await expect(rows.first()).toContainText('91.25 %');
   await expect(rows.first()).toContainText('No declarado');
   // A record made before v3 has no origin: said plainly, never guessed.
-  await expect(rows.first()).toContainText('Origen no registrado');
+  await expect(rows.first()).toContainText('Dato anterior al registro de origen');
   await expect(rows.nth(1)).toContainText('Con comprobante referenciado');
   await expect(rows.nth(1)).toContainText('a.paredes@example.com');
   await expect(rows.nth(1)).toContainText('Diciembre 2024');

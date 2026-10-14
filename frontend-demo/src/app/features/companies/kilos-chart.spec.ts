@@ -1,5 +1,5 @@
 import { EsgCertificate } from '../../core/api/api.types';
-import { AXIS_MIN_TOP_KG, MAX_PERIODS, buildKilosChart, latestCertificate } from './kilos-chart';
+import { MAX_PERIODS, buildKilosChart, latestCertificate, niceAxis } from './kilos-chart';
 
 function certificate(month: string, kg: number, issuedAt = '2026-01-10T15:00:00Z'): EsgCertificate {
   const [year, mm] = month.split('-').map(Number);
@@ -52,15 +52,22 @@ describe('buildKilosChart', () => {
     expect(chart.bars[1].kgText).toBe('12,480.50 kg');
   });
 
-  it("uses the brief's 0-15,000 kg axis, and extends it in 5,000 kg steps only when needed", () => {
+  it('fits the axis to the data with a nice step, so a small month is not a flat line', () => {
+    expect(buildKilosChart([certificate('2024-10', 79.45)])).toMatchObject({ axisTop: 100, ticks: [0, 50, 100] });
+    expect(buildKilosChart([certificate('2024-10', 12480.5)]).ticks).toEqual([0, 5000, 10000, 15000]);
     expect(buildKilosChart([certificate('2024-10', 14999)]).ticks).toEqual([0, 5000, 10000, 15000]);
-    expect(buildKilosChart([]).axisTop).toBe(AXIS_MIN_TOP_KG);
-
-    const big = buildKilosChart([certificate('2024-10', 15000.01)]);
-    expect(big.axisTop).toBe(20000);
-    expect(big.ticks).toEqual([0, 5000, 10000, 15000, 20000]);
+    expect(buildKilosChart([certificate('2024-10', 15000.01)]).ticks).toEqual([0, 10000, 20000]);
+    expect(buildKilosChart([]).ticks).toEqual([0, 5, 10]);
   });
 
+  it('always holds the largest bar, whatever the magnitude', () => {
+    for (const max of [0.3, 1, 7.2, 99.99, 100, 333, 1234.56, 99999999.99]) {
+      const { axisTop, ticks } = niceAxis(max);
+      expect(axisTop, String(max)).toBeGreaterThanOrEqual(max);
+      expect(ticks[0]).toBe(0);
+      expect(ticks.length, String(max)).toBeLessThanOrEqual(6);
+    }
+  });
   it('is empty, not broken, without certificates', () => {
     expect(buildKilosChart([]).bars).toEqual([]);
   });
@@ -97,7 +104,7 @@ describe('annulled certificates', () => {
     const chart = buildKilosChart([annulled('2025-03', 99_000), certificate('2025-03', 500), certificate('2025-02', 400)]);
 
     expect(chart.bars.map((b) => b.kg)).toEqual([400, 500]);
-    expect(chart.axisTop).toBe(AXIS_MIN_TOP_KG);
+    expect(chart.axisTop).toBe(600); // sized by the 500 kg bar, not the annulled 99,000
   });
 
   it('are never the latest certified period', () => {

@@ -112,6 +112,8 @@ export interface BackendOptions {
   lockedFor?: number;
   /** Reject every token on protected endpoints (expired session). */
   rejectTokens?: boolean;
+  /** GET .../certificates answers an empty list for every company (a company that can still be deleted). */
+  noCertificates?: boolean;
   /** GET .../certificates fails with this status (partial failure of the company page). */
   certificatesStatus?: number;
   /** The summary answers hierarchyCompliancePercent: null (no SIGERSOL sync covers the period). */
@@ -1139,7 +1141,9 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
         return gatewayError(route, options.certificatesStatus);
       }
       // FOREIGN_CERTIFICATE exists only to be asked for under the wrong company: never listed.
-      const content = certificates.filter((c) => c.trackedCompanyId === company.id && c.id !== FOREIGN_CERTIFICATE.id);
+      const content = options.noCertificates
+        ? []
+        : certificates.filter((c) => c.trackedCompanyId === company.id && c.id !== FOREIGN_CERTIFICATE.id);
       return json({ content, page: 0, size: 20, totalElements: content.length, totalPages: content.length === 0 ? 0 : 1 });
     }
     if (sub === 'certificate-summary') {

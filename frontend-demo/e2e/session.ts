@@ -63,3 +63,13 @@ export async function expectManualTagSpaced(container: Locator): Promise<void> {
 }
 
 export const WIDTHS = [360, 768, 1280] as const;
+
+/** The collection form's neighbour picker: one editable combobox. */
+export const neighborBox = (page: Page) => page.getByRole('combobox', { name: /^Vecino/ });
+export const neighborList = (page: Page) => page.getByRole('listbox', { name: 'Vecinos' });
+
+/** Open the list and click the neighbour's row. */
+export async function chooseNeighbor(page: Page, label: string): Promise<void> {
+  await neighborBox(page).click();
+  await neighborList(page).getByRole('option', { name: label, exact: true }).click();
+}

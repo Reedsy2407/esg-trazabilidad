@@ -78,6 +78,14 @@ export class CompanyPage {
     stream: ({ params: id }) => this.api.certificates(id),
   });
 
+  /**
+   * Any certificate (issued or annulled) locks the company's deletion, as the server decides (RPT-017):
+   * once the list is loaded and not empty the button gives way to the reason. While it loads or fails
+   * the button stays and the server stays the authority.
+   */
+  protected readonly hasCertificates = computed(
+    () => this.certificates.hasValue() && this.certificates.value().totalElements > 0,
+  );
   /** The latest certified period; null while loading, on error or without certificates. */
   protected readonly latest = computed(() =>
     this.certificates.hasValue() ? latestCertificate(this.certificates.value().content) : null,

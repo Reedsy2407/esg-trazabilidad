@@ -149,15 +149,15 @@ class CertificateDistrictContextApiIT {
 
         assertThat(sigersol.calls()).as("exports never ask SIGERSOL").isEqualTo(callsAtIssue);
         try (PDDocument document = Loader.loadPDF(pdf)) {
-            String text = new PDFTextStripper().getText(document);
-            assertThat(text).contains("La Molina: 42.00 kg trazados");
+            String text = new PDFTextStripper().getText(document).replaceAll("\\s+", " ");
+            assertThat(text).contains("La Molina").contains("42.00 kg");
             assertThat(text).contains("Asociaciones: 3; recicladores: 31");
             assertThat(text).contains("Fuente: SIGERSOL Municipal, año " + LAST_YEAR + ", datos agregados");
-            assertThat(text).contains("Distrito desconocido: 5.50 kg trazados");
-            assertThat(text).doesNotContain("99");
+            assertThat(text).contains("Distrito desconocido").contains("5.50 kg");
+            assertThat(text).doesNotContain("Asociaciones: 99").doesNotContain("recicladores: 999");
         }
-        assertThat(csv).contains("La Molina,150114,42.00,disponible,3,31,\"SIGERSOL Municipal, año " + LAST_YEAR
-                + ", datos agregados\"");
+        assertThat(csv).contains("La Molina;150114;42.00;Disponible;3;31;SIGERSOL Municipal, año " + LAST_YEAR
+                + ", datos agregados");
     }
 
     @Test
@@ -178,7 +178,7 @@ class CertificateDistrictContextApiIT {
                 .get("/tracked-companies/{c}/certificates/{id}/pdf", s.companyId(), certificateId)
                 .then().statusCode(200).extract().asByteArray();
         try (PDDocument document = Loader.loadPDF(pdf)) {
-            assertThat(new PDFTextStripper().getText(document)).contains("Contexto de SIGERSOL Municipal no disponible");
+            assertThat(new PDFTextStripper().getText(document).replaceAll("\\s+", " ")).contains("Contexto de SIGERSOL Municipal no disponible");
         }
     }
 

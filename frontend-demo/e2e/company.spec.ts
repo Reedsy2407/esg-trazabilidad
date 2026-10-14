@@ -133,7 +133,7 @@ test('if only the certificates fail, the header stays, the blocks that need them
 
 test('lifecycle: edit the contact, deactivate with a reason, reactivate, then delete', async ({ page }) => {
   const writes: NonNullable<BackendOptions['writes']> = [];
-  await openCompany(page, COMPANIES[0].id, { writes });
+  await openCompany(page, COMPANIES[0].id, { writes, noCertificates: true });
   const actions = page.getByRole('region', { name: 'Acciones de la empresa' });
 
   await actions.getByRole('button', { name: 'Editar contacto' }).click();
@@ -171,8 +171,17 @@ test('lifecycle: edit the contact, deactivate with a reason, reactivate, then de
   expect(writes[1].body).toEqual({ reason: 'Cerró el local' });
 });
 
-test('deleting a company with certificates (RPT-017) says why and keeps the company', async ({ page }) => {
-  await openCompany(page, COMPANIES[0].id, { companyWriteFailure: { status: 409, code: 'RPT-017' } });
+test('a company with certificates cannot be deleted: no button, the reason, and deactivating is still offered', async ({ page }) => {
+  await openCompany(page, COMPANIES[0].id);
+  const actions = page.getByRole('region', { name: 'Acciones de la empresa' });
+  await expect(page.getByRole('region', { name: 'Certificados' })).toBeVisible();
+  await expect(actions).toContainText('no se puede eliminar');
+  await expect(actions.getByRole('button', { name: 'Eliminar empresa' })).toHaveCount(0);
+  await expect(actions.getByRole('button', { name: 'Desactivar empresa' })).toBeVisible();
+});
+
+test('a certificate issued after the page loaded: the server still refuses the delete (RPT-017) and the company stays', async ({ page }) => {
+  await openCompany(page, COMPANIES[0].id, { noCertificates: true, companyWriteFailure: { status: 409, code: 'RPT-017' } });
   await page.getByRole('button', { name: 'Eliminar empresa' }).click();
   await page.getByLabel('Motivo').fill('Intento');
   await page.getByLabel(/Entiendo que la eliminación no se puede deshacer/).check();

@@ -119,7 +119,7 @@ class CertificateController {
     ResponseEntity<byte[]> exportCsv(@PathVariable UUID companyId, @PathVariable UUID id) {
         byte[] csvBytes = exportCertificateUseCase.exportCsv(companyId, id);
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType("text/csv"))
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, attachment("certificado-" + id + ".csv"))
                 .body(csvBytes);
     }

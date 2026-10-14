@@ -29,37 +29,55 @@
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate #formElement>
         <div class="pair">
           <div class="field">
-            <label for="neighbor-search">Buscar vecino <span class="optional">(por nombre o distrito)</span></label>
-            <input
-              id="neighbor-search"
-              class="control search"
-              type="search"
-              autocomplete="off"
-              aria-controls="neighbor"
-              [value]="neighborQuery()"
-              (input)="neighborQuery.set($any($event.target).value)"
-            />
-            <p class="visually-hidden" role="status">{{ neighborMatches() }}</p>
-            <label for="neighbor" class="second-label">Vecino</label>
+            <label for="neighbor">Vecino <span class="optional">(escribe un nombre o distrito, o elige de la lista)</span></label>
             @if (neighbors.error(); as e) {
               <div class="problem load-problem" role="alert">
                 <p>{{ loadError(e, 'los vecinos') }}</p>
                 <button type="button" class="btn" (click)="neighbors.reload()">Volver a intentar</button>
               </div>
             }
-            <select
-              class="control"
-              id="neighbor"
-              formControlName="neighborId"
-              [attr.aria-invalid]="fieldInvalid('neighborId')"
-              [attr.aria-describedby]="describedBy(fieldInvalid('neighborId') ? 'neighbor-error' : null, neighborsTruncated() ? 'neighbor-more' : null)"
-              [attr.aria-busy]="neighbors.isLoading()"
-            >
-              <option value="">{{ neighbors.isLoading() ? 'Cargando vecinos…' : 'Elige un vecino' }}</option>
-              @for (n of filteredNeighborOptions(); track n.id) {
-                <option [value]="n.id">{{ n.label }}</option>
-              }
-            </select>
+            <!-- One control for one decision: an editable combobox (ARIA 1.2, list autocomplete). The
+                 chosen neighbour lives in the form's neighborId; editing the text drops the choice. -->
+            <div class="combo">
+              <input
+                id="neighbor"
+                class="control"
+                type="text"
+                role="combobox"
+                autocomplete="off"
+                aria-autocomplete="list"
+                aria-controls="neighbor-list"
+                [attr.aria-expanded]="neighborOpen()"
+                [attr.aria-activedescendant]="neighborOpen() && neighborActive() >= 0 && neighborActive() < filteredNeighborOptions().length ? 'neighbor-opt-' + neighborActive() : null"
+                [attr.aria-invalid]="fieldInvalid('neighborId')"
+                [attr.aria-describedby]="describedBy(fieldInvalid('neighborId') ? 'neighbor-error' : null, neighborsTruncated() ? 'neighbor-more' : null)"
+                [attr.aria-busy]="neighbors.isLoading()"
+                [placeholder]="neighbors.isLoading() ? 'Cargando vecinos…' : 'Elige un vecino'"
+                [value]="neighborText()"
+                (input)="onNeighborInput($any($event.target).value)"
+                (focus)="openNeighbors()"
+                (click)="openNeighbors()"
+                (blur)="closeNeighbors()"
+                (keydown)="onNeighborKey($event)"
+              />
+              <ul id="neighbor-list" class="options" role="listbox" aria-label="Vecinos" [hidden]="!neighborOpen()" (mousedown)="$event.preventDefault()">
+                @for (n of filteredNeighborOptions(); track n.id; let i = $index) {
+                  <li
+                    role="option"
+                    [id]="'neighbor-opt-' + i"
+                    [attr.aria-selected]="n.id === neighborId()"
+                    [class.active]="i === neighborActive()"
+                    (mousedown)="$event.preventDefault()"
+                    (click)="pickNeighbor(n.id)"
+                  >
+                    {{ n.label }}
+                  </li>
+                } @empty {
+                  <li class="none" role="presentation">Ningún vecino coincide.</li>
+                }
+              </ul>
+            </div>
+            <p class="visually-hidden" role="status">{{ neighborMatches() }}</p>
             @if (neighborsTruncated()) {
               <p class="hint" id="neighbor-more">Se muestran los primeros {{ neighborOptions().length }} vecinos por nombre.</p>
             }

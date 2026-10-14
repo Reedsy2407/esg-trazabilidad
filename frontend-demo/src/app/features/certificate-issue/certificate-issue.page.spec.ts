@@ -161,6 +161,8 @@ describe('CertificateIssuePage', () => {
     expect(draft.textContent).toContain('91.3 % Ingreso manual');
     expect(draft.textContent).toContain('Asociación Recicla Rímac');
     expect(el.textContent).toContain('Emitir es definitivo');
+    expect(el.textContent).toContain('sí se puede anular');
+    expect(el.textContent).not.toContain('no se puede editar ni anular');
     expect(el.textContent).toContain('Las cifras se recalculan al emitir');
 
     const issue = button(/Emitir certificado de Setiembre 2026/)!;

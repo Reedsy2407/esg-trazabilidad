@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.junit.jupiter.api.BeforeEach;
@@ -470,7 +469,7 @@ class CertificateServiceTest {
         byte[] csvBytes = service.exportCsv(trackedCompanyId, certificate.getId());
 
         List<CSVRecord> records;
-        try (CSVParser parser = CSVParser.parse(new String(csvBytes), CSVFormat.DEFAULT)) {
+        try (CSVParser parser = CSVParser.parse(new String(csvBytes, 3, csvBytes.length - 3, java.nio.charset.StandardCharsets.UTF_8), CertificateCsvExporter.FORMAT)) {
             records = parser.getRecords();
         }
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly(periodStart.toString(), "999.99"));

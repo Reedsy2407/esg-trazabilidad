@@ -138,6 +138,74 @@ class DistrictContextServiceTest {
         verify(provider, times(1)).fetch(anyInt(), anyString());
     }
 
+    /** A clock the test moves forward. */
+    private static final class MovableClock extends Clock {
+        private Instant now;
+
+        MovableClock(Instant now) {
+            this.now = now;
+        }
+
+        void advance(java.time.Duration by) {
+            now = now.plus(by);
+        }
+
+        @Override
+        public ZoneOffset getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(java.time.ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return now;
+        }
+    }
+
+    @Test
+    void theNegativeCacheEntryExpiresExactlyAtFiveMinutes() {
+        MovableClock clock = new MovableClock(NOW);
+        DistrictContextService timed = new DistrictContextService(provider, store, clock);
+        when(store.latest(LA_MOLINA)).thenReturn(Optional.empty());
+        when(provider.fetch(anyInt(), anyString())).thenReturn(new Answer.Unavailable());
+
+        timed.contextFor(LA_MOLINA);
+        clock.advance(java.time.Duration.ofMinutes(4).plusSeconds(59));
+        timed.contextFor(LA_MOLINA);
+        verify(provider, times(1)).fetch(anyInt(), anyString()); // still inside the five minutes
+
+        clock.advance(java.time.Duration.ofSeconds(1)); // exactly 5:00 after the miss
+        timed.contextFor(LA_MOLINA);
+        verify(provider, times(2)).fetch(anyInt(), anyString()); // expired: the provider is asked again
+    }
+
+    @Test
+    void expiredNegativeEntriesArePurgedAndLiveOnesAreCapped() {
+        MovableClock clock = new MovableClock(NOW);
+        DistrictContextService timed = new DistrictContextService(provider, store, clock);
+        when(store.latest(anyString())).thenReturn(Optional.empty());
+        when(provider.fetch(anyInt(), anyString())).thenReturn(new Answer.Unavailable());
+
+        for (int i = 0; i < 10; i++) {
+            timed.contextFor(String.format("1501%02d", i));
+        }
+        assertThat(timed.negativeCacheSize()).isEqualTo(10);
+
+        clock.advance(DistrictContextService.NEGATIVE_CACHE.plusSeconds(1));
+        timed.contextFor("150199"); // the next miss sweeps what expired
+        assertThat(timed.negativeCacheSize()).isEqualTo(1);
+
+        for (int i = 0; i < DistrictContextService.NEGATIVE_CACHE_MAX_ENTRIES + 50; i++) {
+            timed.contextFor(String.format("14%04d", i));
+            clock.advance(java.time.Duration.ofMillis(1));
+        }
+        assertThat(timed.negativeCacheSize()).isLessThanOrEqualTo(DistrictContextService.NEGATIVE_CACHE_MAX_ENTRIES);
+    }
+
     @Test
     void anUnreadableSnapshotTableIsAlsoJustUnavailable() {
         when(store.latest(LA_MOLINA)).thenThrow(new IllegalStateException("db down"));

@@ -10,7 +10,6 @@ import java.util.UUID;
 
 import io.restassured.http.ContentType;
 
-import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.pdfbox.Loader;
@@ -27,6 +26,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import pe.esgtrazabilidad.reporting.certificate.export.CertificateCsvExporter;
 import pe.esgtrazabilidad.reporting.events.ledger.TracedCollectionEntryEntity;
 import pe.esgtrazabilidad.reporting.events.ledger.TracedCollectionEntryJpaRepository;
 
@@ -37,6 +37,7 @@ import pe.esgtrazabilidad.reporting.it.support.TestJwtTokens;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 
@@ -166,8 +167,8 @@ class CertificateExportApiIT {
 
         assertThat(extractedText).contains("Empresa SUNAT 20200000006");
         assertThat(extractedText).contains("20200000006");
-        assertThat(extractedText).contains("2026-10-01");
-        assertThat(extractedText).contains("2026-10-31");
+        assertThat(extractedText).contains("01/10/2026");
+        assertThat(extractedText).contains("31/10/2026");
         assertThat(extractedText).contains("42.00");
         assertThat(extractedText).contains("92.00");
     }
@@ -186,13 +187,13 @@ class CertificateExportApiIT {
                 .get("/tracked-companies/{companyId}/certificates/{id}/csv", companyId, certificateId)
                 .then()
                 .statusCode(200)
-                .contentType("text/csv")
+                .contentType(containsString("text/csv"))
                 .header("Content-Disposition", startsWith("attachment"))
                 .extract()
                 .asByteArray();
 
         List<CSVRecord> records;
-        try (CSVParser parser = CSVParser.parse(new String(csvBytes, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+        try (CSVParser parser = CSVParser.parse(new String(csvBytes, 3, csvBytes.length - 3, StandardCharsets.UTF_8), CertificateCsvExporter.FORMAT)) {
             records = parser.getRecords();
         }
 

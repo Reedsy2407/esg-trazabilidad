@@ -129,6 +129,17 @@ describe('CompanyPage, Resumen del período', () => {
     expect(summaryBlock().textContent).toContain('Aún no hay certificados.');
   });
 
+  it('a company with certificates, even annulled, has no delete button: the reason is shown and deactivating stays', async () => {
+    await answerCertificates([certificate('2024-12-01', '2024-12-31', 12480.5)]);
+    backend.expectOne((r) => r.url === `${base}/certificate-summary`).flush(null, { status: 500, statusText: 'x' });
+    TestBed.tick();
+
+    const find = (text: string) => [...page.querySelectorAll('button')].find((b) => b.textContent?.includes(text));
+    expect(find('Eliminar empresa')).toBeUndefined();
+    expect(find('Desactivar empresa')).toBeTruthy();
+    expect(page.querySelector('.locked')?.textContent).toContain('no se puede eliminar');
+  });
+
   it('shows a missing SIGERSOL compliance as text, never as 0 %, and a partial period as its range', async () => {
     await answerCertificates([certificate('2024-12-01', '2024-12-15', 6100)]);
 

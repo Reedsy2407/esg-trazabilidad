@@ -69,9 +69,24 @@ describe('CollectionRecordPage', () => {
     TestBed.tick();
   };
   const choose = async (id: string, value: string) => {
+    if (id === 'neighbor') {
+      await chooseNeighbor(value);
+      return;
+    }
     const s = select(id);
     s.value = value;
     s.dispatchEvent(new Event('change'));
+    await settle();
+  };
+  /** Clicks the row of that neighbour in the combobox's list. */
+  const chooseNeighbor = async (id: string) => {
+    const label = id === '' ? null : NEIGHBORS.map((n) => ({ id: n.id, label: neighborLabel(n) })).find((n) => n.id === id)!.label;
+    if (label === null) {
+      await type('neighbor', '');
+      return;
+    }
+    const row = Array.from(el.querySelectorAll('#neighbor-list li')).find((li) => li.textContent?.trim() === label) as HTMLElement;
+    row.click();
     await settle();
   };
   const type = async (id: string, value: string) => {
@@ -116,8 +131,8 @@ describe('CollectionRecordPage', () => {
   });
 
   it('lists neighbors and associations with their state, and today in Lima as the default date', () => {
-    const neighbors = Array.from(select('neighbor').options).map((o) => o.text.trim());
-    expect(neighbors).toEqual(['Elige un vecino', 'Rosa Quispe · Cercado de Lima', 'Luis Ramos · San Martín de Porres (inactivo)']);
+    const neighbors = Array.from(el.querySelectorAll('#neighbor-list li'), (o) => o.textContent!.trim());
+    expect(neighbors).toEqual(['Rosa Quispe · Cercado de Lima', 'Luis Ramos · San Martín de Porres (inactivo)']);
     const associations = Array.from(select('association').options).map((o) => o.text.trim());
     expect(associations).toEqual(['Elige una asociación', 'Asociación Recicla Rímac', 'Recicladores Unidos de Comas (suspendida)']);
     expect(input('date').value).toBe(todayInLima());
@@ -143,7 +158,7 @@ describe('CollectionRecordPage', () => {
       submitButton().click();
       await settle();
       vi.runAllTimers();
-      expect(document.activeElement).toBe(select('neighbor'));
+      expect(document.activeElement).toBe(input('neighbor'));
     } finally {
       vi.useRealTimers();
     }
@@ -211,7 +226,7 @@ describe('CollectionRecordPage', () => {
       (Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Registrar otro')) as HTMLButtonElement).click();
       await settle();
       vi.runAllTimers();
-      expect(select('neighbor').value).toBe('n-1');
+      expect(input('neighbor').value).toBe('Rosa Quispe · Cercado de Lima');
       expect(select('association').value).toBe('a-1');
       expect(input('weight').value).toBe('');
       expect(select('schedule').value).toBe('');
@@ -249,11 +264,81 @@ describe('CollectionRecordPage', () => {
 
     expect(alertText()).toBe('La asociación tiene una certificación vencida y no puede registrar recojos.');
     expect(submitButton().disabled).toBe(false);
-    expect(select('neighbor').value).toBe('n-1'); // nothing typed is lost
+    expect(input('neighbor').value).toBe('Rosa Quispe · Cercado de Lima'); // nothing typed is lost
 
     // Once the user changes something, the old rejection no longer applies.
     await choose('association', 'a-2');
     expect(alertText()).toBeUndefined();
+  });
+
+  describe('neighbour combobox (one control for one decision)', () => {
+    const box = () => input('neighbor');
+    const rows = () => Array.from(el.querySelectorAll('#neighbor-list li'), (li) => li.textContent!.trim());
+    const typeIn = async (value: string) => {
+      box().value = value;
+      box().dispatchEvent(new Event('input'));
+      await settle();
+    };
+    const key = async (k: string) => {
+      box().dispatchEvent(new KeyboardEvent('keydown', { key: k, cancelable: true, bubbles: true }));
+      await settle();
+    };
+
+    it('is a single labelled combobox: no second search box, no select', () => {
+      expect(el.querySelector('#neighbor-search')).toBeNull();
+      expect(el.querySelector('select#neighbor')).toBeNull();
+      expect(box().getAttribute('role')).toBe('combobox');
+      expect(el.querySelector('label[for="neighbor"]')?.textContent).toContain('Vecino');
+      expect(box().getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('narrows by name or district without caring for accents or case, and says how many match', async () => {
+      await typeIn('RAMOS');
+      expect(rows()).toEqual(['Luis Ramos · San Martín de Porres (inactivo)']);
+      expect(box().getAttribute('aria-expanded')).toBe('true');
+      expect(el.textContent).toContain('1 vecino coincide con «RAMOS».');
+      await typeIn('san martin');
+      expect(rows()).toHaveLength(1);
+      await typeIn('zzz');
+      expect(rows()).toEqual(['Ningún vecino coincide.']);
+      expect(el.textContent).toContain('Ningún vecino coincide con «zzz».');
+    });
+
+    it('Enter on a freshly focused box submits the form instead of silently choosing the first row', async () => {
+      await fillValid();
+      box().dispatchEvent(new Event('focus'));
+      await settle();
+      await key('Enter');
+      expect(box().value).toBe('Rosa Quispe · Cercado de Lima');
+      expect(box().getAttribute('aria-expanded')).toBe('true'); // nothing was chosen, so nothing closed
+    });
+
+    it('arrows and Enter choose a row, Escape closes, and editing the text withdraws the choice', async () => {
+      box().dispatchEvent(new Event('focus'));
+      await settle();
+      expect(box().getAttribute('aria-expanded')).toBe('true');
+      expect(box().hasAttribute('aria-activedescendant')).toBe(false); // nothing highlighted until the user moves
+      await key('ArrowDown');
+      await key('ArrowDown'); // second row: Luis
+      expect(box().getAttribute('aria-activedescendant')).toBe('neighbor-opt-1');
+      await key('ArrowUp');
+      await key('Enter');
+      expect(box().value).toBe('Rosa Quispe · Cercado de Lima');
+      expect(box().getAttribute('aria-expanded')).toBe('false');
+      await settle();
+      expect(el.querySelector('#schedule option[value="s-1"]')).not.toBeNull(); // the choice reached the form
+
+      await key('ArrowDown');
+      await key('Escape');
+      expect(box().getAttribute('aria-expanded')).toBe('false');
+      expect(box().value).toBe('Rosa Quispe · Cercado de Lima');
+
+      await typeIn('Rosa Quis'); // edited: no longer a chosen neighbour
+      submitButton().click();
+      await settle();
+      expect(el.textContent).toContain('Elige el vecino del recojo.');
+      expect(posts).toEqual([]);
+    });
   });
 
   it('a 504 (outcome unknown) warns against duplicating and keeps every field as typed', async () => {
@@ -266,8 +351,8 @@ describe('CollectionRecordPage', () => {
     await settle();
 
     expect(alertText()).toBe(UNCERTAIN_OUTCOME);
-    expect([select('neighbor').value, select('association').value, input('date').value, input('weight').value, select('schedule').value]).toEqual([
-      'n-1',
+    expect([input('neighbor').value, select('association').value, input('date').value, input('weight').value, select('schedule').value]).toEqual([
+      'Rosa Quispe · Cercado de Lima',
       'a-1',
       '2026-10-05',
       '12.50',
@@ -314,10 +399,10 @@ describe('CollectionRecordPage, V2 conveniences', () => {
 
   it('?vecino= chooses that neighbour, only if listed', async () => {
     let el = await setup(NEIGHBORS[1].id);
-    expect((el.querySelector('#neighbor') as HTMLSelectElement).value).toBe(NEIGHBORS[1].id);
+    expect((el.querySelector('#neighbor') as HTMLInputElement).value).toBe(neighborLabel(NEIGHBORS[1]));
     TestBed.resetTestingModule();
     el = await setup('no-such-id');
-    expect((el.querySelector('#neighbor') as HTMLSelectElement).value).toBe('');
+    expect((el.querySelector('#neighbor') as HTMLInputElement).value).toBe('');
   });
 
   it('chooses the association used last time, if it is still listed', async () => {

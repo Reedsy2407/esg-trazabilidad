@@ -75,7 +75,7 @@ describe('SigersolPage', () => {
     const rows = [...el.querySelectorAll('table.ledger tbody tr')].map((r) =>
       [...r.querySelectorAll('td')].map((td) => td.textContent?.replace(/\s+/g, ' ').trim()),
     );
-    expect(rows[0]).toEqual(['Setiembre 2026', 'Recicla Rímac', '91.25 %', 'No declarado', 'Origen no registrado', '02/10/2026']);
+    expect(rows[0]).toEqual(['Setiembre 2026', 'Recicla Rímac', '91.25 %', 'No declarado', 'Dato anterior al registro de origen', '02/10/2026']);
     expect(rows[1]).toEqual([
       'Setiembre 2026 Reporte anual',
       'Asociación no listada',

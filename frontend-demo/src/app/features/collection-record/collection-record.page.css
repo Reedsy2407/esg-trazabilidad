@@ -165,9 +165,42 @@ input.num {
   }
 }
 
-/* Neighbour search: the box narrows the picker below it. */
-.second-label {
-  margin-top: var(--space-3);
+/* Neighbour combobox: the list opens right under the box, over what follows. */
+.combo {
+  position: relative;
+}
+.options {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  max-height: 264px;
+  margin: 2px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+.options[hidden] {
+  display: none;
+}
+.options li {
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.options li[aria-selected='true'] {
+  font-weight: 800;
+}
+.options li.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+.options li.none {
+  color: var(--ink-soft);
+  cursor: default;
 }
 
 /* Bitácora: a till roll of this session's tickets, kilos first, as the scale prints them. */

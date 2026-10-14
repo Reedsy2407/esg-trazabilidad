@@ -1,10 +1,28 @@
 import { EsgCertificate } from '../../core/api/api.types';
 import { formatKg, periodLabel, shortPeriodLabel } from '../../shared/format';
 
-/** The brief's axis: 0 / 5,000 / 10,000 / 15,000 kg, extended in 5,000 kg steps only if a value is above it. */
-export const AXIS_STEP_KG = 5_000;
-export const AXIS_MIN_TOP_KG = 15_000;
 export const MAX_PERIODS = 12;
+/** Intervals the axis aims for: few enough that the labels breathe, enough to read a bar against. */
+const TARGET_INTERVALS = 3;
+
+/**
+ * An axis that fits the data: a "nice" step (1, 2 or 5 times a power of ten) giving about three
+ * intervals, topped at the first multiple that holds the largest bar. 79.45 kg gets 0 / 50 / 100,
+ * 12,480.50 kg gets 0 / 5,000 / 10,000 / 15,000. No data gets a small empty 0-10 axis.
+ */
+export function niceAxis(max: number): { axisTop: number; ticks: number[] } {
+  const clean = (n: number) => Math.round(n * 1e6) / 1e6;
+  let step = 5;
+  if (max > 0) {
+    const raw = max / TARGET_INTERVALS;
+    const magnitude = 10 ** Math.floor(Math.log10(raw));
+    const normalized = raw / magnitude;
+    step = clean((normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude);
+  }
+  const intervals = max > 0 ? Math.ceil(clean(max / step)) : 2;
+  const ticks = Array.from({ length: intervals + 1 }, (_, i) => clean(i * step));
+  return { axisTop: ticks[ticks.length - 1], ticks };
+}
 
 export interface ChartBar {
   readonly key: string;
@@ -49,11 +67,7 @@ export function buildKilosChart(certificates: readonly EsgCertificate[]): ChartM
     .slice(0, MAX_PERIODS)
     .reverse();
   const max = latest.reduce((m, c) => Math.max(m, c.kilosTrazados), 0);
-  const axisTop = Math.max(AXIS_MIN_TOP_KG, Math.ceil(max / AXIS_STEP_KG) * AXIS_STEP_KG);
-  const ticks: number[] = [];
-  for (let tick = 0; tick <= axisTop; tick += AXIS_STEP_KG) {
-    ticks.push(tick);
-  }
+  const { axisTop, ticks } = niceAxis(max);
   return {
     axisTop,
     ticks,

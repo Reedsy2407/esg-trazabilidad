@@ -237,9 +237,14 @@ code {
   margin: 0;
   overflow-wrap: anywhere;
 }
+/* Same two-column grid as the ticket: the section sits in the ticket's column, apart from it. */
+.annul-row {
+  margin-top: var(--space-8);
+}
 .annul {
-  max-width: 560px;
-  margin: 0 auto;
+  grid-column: 1;
+  padding-top: var(--space-5);
+  border-top: 2px solid var(--ink);
 }
 .annul p {
   margin-top: 0;

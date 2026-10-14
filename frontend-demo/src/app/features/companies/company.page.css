@@ -325,3 +325,10 @@ tbody tr:has(.row-link:focus-visible) {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
+/* Deleting is closed to a company with certificates: the reason sits where the button was. */
+.locked {
+  margin: var(--space-3) 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}

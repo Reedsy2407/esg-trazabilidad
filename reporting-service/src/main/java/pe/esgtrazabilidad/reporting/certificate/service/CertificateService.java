@@ -137,8 +137,8 @@ class CertificateService
         // Service-level fast check first (clean 409 without ever reaching
         // the database's own rejection) -- the EXCLUDE USING gist
         // constraint on esg_certificate (Task 50) is the real backstop that
-        // closes the race a plain check-then-act can't, to be proven with a
-        // real two-thread test in Task 53.
+        // closes the race a plain check-then-act can't (proven by
+        // CertificateConcurrencyApiIT).
         if (esgCertificateRepository.existsOverlapping(command.trackedCompanyId(), command.periodStart(), command.periodEnd())) {
             throw new ApplicationException(ReportingErrors.OVERLAPPING_CERTIFICATE_PERIOD);
         }

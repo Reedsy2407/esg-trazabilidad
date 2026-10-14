@@ -2,8 +2,10 @@ import AxeBuilder from '@axe-core/playwright';
 import { Page, expect, test } from '@playwright/test';
 
 import { ASSOCIATIONS, BackendOptions, EMAIL, NEIGHBORS, PASSWORD, SCHEDULES, fakeBackend } from './backend';
+import { chooseNeighbor, neighborBox, neighborList } from './session';
 
 const ROSA = NEIGHBORS[1];
+
 
 async function openForm(page: Page, options: BackendOptions = {}): Promise<void> {
   await fakeBackend(page, options);
@@ -16,7 +18,9 @@ async function openForm(page: Page, options: BackendOptions = {}): Promise<void>
   await expect(page).toHaveURL(/\/recojos\/nuevo$/);
   await expect(page.getByRole('heading', { name: 'Registrar recojo', level: 1 })).toBeVisible();
   // Both pickers have loaded.
-  await expect(page.getByLabel('Vecino', { exact: true }).locator('option')).toHaveCount(NEIGHBORS.length + 1);
+  await neighborBox(page).click();
+  await expect(neighborList(page).getByRole('option')).toHaveCount(NEIGHBORS.length);
+  await neighborBox(page).press('Escape');
   await expect(page.getByLabel('Asociación').locator('option')).toHaveCount(ASSOCIATIONS.length + 1);
 }
 
@@ -33,7 +37,7 @@ test('register a collection with a schedule: the request carries exactly the rea
   await openForm(page, { collectionPosts: posts });
   await expect(page.getByRole('link', { name: 'Registrar recojo' })).toHaveAttribute('aria-current', 'page');
 
-  await page.getByLabel('Vecino', { exact: true }).selectOption({ label: `${ROSA.fullName} · ${ROSA.district}` });
+  await chooseNeighbor(page, `${ROSA.fullName} · ${ROSA.district}`);
   await page.getByLabel('Asociación').selectOption({ label: ASSOCIATIONS[0].name });
   await page.getByLabel('Fecha del recojo').fill('2026-10-05');
   await page.getByLabel('Peso recolectado (kg)').fill('12.50');
@@ -74,17 +78,19 @@ test('register a collection with a schedule: the request carries exactly the rea
 test('inactive and suspended entries are labeled; an inactive neighbour is refused (COL-013); no schedule sends null', async ({ page }) => {
   const posts: { neighborId: string; body: unknown }[] = [];
   await openForm(page, { collectionPosts: posts });
-  await expect(page.getByLabel('Vecino', { exact: true })).toContainText(`${NEIGHBORS[0].fullName} · ${NEIGHBORS[0].district} (inactivo)`);
+  await neighborBox(page).click();
+  await expect(neighborList(page).getByRole('option', { name: `${NEIGHBORS[0].fullName} · ${NEIGHBORS[0].district} (inactivo)`, exact: true })).toBeVisible();
+  await neighborBox(page).press('Escape');
   await expect(page.getByLabel('Asociación')).toContainText(`${ASSOCIATIONS[1].name} (suspendida)`);
 
-  await page.getByLabel('Vecino', { exact: true }).selectOption({ label: `${NEIGHBORS[0].fullName} · ${NEIGHBORS[0].district} (inactivo)` });
+  await chooseNeighbor(page, `${NEIGHBORS[0].fullName} · ${NEIGHBORS[0].district} (inactivo)`);
   await expect(page.getByText('Este vecino no tiene cronogramas.')).toBeVisible();
   await page.getByLabel('Asociación').selectOption({ label: ASSOCIATIONS[0].name });
   await page.getByLabel('Peso recolectado (kg)').fill('3');
   await page.getByRole('button', { name: 'Registrar recojo' }).click();
   await expect(page.getByRole('alert')).toContainText('El vecino está inactivo y no puede recibir recojos.');
 
-  await page.getByLabel('Vecino', { exact: true }).selectOption({ label: `${NEIGHBORS[1].fullName} · ${NEIGHBORS[1].district}` });
+  await chooseNeighbor(page, `${NEIGHBORS[1].fullName} · ${NEIGHBORS[1].district}`);
   await page.getByLabel('Peso recolectado (kg)').fill('3');
   await page.getByRole('button', { name: 'Registrar recojo' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Recojo registrado' })).toContainText('3.00 kg');
@@ -98,7 +104,7 @@ test('empty and malformed fields are explained next to each field, by keyboard, 
   await page.getByLabel('Peso recolectado (kg)').fill('12,5');
   await page.getByLabel('Peso recolectado (kg)').press('Enter'); // submits the form
   await expect(page.getByText('Elige el vecino del recojo.')).toBeVisible();
-  await expect(page.getByLabel('Vecino', { exact: true })).toBeFocused(); // the first field to fix
+  await expect(neighborBox(page)).toBeFocused(); // the first field to fix
   await expect(page.getByText('Elige la asociación que hizo el recojo.')).toBeVisible();
   await expect(page.getByText('Escribe solo números, con punto y hasta 2 decimales')).toBeVisible();
   await expect(page.getByLabel('Peso recolectado (kg)')).toHaveAttribute('aria-invalid', 'true');
@@ -110,7 +116,7 @@ test('empty and malformed fields are explained next to each field, by keyboard, 
 
 test('COL-009 (association with an expired certification) is explained and nothing typed is lost', async ({ page }) => {
   await openForm(page, { collectionFailure: { status: 409, code: 'COL-009' } });
-  await page.getByLabel('Vecino', { exact: true }).selectOption({ label: `${ROSA.fullName} · ${ROSA.district}` });
+  await chooseNeighbor(page, `${ROSA.fullName} · ${ROSA.district}`);
   await page.getByLabel('Asociación').selectOption({ label: ASSOCIATIONS[0].name });
   await page.getByLabel('Peso recolectado (kg)').fill('8.25');
   await page.getByRole('button', { name: 'Registrar recojo' }).click();
@@ -123,7 +129,7 @@ test('COL-009 (association with an expired certification) is explained and nothi
 test('a 504 from the gateway: the form warns the record may exist, never says it was not saved, and keeps the data', async ({ page }) => {
   const posts: { neighborId: string; body: unknown }[] = [];
   await openForm(page, { collectionFailure: { status: 504, code: null }, collectionPosts: posts });
-  await page.getByLabel('Vecino', { exact: true }).selectOption({ label: `${ROSA.fullName} · ${ROSA.district}` });
+  await chooseNeighbor(page, `${ROSA.fullName} · ${ROSA.district}`);
   await page.getByLabel('Asociación').selectOption({ label: ASSOCIATIONS[0].name });
   await page.getByLabel('Peso recolectado (kg)').fill('8.25');
   await page.getByRole('button', { name: 'Registrar recojo' }).click();
@@ -156,7 +162,9 @@ for (const width of [360, 768, 1280]) {
     await openForm(page);
     await expectNoSidewaysScroll(page);
 
-    for (const label of ['Buscar vecino (por nombre o distrito)', 'Vecino', 'Asociación', 'Fecha del recojo', 'Peso recolectado (kg)', 'Cronograma (opcional)']) {
+    const box = await neighborBox(page).boundingBox();
+    expect(box?.height, 'Vecino').toBeGreaterThanOrEqual(44);
+    for (const label of ['Asociación', 'Fecha del recojo', 'Peso recolectado (kg)', 'Cronograma (opcional)']) {
       const box = await page.getByLabel(label, { exact: true }).boundingBox();
       expect(box?.height, label).toBeGreaterThanOrEqual(44);
     }
@@ -198,7 +206,7 @@ for (const width of [360, 768, 1280]) {
     const preview = page.locator('aside.preview');
     await expect(preview).toHaveAttribute('aria-hidden', 'true');
 
-    await page.getByLabel('Vecino', { exact: true }).selectOption({ label: `${ROSA.fullName} · ${ROSA.district}` });
+    await chooseNeighbor(page, `${ROSA.fullName} · ${ROSA.district}`);
     await page.getByLabel('Asociación').selectOption({ label: ASSOCIATIONS[0].name });
     await page.getByLabel('Peso recolectado (kg)').fill('8.25');
     await expect(preview).toContainText(ROSA.fullName);

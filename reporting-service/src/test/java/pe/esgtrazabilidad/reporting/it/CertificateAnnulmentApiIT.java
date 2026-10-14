@@ -306,7 +306,7 @@ class CertificateAnnulmentApiIT {
                 .get("/tracked-companies/{companyId}/certificates/{id}/pdf", ids[0], ids[1])
                 .then().statusCode(200).extract().asByteArray();
         try (PDDocument document = Loader.loadPDF(pdf)) {
-            String text = new PDFTextStripper().getText(document);
+            String text = new PDFTextStripper().getText(document).replaceAll("\\s+", " ");
             assertThat(text).contains("ANULADO").contains("=Datos erróneos").contains("staff@example.com");
             assertThat(text).contains("Proyecto académico, sin validez legal");
         }
@@ -315,7 +315,7 @@ class CertificateAnnulmentApiIT {
                 given().when().get("/tracked-companies/{companyId}/certificates/{id}/csv", ids[0], ids[1])
                         .then().statusCode(200).extract().asByteArray(),
                 StandardCharsets.UTF_8);
-        assertThat(csv).contains("estado,Anulado").contains("motivo_anulacion,'=Datos erróneos");
+        assertThat(csv).contains("Estado;Anulado").contains("Motivo de anulación;'=Datos erróneos");
     }
 
     @Test

@@ -27,5 +27,5 @@ export function coverageNote(summary: {
 }
 
 export function originLabel(origin: SigersolOrigin | null): string {
-  return ORIGIN_OPTIONS.find((o) => o.value === origin)?.label ?? 'Origen no registrado';
+  return ORIGIN_OPTIONS.find((o) => o.value === origin)?.label ?? 'Dato anterior al registro de origen';
 }

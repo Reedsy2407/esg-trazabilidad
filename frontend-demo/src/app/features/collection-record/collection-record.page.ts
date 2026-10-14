@@ -113,7 +113,7 @@ export class CollectionRecordPage {
   protected readonly neighbors = rxResource({ stream: () => this.api.neighbors() });
   protected readonly associations = rxResource({ stream: () => this.api.associations() });
 
-  private readonly neighborId = toSignal(this.form.controls.neighborId.valueChanges, { initialValue: '' });
+  protected readonly neighborId = toSignal(this.form.controls.neighborId.valueChanges, { initialValue: '' });
   protected readonly schedules = rxResource({
     params: () => this.neighborId() || undefined,
     stream: ({ params: neighborId }) => this.api.schedules(neighborId).pipe(map((page) => page.content)),
@@ -127,25 +127,28 @@ export class CollectionRecordPage {
         }))
       : [],
   );
-  /** The search box above the neighbour picker: narrows the loaded list, the API has no name search. */
-  protected readonly neighborQuery = signal('');
+  /**
+   * The neighbour combobox: the text in the box, whether its list is open and the highlighted
+   * row. The list narrows the loaded neighbours (the API has no name search); once one is chosen
+   * the box shows its label and the whole list is offered again.
+   */
+  protected readonly neighborText = signal('');
+  protected readonly neighborOpen = signal(false);
+  /** -1 until the user arrows or types: Enter then submits the form instead of choosing a row. */
+  protected readonly neighborActive = signal(-1);
+  private readonly neighborQuery = computed(() => (this.neighborId() ? '' : searchKey(this.neighborText())));
   protected readonly filteredNeighborOptions = computed(() => {
-    const query = searchKey(this.neighborQuery());
+    const query = this.neighborQuery();
     const all = this.neighborOptions();
-    if (query === '') {
-      return all;
-    }
-    const chosen = this.neighborId();
-    // The chosen neighbour stays listed, or the select would silently lose its value.
-    return all.filter((n) => n.id === chosen || searchKey(n.label).includes(query));
+    return query === '' ? all : all.filter((n) => searchKey(n.label).includes(query));
   });
   /** "3 vecinos coinciden", said politely while typing; empty when not searching. */
   protected readonly neighborMatches = computed(() => {
-    const query = this.neighborQuery().trim();
-    if (query === '' || !this.neighbors.hasValue()) {
+    const query = this.neighborText().trim();
+    if (this.neighborId() || query === '' || !this.neighbors.hasValue()) {
       return '';
     }
-    const count = this.neighborOptions().filter((n) => searchKey(n.label).includes(searchKey(query))).length;
+    const count = this.filteredNeighborOptions().length;
     return count === 0
       ? `Ningún vecino coincide con «${query}».`
       : `${count} ${count === 1 ? 'vecino coincide' : 'vecinos coinciden'} con «${query}».`;
@@ -210,6 +213,14 @@ export class CollectionRecordPage {
     this.form.controls.neighborId.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.form.controls.scheduleId.setValue(''));
+    // A neighbour chosen from outside the box (?vecino=) shows its name in it.
+    effect(() => {
+      const id = this.neighborId();
+      const label = this.neighborOptions().find((n) => n.id === id)?.label;
+      if (id && label !== undefined) {
+        untracked(() => this.neighborText.set(label));
+      }
+    });
     // A rejection is about what was sent: once the user edits, it no longer applies.
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.error.set(null));
 
@@ -235,6 +246,76 @@ export class CollectionRecordPage {
         });
       }
     });
+  }
+
+  protected onNeighborInput(text: string): void {
+    this.neighborText.set(text);
+    // Editing the text withdraws the choice: the box never shows one neighbour while sending another.
+    if (this.form.controls.neighborId.value !== '') {
+      this.form.controls.neighborId.setValue('');
+    }
+    this.neighborActive.set(0);
+    this.neighborOpen.set(true);
+  }
+
+  protected openNeighbors(): void {
+    if (!this.neighborOpen()) {
+      this.neighborActive.set(-1);
+      this.neighborOpen.set(true);
+    }
+  }
+
+  private setActive(index: number): void {
+    this.neighborActive.set(index);
+    // Keep the highlighted row inside the list's 264 px window.
+    setTimeout(() => document.getElementById('neighbor-opt-' + index)?.scrollIntoView({ block: 'nearest' }));
+  }
+
+  protected closeNeighbors(): void {
+    this.neighborOpen.set(false);
+    this.form.controls.neighborId.markAsTouched();
+  }
+
+  protected pickNeighbor(id: string): void {
+    this.form.controls.neighborId.setValue(id);
+    this.form.controls.neighborId.markAsTouched();
+    this.neighborOpen.set(false);
+  }
+
+  protected onNeighborKey(event: KeyboardEvent): void {
+    const count = this.filteredNeighborOptions().length;
+    switch (event.key) {
+      case 'ArrowDown':
+      case 'ArrowUp': {
+        event.preventDefault();
+        if (!this.neighborOpen()) {
+          this.neighborActive.set(-1);
+          this.neighborOpen.set(true);
+          return;
+        }
+        if (count > 0) {
+          const current = this.neighborActive();
+          const next = event.key === 'ArrowDown' ? (current + 1) % count : current <= 0 ? count - 1 : current - 1;
+          this.setActive(next);
+        }
+        return;
+      }
+      case 'Enter': {
+        // Open with a highlighted row: Enter chooses it. Closed: it submits the form as usual.
+        const option = this.neighborActive() >= 0 ? this.filteredNeighborOptions()[this.neighborActive()] : undefined;
+        if (this.neighborOpen() && option) {
+          event.preventDefault();
+          this.pickNeighbor(option.id);
+        }
+        return;
+      }
+      case 'Escape':
+        if (this.neighborOpen()) {
+          event.preventDefault();
+          this.neighborOpen.set(false);
+        }
+        return;
+    }
   }
 
   protected fieldInvalid(name: 'neighborId' | 'associationId' | 'collectionDate' | 'weightKg'): boolean {

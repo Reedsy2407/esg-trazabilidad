@@ -619,5 +619,10 @@ Rebanadas (máx. 10 commits en la rama, uno por rebanada vertical con tasks/ y d
 - [x] V3-6b.1: texto del borrador (sí se anula, no se edita); sección Anular dentro de la columna del recibo; "Vecino" de Registrar recojo como un solo combobox accesible (specs unitarios y e2e al nuevo control); gráfica con escala adaptable (`niceAxis`); "Dato anterior al registro de origen"; PDF rehecho (hora de Lima, VIGENTE/ANULADO, nombre ajustado, "Página i de n", también anulados); CSV con BOM UTF-8, separador `;` y nombres unificados; eliminar empresa: el backend ya bloqueaba con RPT-017 (también con certificados anulados), ahora el front no ofrece el botón si hay certificados; caché negativa de SIGERSOL con purga, tope y expiración exacta a 5 min (corrige que servir desde caché alargaba la ventana) y comentarios "Task 53" retirados.
 - Cronograma de vecino (respuesta en el informe de cierre): solo guarda el vínculo del recojo; no cambia kilos ni certificados.
 
+## M6c: rendimiento medido (shared-kernel + los cuatro servicios + frontend, rama `v3/m6c`, sin PR) — **única parada: OK de merge de Angel**
+
+- [x] V3-6c.1: logs de tiempos con forma fija (`event=http_request` con servicio, método, ruta plantilla, estado, `durationMs`, `dbMs`, `poolMs`; `event=slow_query`; `event=password_hash`; `event=warmup`; INFO normal, ERROR en fallos; sin datos personales) en shared-kernel; `scripts/perf-summary.sh`; calentamiento al arrancar (`esg.warmup.enabled`, activo en las imágenes Docker): primera petición de lista 2317 → 340 ms, primer login 2071 → 565 ms a 0.1 CPU; login sin `@Transactional`; la página de login despierta los servicios con el aviso "Despertando servicios…". Tabla antes/después y lo descartado (bcrypt, pool, índices, regiones, lazy-init) en `docs/performance.md`.
+- Pendiente de medir con credenciales (no hay): registro de empresa y listas autenticadas en producción; `scripts/perf-summary.sh` sobre un log de Render tras una sesión normal.
+
 ### M6–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

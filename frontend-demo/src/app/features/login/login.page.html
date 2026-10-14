@@ -8,6 +8,11 @@
         <p class="lead">Inicia sesión con tu correo y contraseña.</p>
         <hr class="dots" />
 
+        <!-- Always in the DOM: a live region that appears together with its text isn't reliably announced. -->
+        <p class="notice wake" role="status" [class.visually-hidden]="!waking()">
+          {{ waking() ? 'Despertando servicios… Si tarda un poco, es normal: se están encendiendo y puede demorar hasta 2 minutos. Ya puedes escribir tus datos.' : '' }}
+        </p>
+
         @if (motivo() === 'sesion') {
           <p class="notice" role="status">Tu sesión terminó. Vuelve a iniciar sesión para continuar.</p>
         }

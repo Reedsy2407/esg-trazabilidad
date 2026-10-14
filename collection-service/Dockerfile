@@ -36,6 +36,8 @@ USER app
 # container limit, the single-threaded collector, C1 only (faster startup on a
 # fraction of a CPU), and smaller thread stacks.
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k"
+# Right after it starts answering, each service runs its own first requests once (shared-kernel StartupWarmup), so the first user does not pay for them.
+ENV ESG_WARMUP_ENABLED=true
 
 EXPOSE 8082
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

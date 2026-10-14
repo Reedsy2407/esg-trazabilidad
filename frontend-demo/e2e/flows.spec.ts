@@ -56,7 +56,7 @@ test('too many attempts: the lock is announced and the button waits for Retry-Af
   await page.getByLabel('Contraseña').fill(PASSWORD);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
-  await expect(page.getByRole('status')).toHaveText('Demasiados intentos. Podrás volver a intentarlo en 3 segundos.');
+  await expect(page.getByRole('status').filter({ hasText: 'Demasiados' })).toHaveText('Demasiados intentos. Podrás volver a intentarlo en 3 segundos.');
   await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeEnabled({ timeout: 5_000 });
 });

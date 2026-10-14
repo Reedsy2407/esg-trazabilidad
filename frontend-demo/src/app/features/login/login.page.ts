@@ -1,6 +1,11 @@
 import { Component, DestroyRef, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { Subject, catchError, forkJoin, of, retry, take, takeUntil, timeout, timer } from 'rxjs';
+
+import { environment } from '../../../environments/environment';
+import { ServiceKey } from '../../../environments/environment.model';
 
 import { BackendApi } from '../../core/api/backend.api';
 import { SessionService } from '../../core/auth/session.service';
@@ -8,6 +13,12 @@ import { ApiError } from '../../core/http/api-error';
 
 /** Used when a 429 arrives without a readable Retry-After (the limiter refills one attempt every 12 s). */
 const FALLBACK_LOCK_SECONDS = 60;
+/** The services answer this fast when they are awake: only a slower wake-up gets a notice. */
+export const WAKE_NOTICE_AFTER_MS = 1_500;
+const WAKE_ATTEMPT_TIMEOUT_MS = 60_000;
+const WAKE_RETRY_DELAY_MS = 3_000;
+const WAKE_RETRIES = 20;
+const SERVICE_KEYS: readonly ServiceKey[] = ['auth', 'recycler', 'collection', 'reporting'];
 
 @Component({
   selector: 'app-login-page',
@@ -51,8 +62,40 @@ export class LoginPage {
 
   private ticker: ReturnType<typeof setInterval> | null = null;
 
+  /**
+   * True while the four services have not all answered yet. Render's free services sleep after 15
+   * minutes, and landing straight on this page (a bookmark, a logout) skips the entry screen that
+   * wakes them, so the first login would otherwise sit silent for up to two minutes.
+   */
+  protected readonly waking = signal(false);
+
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.stopTicker());
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => this.stopTicker());
+    this.wakeServices(destroyRef);
+  }
+
+  /** Background liveness pings (nothing blocks: the form works at once); a notice only if it is slow. */
+  private wakeServices(destroyRef: DestroyRef): void {
+    const done = new Subject<void>();
+    timer(WAKE_NOTICE_AFTER_MS)
+      .pipe(takeUntil(done), takeUntilDestroyed(destroyRef))
+      .subscribe(() => this.waking.set(true));
+    forkJoin(
+      SERVICE_KEYS.map((key) =>
+        this.api.liveness(environment.services[key]).pipe(
+          timeout(WAKE_ATTEMPT_TIMEOUT_MS),
+          retry({ count: WAKE_RETRIES, delay: WAKE_RETRY_DELAY_MS }),
+          take(1),
+          catchError(() => of(null)),
+        ),
+      ),
+    )
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe(() => {
+        done.next();
+        this.waking.set(false);
+      });
   }
 
   protected fieldInvalid(name: 'email' | 'password'): boolean {

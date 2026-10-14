@@ -18,6 +18,8 @@ import pe.esgtrazabilidad.kernel.error.ApplicationException;
 @Service
 class StaffUserService implements LoginUseCase, CreateStaffUserUseCase, GetCurrentStaffUserUseCase {
 
+    private static final org.slf4j.Logger hashLog = org.slf4j.LoggerFactory.getLogger("esg.auth");
+
     private final StaffUserRepository staffUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtIssuer jwtIssuer;
@@ -28,15 +30,28 @@ class StaffUserService implements LoginUseCase, CreateStaffUserUseCase, GetCurre
         this.jwtIssuer = jwtIssuer;
     }
 
+    /**
+     * Not @Transactional: the lookup is one read, and a transaction would hold a pooled database
+     * connection (a remote one on Neon) for the whole bcrypt comparison, about 0.6 s on Render's 0.1 CPU.
+     */
     @Override
-    @Transactional
     public String login(String email, String rawPassword) {
         StaffUser staffUser = staffUserRepository
                 .findByEmail(email.toLowerCase())
                 .filter(StaffUser::isActive)
-                .filter(user -> passwordEncoder.matches(rawPassword, user.getPasswordHash()))
+                .filter(user -> hashMatches(rawPassword, user.getPasswordHash()))
                 .orElseThrow(() -> new ApplicationException(AuthErrors.INVALID_CREDENTIALS));
         return jwtIssuer.issue(staffUser.getId(), staffUser.getEmail());
+    }
+
+    /** The password check is the one CPU-heavy step of a login: timed on its own (no data in the line). */
+    private boolean hashMatches(String rawPassword, String hash) {
+        long start = System.nanoTime();
+        try {
+            return passwordEncoder.matches(rawPassword, hash);
+        } finally {
+            hashLog.info("event=password_hash service=auth-service durationMs={}", (System.nanoTime() - start) / 1_000_000);
+        }
     }
 
     @Override

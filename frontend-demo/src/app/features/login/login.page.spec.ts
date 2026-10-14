@@ -7,7 +7,7 @@ import { environment } from '../../../environments/environment';
 import { SessionService } from '../../core/auth/session.service';
 import { errorInterceptor, jwtInterceptor } from '../../core/http/interceptors';
 import { inOneHour, testJwt } from '../../testing/jwt';
-import { LoginPage } from './login.page';
+import { LoginPage, WAKE_NOTICE_AFTER_MS } from './login.page';
 
 const LOGIN_URL = `${environment.services.auth}/auth/login`;
 
@@ -48,7 +48,15 @@ describe('LoginPage', () => {
     fixture = TestBed.createComponent(LoginPage);
     page = fixture.nativeElement as HTMLElement;
     fixture.detectChanges();
+    answerLiveness();
   });
+
+  /** The page wakes the four services in the background; the tests answer those pings. */
+  const answerLiveness = () => {
+    for (const request of backend.match((r) => r.url.endsWith('/actuator/health/liveness'))) {
+      request.flush({ status: 'UP' });
+    }
+  };
 
   afterEach(() => {
     backend.verify();
@@ -152,5 +160,66 @@ describe('LoginPage', () => {
     fixture.detectChanges();
 
     expect(page.querySelector('[role=alert]')?.textContent).toContain('No se pudo conectar con el servicio de autenticación.');
+  });
+});
+
+describe('LoginPage waking the services', () => {
+  let backend: HttpTestingController;
+  let page: HTMLElement;
+  let fixture: ComponentFixture<LoginPage>;
+
+  const pings = () => backend.match((r) => r.url.endsWith('/actuator/health/liveness'));
+  const notice = () => page.querySelector('.wake') as HTMLElement;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    sessionStorage.clear();
+    TestBed.configureTestingModule({
+      imports: [LoginPage],
+      providers: [provideRouter([]), provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])), provideHttpClientTesting()],
+    });
+    backend = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(LoginPage);
+    page = fixture.nativeElement as HTMLElement;
+    fixture.detectChanges();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  it('pings the four services at once, without blocking the form, and says nothing if they answer fast', () => {
+    const requests = pings();
+    expect(requests.map((r) => r.request.url).sort()).toEqual(
+      Object.values(environment.services).map((base) => `${base}/actuator/health/liveness`).sort(),
+    );
+    vi.advanceTimersByTime(WAKE_NOTICE_AFTER_MS - 100);
+    requests.forEach((r) => r.flush({ status: 'UP' }));
+    vi.advanceTimersByTime(WAKE_NOTICE_AFTER_MS);
+    fixture.detectChanges();
+    expect(notice().textContent?.trim()).toBe('');
+    expect((page.querySelector('button[type=submit]') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('says "Despertando servicios" once it is slow, and takes it back when the last one answers', () => {
+    const requests = pings();
+    requests.slice(0, 3).forEach((r) => r.flush({ status: 'UP' }));
+    vi.advanceTimersByTime(WAKE_NOTICE_AFTER_MS + 10);
+    fixture.detectChanges();
+    expect(notice().textContent).toContain('Despertando servicios');
+    expect(notice().classList.contains('visually-hidden')).toBe(false);
+    expect((page.querySelector('button[type=submit]') as HTMLButtonElement).disabled).toBe(false); // never blocks
+
+    requests[3].flush({ status: 'UP' });
+    fixture.detectChanges();
+    expect(notice().textContent?.trim()).toBe('');
+    expect(notice().classList.contains('visually-hidden')).toBe(true);
+  });
+
+  it('a service that fails is retried, not shown as an error', () => {
+    const [first, ...rest] = pings();
+    rest.forEach((r) => r.flush({ status: 'UP' }));
+    first.flush(null, { status: 502, statusText: 'Bad Gateway' });
+    vi.advanceTimersByTime(3_100);
+    expect(pings()).toHaveLength(1); // the retry
+    expect(page.querySelector('[role=alert]')).toBeNull();
   });
 });

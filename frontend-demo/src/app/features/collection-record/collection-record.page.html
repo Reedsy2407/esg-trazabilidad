@@ -64,11 +64,14 @@
                 @for (n of filteredNeighborOptions(); track n.id; let i = $index) {
                   <li
                     role="option"
+                    tabindex="-1"
                     [id]="'neighbor-opt-' + i"
                     [attr.aria-selected]="n.id === neighborId()"
                     [class.active]="i === neighborActive()"
                     (mousedown)="$event.preventDefault()"
                     (click)="pickNeighbor(n.id)"
+                    (keydown.enter)="$event.preventDefault(); pickNeighbor(n.id)"
+                    (keydown.space)="$event.preventDefault(); pickNeighbor(n.id)"
                   >
                     {{ n.label }}
                   </li>

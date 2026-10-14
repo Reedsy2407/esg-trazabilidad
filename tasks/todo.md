@@ -541,7 +541,8 @@ Rama y PR por módulo (`v3/mN`). Freno para el OK de Angel antes del merge: M2, 
 #### Pendiente (bloqueo de infraestructura, no de código)
 
 - [x] `gh pr merge` fallaba en ambos PR (#27 y #29) con `403 Resource not accessible by personal access token` (confirmado por GraphQL y por REST `pulls/.../merge`), aunque el repo mostraba `admin:true` para la cuenta — era el *token* el que no tenía permiso de escritura en pull requests, no el usuario. Resuelto: Angel fusionó #27 y #29 a mano desde GitHub el 2026-10-11, sin reintento necesario.
-- [ ] Siguiente en el portal (task 4 de portal/PLAN.md): glosario de estados y catálogo de errores por servicio (`errores-<servicio>.md`, `estados-<servicio>.md`), más el job informativo `catalog-drift` — mismo patrón que `openapi-drift` (informa, no bloquea, mismo filtro de disparo).
+- [ ] **Misión del portal: se hace AL FINAL, cuando todo esté definido** (Angel, 2026-10-14; no "después de M5"). No se ejecuta todavía. Alcance añadido: concepto de negocio de los dos estados de la empresa (activa/inactiva y verificada/no verificada), el cronograma del vecino, la limitación de que los recojos no se editan ni se borran, y las reglas nuevas de PDF/CSV y de eliminar empresa (detalle en HOJA-DE-RUTA.md → "Objetivo del portal").
+- [ ] (Diferido hasta esa misión) Siguiente en el portal (task 4 de portal/PLAN.md): glosario de estados y catálogo de errores por servicio (`errores-<servicio>.md`, `estados-<servicio>.md`), más el job informativo `catalog-drift` — mismo patrón que `openapi-drift` (informa, no bloquea, mismo filtro de disparo).
 
 ### M1: shared-kernel (rama `v3/m1`) — PR #26, fusionado por Angel el 2026-10-11
 - [x] V3-1.1: value object `Ruc` (11 dígitos, prefijo 10/15/16/17/20, módulo 11); pruebas con 20131312955 válido, 20999000029 y 20999000037 inválidos

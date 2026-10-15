@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Production smoke test with a throwaway "smoke-" data set: logs in as a test staff user,
-# registers a company (manual, unverified path: no SUNAT/Decolecta call), a neighbor and one
+# registers a neighbor and one
 # collection record, times each call, reads the services' own timing logs for that window with
 # `render logs` + scripts/perf-summary.sh, and cleans up everything it created.
 #
-#   SMOKE_EMAIL=smoke-xxx@example.org SMOKE_PASSWORD=... scripts/smoke-prod.sh
+#   scripts/smoke-prod.sh
 #
-# Credentials come only from the environment (never from a file, never printed). The test staff
-# user must already exist: create it once with POST /auth/staff-users (a staff user cannot be
+# Credentials: the DPAPI-encrypted file written by scripts/smoke-cred.ps1 (outside the repo), or
+# SMOKE_EMAIL / SMOKE_PASSWORD when both are set. Never printed. The test staff user must already
+# exist: scripts/smoke-create-user.mjs creates it through the real screen (a staff user cannot be
 # deleted through the API, so it is reused; its e-mail must start with "smoke-").
-# Optional: SMOKE_ASSOCIATION_ID (default: the first active association), SMOKE_KEEP=1 (skip
+# Optional: SMOKE_COMPANY=1 (also register a company: spends one provider lookup), SMOKE_ASSOCIATION_ID (default: the first active association), SMOKE_KEEP=1 (skip
 # the clean-up, to look at the data), SMOKE_LOGS=0 (skip the Render log step).
 #
 # What stays behind and why: a collection record can never be edited or deleted, so the smoke
@@ -19,8 +20,15 @@ set -uo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
 services_file="$here/services.txt"
-: "${SMOKE_EMAIL:?set SMOKE_EMAIL (must start with smoke-)}"
-: "${SMOKE_PASSWORD:?set SMOKE_PASSWORD}"
+# Credentials: SMOKE_EMAIL / SMOKE_PASSWORD if set, else the DPAPI-encrypted file read by
+# scripts/smoke-cred.ps1 (%LOCALAPPDATA%\esg-smoke\cred.xml). Read into variables, never printed.
+if [ -z "${SMOKE_EMAIL:-}" ] || [ -z "${SMOKE_PASSWORD:-}" ]; then
+  cred_ps1="$(cygpath -w "$here/smoke-cred.ps1" 2>/dev/null || echo "$here/smoke-cred.ps1")"
+  SMOKE_EMAIL="$(powershell -NoProfile -ExecutionPolicy Bypass -File "$cred_ps1" -Mode Get -Field Email </dev/null 2>/dev/null | tr -d '\r')"
+  SMOKE_PASSWORD="$(powershell -NoProfile -ExecutionPolicy Bypass -File "$cred_ps1" -Mode Get -Field Password </dev/null 2>/dev/null | tr -d '\r')"
+fi
+[ -n "${SMOKE_EMAIL:-}" ] && [ -n "${SMOKE_PASSWORD:-}" ] || { echo "no smoke credentials: set SMOKE_EMAIL/SMOKE_PASSWORD or create the account (scripts/smoke-create-user.mjs)" >&2; exit 2; }
+export SMOKE_EMAIL SMOKE_PASSWORD
 case "$SMOKE_EMAIL" in smoke-*) ;; *) echo "SMOKE_EMAIL must start with smoke-" >&2; exit 2 ;; esac
 
 base() { awk -v n="$1" '$1 == n { print $2 }' "$services_file"; }
@@ -85,15 +93,19 @@ if [ -z "$assoc" ]; then
 fi
 [ -n "$assoc" ] || { echo "no association to attach the company to (set SMOKE_ASSOCIATION_ID)" >&2; exit 1; }
 
-# --- 3. company (manual path, no SUNAT) -------------------------------------------------------
-ruc="$(node -e '
+# --- 3. company -------------------------------------------------------------------------------
+# Off by default: the server only accepts the manual (unverified) path after asking SUNAT through
+# the provider and getting no answer (RPT-014 otherwise), so even this path spends one lookup of
+# the provider's quota. SMOKE_COMPANY=1 turns it on (it then works only while the provider is down).
+if [ "${SMOKE_COMPANY:-0}" = 1 ]; then
+  ruc="$(node -e '
 const w=[5,4,3,2,7,6,5,4,3,2];let d="20"+String(Math.floor(Math.random()*1e8)).padStart(8,"0");
 const s=d.split("").reduce((a,c,i)=>a+Number(c)*w[i],0);let c=11-(s%11);if(c===10)c=0;if(c===11)c=1;
 process.stdout.write(d+c)')"
-call "register company (unverified)" POST "$REP/tracked-companies/unverified" \
-  "$(node -e 'process.stdout.write(JSON.stringify({associationId:process.argv[1],ruc:process.argv[2],name:process.argv[3],contactName:"smoke",contactEmail:"smoke@example.org"}))' "$assoc" "$ruc" "$run")"
-need 2
-created_company="$(json id <"$tmp/body")"
+  call "register company (unverified)" POST "$REP/tracked-companies/unverified"     "$(node -e 'process.stdout.write(JSON.stringify({associationId:process.argv[1],ruc:process.argv[2],name:process.argv[3],contactName:"smoke",contactEmail:"smoke@example.org"}))' "$assoc" "$ruc" "$run")"
+  need 2
+  created_company="$(json id <"$tmp/body")"
+fi
 call "list companies" GET "$REP/tracked-companies?size=20"; need 200
 
 # --- 4. neighbor + collection record ----------------------------------------------------------

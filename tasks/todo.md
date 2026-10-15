@@ -624,8 +624,14 @@ Rebanadas (máx. 10 commits en la rama, uno por rebanada vertical con tasks/ y d
 - [x] V3-6c.1: logs de tiempos con forma fija (`event=http_request` con servicio, método, ruta plantilla, estado, `durationMs`, `dbMs`, `poolMs`; `event=slow_query`; `event=password_hash`; `event=warmup`; INFO normal, ERROR en fallos; sin datos personales) en shared-kernel; `scripts/perf-summary.sh`; calentamiento al arrancar (`esg.warmup.enabled`, activo en las imágenes Docker): primera petición de lista 2317 → 340 ms, primer login 2071 → 565 ms a 0.1 CPU; login sin `@Transactional`; la página de login despierta los servicios con el aviso "Despertando servicios…". Tabla antes/después y lo descartado (bcrypt, pool, índices, regiones, lazy-init) en `docs/performance.md`.
 - Pendiente de medir con credenciales (no hay): registro de empresa y listas autenticadas en producción; `scripts/perf-summary.sh` sobre un log de Render tras una sesión normal.
 
-- Alcance añadido a M7 (2026-10-14, sin empezarlo): seguridad de las cuentas del personal en auth-service y frontend: longitud mínima de contraseña (hoy el backend solo exige `@NotBlank`), desactivar y reactivar cuentas del personal, cambiar contraseña, y modelo ADMIN/STAFF (hoy cualquier cuenta crea otras con acceso completo). Detalle en HOJA-DE-RUTA.md.
-- Dependabot (2026-10-14): cerradas sin mezclar las propuestas que suben las imágenes a Java 24/26 (#9 a #12 y #22; el proyecto usa Java 21 LTS). Pendiente: revisar las de acciones del CI (#2 setup-java, #4 checkout, #15 setup-node, #16 upload-artifact, #24 download-artifact) cuando el CI esté verde; el resto (Angular 22, vitest 5, Spring Boot 4, springdoc 3, rest-assured 6, grupos maven y npm) sigue abierto.
+## M7 (alcance completo fijado el 2026-10-15; NO empezado hasta que Angel lo pida; detalle en HOJA-DE-RUTA.md)
+
+- [ ] Limpieza de producción: certificados de SUNAT y empresa SUNAT de prueba, Smoke Task83, empresa demo sin verificar (RUC 20999000029), vecinos `smoke-`; RUC demo reemplazados por RUC reales públicos con el OK de Angel (simulación primero, luego aplicar desde PowerShell). Cuenta huérfana `smoke-cc71936b@…`: inactivarla.
+- [ ] Seguridad de cuentas (auth-service + frontend): contraseña mínima en el backend, desactivar/reactivar, cambiar contraseña, modelo ADMIN/STAFF (la prueba de humo pasa a una cuenta STAFF).
+- [ ] Frontend: combobox de vecino con limpieza temporal; campo de comprobante SIGERSOL visible y obligatorio solo con «Con comprobante referenciado», con la misma regla en el backend; recorte de `company.page.css`.
+- [ ] Decisión del CSV (`;` fijo con BOM; no abre en columnas con es-MX/en-US; opción `sep=;`). Verificar si la sesión dura 30 minutos o 1 hora.
+- [ ] Higiene: borrar la rama `v3/m1-draft` (ya no existe en local ni en origin: confirmar); PR de Dependabot de acciones del CI (#2, #4, #15, #16, #24) con `scripts/merge-dependabot-actions.sh` cuando el CI esté verde, e `ignore` de imágenes Java no LTS en `.github/dependabot.yml`. Las de Java 24/26 (#9 a #12, #22) ya se cerraron; el resto (Angular 22, vitest 5, Spring Boot 4, springdoc 3, rest-assured 6, grupos maven y npm) sigue abierto.
+- Después de M7 (fuera de su alcance): M8, portal, README con capturas, informe, «Olvidé mi contraseña», caso 503.
 
 ### M6–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

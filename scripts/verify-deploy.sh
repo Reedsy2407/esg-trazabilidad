@@ -24,9 +24,12 @@
 set -uo pipefail
 
 REPO="${VERIFY_REPO:-Reedsy2407/esg-trazabilidad}"
-CI_TIMEOUT=600
-SERVICE_TIMEOUT=600
+TOTAL_BUDGET=720   # the whole wait (CI + services) never goes past 12 minutes
+CI_TIMEOUT=$TOTAL_BUDGET
+SERVICE_TIMEOUT=$TOTAL_BUDGET
 INTERVAL=10
+PROGRESS_EVERY=60
+script_start=$SECONDS
 
 here="$(cd "$(dirname "$0")" && pwd)"
 root="$(cd "$here/.." && pwd)"
@@ -71,11 +74,14 @@ short="${sha:0:7}"
 # --- 1. CI --------------------------------------------------------------------
 ci_line=""
 ci_ok=1
+ci_end_epoch=0
 start=$SECONDS
+last_progress=$SECONDS
 while :; do
   runs="$("$gh_bin" run list -R "$REPO" --commit "$sha" \
-    --json databaseId,status,conclusion --jq '.[] | "\(.databaseId) \(.status) \(.conclusion)"' 2>/dev/null)"
+    --json databaseId,status,conclusion,updatedAt --jq '.[] | "\(.databaseId) \(.status) \(.conclusion) \(.updatedAt)"' 2>/dev/null)"
   if [ -n "$runs" ] && ! grep -qv " completed " <<<"$runs"; then
+    ci_end_epoch="$(awk '{print $4}' <<<"$runs" | sort | tail -1 | xargs -I{} date -d {} +%s 2>/dev/null || echo 0)"
     failed_ids="$(awk '$3 != "success" && $3 != "skipped" && $3 != "neutral" {print $1}' <<<"$runs")"
     if [ -z "$failed_ids" ]; then
       ci_line="CI   $short OK ($(wc -l <<<"$runs" | tr -d ' ') run(s) green, waited $((SECONDS - start))s)"
@@ -100,8 +106,15 @@ while :; do
     fi
     break
   fi
+  if [ $((SECONDS - last_progress)) -ge $PROGRESS_EVERY ]; then
+    echo "progress: waiting for CI on $short, $((SECONDS - script_start))s of ${TOTAL_BUDGET}s"
+    last_progress=$SECONDS
+  fi
   sleep "$INTERVAL"
 done
+# What is left of the 12 minutes is the services' wait.
+SERVICE_TIMEOUT=$((TOTAL_BUDGET - (SECONDS - script_start)))
+[ "$SERVICE_TIMEOUT" -ge 60 ] || SERVICE_TIMEOUT=60
 
 # --- 2. Deployed commit + liveness ------------------------------------------------
 same_commit() { # served expected -- prefix match either way, at least 7 chars
@@ -116,12 +129,12 @@ same_image() { # served pathspecs...
     git -C "$root" diff --quiet "$served" "$sha" -- "$@"
 }
 
-probe() { # name url expected outfile pathspecs...
-  local name="$1" url="$2" expected="$3" out="$4" t0=$SECONDS served="" live=""
+probe() { # name url expected outfile no_deploy_coming pathspecs...
+  local name="$1" url="$2" expected="$3" out="$4" no_deploy="$5" t0=$SECONDS served="" live=""
   # The static frontend has no actuator: its build writes /version.json, and "alive" is its index.
   local info_path="/actuator/info" live_path="/actuator/health/liveness"
   if [ "$name" = frontend ]; then info_path="/version.json"; live_path="/"; fi
-  shift 4
+  shift 5
   while :; do
     served="$(curl -s -m 30 "$url$info_path" 2>/dev/null | sed -n 's/.*"commit":"\([0-9a-f]*\)".*/\1/p')"
     served="${served:-nothing}"
@@ -131,6 +144,12 @@ probe() { # name url expected outfile pathspecs...
         printf '%-10s OK   %4ss  serving %s\n' "$name" "$((SECONDS - t0))" "${served:0:7}" >"$out"
         return
       fi
+    elif [ -n "$no_deploy" ] && [ "$served" != nothing ] &&
+      git -C "$root" merge-base --is-ancestor "$served" "$expected" 2>/dev/null; then
+      # Older than expected and no deploy can be under way: do not wait, say so now.
+      printf '%-10s NEEDS DEPLOY  serving %s, expected %s (%s)\n' "$name" "${served:0:7}" "${expected:0:7}" "$no_deploy" >"$out"
+      touch "$out.stale"
+      return
     fi
     if [ $((SECONDS - t0)) -ge $SERVICE_TIMEOUT ]; then
       printf '%-10s FAIL %4ss  serving %s, expected %s%s\n' "$name" "$((SECONDS - t0))" \
@@ -160,8 +179,31 @@ while read -r name url paths; do
   # buildFilter globs as git pathspecs ("dir/**" -> "dir/"); read -a never globs.
   read -ra pathspecs <<<"$(sed 's#/\*\*#/#g' <<<"$paths")"
   expected="$(git -C "$root" log -1 --format=%H "$sha" -- "${pathspecs[@]}")"
-  probe "$name" "$url" "$expected" "$tmp/$name" "${pathspecs[@]}" &
+  # A deploy can only be under way if the expected commit's own CI went green (Render deploys on
+  # checksPass) and that was less than the whole wait ago. Otherwise nothing is coming.
+  no_deploy=""
+  if [ "$expected" != "$sha" ]; then
+    eruns="$("$gh_bin" run list -R "$REPO" --commit "$expected" \
+      --json status,conclusion,updatedAt --jq '.[] | "\(.status) \(.conclusion) \(.updatedAt)"' 2>/dev/null)"
+    if grep -qE '^completed (failure|cancelled|timed_out|startup_failure)' <<<"$eruns"; then
+      no_deploy="CI of ${expected:0:7} was red, so Render never deployed it"
+    fi
+  fi
+  if [ -z "$no_deploy" ] && [ "$ci_end_epoch" -gt 0 ] && [ $(($(date +%s) - ci_end_epoch)) -gt "$TOTAL_BUDGET" ]; then
+    no_deploy="CI finished over $((TOTAL_BUDGET / 60)) minutes ago and no deploy of it is under way"
+  fi
+  # VERIFY_DEPLOYING=1: a deploy was just started by hand, so waiting for it is right.
+  [ -z "${VERIFY_DEPLOYING:-}" ] || no_deploy=""
+  probe "$name" "$url" "$expected" "$tmp/$name" "$no_deploy" "${pathspecs[@]}" &
 done <"$services_file"
+# One progress line a minute while the probes run.
+while [ -n "$(jobs -r)" ]; do
+  for _ in $(seq 1 $((PROGRESS_EVERY / 2))); do
+    [ -n "$(jobs -r)" ] || break
+    sleep 2
+  done
+  [ -n "$(jobs -r)" ] && echo "progress: waiting for the services, $((SECONDS - script_start))s of ${TOTAL_BUDGET}s"
+done
 wait
 
 status=0
@@ -174,9 +216,10 @@ echo "$ci_line"
 stale=()
 for name in "${names[@]}"; do [ -e "$tmp/$name.stale" ] && stale+=("$name"); done
 if [ "${#stale[@]}" -gt 0 ]; then
-  echo "hint: ${stale[*]} still on an older commit. ${sha:0:7} touches none of their buildFilter"
-  echo "      paths, and Render may skip the auto-deploy when a push's last commit doesn't match,"
-  echo "      even if earlier commits in it do. Use Manual Deploy > Deploy latest commit for them"
-  echo "      in Render, then run this script again (docs/deployment.md, 5b)."
+  echo "hint: ${stale[*]} need a deploy. ${sha:0:7} touches none of their buildFilter paths, and"
+  echo "      Render skips the auto-deploy when the commit that did touch them had a red CI or the"
+  echo "      push's last commit doesn't match. Deploy the latest commit of each (Render Manual"
+  echo "      Deploy, or 'render deploys create <srv-id> --confirm -o text'), then run this script"
+  echo "      again (docs/deployment.md, 5b)."
 fi
 exit $status

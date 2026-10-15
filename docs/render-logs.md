@@ -24,6 +24,13 @@ them from the dashboard.
 
 (`esg-frontend`, the static site, is `srv-db47vvu0tbcc73dff7bg`; it has no application logs worth reading.)
 
+## Deploying (the only write allowed)
+
+`timeout 60 render deploys create <srv-id> --confirm -o text < /dev/null` starts a deploy of the latest
+commit of one of the four API services (ids above); it is allowed only for those ids in
+`.claude/settings.local.json`. Used after a merge when `scripts/verify-deploy.sh` reports `NEEDS DEPLOY`
+(see `docs/deployment.md`, 5b). Everything else in `render` stays denied.
+
 ## How to run it
 
 ```

@@ -624,5 +624,7 @@ Rebanadas (máx. 10 commits en la rama, uno por rebanada vertical con tasks/ y d
 - [x] V3-6c.1: logs de tiempos con forma fija (`event=http_request` con servicio, método, ruta plantilla, estado, `durationMs`, `dbMs`, `poolMs`; `event=slow_query`; `event=password_hash`; `event=warmup`; INFO normal, ERROR en fallos; sin datos personales) en shared-kernel; `scripts/perf-summary.sh`; calentamiento al arrancar (`esg.warmup.enabled`, activo en las imágenes Docker): primera petición de lista 2317 → 340 ms, primer login 2071 → 565 ms a 0.1 CPU; login sin `@Transactional`; la página de login despierta los servicios con el aviso "Despertando servicios…". Tabla antes/después y lo descartado (bcrypt, pool, índices, regiones, lazy-init) en `docs/performance.md`.
 - Pendiente de medir con credenciales (no hay): registro de empresa y listas autenticadas en producción; `scripts/perf-summary.sh` sobre un log de Render tras una sesión normal.
 
+- Dependabot (2026-10-14): cerradas sin mezclar las propuestas que suben las imágenes a Java 24/26 (#9 a #12 y #22; el proyecto usa Java 21 LTS). Pendiente: revisar las de acciones del CI (#2 setup-java, #4 checkout, #15 setup-node, #16 upload-artifact, #24 download-artifact) cuando el CI esté verde; el resto (Angular 22, vitest 5, Spring Boot 4, springdoc 3, rest-assured 6, grupos maven y npm) sigue abierto.
+
 ### M6–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

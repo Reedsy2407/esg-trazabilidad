@@ -49,7 +49,7 @@ Remove-Item Env:ESG_STAFF_EMAIL, Env:ESG_STAFF_PASSWORD
 
 La primera llamada puede tardar hasta ~2 minutos: los servicios del plan gratuito de Render se duermen, y el script espera a que despierten, avisando del progreso.
 
-Opcional: `--extra-association` agrega una segunda asociación ("Asociación de Recicladores Demo Sur (ficticia)", RUC 20999000037). Su certificación vence 20 días después de la fecha en que se corre, así que sale con el chip "por vencer". Está apagada por defecto y también pasa por la simulación. Si esa asociación ya tiene una certificación "Registro municipal (demo)", no se crea otra, aunque ya haya vencido:
+Opcional: `--extra-association` agrega una segunda asociación ("Asociación de Recicladores Demo Sur (ficticia)", RUC 20521286769, el de una entidad pública real; sin validez legal). Su certificación vence 20 días después de la fecha en que se corre, así que sale con el chip "por vencer". Está apagada por defecto y también pasa por la simulación. Si esa asociación ya tiene una certificación "Registro municipal (demo)", no se crea otra, aunque ya haya vencido:
 
 ```powershell
 node scripts/demo-seed/seed.mjs --extra-association

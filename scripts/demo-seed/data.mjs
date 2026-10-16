@@ -47,7 +47,7 @@ export const NEIGHBORS = [
 
 export const COMPANY = {
   name: 'Empresa Demo Envases S.A.C. (ficticia)',
-  ruc: '20999000029',
+  ruc: '20492966658',
 };
 
 export const SIGERSOL = {
@@ -72,7 +72,7 @@ export const CERTIFICATE = {
  */
 export const EXTRA_ASSOCIATION = {
   name: 'Asociación de Recicladores Demo Sur (ficticia)',
-  ruc: '20999000037',
+  ruc: '20521286769',
 };
 export const EXTRA_CERTIFICATION_TYPE = 'Registro municipal (demo)';
 export const EXTRA_EXPIRES_IN_DAYS = 20;

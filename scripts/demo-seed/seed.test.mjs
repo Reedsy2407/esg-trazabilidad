@@ -165,7 +165,7 @@ test('--apply creates everything in order, linking each collection to its schedu
     assert.equal(schedule.neighborId, r.neighborId);
     assert.equal(r.associationId, db.associations[0].id);
   }
-  assert.deepEqual(db.companies.map((c) => [c.name, c.ruc, c.associationId]), [['Empresa Demo Envases S.A.C. (ficticia)', '20999000029', db.associations[0].id]]);
+  assert.deepEqual(db.companies.map((c) => [c.name, c.ruc, c.associationId]), [['Empresa Demo Envases S.A.C. (ficticia)', '20492966658', db.associations[0].id]]);
   assert.deepEqual(db.syncs.map((s) => [s.periodStart, s.periodEnd, s.hierarchyCompliancePercent, s.officialKilosDeclared, s.sourceNote]), [['2026-09-01', '2026-09-30', 85.5, 70, 'Dato de demostración, no oficial']]);
   assert.deepEqual(db.certificates, []);
   assert.match(out, /Listo: 16 creados, 0 ya existían\./);

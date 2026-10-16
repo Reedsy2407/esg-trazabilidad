@@ -84,6 +84,11 @@ token="$(json accessToken <"$tmp/body")"
 [ -n "$token" ] || token="$(json token <"$tmp/body")"
 [ -n "$token" ] || { echo "login answered 200 without a token" >&2; exit 1; }
 
+# --- 1b. the smoke account is a STAFF: the admin-only account list must answer 403 -------------
+call "admin route as STAFF (403)" GET "$AUTH/auth/staff-users"
+need 403
+grep -q 'AUTH-006' "$tmp/body" || { echo "  403 without AUTH-006: $(head -c 200 "$tmp/body")" >&2; failures=$((failures + 1)); }
+
 # --- 2. association (existing, active) --------------------------------------------------------
 assoc="${SMOKE_ASSOCIATION_ID:-}"
 if [ -z "$assoc" ]; then

@@ -88,7 +88,7 @@ Why liveness and not `/actuator/health`: when RabbitMQ or Postgres is down, the 
 
 On its first start against an empty `staff_user` table, auth-service creates the `ADMIN_BOOTSTRAP_EMAIL` account with a **random password, logged once at WARN level**, in a line of the form `email=<email> password=<password>`. Read it in **esg-auth-service → Logs** right after the first deploy, and store it in a password manager **immediately**. The window is narrow: in the real go-live, the line was no longer in the logs after a few restarts and redeploys, and the account had to be reset (below).
 
-It is never logged again, and there is no change-password endpoint yet. The bootstrap only runs when `staff_user` is completely empty. So if the password is lost, recovering it means deleting every row of `staff_user` in Neon's SQL editor and restarting esg-auth-service, which logs a new password once. That also removes every other staff account created since.
+It is never logged again. Since M7 the account is created as **ADMIN** with a pending password change (the screens send the person to choose their own, 15 to 64 characters), and `ADMIN_BOOTSTRAP_EMAIL` has a second behaviour: when the table already has accounts but **no active ADMIN**, the account that variable names (it must exist and be active) is promoted to ADMIN at startup, and nothing else is touched (this is how production got its first admin when roles arrived). With an active ADMIN in place a restart does nothing. An admin can reset any account's password from the app (including another admin's), and anyone can change their own; there is no recovery without an admin yet («Olvidé mi contraseña» is designed, not built). If the only admin's password is lost, the last resort is deleting every row of `staff_user` in Neon's SQL editor and restarting esg-auth-service logs a new password once (this also removes every other staff account).
 
 ## 5b. Verify a deploy
 
@@ -217,3 +217,9 @@ The site's response headers (in `render.yaml`) include a Content-Security-Policy
 - **CloudAMQP deletes a queue that nobody has consumed from for 28 days.** The services redeclare their queues on the next start, but messages that were sitting in a deleted queue are lost. Acceptable for a demo; revisit before carrying real data.
 - **One auth-service instance.** The login rate limit is in memory and resets when that instance restarts or sleeps.
 - **The Swagger UI is public on purpose.** It is the demo's front door and only documents the API; every business call behind it still needs a token.
+
+More limits (SIGERSOL, sessions, CSV, demo, zero cost) are in [known-limitations.md](known-limitations.md).
+
+## The production demo (since M7)
+
+The demo data was rebuilt on 2026-10-16 with real public RUC: the company is MINAM (RUC 20492966658, name from SUNAT, «MINISTERIO DEL AMBIENTE»), its association is "Demo Sur" (RUC 20521286769, OEFA), and the issued certificate covers 17 to 30 September 2026 with **35,30 kg** traced and **85,5 %** declared hierarchy compliance. The seed (`scripts/demo-seed/`) expects exactly that and looks the month's records up by the SIGERSOL period. The earlier test certificates and companies were annulled or deactivated, not deleted. The district table of that certificate reads «Distrito desconocido» (see [known-limitations.md](known-limitations.md)).

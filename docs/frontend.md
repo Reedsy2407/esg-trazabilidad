@@ -10,7 +10,10 @@ The Angular app in `frontend-demo/` is the staff console for the four services. 
 |---|---|---|
 | auth | `POST /auth/login` | Iniciar sesión |
 | auth | `GET /auth/me` | Mi sesión |
-| auth | `POST /auth/staff-users` | Mi sesión → Crear una cuenta del personal |
+| auth | `POST /auth/me/password` | Mi sesión → Cambiar mi contraseña (M7) |
+| auth | `GET /auth/staff-users` | Mi sesión → Cuentas del personal (ADMIN only, M7) |
+| auth | `POST /auth/staff-users` | Cuentas del personal → Crear una cuenta del personal (ADMIN only) |
+| auth | `PATCH …/staff-users/{id}/deactivate`, `…/reactivate`, `POST …/staff-users/{id}/password` | Cuentas del personal (desactivar y reactivar con motivo; Restablecer una contraseña) (ADMIN only) |
 | recycler | `GET /associations` | Asociaciones (list, state filter); pickers in Registrar recojo, Registrar empresa, SIGERSOL; names on Vecino's collections |
 | recycler | `GET /associations/{id}` | Asociación; Emitir certificado (the draft's association) |
 | recycler | `GET /associations/{id}/certifications` | Asociación (certification chips) |
@@ -64,21 +67,24 @@ The backend doesn't enforce these; the screens do, and say so.
   - The company page edits the **contact** only (RUC and association are API-only), deactivates/reactivates and deletes with a required reason (`reason-confirm.ts`). `RPT-018`: already in that state. `RPT-017`: it has certificates (annulled ones count), so it can only be deactivated. A deleted company disappears and its RUC is free again.
   - Legacy companies (typed by hand before M4) show as **No verificada** until verified; cleaning the demo data is M7.
 - **M6b corrections.** The issue screen says issuing is final *for editing* (a certificate can still be annulled, with a reason). The certificate page's "Anular" section sits in the ticket's column. "Registrar recojo" has ONE neighbour control, an editable combobox ("Vecino": type a name or district, arrows and Enter to choose, Esc to close; editing the text withdraws the choice). The kilos chart's axis fits the data (a "nice" step, about three intervals), not a fixed 0-15,000. A company with certificates (even annulled) shows no "Eliminar empresa" button, only the reason; the server still answers `RPT-017` if one appears meanwhile. Rows from before M5 read "Dato anterior al registro de origen".
-- **Certificate files** (M6b): the PDF is laid out like the ticket (title band, VIGENTE or ANULADO stamp, company wrapped inside the margins, kilos as the one big figure, striped table, district table), dates as dd/MM/yyyy and times in Lima, a pale ANULADO mark on every page of an annulled one, and the footer "Proyecto académico, sin validez legal" with "Página i de n". The CSV is UTF-8 with a byte-order mark and "," as separator (what Excel opens in columns where the decimal is a dot, as in Peru, with accents; fields with commas, quotes or line breaks are quoted), with field names in one style: Estado (Vigente or Anulado), Anulado en (hora de Lima), Anulado por, Motivo de anulación, Disponible / No disponible.
+- **Certificate files** (M6b): the PDF is laid out like the ticket (title band, VIGENTE or ANULADO stamp, company wrapped inside the margins, kilos as the one big figure, striped table, district table), dates as dd/MM/yyyy and times in Lima, a pale ANULADO mark on every page of an annulled one, and the footer "Proyecto académico, sin validez legal" with "Página i de n". The CSV (M7b: comma, RFC 4180) is UTF-8 with a byte-order mark, CRLF and "," as separator (what Excel opens in columns where the decimal is a dot, as in Peru, with accents; fields with commas, quotes or line breaks are quoted; numbers use a dot decimal and no grouping; on a Windows with a decimal comma, like es-ES, it opens in one column: use Data > From Text/CSV and pick ","), with field names in one style: Estado (Vigente or Anulado), Anulado en (hora de Lima), Anulado por, Motivo de anulación, Disponible / No disponible.
 - **District context** (M5): the certificate page and the draft list the kilos of each district with SIGERSOL Municipal's aggregated counts (associations and recyclers), their year and source, under "Contexto distrital". The note says they describe the district, not the company or its suppliers, and nothing is worded as a validation (the certificate never uses the word "verifica"). A district SIGERSOL has nothing for reads "Contexto de SIGERSOL Municipal no disponible."; kilos whose records carry no district read "Distrito desconocido". On a certificate the lines are frozen when it is issued; in the draft they are live. Only counts are shown: tonnes are not (unknown unit).
-- **SIGERSOL origin** (M5, D1): registering a figure asks "Origen del dato" (declarado por el operador, or con comprobante referenciado plus an optional reference) and records the staff member's email from the session. The wording never says SIGERSOL validated it. Older records read "Dato anterior al registro de origen". A company's summary and the certificate draft show the origin of the covering record, or "No verificado: ningún registro SIGERSOL cubre el período."
-- **SIGERSOL** figures are always labelled "ingreso manual": they are typed in from SIGERSOL; nothing integrates with it. The form keeps the columns' precision, and caps the note at 255 characters: a longer one would fail in the database and come back as RPT-006 ("overlap"), which would mislead.
+- **SIGERSOL origin** (M5, D1; reworded in M7): registering a figure asks "Origen del dato" (declarado por el operador, or con comprobante referenciado) and records the staff member's email from the session. The reference is **required** exactly with "Con comprobante referenciado" (`RPT-021`) and is "referenciado, no verificado por SIGERSOL". The wording never says SIGERSOL validated it. Older records read "Dato anterior al registro de origen". A company's summary and the certificate draft show the origin of the covering record, or "Sin dato declarado: ningún registro cubre el período."
+- **The hierarchy figure is declared** (M7): screens, PDF and CSV label it «Cumplimiento de jerarquía (declarado)» and carry the note that it is declared by the association's operator, not an official SIGERSOL figure, and not verified by this platform.
+- **SIGERSOL** figures are always labelled "ingreso manual": «Cifras declaradas por el operador, ingresadas a mano; esta aplicación no se conecta con SIGERSOL ni las verifica.» The form keeps the columns' precision, and caps the note at 255 characters: a longer one would fail in the database and come back as RPT-006 ("overlap"), which would mislead.
 - **Staff accounts:**
   - The initial password is always generated in the browser (16 characters, `crypto.getRandomValues`, no ambiguous characters). It is never typed.
   - It exists only in the page's memory: never in storage, the URL, router state, the console or a DOM attribute. It is dropped by "Ya la entregué", by a confirmed "Descartar", by leaving the page, or when an attempt is refused before ever creating the account. If the screen copied it, the clipboard is overwritten too.
   - After an unknown outcome it stays visible, and a retry reuses it.
   - Emails need a dot in the domain, checked before sending: `@Email` accepts `a@b`, which the service then refuses with AUTH-005.
-- **Session:** "Tu sesión vence a las HH:MM (dura X y no se renueva)" takes the time from the token's `exp` (shown in Lima) and the length from `exp − iat`. auth-service issues no refresh token.
+- **Roles and accounts (M7):** the role comes from the token and only steers the screens: «Cuentas del personal» and its actions show for an ADMIN, and the route guards send a STAFF member away from them; the server decides from the database (AUTH-006 for a non-admin). Passwords are 15 to 64 characters (NIST SP 800-63B); the form shows the rule and the server's `AUTH-007`/`AUTH-008` answers. After an account is created or reset, the person is sent to «Cambiar mi contraseña» before anything else (a guard, not a backend rule). Deactivate and reset say that a token already issued stays valid until it expires (at most one hour).
+- **Session:** "Tu sesión vence a las HH:MM (dura X y no se renueva)" takes the time from the token's `exp` (shown in Lima) and the length from `exp − iat` (one hour, no revocation). auth-service issues no refresh token.
+- **Combobox browsing (M7):** the district select and the neighbour combobox open with the full list on click (an empty search box), and leaving without choosing restores the previous choice.
 - **Unknown outcomes:** a write with no answer, a 408 or a 5xx (Render answers 502/504 while a service wakes) never claims it failed. The message says how to check before retrying.
 
 ## Known limitations
 
-- **No roles.** Any signed-in staff member can issue certificates, create staff accounts, cancel schedules and register companies or SIGERSOL figures. The screens say so and ask for an explicit confirmation before the irreversible or sensitive actions.
+- **Two roles only** (M7). Account administration is ADMIN-only; any signed-in staff member can still issue certificates, cancel schedules and register companies or SIGERSOL figures. The screens ask for an explicit confirmation before the irreversible or sensitive actions. See [Limitaciones conocidas](known-limitations.md).
 - **Pickers load one page of 100** (the services' `max-page-size`). They say so when there are more. Neighbour search filters only what was loaded.
 - **The district filter** is the same combobox used to register or edit a neighbour (M2): it picks one of the 50 districts by `districtUbigeo`, so it can't miss on case or accents. It still can't match free text, because the backend filters by the ubigeo code, not by name.
 - **The session log (bitácora)** lives in the tab's sessionStorage, tied to one sign-in. It is not a server record.
@@ -103,9 +109,9 @@ reporting-service's **tracked company** (`/tracked-companies`) is the company ce
 
 ## Pending in the backend
 
-- Edit, deactivate or delete: tracked companies, SIGERSOL records, staff accounts. (Neighbours got all three in M2.)
-- Change or reset a staff password. Today the initial password is permanent.
-- Roles or permissions (who may issue certificates or create staff).
+- Edit, deactivate or delete: SIGERSOL records. (Neighbours got all three in M2, tracked companies in M4, staff accounts in M7: deactivate/reactivate, no delete.)
+- Password recovery without an admin («Olvidé mi contraseña»): designed, not built. Changing your own password and an admin reset exist since M7.
+- Finer permissions than ADMIN/STAFF (who may issue certificates).
 - Search neighbours by name (the list only filters by state and exact district).
 - The association's name on the certificate (`EsgCertificateResponse` has only `associationId`).
 - A JSON endpoint for a certificate's weighings (they travel only in the CSV).

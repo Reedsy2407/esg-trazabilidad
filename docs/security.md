@@ -54,6 +54,8 @@ NIST SP 800-63B for a password that is the only authenticator, enforced by auth-
 
 The services validate the JWT by signature and expiry, without asking auth-service (a stateless design, needed because the free-tier services go to sleep). Consequence: after a password change or reset, or after an account is deactivated, a token already issued stays valid until it expires (one hour, a constant in `JwtIssuer`, never refreshed). Decision of Angel (2026-10-15): accepted as a known, documented limitation. Admin-only actions are the exception, because auth-service reads the database for them. The deactivate and reset screens say so.
 
+All the limits the project accepts on purpose (SIGERSOL, sessions and accounts, exports, the demo and the zero-cost rule) are collected in [known-limitations.md](known-limitations.md).
+
 ### JWT in sessionStorage, with a CSP
 
 The frontend keeps the token in `sessionStorage`: it lives only in that tab and is gone when the tab closes. JavaScript can read it, so an XSS would expose it. The alternative, an HttpOnly cookie, would need the four APIs on one site (or `SameSite=None` cookies) plus CSRF protection, a different design for a static site that calls four origins. The risk is reduced instead:

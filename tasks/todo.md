@@ -642,5 +642,9 @@ Estado previo al merge (2026-10-16): código, pruebas y docs hechos en la rama (
 - [x] Higiene: borrar la rama `v3/m1-draft` (ya no existe en local ni en origin: confirmar); PR de Dependabot de acciones del CI (#2, #4, #15, #16, #24) con `scripts/merge-dependabot-actions.sh` cuando el CI esté verde, e `ignore` de imágenes Java no LTS en `.github/dependabot.yml`. Las de Java 24/26 (#9 a #12, #22) ya se cerraron; el resto (Angular 22, vitest 5, Spring Boot 4, springdoc 3, rest-assured 6, grupos maven y npm) sigue abierto.
 - Después de M7 (fuera de su alcance): M8 (incluye corregir `SPEC-reporting-service.md` y la guía para que no digan «oficial de MINAM» ni «official compliance backing»), portal, README con capturas, informe, «Olvidé mi contraseña», caso 503.
 
+## M8 (documentación, 2026-10-16)
+
+- [x] Wording «declarado» (sin «oficial de MINAM» ni «official compliance backing») en `SPEC-reporting-service.md` y la guía (ambos en `.gitignore`, solo en disco); `docs/frontend.md` al día con M7/M7b (roles, cuentas, contraseña, CSV, combobox); `docs/deployment.md` con el comportamiento de `ADMIN_BOOTSTRAP_EMAIL` y la demo; `docs/security.md` enlaza las limitaciones; nueva `docs/known-limitations.md`. Sin código; el portal y «Olvidé mi contraseña» no se tocaron.
+
 ### M6–M8
 - Detalle por task al abrir cada módulo (ver la tabla de módulos en tasks/plan.md).

@@ -35,19 +35,59 @@ class CertificateCsvExporterTest {
     }
 
     @Test
-    void opensInSpanishExcelWithAccentsAndColumns() {
+    void opensInExcelWithTheCommaListSeparatorWithAccentsIntactAndACommaInANameQuoted() {
         TrackedCompany trackedCompany = TrackedCompany.create("Peña, Núñez S.A.C.", "20123456789", UUID.randomUUID());
         EsgCertificate certificate = EsgCertificate.issue(
                 trackedCompany, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), new BigDecimal("8.00"), new BigDecimal("85.00"));
 
         String text = decode(exporter.export(certificate, List.of()));
 
-        // Semicolon-separated (Excel in Spanish), UTF-8 with accents intact, no stray comma-split.
-        assertThat(text).contains("Empresa;Peña, Núñez S.A.C.");
-        assertThat(text).contains("Cumplimiento de jerarquía (declarado);85.00");
-        assertThat(text).contains("Período inicio;2026-01-01");
-        assertThat(text).contains("Estado;Vigente");
+        // Comma-separated (the list separator of a machine with a dot decimal), UTF-8 with accents intact;
+        // the comma inside the company name is quoted, so it is not read as a column break.
+        assertThat(text).contains("Empresa,\"Peña, Núñez S.A.C.\"");
+        assertThat(text).contains("Cumplimiento de jerarquía (declarado),85.00");
+        assertThat(text).contains("Período inicio,2026-01-01");
+        assertThat(text).contains("Estado,Vigente");
         assertThat(text).doesNotContain("Ã");
+        assertThat(CertificateCsvExporter.SEPARATOR).isEqualTo(',');
+    }
+
+    @Test
+    void aFieldWithCommasQuotesOrLineBreaksIsQuotedAndEscapedAndRoundTripsAsOneField() throws IOException {
+        String name = "He said \"hi\", ok\nsecond line";
+        TrackedCompany trackedCompany = TrackedCompany.create(name, "20123456789", UUID.randomUUID());
+        EsgCertificate certificate = EsgCertificate.issue(
+                trackedCompany, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), new BigDecimal("8.00"), new BigDecimal("85.00"));
+
+        String text = decode(exporter.export(certificate, List.of()));
+
+        // RFC 4180: wrapped in double quotes, an inner quote doubled, the line break kept inside the quotes.
+        assertThat(text).contains("Empresa,\"He said \"\"hi\"\", ok\nsecond line\"");
+        try (CSVParser parser = CSVParser.parse(text, org.apache.commons.csv.CSVFormat.RFC4180)) {
+            List<CSVRecord> records = parser.getRecords();
+            assertThat(records.get(0)).containsExactly("Empresa", name);
+            assertThat(records.get(1)).containsExactly("RUC", "20123456789");
+        }
+    }
+
+    @Test
+    void numbersUseADotDecimalAndNoGroupingSoTheyNeverHoldTheSeparator() throws IOException {
+        TrackedCompany trackedCompany = TrackedCompany.create("Empresa", "20123456789", UUID.randomUUID());
+        EsgCertificate certificate = EsgCertificate.issue(
+                trackedCompany, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), new BigDecimal("12480.50"), new BigDecimal("87.50"));
+        List<EsgCertificateLineItem> lineItems = List.of(
+                EsgCertificateLineItem.of(certificate.getId(), LocalDate.of(2026, 1, 5), new BigDecimal("1234.50")));
+
+        String text = decode(exporter.export(certificate, lineItems));
+
+        try (CSVParser parser = CSVParser.parse(text, org.apache.commons.csv.CSVFormat.RFC4180)) {
+            List<CSVRecord> records = parser.getRecords();
+            // Split on the comma, as Excel does with a comma list separator: two columns, number intact.
+            assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("Kilos trazados", "12480.50"));
+            assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("Cumplimiento de jerarquía (declarado)", "87.50"));
+            assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("2026-01-05", "1234.50"));
+        }
+        assertThat(text).doesNotContain("12,480").doesNotContain("1,234").doesNotContain("87,50");
     }
 
     @Test

@@ -315,7 +315,7 @@ class CertificateAnnulmentApiIT {
                 given().when().get("/tracked-companies/{companyId}/certificates/{id}/csv", ids[0], ids[1])
                         .then().statusCode(200).extract().asByteArray(),
                 StandardCharsets.UTF_8);
-        assertThat(csv).contains("Estado;Anulado").contains("Motivo de anulación;'=Datos erróneos");
+        assertThat(csv).contains("Estado,Anulado").contains("Motivo de anulación,'=Datos erróneos");
     }
 
     @Test

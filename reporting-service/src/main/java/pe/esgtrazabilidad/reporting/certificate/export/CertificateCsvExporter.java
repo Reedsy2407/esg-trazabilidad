@@ -32,17 +32,17 @@ public class CertificateCsvExporter {
     private static final ZoneId LIMA = ZoneId.of("America/Lima");
 
     /**
-     * Excel splits a double-clicked CSV with the Windows LIST SEPARATOR, which follows the decimal
-     * symbol: a semicolon where the decimal is a comma (es-ES), a comma where it is a dot (en-US,
-     * es-MX and, per CLDR, es-PE). So a semicolon file opens in columns on the first kind of machine
-     * and in column A on the second; it decodes as ANSI unless it opens with a UTF-8 byte-order mark,
-     * which is why the BOM is always written. Decision (M7): keep the semicolon, because a
-     * {@code sep=;} first line makes LibreOffice and any parser (pandas, Numbers) read it as data, and
-     * a comma would break the machines that use the semicolon; the limitation is documented instead
-     * (open it from Excel's Data > From Text/CSV and pick ";" as the delimiter). Quoting still
-     * protects any value holding a semicolon, and the dot-decimal numbers stay as plain text-numbers.
+     * RFC 4180: a comma between fields, CRLF between records, and double quotes around any field that
+     * holds a comma, a quote or a line break (a quote inside is doubled). Excel splits a double-clicked
+     * CSV with the Windows LIST SEPARATOR, which follows the decimal symbol: a comma where the decimal
+     * is a dot (en-US, es-MX and, per CLDR, es-PE, the platform's users), a semicolon where it is a
+     * comma (es-ES). M7b (Angel): the comma, since it also opens in columns in every parser (pandas,
+     * LibreOffice, Numbers) without a {@code sep=} line; on a machine with a decimal comma the file
+     * lands in column A (open it from Excel's Data > From Text/CSV and pick "," as the delimiter).
+     * It decodes as ANSI unless it opens with a UTF-8 byte-order mark, which is why the BOM is always
+     * written. Numbers are written with a dot decimal and never grouped, so they never hold a comma.
      */
-    public static final char SEPARATOR = ';';
+    public static final char SEPARATOR = ',';
     public static final CSVFormat FORMAT = CSVFormat.DEFAULT.builder().setDelimiter(SEPARATOR).build();
     private static final byte[] UTF8_BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
 

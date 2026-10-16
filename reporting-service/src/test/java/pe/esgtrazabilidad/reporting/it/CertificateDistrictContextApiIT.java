@@ -156,8 +156,9 @@ class CertificateDistrictContextApiIT {
             assertThat(text).contains("Distrito desconocido").contains("5.50 kg");
             assertThat(text).doesNotContain("Asociaciones: 99").doesNotContain("recicladores: 999");
         }
-        assertThat(csv).contains("La Molina;150114;42.00;Disponible;3;31;SIGERSOL Municipal, año " + LAST_YEAR
-                + ", datos agregados");
+        // The source holds commas, so it is a quoted field.
+        assertThat(csv).contains("La Molina,150114,42.00,Disponible,3,31,\"SIGERSOL Municipal, año " + LAST_YEAR
+                + ", datos agregados\"");
     }
 
     @Test

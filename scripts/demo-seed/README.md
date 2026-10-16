@@ -3,16 +3,16 @@
 Carga, a través de las APIs públicas, la lista de datos de demo aprobada (ver `tasks/todo.md`, "Handoff v2"):
 
 - la asociación "Asociación de Recicladores Demo Norte (ficticia)" y su certificación;
-- 3 vecinos con sus cronogramas y 6 recojos de setiembre de 2026 (66.95 kg en total);
+- 3 vecinos con sus cronogramas y 6 recojos de setiembre de 2026 (66.95 kg en total; el certificado cubre solo del 17 al 30, 35.30 kg);
 - la empresa "Empresa Demo Envases S.A.C. (ficticia)";
 - el dato SIGERSOL de setiembre (ingreso manual);
-- y, solo si se pide, el certificado de Setiembre 2026.
+- y, solo si se pide, el certificado del 17 al 30 de setiembre de 2026 (el 16 de setiembre hay un recojo de prueba ajeno al seed, fuera del período).
 
 Todo es ficticio, con "(demo)" o "(ficticia)" en el nombre. No crea cuentas del personal.
 
 - **Simulación por defecto.** Sin `--apply` solo lee y muestra, paso a paso, qué crearía (`+`) y qué ya existe (`=`).
 - **Idempotente.** Antes de cada alta busca si ya existe (por RUC, nombre, fecha o período) y la omite. Se puede volver a correr sin duplicar nada. Si encuentra un conflicto (por ejemplo, otro registro SIGERSOL que se superpone), se detiene sin tocarlo.
-- **El certificado es irreversible.** Solo se emite con `--apply --emit-certificate`, y solo si el borrador da exactamente 66.95 kg y 85.5 %. Los kilos llegan a reportes por evento, unos segundos después de cada recojo; si aún no cuadran, el script no emite y pide volver a correr en un minuto.
+- **El certificado es irreversible.** Solo se emite con `--apply --emit-certificate`, y solo si el borrador (17 al 30 de setiembre) da exactamente 35.30 kg y 85.5 %. Los kilos llegan a reportes por evento, unos segundos después de cada recojo; si aún no cuadran, el script no emite y pide volver a correr en un minuto.
 - **Solo habla con los cuatro servicios conocidos** (`esg-auth-service`, `esg-recycler-service`, `esg-collection-service` y `esg-reporting-service` en onrender.com), los mismos del frontend. Se niega a cualquier otra URL y no sigue redirecciones.
 - **Credenciales solo por variables de entorno** (`ESG_STAFF_EMAIL`, `ESG_STAFF_PASSWORD`). Nunca se aceptan como argumento. La contraseña y el token nunca se imprimen ni se guardan.
 - Requiere Node 22 o superior. No usa dependencias.
@@ -39,7 +39,7 @@ node scripts/demo-seed/seed.mjs --apply
 # 4. Comprobar: debe decir "0 altas pendientes".
 node scripts/demo-seed/seed.mjs
 
-# 5. Certificado (IRREVERSIBLE). Primero en simulación: debe decir "se emitiría con 66.95 kg y 85.5 %".
+# 5. Certificado (IRREVERSIBLE). Primero en simulación: debe decir "se emitiría con 35.3 kg y 85.5 %".
 node scripts/demo-seed/seed.mjs --emit-certificate
 node scripts/demo-seed/seed.mjs --apply --emit-certificate
 

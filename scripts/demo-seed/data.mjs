@@ -60,9 +60,9 @@ export const SIGERSOL = {
 
 /** What the certificate must come out with; the script refuses to issue it otherwise. */
 export const CERTIFICATE = {
-  periodStart: '2026-09-01',
+  periodStart: '2026-09-17',
   periodEnd: '2026-09-30',
-  expectedKilos: 66.95,
+  expectedKilos: 35.3,
   expectedCompliancePercent: 85.5,
 };
 

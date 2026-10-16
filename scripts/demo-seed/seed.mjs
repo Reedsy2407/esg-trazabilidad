@@ -32,7 +32,7 @@ export function isAllowedUrl(url) {
 const USAGE = `Uso: node scripts/demo-seed/seed.mjs [--apply] [--emit-certificate] [--extra-association]
   (sin opciones)        simulación: solo lecturas, muestra qué crearía y qué ya existe
   --apply               crea lo que falta
-  --emit-certificate    con --apply, emite el certificado de Setiembre 2026 (IRREVERSIBLE)
+  --emit-certificate    con --apply, emite el certificado del 17 al 30 de setiembre de 2026 (IRREVERSIBLE)
   --extra-association   también una 2.ª asociación demo con certificación por vencer
 Credenciales: variables de entorno ESG_STAFF_EMAIL y ESG_STAFF_PASSWORD (nunca argumentos).`;
 
@@ -368,7 +368,7 @@ class Seeder {
     }
 
     const records = neighbor && association
-      ? await this.api.all('collection', `/neighbors/${neighbor.id}/collection-records`, { from: DATA.CERTIFICATE.periodStart, to: DATA.CERTIFICATE.periodEnd })
+      ? await this.api.all('collection', `/neighbors/${neighbor.id}/collection-records`, { from: DATA.SIGERSOL.periodStart, to: DATA.SIGERSOL.periodEnd })
       : [];
     for (const c of demo.collections) {
       const recordLabel = `  Recojo ${dmy(c.collectionDate)}, ${c.weightKg.toFixed(2)} kg`;
@@ -430,7 +430,7 @@ class Seeder {
   }
 
   async certificate(company) {
-    this.say('6. Certificado de Setiembre 2026 (IRREVERSIBLE)');
+    this.say('6. Certificado del 17 al 30 de setiembre de 2026 (IRREVERSIBLE)');
     const demo = DATA.CERTIFICATE;
     const period = { periodStart: demo.periodStart, periodEnd: demo.periodEnd };
     const label = `Certificado ${dmy(demo.periodStart)} al ${dmy(demo.periodEnd)}`;

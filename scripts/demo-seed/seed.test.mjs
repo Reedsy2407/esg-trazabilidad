@@ -107,7 +107,7 @@ function fakeBackend({ lagKilos = false, failPost = null } = {}) {
     if (svc === 'reporting' && (m = p.match(/^\/tracked-companies\/([^/]+)\/certificates$/))) {
       if (method === 'GET') return page(db.certificates.filter((c) => c.trackedCompanyId === m[1]), url);
       const company = db.companies.find((c) => c.id === m[1]);
-      const kilos = db.records.filter((r) => r.associationId === company.associationId).reduce((sum, r) => sum + Math.round(r.weightKg * 100), 0) / 100;
+      const kilos = db.records.filter((r) => r.associationId === company.associationId && r.collectionDate >= body.periodStart && r.collectionDate <= body.periodEnd).reduce((sum, r) => sum + Math.round(r.weightKg * 100), 0) / 100;
       const c = { id: id(), trackedCompanyId: m[1], associationId: company.associationId, ...body, kilosTrazados: kilos, hierarchyCompliancePercent: 85.5 };
       db.certificates.push(c);
       return json(201, c);
@@ -132,7 +132,7 @@ test('simulation (the default): only reads, says what it would create, writes no
   assert.match(out, /SIMULACIÓN/);
   assert.match(out, /Asociación "Asociación de Recicladores Demo Norte \(ficticia\)" \(RUC 20999000011\): se crearía/);
   assert.match(out, /Vecino Lucía Paz \(demo\), Calle Demo 303, Independencia: se crearía/);
-  assert.match(out, /Certificado 01\/09\/2026 al 30\/09\/2026: no se emite\. Solo con --apply --emit-certificate\./);
+  assert.match(out, /Certificado 17\/09\/2026 al 30\/09\/2026: no se emite\. Solo con --apply --emit-certificate\./);
   assert.match(out, /16 altas pendientes, 0 ya existen\. No se escribió nada\./);
   // Every request carried no body but the login's, and none followed redirects.
   assert.ok(backend.calls.every((c) => c.init.redirect === 'error'));
@@ -184,20 +184,20 @@ test('a second run does not duplicate anything', async () => {
   assert.match(sim.out, /0 altas pendientes, 16 ya existen/);
 });
 
-test('--apply --emit-certificate issues September once, only when the draft is 66.95 kg and 85.5 %', async () => {
+test('--apply --emit-certificate issues September once, only when the draft is 35.3 kg and 85.5 %', async () => {
   const backend = fakeBackend();
   await seed(backend, ['--apply']);
   const sim = await seed(backend, ['--emit-certificate']);
-  assert.match(sim.out, /se emitiría con 66\.95 kg y 85\.5 %/);
+  assert.match(sim.out, /se emitiría con 35\.3 kg y 85\.5 %/);
   assert.deepEqual(backend.db.certificates, []);
 
   const { code, out } = await seed(backend, ['--apply', '--emit-certificate']);
   assert.equal(code, 0, out);
-  assert.deepEqual(backend.db.certificates.map((c) => [c.periodStart, c.periodEnd, c.kilosTrazados]), [[CERTIFICATE.periodStart, CERTIFICATE.periodEnd, 66.95]]);
+  assert.deepEqual(backend.db.certificates.map((c) => [c.periodStart, c.periodEnd, c.kilosTrazados]), [[CERTIFICATE.periodStart, CERTIFICATE.periodEnd, 35.3]]);
   const again = await seed(backend, ['--apply', '--emit-certificate']);
   assert.equal(again.code, 0);
   assert.equal(backend.db.certificates.length, 1);
-  assert.match(again.out, /Certificado 01\/09\/2026 al 30\/09\/2026: ya existe/);
+  assert.match(again.out, /Certificado 17\/09\/2026 al 30\/09\/2026: ya existe/);
 });
 
 test('the certificate is refused while the kilos have not reached reporting yet', async () => {

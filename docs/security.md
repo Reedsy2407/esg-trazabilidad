@@ -50,6 +50,10 @@ The frontend keeps the token in `sessionStorage`: it lives only in that tab and 
 - no HTML-injection sinks in the code (checked in this review);
 - tokens expire after one hour and are never refreshed.
 
+### Known limitation: a token stays valid until it expires
+
+The services validate the JWT by signature and expiry, without asking auth-service (a stateless design, needed because the free-tier services go to sleep). Consequence: after a password change or reset, or after an account is deactivated, a token already issued stays valid until it expires (one hour, a constant in `JwtIssuer`, never refreshed). Decision of Angel (2026-10-15): accepted as a known, documented limitation.
+
 ### No row-level security
 
 Row-level security matters when the browser talks to the database directly, as with Supabase's client libraries. Here the browser only talks to the services, each service reaches the database with its own credentials, and every access rule is applied in the service. There is a single tenant, so there are no rows to hide from one user to another.

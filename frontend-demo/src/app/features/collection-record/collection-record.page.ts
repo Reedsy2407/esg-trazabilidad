@@ -8,6 +8,7 @@ import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
 import { CollectionLogService } from '../../core/session/collection-log.service';
 import { rememberAssociation, rememberedAssociation } from '../../core/session/remembered-association';
+import { BrowseMode } from '../../shared/browse-mode';
 import { byWeekday, neighborLabel, scheduleLabel } from '../../shared/collection-labels';
 import { loadErrorMessage } from '../../shared/error-message';
 import { formatKg, formatLocalDate, todayInLima } from '../../shared/format';
@@ -133,6 +134,10 @@ export class CollectionRecordPage {
    * the box shows its label and the whole list is offered again.
    */
   protected readonly neighborText = signal('');
+  /** A click on a box that holds a neighbour empties it to browse; leaving without choosing restores it. */
+  private readonly neighborBrowse = new BrowseMode();
+  /** What the input shows: the text, or nothing while browsing. */
+  protected readonly neighborShown = computed(() => this.neighborBrowse.show(this.neighborText()));
   protected readonly neighborOpen = signal(false);
   /** -1 until the user arrows or types: Enter then submits the form instead of choosing a row. */
   protected readonly neighborActive = signal(-1);
@@ -249,6 +254,7 @@ export class CollectionRecordPage {
   }
 
   protected onNeighborInput(text: string): void {
+    this.neighborBrowse.stop();
     this.neighborText.set(text);
     // Editing the text withdraws the choice: the box never shows one neighbour while sending another.
     if (this.form.controls.neighborId.value !== '') {
@@ -265,6 +271,20 @@ export class CollectionRecordPage {
     }
   }
 
+  /** A click: the chosen neighbour's name is hidden to browse the whole list; the choice itself stays. */
+  protected clickNeighbors(): void {
+    if (this.neighborId() !== '') {
+      this.neighborBrowse.start(this.neighborText());
+    }
+    this.openNeighbors();
+  }
+
+  /** Focus by keyboard selects the text, so typing replaces it instead of continuing it. */
+  protected focusNeighbors(event: FocusEvent): void {
+    (event.target as HTMLInputElement).select();
+    this.openNeighbors();
+  }
+
   private setActive(index: number): void {
     this.neighborActive.set(index);
     // Keep the highlighted row inside the list's 264 px window.
@@ -272,11 +292,13 @@ export class CollectionRecordPage {
   }
 
   protected closeNeighbors(): void {
+    this.neighborBrowse.stop();
     this.neighborOpen.set(false);
     this.form.controls.neighborId.markAsTouched();
   }
 
   protected pickNeighbor(id: string): void {
+    this.neighborBrowse.stop();
     this.form.controls.neighborId.setValue(id);
     this.form.controls.neighborId.markAsTouched();
     this.neighborOpen.set(false);
@@ -312,6 +334,7 @@ export class CollectionRecordPage {
       case 'Escape':
         if (this.neighborOpen()) {
           event.preventDefault();
+          this.neighborBrowse.stop();
           this.neighborOpen.set(false);
         }
         return;

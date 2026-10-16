@@ -158,6 +158,71 @@ describe('DistrictSelect', () => {
     expect(input().value).toBe('La Perla');
   });
 
+  it('a click empties the box to browse; leaving without choosing puts the district back', () => {
+    create();
+    host.control.setValue('150110');
+    TestBed.tick();
+    expect(input().value).toBe('Comas');
+
+    input().click();
+    TestBed.tick();
+    expect(input().value).toBe('');
+    expect(host.control.value).toBe('150110'); // the choice itself is kept
+    expect(options()).toHaveLength(50); // the whole list, not filtered by the old name
+    expect(input().getAttribute('aria-expanded')).toBe('true');
+
+    input().dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+    TestBed.tick();
+    expect(input().value).toBe('Comas');
+    expect(host.control.value).toBe('150110');
+  });
+
+  it('after a click, choosing another district replaces the choice and typing starts from nothing', () => {
+    create();
+    host.control.setValue('150110');
+    TestBed.tick();
+    input().click();
+    TestBed.tick();
+    type('rimac');
+    expect(input().value).toBe('rimac');
+    expect(optionNames()).toEqual(['Rímac']);
+    options()[0].click();
+    TestBed.tick();
+    expect(host.control.value).toBe('150128');
+    expect(input().value).toBe('Rímac');
+  });
+
+  it('Escape after a click puts the district back too', () => {
+    create();
+    host.control.setValue('150110');
+    TestBed.tick();
+    input().click();
+    TestBed.tick();
+    expect(input().value).toBe('');
+    key('Escape');
+    expect(input().value).toBe('Comas');
+    expect(input().getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('a click on an empty box changes nothing', () => {
+    create();
+    input().click();
+    TestBed.tick();
+    expect(input().value).toBe('');
+    expect(host.control.value).toBeNull();
+  });
+
+  it('the all-districts filter also empties on a click and comes back', () => {
+    create(true);
+    expect(input().value).toBe('Todos los distritos');
+    input().click();
+    TestBed.tick();
+    expect(input().value).toBe('');
+    input().dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+    TestBed.tick();
+    expect(input().value).toBe('Todos los distritos');
+  });
+
   it('a value outside the list is treated as none', () => {
     create();
     host.control.setValue('150201');

@@ -8,7 +8,7 @@ import { BackendApi } from '../../core/api/backend.api';
 import { loadErrorMessage } from '../../shared/error-message';
 import { formatInstantDate, formatKg, formatPercentExact, periodLabel } from '../../shared/format';
 import { ManualTag } from './manual-tag';
-import { originLabel } from './origin-label';
+import { COMPLIANCE_LABEL, DECLARED_STATEMENT, originLabel } from './origin-label';
 
 /** Was this page opened right after registering a record? Read once, then dropped from history. */
 function justRegistered(): boolean {
@@ -38,6 +38,8 @@ export class SigersolPage {
   readonly asociacion = input<string | undefined>(undefined);
 
   protected readonly registered = justRegistered();
+  protected readonly complianceLabel = COMPLIANCE_LABEL;
+  protected readonly statement = DECLARED_STATEMENT;
   protected readonly associationId = computed(() => this.asociacion() || null);
 
   protected readonly syncs = rxResource({

@@ -9,7 +9,7 @@ import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
 import { loadErrorMessage, writeErrorText } from '../../shared/error-message';
 import { ReasonConfirm } from '../../shared/reason-confirm';
-import { coverageNote } from '../sigersol/origin-label';
+import { COMPLIANCE_LABEL, coverageNote } from '../sigersol/origin-label';
 
 const STATUS_UNCERTAIN =
   'No pudimos confirmar si cambió el estado de la empresa. Recarga la página para ver el actual antes de volver a intentarlo.';
@@ -101,6 +101,8 @@ export class CompanyPage {
     },
     stream: ({ params: p }) => this.api.certificateSummary(p.id, p.periodStart, p.periodEnd),
   });
+
+  protected readonly complianceLabel = COMPLIANCE_LABEL;
 
   protected readonly summaryLines = computed(() => {
     if (!this.summary.hasValue()) {

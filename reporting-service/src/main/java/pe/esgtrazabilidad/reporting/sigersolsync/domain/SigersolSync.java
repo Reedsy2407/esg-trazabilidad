@@ -99,6 +99,10 @@ public class SigersolSync {
         if (reference != null && reference.length() > 255) {
             throw new IllegalArgumentException("La referencia no puede pasar de 255 caracteres");
         }
+        // The same rule as the service's RPT-021, kept here so no code path can build one without a proof.
+        if (origin == SigersolOrigin.REFERENCED_PROOF && (reference == null || reference.isBlank())) {
+            throw new IllegalArgumentException("Con comprobante referenciado, la referencia es obligatoria");
+        }
         if (associationId == null) {
             throw new IllegalArgumentException("La asociación es obligatoria");
         }

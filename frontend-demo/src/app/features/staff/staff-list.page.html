@@ -1,0 +1,105 @@
+<a class="back-link" routerLink="/mi-sesion">Volver a mi sesión</a>
+
+<header class="page-head with-action">
+  <div>
+    <h1>Cuentas del personal</h1>
+    <p class="sub">Quién puede entrar a la aplicación. Solo un administrador ve esta lista.</p>
+  </div>
+  <a class="btn btn-primary" routerLink="/mi-sesion/personal/nueva">Crear una cuenta</a>
+</header>
+
+<!-- Always in the DOM: the result of a change is announced here. -->
+<p class="visually-hidden" role="status">{{ status() }}</p>
+@if (status() !== '') {
+  <p class="done" aria-hidden="true">{{ status() }}</p>
+}
+
+@if (accounts.error(); as e) {
+  <div class="problem" role="alert">
+    <p>{{ loadError(e) }}</p>
+    <button type="button" class="btn" (click)="accounts.reload()">Volver a intentar</button>
+  </div>
+} @else if (accounts.hasValue()) {
+  <ul class="accounts" tabindex="-1" #list aria-label="Cuentas del personal">
+    @for (a of accounts.value(); track a.id) {
+      <li class="account" [class.inactive]="!a.active">
+        <div class="who">
+          <p class="name">
+            {{ a.fullName }}
+            @if (isMe(a)) {
+              <span class="tag">tú</span>
+            }
+          </p>
+          <p class="email">{{ a.email }}</p>
+        </div>
+        <dl class="facts">
+          <div><dt>Rol</dt><dd>{{ roleText(a) }}</dd></div>
+          <div><dt>Estado</dt><dd>{{ a.active ? 'Activa' : 'Inactiva' }}</dd></div>
+          <div><dt>Creada el</dt><dd class="mono">{{ date(a.createdAt) }}</dd></div>
+          @if (a.statusChangedAt) {
+            <div>
+              <dt>{{ a.active ? 'Reactivada' : 'Desactivada' }}</dt>
+              <dd>
+                <span class="mono">{{ date(a.statusChangedAt) }}</span>
+                @if (a.statusChangedBy) {
+                  por {{ a.statusChangedBy }}
+                }
+                · «{{ a.statusReason }}»
+              </dd>
+            </div>
+          }
+        </dl>
+
+        @if (!isMe(a)) {
+          <div class="actions">
+            @if (a.active) {
+              <button type="button" class="btn" [attr.data-open]="'deactivate-' + a.id" [attr.aria-label]="'Desactivar a ' + a.email" (click)="open('deactivate', a)">Desactivar…</button>
+              <a class="btn" [routerLink]="['/mi-sesion/personal', a.id, 'restablecer']" [attr.aria-label]="'Restablecer la contraseña de ' + a.email">Restablecer contraseña…</a>
+            } @else {
+              <button type="button" class="btn" [attr.data-open]="'reactivate-' + a.id" [attr.aria-label]="'Reactivar a ' + a.email" (click)="open('reactivate', a)">Reactivar…</button>
+            }
+          </div>
+        } @else {
+          <p class="me-note">Tu propia cuenta: para cambiar tu contraseña usa <a routerLink="/mi-sesion/contrasena">Cambiar mi contraseña</a>.</p>
+        }
+
+        @if (panel(); as p) {
+          @if (p.id === a.id) {
+            @if (p.kind === 'deactivate') {
+              <app-reason-confirm
+                idPrefix="deactivate"
+                title="Desactivar cuenta"
+                explanation="La persona ya no podrá iniciar sesión. La sesión que tenga abierta sigue valiendo hasta que venza (hasta 1 hora): la aplicación no cierra sesiones ya iniciadas. Se puede reactivar después."
+                confirmLabel="Entiendo que ya no podrá iniciar sesión"
+                [actionText]="'Desactivar a ' + a.email"
+                busyText="Desactivando…"
+                [busy]="panelBusy()"
+                [error]="panelError()"
+                (confirm)="change(a, $event)"
+                (cancelled)="close()"
+              />
+            } @else {
+              <app-reason-confirm
+                idPrefix="reactivate"
+                title="Reactivar cuenta"
+                explanation="La persona vuelve a poder iniciar sesión con su contraseña."
+                confirmLabel="Revisé que esta persona debe volver a entrar"
+                [actionText]="'Reactivar a ' + a.email"
+                busyText="Reactivando…"
+                [busy]="panelBusy()"
+                [error]="panelError()"
+                (confirm)="change(a, $event)"
+                (cancelled)="close()"
+              />
+            }
+          }
+        }
+      </li>
+    } @empty {
+      <li class="empty-note">No hay cuentas.</li>
+    }
+  </ul>
+} @else {
+  <div aria-hidden="true"><span class="skel wide"></span><span class="skel wide"></span><span class="skel wide"></span></div>
+  <p class="visually-hidden">Cargando las cuentas</p>
+}

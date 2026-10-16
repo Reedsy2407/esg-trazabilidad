@@ -58,6 +58,40 @@ class SigersolSyncServiceTest {
 
     private static final CurrentActor ACTOR = new CurrentActor(UUID.randomUUID(), "ana@example.com");
 
+    private RegisterSigersolSyncCommand commandWith(SigersolOrigin origin, String reference) {
+        return new RegisterSigersolSyncCommand(
+                UUID.randomUUID(),
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 1, 31),
+                new BigDecimal("80.00"),
+                null,
+                null,
+                origin,
+                reference,
+                ACTOR);
+    }
+
+    @Test
+    void aReferencedProofWithoutAReferenceIsRefusedWithRpt021AndNothingIsSaved() {
+        for (String reference : new String[] {null, "", "   "}) {
+            assertThatThrownBy(() -> service.register(commandWith(SigersolOrigin.REFERENCED_PROOF, reference)))
+                    .isInstanceOf(ApplicationException.class)
+                    .satisfies(e -> assertThat(((ApplicationException) e).getError())
+                            .isEqualTo(ReportingErrors.MISSING_SIGERSOL_REFERENCE));
+        }
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void aDeclaredByOperatorRecordNeedsNoReference() {
+        when(repository.existsOverlapping(any(), any(), any())).thenReturn(false);
+        when(repository.save(any(SigersolSync.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SigersolSync saved = service.register(commandWith(SigersolOrigin.DECLARED_BY_OPERATOR, null));
+
+        assertThat(saved.getReference()).isNull();
+    }
+
     @Test
     void theOriginTheReferenceAndTheActorOfTheCommandEndUpOnTheRecord() {
         UUID associationId = UUID.randomUUID();

@@ -20,6 +20,15 @@ async function openForm(page: Page, context: BrowserContext, options: BackendOpt
   return { writes, console, unmocked };
 }
 
+async function openAccounts(page: Page, options: BackendOptions = {}) {
+  const writes: NonNullable<BackendOptions['writes']> = [];
+  const unmocked = await signedIn(page, '/empresas', { ...options, writes });
+  await page.getByRole('link', { name: `Mi sesión: ${EMAIL}` }).click();
+  await page.getByRole('link', { name: 'Cuentas del personal' }).click();
+  await expect(page.getByRole('heading', { name: 'Cuentas del personal', level: 1 })).toBeVisible();
+  return { writes, unmocked };
+}
+
 async function fillAndCreate(page: Page) {
   await page.getByLabel('Nombre completo').fill(NEW.fullName);
   await page.getByLabel('Correo').fill(NEW.email);
@@ -65,8 +74,8 @@ test('create an account: the generated password is shown on request, copied, han
   await fillAndCreate(page);
   await expect(page.getByRole('heading', { name: `Cuenta creada para ${NEW.email}` })).toBeFocused();
   expect(writes).toHaveLength(1);
-  const { password, ...rest } = writes[0].body as { password: string; email: string; fullName: string };
-  expect(rest).toEqual(NEW);
+  const { password, ...rest } = writes[0].body as { password: string; email: string; fullName: string; role: string };
+  expect(rest).toEqual({ ...NEW, role: 'STAFF' });
   expect(password).toMatch(/^[A-HJ-NP-Za-km-np-z2-9]{16}$/);
 
   // Hidden until asked for.
@@ -118,8 +127,8 @@ test('an unknown outcome keeps the password and retries with the same one; AUTH-
   await expectNowhere(page, password, console);
 
   // Leaving the page forgets it: coming back shows an empty form.
-  await page.getByRole('link', { name: 'Volver a mi sesión' }).click();
-  await page.getByRole('link', { name: 'Crear una cuenta del personal' }).click();
+  await page.getByRole('link', { name: 'Volver a las cuentas' }).click();
+  await page.getByRole('link', { name: 'Crear una cuenta' }).click();
   await expect(page.getByLabel('Nombre completo')).toHaveValue('');
   expect(await page.content()).not.toContain(password);
   expect(unmocked).toEqual([]);
@@ -181,10 +190,138 @@ for (const width of WIDTHS) {
     await page.getByRole('button', { name: 'Mostrar' }).click();
     await expectNoSidewaysScroll(page);
     await checkA11y(page);
+    await page.getByRole('link', { name: 'Volver a las cuentas' }).click();
+    await expect(page.getByRole('heading', { name: 'Cuentas del personal', level: 1 })).toBeVisible();
+    await expectNoSidewaysScroll(page);
+    await checkA11y(page);
     await page.getByRole('link', { name: 'Volver a mi sesión' }).click();
     await expect(page.getByText('Ana Paredes Quispe')).toBeVisible();
     await expectNoSidewaysScroll(page);
     await checkA11y(page);
     expect(unmocked).toEqual([]);
   });
+
+  test(`Cuentas, restablecer y cambiar mi contraseña at ${width} px: no sideways scroll, axe clean`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const { unmocked } = await openAccounts(page);
+    await expectNoSidewaysScroll(page);
+    await checkA11y(page);
+    await page.getByRole('button', { name: 'Desactivar a rosa.quispe@asociacion.pe' }).click();
+    await expect(page.getByRole('heading', { name: 'Desactivar cuenta' })).toBeVisible();
+    await expectNoSidewaysScroll(page);
+    await checkA11y(page);
+    await page.getByRole('button', { name: 'No, volver' }).click();
+    await page.getByRole('link', { name: 'Restablecer la contraseña de rosa.quispe@asociacion.pe' }).click();
+    await expect(page.getByRole('heading', { name: 'Restablecer una contraseña', level: 1 })).toBeVisible();
+    await expectNoSidewaysScroll(page);
+    await checkA11y(page);
+    await page.getByRole('link', { name: 'Volver a las cuentas' }).click();
+    await page.getByRole('link', { name: 'Volver a mi sesión' }).click();
+    await page.getByRole('link', { name: 'Cambiar mi contraseña' }).click();
+    await expect(page.getByRole('heading', { name: 'Cambiar mi contraseña', level: 1 })).toBeVisible();
+    await page.getByRole('button', { name: 'Cambiar contraseña' }).click();
+    await expect(page.getByText('Escribe tu contraseña actual.')).toBeVisible();
+    await expectNoSidewaysScroll(page);
+    await checkA11y(page);
+    expect(unmocked).toEqual([]);
+  });
 }
+
+test('Cuentas: lists every account, deactivates and reactivates with a reason, and never offers your own', async ({ page }) => {
+  const { writes, unmocked } = await openAccounts(page);
+  const row = (email: string) => page.locator('.account').filter({ hasText: email });
+  await expect(page.locator('.account')).toHaveCount(3);
+  const mine = page.locator('.account').first(); // the oldest account is the signed-in one
+  await expect(mine).toContainText(EMAIL);
+  await expect(mine.getByText('tú')).toBeVisible();
+  await expect(mine.getByRole('button')).toHaveCount(0);
+  await expect(row('luis.inactivo@asociacion.pe')).toContainText('«Dejó la asociación»');
+
+  await page.getByRole('button', { name: 'Desactivar a rosa.quispe@asociacion.pe' }).click();
+  await page.getByLabel('Motivo').fill('Cambió de trabajo');
+  await page.getByLabel('Entiendo que ya no podrá iniciar sesión').check();
+  await page.getByRole('button', { name: 'Desactivar a rosa.quispe@asociacion.pe' }).last().click();
+  await expect(row('rosa.quispe@asociacion.pe')).toContainText('Inactiva');
+  await expect(row('rosa.quispe@asociacion.pe')).toContainText(`por ${EMAIL}`);
+  await expect(page.getByRole('status').filter({ hasText: 'desactivada' })).toBeAttached();
+  expect(writes.at(-1)).toMatchObject({ method: 'PATCH', body: { reason: 'Cambió de trabajo' } });
+
+  await page.getByRole('button', { name: 'Reactivar a rosa.quispe@asociacion.pe' }).click();
+  await page.getByLabel('Motivo').fill('Volvió');
+  await page.getByLabel('Revisé que esta persona debe volver a entrar').check();
+  await page.getByRole('button', { name: 'Reactivar a rosa.quispe@asociacion.pe' }).last().click();
+  await expect(row('rosa.quispe@asociacion.pe')).toContainText('Activa');
+  expect(unmocked).toEqual([]);
+});
+
+test('Restablecer: the generated password is shown on request, sent once and never stored', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const { writes, unmocked } = await openAccounts(page);
+  await page.getByRole('link', { name: 'Restablecer la contraseña de rosa.quispe@asociacion.pe' }).click();
+  await page.getByLabel('Entiendo que la contraseña anterior dejará de servir').check();
+  await page.getByRole('button', { name: 'Generar y aplicar la contraseña' }).click();
+  await expect(page.getByRole('heading', { name: 'Contraseña restablecida para rosa.quispe@asociacion.pe' })).toBeFocused();
+  const sent = writes.at(-1)!;
+  expect(sent.path).toMatch(/\/staff-users\/staff-8\/password$/);
+  const password = (sent.body as { newPassword: string }).newPassword;
+  expect(password).toMatch(/^[A-HJ-NP-Za-km-np-z2-9]{16}$/);
+  await expect(page.getByText(password)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Mostrar' }).click();
+  await expect(page.locator('.secret code')).toHaveText(password);
+  const places = await page.evaluate(() => ({
+    storage: [...Object.keys(sessionStorage).map((k) => sessionStorage.getItem(k)), ...Object.keys(localStorage).map((k) => localStorage.getItem(k))].join('\n'),
+    url: location.href,
+    state: JSON.stringify(history.state),
+    attributes: [...document.querySelectorAll('*')].flatMap((n) => [...n.attributes].map((a) => a.value)).join('\n'),
+  }));
+  for (const place of Object.values(places)) {
+    expect(place).not.toContain(password);
+  }
+  await page.getByRole('button', { name: 'Ya la entregué' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'La contraseña se borró de esta pantalla.' })).toBeAttached();
+  expect(await page.content()).not.toContain(password);
+  expect(unmocked).toEqual([]);
+});
+
+test('Cambiar mi contraseña: a wrong current password is said under its field and the session goes on after a success', async ({ page }) => {
+  const writes: NonNullable<BackendOptions['writes']> = [];
+  const unmocked = await signedIn(page, '/empresas', { writes, changePasswordFailure: { status: 400, code: 'AUTH-008' } });
+  await page.getByRole('link', { name: `Mi sesión: ${EMAIL}` }).click();
+  await page.getByRole('link', { name: 'Cambiar mi contraseña' }).click();
+  await page.getByLabel('Contraseña actual', { exact: true }).fill('clave-equivocada-123');
+  await page.getByLabel('Contraseña nueva', { exact: true }).fill('una frase larga que solo yo uso');
+  await page.getByLabel('Repite la contraseña nueva').fill('una frase larga que solo yo uso');
+  await page.getByRole('button', { name: 'Cambiar contraseña' }).click();
+  await expect(page.getByText('La contraseña actual no es correcta.')).toBeVisible();
+  await expect(page.getByLabel('Contraseña actual', { exact: true })).toBeFocused();
+  expect(unmocked).toEqual([]);
+});
+
+test('a new account is sent to choose its own password first, and signs in again with it', async ({ page }) => {
+  const writes: NonNullable<BackendOptions['writes']> = [];
+  const unmocked = await signedIn(page, '/empresas', { writes, pwdChange: true });
+  // The login landed on /empresas, but the guard steers every screen to the change page.
+  await expect(page).toHaveURL(/\/mi-sesion\/contrasena$/);
+  await expect(page.getByText('Tu contraseña la eligió otra persona')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Volver a mi sesión' })).toHaveCount(0);
+  await page.getByLabel('Contraseña actual', { exact: true }).fill('clave-correcta');
+  await page.getByLabel('Contraseña nueva', { exact: true }).fill('una frase larga que solo yo uso');
+  await page.getByLabel('Repite la contraseña nueva').fill('una frase larga que solo yo uso');
+  await page.getByRole('button', { name: 'Cambiar contraseña' }).click();
+  await expect(page).toHaveURL(/\/login\?motivo=clave$/);
+  await expect(page.getByText('Contraseña cambiada. Inicia sesión con la nueva.')).toBeVisible();
+  expect(unmocked).toEqual([]);
+});
+
+test('a STAFF member does not see the account screens and cannot open them by address', async ({ page }) => {
+  const unmocked = await signedIn(page, '/empresas', { role: 'STAFF' });
+  await page.getByRole('link', { name: `Mi sesión: ${EMAIL}` }).click();
+  await expect(page.getByRole('link', { name: 'Cuentas del personal' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Crear una cuenta del personal' })).toHaveCount(0);
+  await page.evaluate(() => {
+    history.pushState({}, '', '/mi-sesion/personal');
+    dispatchEvent(new PopStateEvent('popstate'));
+  });
+  await expect(page).toHaveURL(/\/mi-sesion$/);
+  expect(unmocked).toEqual([]);
+});

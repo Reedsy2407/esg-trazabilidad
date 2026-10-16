@@ -14,6 +14,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.springframework.stereotype.Component;
 
+import pe.esgtrazabilidad.reporting.certificate.HierarchyDeclaration;
 import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
@@ -31,10 +32,15 @@ public class CertificateCsvExporter {
     private static final ZoneId LIMA = ZoneId.of("America/Lima");
 
     /**
-     * Excel in Spanish reads a CSV with a semicolon (its list separator uses the decimal comma) and
-     * decodes it as ANSI unless the file opens with a UTF-8 byte-order mark: without them every
-     * column lands in A and accents turn into "Ã±". Quoting still protects any value holding a
-     * semicolon, and the dot-decimal numbers stay as plain text-numbers.
+     * Excel splits a double-clicked CSV with the Windows LIST SEPARATOR, which follows the decimal
+     * symbol: a semicolon where the decimal is a comma (es-ES), a comma where it is a dot (en-US,
+     * es-MX and, per CLDR, es-PE). So a semicolon file opens in columns on the first kind of machine
+     * and in column A on the second; it decodes as ANSI unless it opens with a UTF-8 byte-order mark,
+     * which is why the BOM is always written. Decision (M7): keep the semicolon, because a
+     * {@code sep=;} first line makes LibreOffice and any parser (pandas, Numbers) read it as data, and
+     * a comma would break the machines that use the semicolon; the limitation is documented instead
+     * (open it from Excel's Data > From Text/CSV and pick ";" as the delimiter). Quoting still
+     * protects any value holding a semicolon, and the dot-decimal numbers stay as plain text-numbers.
      */
     public static final char SEPARATOR = ';';
     public static final CSVFormat FORMAT = CSVFormat.DEFAULT.builder().setDelimiter(SEPARATOR).build();
@@ -73,6 +79,14 @@ public class CertificateCsvExporter {
 
     public byte[] export(
             EsgCertificate certificate, List<EsgCertificateLineItem> lineItems, List<DistrictLine> districtLines) {
+        return export(certificate, lineItems, districtLines, HierarchyDeclaration.NOT_RECORDED);
+    }
+
+    public byte[] export(
+            EsgCertificate certificate,
+            List<EsgCertificateLineItem> lineItems,
+            List<DistrictLine> districtLines,
+            HierarchyDeclaration declaration) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.writeBytes(UTF8_BOM);
         try (OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
@@ -82,8 +96,8 @@ public class CertificateCsvExporter {
             printer.printRecord("Período inicio", certificate.getPeriodStart().format(DATE_FORMAT));
             printer.printRecord("Período fin", certificate.getPeriodEnd().format(DATE_FORMAT));
             printer.printRecord("Kilos trazados", certificate.getKilosTrazados().toPlainString());
-            printer.printRecord(
-                    "Cumplimiento de jerarquía (%)", certificate.getHierarchyCompliancePercent().toPlainString());
+            // A percentage, written as a plain number; the note row below says whose figure it is.
+            printer.printRecord(HierarchyDeclaration.LABEL, certificate.getHierarchyCompliancePercent().toPlainString());
             printer.printRecord("Emitido (hora de Lima)", limaTime(certificate.getIssuedAt()));
             printer.printRecord("Estado", certificate.isAnnulled() ? "Anulado" : "Vigente");
             if (certificate.isAnnulled()) {
@@ -91,6 +105,7 @@ public class CertificateCsvExporter {
                 printer.printRecord("Anulado por", text(annulledBy(certificate)));
                 printer.printRecord("Motivo de anulación", text(certificate.getAnnulmentReason()));
             }
+            printer.printRecord("Nota sobre la jerarquía", text(declaration.note()));
             printer.println();
 
             if (!districtLines.isEmpty()) {

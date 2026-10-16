@@ -25,7 +25,19 @@ public enum AuthErrors implements ApplicationError {
             "AUTH-004", "Demasiados intentos de inicio de sesión, intenta más tarde", HttpStatus.TOO_MANY_REQUESTS),
     // POST /auth/staff-users: an email @Email accepts but StaffUser.isValidEmail
     // doesn't (no dot in the domain, e.g. "ana@empresa").
-    INVALID_STAFF_EMAIL("AUTH-005", "El email no es válido", HttpStatus.BAD_REQUEST);
+    INVALID_STAFF_EMAIL("AUTH-005", "El email no es válido", HttpStatus.BAD_REQUEST),
+    // Decided from the database, not from the token's role claim.
+    ADMIN_REQUIRED("AUTH-006", "Solo un administrador puede hacer esto", HttpStatus.FORBIDDEN),
+    // NIST SP 800-63B: 15 to 64 characters, not a common password, not built from the email or the product name.
+    WEAK_PASSWORD(
+            "AUTH-007",
+            "La contraseña debe tener entre 15 y 64 caracteres y no puede ser una contraseña común ni incluir tu correo",
+            HttpStatus.BAD_REQUEST),
+    // 400, not 401: the frontend ends the session on any 401, and this is a form error.
+    WRONG_CURRENT_PASSWORD("AUTH-008", "La contraseña actual no es correcta", HttpStatus.BAD_REQUEST),
+    // Deactivating or resetting your own account from the admin screens.
+    CANNOT_ACT_ON_OWN_ACCOUNT("AUTH-009", "No puedes hacer esto con tu propia cuenta", HttpStatus.CONFLICT),
+    STATUS_UNCHANGED("AUTH-010", "La cuenta ya está en ese estado", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

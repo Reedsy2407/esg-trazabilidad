@@ -11,6 +11,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import pe.esgtrazabilidad.auth.staffuser.domain.StaffRole;
 import pe.esgtrazabilidad.auth.staffuser.domain.StaffUser;
 import pe.esgtrazabilidad.auth.staffuser.port.out.StaffUserRepository;
 
@@ -78,6 +79,42 @@ class StaffUserRepositoryAdapterIT {
 
         assertThat(staffUserRepository.findByEmail("buscar@esgtrazabilidad.pe")).isPresent();
         assertThat(staffUserRepository.findByEmail("no-existe@esgtrazabilidad.pe")).isEmpty();
+    }
+
+    @Test
+    void savingAnExistingAccountUpdatesItWithEveryNewColumn() {
+        StaffUser original = staffUserRepository.save(
+                StaffUser.create("cambio@esgtrazabilidad.pe", "hash-1", "Cambio", StaffRole.STAFF, true));
+        java.util.UUID admin = java.util.UUID.randomUUID();
+        java.time.Instant now = java.time.Instant.parse("2026-10-15T20:00:00Z");
+
+        staffUserRepository.save(original.withPassword("hash-2", false, now).promoteToAdmin().deactivate("motivo", admin, now));
+
+        StaffUser stored = staffUserRepository.findById(original.getId()).orElseThrow();
+        assertThat(stored.getPasswordHash()).isEqualTo("hash-2");
+        assertThat(stored.isMustChangePassword()).isFalse();
+        assertThat(stored.getPasswordChangedAt()).isEqualTo(now);
+        assertThat(stored.getRole()).isEqualTo(StaffRole.ADMIN);
+        assertThat(stored.isActive()).isFalse();
+        assertThat(stored.getStatusReason()).isEqualTo("motivo");
+        assertThat(stored.getStatusChangedBy()).isEqualTo(admin);
+        assertThat(stored.getStatusChangedAt()).isEqualTo(now);
+        assertThat(jpaRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void findAllReturnsEveryAccountOldestFirstAndExistsActiveAdminIgnoresInactiveAndStaff() {
+        assertThat(staffUserRepository.existsActiveAdmin()).isFalse();
+        staffUserRepository.save(StaffUser.create("staff@esgtrazabilidad.pe", "hash", "Staff"));
+        assertThat(staffUserRepository.existsActiveAdmin()).isFalse();
+        StaffUser admin = staffUserRepository.save(
+                StaffUser.create("jefa@esgtrazabilidad.pe", "hash", "Jefa", StaffRole.ADMIN, false));
+        assertThat(staffUserRepository.existsActiveAdmin()).isTrue();
+        staffUserRepository.save(admin.deactivate("baja", admin.getId(), java.time.Instant.now()));
+        assertThat(staffUserRepository.existsActiveAdmin()).isFalse();
+
+        assertThat(staffUserRepository.findAll()).extracting(StaffUser::getEmail)
+                .containsExactly("staff@esgtrazabilidad.pe", "jefa@esgtrazabilidad.pe");
     }
 
     @Test

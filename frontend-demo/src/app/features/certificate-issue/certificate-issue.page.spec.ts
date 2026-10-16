@@ -222,7 +222,7 @@ describe('CertificateIssuePage', () => {
     summary = { kilosTrazados: 50, hierarchyCompliancePercent: null };
     await setInput('month', '2026-07');
     await review();
-    expect(el.textContent).toContain('No hay un registro SIGERSOL de la asociación que cubra todo Julio 2026');
+    expect(el.textContent).toContain('No hay un cumplimiento de jerarquía declarado para esa asociación que cubra todo Julio 2026');
     const link = el.querySelector('a[href*="/sigersol/nuevo"]') as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/sigersol/nuevo?asociacion=a-1&desde=2026-07-01&hasta=2026-07-31');
     expect(el.querySelector('.check')).toBeNull();
@@ -285,7 +285,7 @@ describe('CertificateIssuePage', () => {
     await review();
     const cases: [ApiError, RegExp, string | null][] = [
       [new ApiError(409, 'RPT-004', null, null), /ya tiene un certificado que se superpone con Setiembre 2026/, 'Ver los certificados de la empresa'],
-      [new ApiError(409, 'RPT-005', null, null), /No hay un registro SIGERSOL de la asociación que cubra todo Setiembre 2026/, 'Registrar el dato SIGERSOL de este período'],
+      [new ApiError(409, 'RPT-005', null, null), /No hay un cumplimiento de jerarquía declarado para esa asociación que cubra todo Setiembre 2026/, 'Registrar el cumplimiento declarado de este período'],
       // The screen refuses a backwards period first; this is the backend's own refusal if one got through.
       [new ApiError(400, 'RPT-009', null, null), /rechazó Setiembre 2026: la fecha final es anterior a la inicial/, null],
       [new ApiError(504, null, null, null), new RegExp(ISSUE_UNCERTAIN.slice(0, 40)), 'Ver los certificados de la empresa'],

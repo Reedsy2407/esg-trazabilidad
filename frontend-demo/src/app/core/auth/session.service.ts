@@ -4,6 +4,9 @@ const STORAGE_KEY = 'esg.session';
 /** Other sessionStorage entries that belong to the signed-in person and end with the session. */
 export const COLLECTION_LOG_KEY = 'esg.bitacora';
 
+/** auth-service's two roles. A token without the claim (issued before roles existed) counts as STAFF. */
+export type StaffRole = 'ADMIN' | 'STAFF';
+
 interface Session {
   /** Random, per sign-in: what session-scoped data (the bitácora) is tied to. Not a secret. */
   readonly id: string;
@@ -13,6 +16,10 @@ interface Session {
   readonly expiresAt: number;
   /** Epoch milliseconds, from the token's `iat` (auth-service sets it); null if a token lacks it. */
   readonly issuedAt: number | null;
+  /** From the token's `role`. Only decides what the screens show: auth-service decides what is allowed. */
+  readonly role: StaffRole;
+  /** The token's `pwdChange`: someone else chose this password, so the person must choose their own. */
+  readonly mustChangePassword: boolean;
 }
 
 /**
@@ -29,6 +36,9 @@ export class SessionService {
   readonly email = computed(() => this.session()?.email ?? null);
   readonly expiresAt = computed(() => this.session()?.expiresAt ?? null);
   readonly issuedAt = computed(() => this.session()?.issuedAt ?? null);
+  readonly role = computed<StaffRole | null>(() => this.session()?.role ?? null);
+  readonly isAdmin = computed(() => this.session()?.role === 'ADMIN');
+  readonly mustChangePassword = computed(() => this.session()?.mustChangePassword ?? false);
   /** Changes with every sign-in, even of the same person; null when signed out. */
   readonly sessionId = computed(() => this.session()?.id ?? null);
 
@@ -46,6 +56,8 @@ export class SessionService {
       email: payload.email,
       expiresAt: payload.exp * 1000,
       issuedAt: payload.iat === null ? null : payload.iat * 1000,
+      role: payload.role,
+      mustChangePassword: payload.pwdChange,
     };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     // A new sign-in starts a new bitácora, whatever ended the previous session (sign-out, or an
@@ -61,7 +73,13 @@ export class SessionService {
   }
 }
 
-export function decodeJwtPayload(token: string): { email: string; exp: number; iat: number | null } {
+export function decodeJwtPayload(token: string): {
+  email: string;
+  exp: number;
+  iat: number | null;
+  role: StaffRole;
+  pwdChange: boolean;
+} {
   const part = token.split('.')[1];
   if (part === undefined) {
     throw new Error('Not a JWT');
@@ -76,11 +94,17 @@ export function decodeJwtPayload(token: string): { email: string; exp: number; i
   if (typeof payload !== 'object' || payload === null) {
     throw new Error('JWT payload is not an object');
   }
-  const { email, exp, iat } = payload as Record<string, unknown>;
+  const { email, exp, iat, role, pwdChange } = payload as Record<string, unknown>;
   if (typeof email !== 'string' || typeof exp !== 'number') {
     throw new Error('JWT payload lacks email or exp');
   }
-  return { email, exp, iat: typeof iat === 'number' ? iat : null };
+  return {
+    email,
+    exp,
+    iat: typeof iat === 'number' ? iat : null,
+    role: role === 'ADMIN' ? 'ADMIN' : 'STAFF',
+    pwdChange: pwdChange === true,
+  };
 }
 
 function readStored(): Session | null {
@@ -93,16 +117,25 @@ function readStored(): Session | null {
     if (typeof value !== 'object' || value === null) {
       return null;
     }
-    const { id, token, email, expiresAt, issuedAt } = value as Record<string, unknown>;
+    const { id, token, email, expiresAt, issuedAt, role, mustChangePassword } = value as Record<string, unknown>;
     if (typeof token !== 'string' || typeof email !== 'string' || typeof expiresAt !== 'number') {
       return null;
     }
     const iat = typeof issuedAt === 'number' ? issuedAt : null;
+    // Stored before roles: STAFF and nothing pending, the safe reading.
+    const parsed = {
+      token,
+      email,
+      expiresAt,
+      issuedAt: iat,
+      role: role === 'ADMIN' ? ('ADMIN' as const) : ('STAFF' as const),
+      mustChangePassword: mustChangePassword === true,
+    };
     if (typeof id === 'string') {
-      return { id, token, email, expiresAt, issuedAt: iat };
+      return { id, ...parsed };
     }
     // Stored before sessions had an id: give it one and keep it, so a reload doesn't change it.
-    const session = { id: newId(), token, email, expiresAt, issuedAt: iat };
+    const session = { id: newId(), ...parsed };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     return session;
   } catch {

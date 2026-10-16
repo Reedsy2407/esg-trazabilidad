@@ -13,6 +13,8 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 import org.junit.jupiter.api.Test;
 
+import pe.esgtrazabilidad.reporting.certificate.HierarchyDeclaration;
+import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolOrigin;
 import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateStatus;
@@ -61,6 +63,35 @@ class CertificatePdfExporterTest {
                 LocalDate.of(2026, 1, 31),
                 new BigDecimal("120.50"),
                 new BigDecimal("85.00"));
+    }
+
+    @Test
+    void theHierarchyFigureIsLabelledDeclaredAndTheNoteSaysWhoDeclaredItAndWithWhatProof() throws IOException {
+        byte[] pdf = exporter.export(
+                issued(),
+                List.of(),
+                new HierarchyDeclaration(SigersolOrigin.REFERENCED_PROOF, "ana@asociacion.pe", "Informe 2025 · envío 8841"));
+
+        String text = normalized(textOf(pdf));
+
+        assertThat(text).contains("Cumplimiento de jerarquía (declarado)");
+        assertThat(text)
+                .contains("El cumplimiento de jerarquía es un dato declarado por el operador de la asociación "
+                        + "(origen: con comprobante referenciado, registrado por ana@asociacion.pe), "
+                        + "respaldado por el comprobante «Informe 2025 · envío 8841»; "
+                        + "no es una cifra oficial de SIGERSOL ni la verifica esta plataforma.");
+        assertThat(text).doesNotContain("dato SIGERSOL de ingreso manual");
+    }
+
+    @Test
+    void withoutAProofOrAnAuthorTheNoteLeavesThoseParts() throws IOException {
+        String declared = normalized(textOf(exporter.export(
+                issued(), List.of(), new HierarchyDeclaration(SigersolOrigin.DECLARED_BY_OPERATOR, "ana@asociacion.pe", null))));
+        assertThat(declared).contains("(origen: declarado por el operador, registrado por ana@asociacion.pe); no es una cifra oficial");
+        assertThat(declared).doesNotContain("respaldado");
+
+        String old = normalized(textOf(exporter.export(issued())));
+        assertThat(old).contains("(origen: no registrado); no es una cifra oficial de SIGERSOL ni la verifica esta plataforma.");
     }
 
     @Test

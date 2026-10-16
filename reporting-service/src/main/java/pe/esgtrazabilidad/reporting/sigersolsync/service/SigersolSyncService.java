@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.reporting.exception.ReportingErrors;
+import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolOrigin;
 import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolSync;
 import pe.esgtrazabilidad.reporting.sigersolsync.port.in.GetSigersolSyncUseCase;
 import pe.esgtrazabilidad.reporting.sigersolsync.port.in.ListSigersolSyncsUseCase;
@@ -26,6 +27,11 @@ class SigersolSyncService implements RegisterSigersolSyncUseCase, GetSigersolSyn
 
     @Override
     public SigersolSync register(RegisterSigersolSyncCommand command) {
+        // Checked first so the reason is clear (RPT-021), not the generic "datos no válidos" (RPT-008).
+        if (command.origin() == SigersolOrigin.REFERENCED_PROOF
+                && (command.reference() == null || command.reference().isBlank())) {
+            throw new ApplicationException(ReportingErrors.MISSING_SIGERSOL_REFERENCE);
+        }
         if (repository.existsOverlapping(command.associationId(), command.periodStart(), command.periodEnd())) {
             throw new ApplicationException(ReportingErrors.DUPLICATE_SIGERSOL_SYNC_PERIOD);
         }

@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { BackendApi } from '../../core/api/backend.api';
+import { StaffRole } from '../../core/api/api.types';
 import { ApiError } from '../../core/http/api-error';
 import { writeErrorText } from '../../shared/error-message';
 import { generateInitialPassword } from './initial-password';
@@ -34,8 +35,8 @@ const HEADINGS: Record<Outcome['kind'], (email: string) => string> = {
 };
 
 /**
- * Crear una cuenta del personal (POST /auth/staff-users). Any signed-in staff member can (no roles),
- * so the screen says what the new account can do and asks to confirm. The initial password is
+ * Crear una cuenta del personal (POST /auth/staff-users), only for an ADMIN. The screen says what
+ * the new account can do and asks to confirm. The initial password is
  * generated here, never typed, and exists only in this component's memory: never in storage, the
  * URL, router state, the console or the session log; never in a DOM attribute (only a text node
  * while shown). "Ya la entregué", leaving the page, or a refused attempt that never used it, drop it.
@@ -54,6 +55,7 @@ export class StaffNewPage {
   protected readonly form = this.fb.group({
     fullName: ['', [Validators.required, (c: { value: string }) => (c.value.trim() === '' ? { required: true } : null)]],
     email: ['', [Validators.required, (c: { value: string }) => (c.value.trim() !== '' && !STAFF_EMAIL.test(c.value.trim()) ? { email: true } : null)]],
+    role: ['STAFF' as StaffRole],
   });
 
   /** The initial password: only here, in memory. */
@@ -119,7 +121,7 @@ export class StaffNewPage {
     this.status.set('');
     this.sending.set(true);
     this.api
-      .createStaffUser({ email, password, fullName: v.fullName.trim() })
+      .createStaffUser({ email, password, fullName: v.fullName.trim(), role: v.role })
       .pipe(
         finalize(() => this.sending.set(false)),
         takeUntilDestroyed(this.destroyRef),
@@ -144,6 +146,8 @@ export class StaffNewPage {
             writeErrorText(error, '', {
               'AUTH-002': `Ya existe una cuenta del personal con el correo ${email}.`,
               'AUTH-005': `El servicio rechazó el correo ${email}: le falta un punto en el dominio (por ejemplo, @asociacion.pe).`,
+              'AUTH-006': 'Solo un administrador puede crear cuentas.',
+              'AUTH-007': 'El servicio rechazó la contraseña generada. Vuelve a intentarlo: se generará otra.',
               VALIDATION_ERROR: 'El servicio rechazó los datos. Revisa el nombre y el correo.',
             }),
           );
@@ -197,7 +201,7 @@ export class StaffNewPage {
     this.outcome.set(null);
     this.submitted.set(false);
     this.form.enable();
-    this.form.reset({ fullName: '', email: '' });
+    this.form.reset({ fullName: '', email: '', role: 'STAFF' });
     this.status.set('La contraseña se borró de esta pantalla.');
     setTimeout(() => this.formTitle()?.nativeElement.focus());
   }

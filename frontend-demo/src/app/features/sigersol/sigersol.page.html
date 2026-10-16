@@ -2,8 +2,7 @@
   <div>
     <h1>Registros SIGERSOL</h1>
     <p class="sub">
-      <app-manual-tag /> Cifras oficiales de cada asociación, copiadas a mano desde SIGERSOL. Esta aplicación no se conecta
-      con SIGERSOL.
+      <app-manual-tag /> {{ statement }}
     </p>
   </div>
   <a class="btn btn-primary" routerLink="/sigersol/nuevo" [queryParams]="{ asociacion: associationId() }">Registrar dato SIGERSOL</a>
@@ -60,7 +59,7 @@
           <tr>
             <th scope="col">Período</th>
             <th scope="col">Asociación</th>
-            <th scope="col" class="num">Cumplimiento de jerarquía</th>
+            <th scope="col" class="num">{{ complianceLabel }}</th>
             <th scope="col" class="num">Kilos declarados</th>
             <th scope="col">Origen</th>
             <th scope="col">Ingresado</th>
@@ -99,7 +98,7 @@
           <span class="entry-title">{{ r.period }}</span>
           <dl>
             <div><dt>Asociación</dt><dd>{{ r.association }}</dd></div>
-            <div><dt>Cumplimiento</dt><dd class="mono">{{ r.compliance }}</dd></div>
+            <div><dt>Cumplimiento (declarado)</dt><dd class="mono">{{ r.compliance }}</dd></div>
             <div><dt>Kilos declarados</dt><dd class="mono">{{ r.kilos }}</dd></div>
             <div>
               <dt>Origen</dt>

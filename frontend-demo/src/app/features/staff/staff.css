@@ -26,6 +26,11 @@
   font-weight: 600;
   overflow-wrap: anywhere;
 }
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
 @media (max-width: 639.98px) {
   .panel {
     padding: var(--space-4);

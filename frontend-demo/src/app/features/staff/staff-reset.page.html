@@ -1,0 +1,98 @@
+<a class="back-link" routerLink="/mi-sesion/personal">Volver a las cuentas</a>
+
+<header class="page-head">
+  <h1>Restablecer una contraseña</h1>
+  <p class="sub">La contraseña nueva la genera esta pantalla; no se escribe.</p>
+</header>
+
+<!-- Always in the DOM: the result is announced here. -->
+<p class="visually-hidden" role="status">{{ status() }}</p>
+
+@if (accounts.error(); as e) {
+  <div class="problem" role="alert">
+    <p>{{ loadError(e) }}</p>
+    <button type="button" class="btn" (click)="accounts.reload()">Volver a intentar</button>
+  </div>
+} @else if (accounts.hasValue()) {
+  @if (account(); as a) {
+    <section class="sheet-flat panel" aria-labelledby="account-title">
+      <h2 id="account-title">Cuenta</h2>
+      <dl class="facts">
+        <div><dt>Nombre</dt><dd>{{ a.fullName }}</dd></div>
+        <div><dt>Correo</dt><dd>{{ a.email }}</dd></div>
+        <div><dt>Estado</dt><dd>{{ a.active ? 'Activa' : 'Inactiva' }}</dd></div>
+      </dl>
+    </section>
+
+    @if (outcome(); as o) {
+      <section class="sheet-flat panel handover" aria-labelledby="result-title">
+        <h2 id="result-title" tabindex="-1" #resultTitle>
+          {{ o === 'applied' ? 'Contraseña restablecida para ' + a.email : 'No pudimos confirmar si se restableció' }}
+        </h2>
+        @if (o === 'applied') {
+          <p>
+            Esta es su contraseña nueva. Entrégala en persona: no se volverá a mostrar. Al iniciar sesión, la aplicación le pedirá
+            elegir la suya. Si ya tiene una sesión abierta, sigue valiendo hasta que venza (hasta 1 hora).
+          </p>
+        } @else {
+          <p class="warning">
+            Si se restableció, su contraseña es esta. Guárdala hasta comprobarlo: vuelve a intentarlo con la misma, o inicia sesión con
+            ese correo y esta contraseña en una ventana privada u otro navegador (si sales de esta pantalla, la contraseña se borra).
+          </p>
+        }
+
+        @if (password(); as p) {
+          <app-secret-box [password]="p" />
+        }
+
+        @if (o === 'uncertain') {
+          <div class="row">
+            <button type="button" class="btn btn-primary" [disabled]="sending()" (click)="confirmed.set(true); submit()">
+              {{ sending() ? 'Restableciendo…' : 'Volver a intentar con la misma contraseña' }}
+            </button>
+            <button type="button" class="btn" [disabled]="sending()" (click)="handedOver()">Descartar</button>
+          </div>
+        } @else {
+          <button type="button" class="btn btn-primary" (click)="handedOver()">Ya la entregué</button>
+        }
+        @if (error(); as message) {
+          <p class="problem" role="alert">{{ message }}</p>
+        }
+      </section>
+    } @else {
+      <form class="form-sheet" (submit)="$event.preventDefault(); submit()" novalidate aria-labelledby="form-title">
+        <h2 id="form-title" class="visually-hidden">Restablecer la contraseña</h2>
+        <div class="notice">
+          <p>
+            Se pondrá una contraseña nueva a esta cuenta y la anterior dejará de servir. La persona tendrá que elegir la suya al
+            volver a iniciar sesión.
+          </p>
+          <label class="check">
+            <input
+              type="checkbox"
+              [checked]="confirmed()"
+              (change)="setConfirmed($event)"
+              [attr.aria-invalid]="submitted() && !confirmed()"
+              [attr.aria-describedby]="submitted() && !confirmed() ? 'ack-error' : null"
+            />
+            Entiendo que la contraseña anterior dejará de servir
+          </label>
+          @if (submitted() && !confirmed()) {
+            <p class="field-error" id="ack-error">Marca la casilla para confirmar.</p>
+          }
+        </div>
+        @if (error(); as message) {
+          <p class="problem form-problem" role="alert">{{ message }}</p>
+        }
+        <button class="btn btn-primary submit" type="submit" [disabled]="sending()">
+          {{ sending() ? 'Restableciendo…' : 'Generar y aplicar la contraseña' }}
+        </button>
+      </form>
+    }
+  } @else {
+    <p class="problem" role="alert">La cuenta no existe en la lista. <a routerLink="/mi-sesion/personal">Volver a las cuentas</a>.</p>
+  }
+} @else {
+  <div aria-hidden="true"><span class="skel wide"></span><span class="skel wide"></span></div>
+  <p class="visually-hidden">Cargando la cuenta</p>
+}

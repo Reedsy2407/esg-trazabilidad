@@ -9,7 +9,7 @@ import { DistrictContext } from '../../shared/district-context';
 import { loadErrorMessage, writeErrorText } from '../../shared/error-message';
 import { formatKg, formatLocalDate, formatPercent, periodLabel, todayInLima } from '../../shared/format';
 import { ManualTag } from '../sigersol/manual-tag';
-import { coverageNote } from '../sigersol/origin-label';
+import { COMPLIANCE_LABEL, coverageNote } from '../sigersol/origin-label';
 import { Period, monthPeriod, overlaps, periodProblem, previousMonth } from './issue-period';
 
 export const ISSUE_UNCERTAIN =
@@ -97,6 +97,8 @@ export class CertificateIssuePage {
     params: () => this.reviewed() ?? undefined,
     stream: ({ params: p }) => this.api.certificateSummary(this.id(), p.start, p.end),
   });
+  protected readonly complianceLabel = COMPLIANCE_LABEL;
+
   protected readonly draft = computed(() => {
     const period = this.reviewed();
     if (period === null || !this.summary.hasValue() || !this.company.hasValue()) {
@@ -221,7 +223,7 @@ export class CertificateIssuePage {
             kind,
             text: writeErrorText(error, ISSUE_UNCERTAIN, {
               'RPT-004': `Esta empresa ya tiene un certificado que se superpone con ${draft.label}. Cada día se certifica una sola vez.`,
-              'RPT-005': `No hay un registro SIGERSOL de la asociación que cubra todo ${draft.label}. Regístralo y vuelve a revisar el borrador.`,
+              'RPT-005': `No hay un cumplimiento de jerarquía declarado para esa asociación que cubra todo ${draft.label}. Regístralo y vuelve a revisar el borrador.`,
               'RPT-015': 'Esta empresa está inactiva: no se pueden emitir certificados. Reactívala o registra la empresa correcta.',
               'RPT-016': 'Esta empresa no está verificada con SUNAT. Verifícala desde su ficha y vuelve a intentarlo.',
               'RPT-009': `El servicio rechazó ${draft.label}: la fecha final es anterior a la inicial. Revisa las fechas del período.`,

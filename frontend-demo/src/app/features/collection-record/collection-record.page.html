@@ -53,10 +53,10 @@
                 [attr.aria-describedby]="describedBy(fieldInvalid('neighborId') ? 'neighbor-error' : null, neighborsTruncated() ? 'neighbor-more' : null)"
                 [attr.aria-busy]="neighbors.isLoading()"
                 [placeholder]="neighbors.isLoading() ? 'Cargando vecinos…' : 'Elige un vecino'"
-                [value]="neighborText()"
+                [value]="neighborShown()"
                 (input)="onNeighborInput($any($event.target).value)"
-                (focus)="openNeighbors()"
-                (click)="openNeighbors()"
+                (focus)="focusNeighbors($event)"
+                (click)="clickNeighbors()"
                 (blur)="closeNeighbors()"
                 (keydown)="onNeighborKey($event)"
               />

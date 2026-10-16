@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import pe.esgtrazabilidad.reporting.certificate.HierarchyDeclaration;
+import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolOrigin;
 import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
@@ -42,7 +44,7 @@ class CertificateCsvExporterTest {
 
         // Semicolon-separated (Excel in Spanish), UTF-8 with accents intact, no stray comma-split.
         assertThat(text).contains("Empresa;Peña, Núñez S.A.C.");
-        assertThat(text).contains("Cumplimiento de jerarquía (%);85.00");
+        assertThat(text).contains("Cumplimiento de jerarquía (declarado);85.00");
         assertThat(text).contains("Período inicio;2026-01-01");
         assertThat(text).contains("Estado;Vigente");
         assertThat(text).doesNotContain("Ã");
@@ -71,6 +73,32 @@ class CertificateCsvExporterTest {
                 "'=SUMA(1)", "150131", "2.00", "No disponible", "", "", ""));
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly(
                 "Distrito desconocido", "", "1.00", "Distrito desconocido", "", "", ""));
+    }
+
+    @Test
+    void aNoteRowSaysWhoDeclaredTheHierarchyFigureAndItsProof() throws IOException {
+        TrackedCompany trackedCompany = TrackedCompany.create("Empresa", "20123456789", UUID.randomUUID());
+        EsgCertificate certificate = EsgCertificate.issue(
+                trackedCompany, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), new BigDecimal("8.00"), new BigDecimal("85.00"));
+
+        byte[] csv = exporter.export(
+                certificate,
+                List.of(),
+                List.of(),
+                new HierarchyDeclaration(SigersolOrigin.REFERENCED_PROOF, "ana@asociacion.pe", "factura F001-123"));
+
+        List<CSVRecord> records;
+        try (CSVParser parser = CSVParser.parse(decode(csv), CertificateCsvExporter.FORMAT)) {
+            records = parser.getRecords();
+        }
+        assertThat(records).anySatisfy(r -> assertThat(r).containsExactly(
+                "Nota sobre la jerarquía",
+                "El cumplimiento de jerarquía es un dato declarado por el operador de la asociación "
+                        + "(origen: con comprobante referenciado, registrado por ana@asociacion.pe), "
+                        + "respaldado por el comprobante «factura F001-123»; "
+                        + "no es una cifra oficial de SIGERSOL ni la verifica esta plataforma."));
+        // Without a declaration at hand (a record from before origins), it still says it is declared.
+        assertThat(decode(exporter.export(certificate, List.of()))).contains("(origen: no registrado)");
     }
 
     @Test
@@ -110,7 +138,7 @@ class CertificateCsvExporterTest {
         assertThat(records.get(0)).containsExactly("Empresa", "Empresa, S.A.C.");
         assertThat(records.get(1)).containsExactly("RUC", "20123456789");
         assertThat(records.get(4)).containsExactly("Kilos trazados", "120.50");
-        assertThat(records.get(5)).containsExactly("Cumplimiento de jerarquía (%)", "85.00");
+        assertThat(records.get(5)).containsExactly("Cumplimiento de jerarquía (declarado)", "85.00");
 
         // Line items table: every frozen entry must appear as its own row.
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly("2026-01-05", "50.00"));
@@ -126,7 +154,7 @@ class CertificateCsvExporterTest {
         assertThat(records.get(0)).containsExactly("Empresa", "'" + name);
         // Numbers are never prefixed: a leading "-" there is a real negative.
         assertThat(records.get(4)).containsExactly("Kilos trazados", "120.50");
-        assertThat(records.get(5)).containsExactly("Cumplimiento de jerarquía (%)", "85.00");
+        assertThat(records.get(5)).containsExactly("Cumplimiento de jerarquía (declarado)", "85.00");
     }
 
     @ParameterizedTest

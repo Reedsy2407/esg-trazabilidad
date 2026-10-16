@@ -16,12 +16,16 @@ import com.nimbusds.jwt.SignedJWT;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import pe.esgtrazabilidad.auth.staffuser.domain.StaffRole;
+
 /**
  * The only class in the whole reactor that holds the SIGNING side of
  * JWT_SECRET -- every other service (including auth-service's own
  * SecurityConfig, via shared-kernel's JwtSecurityConfig) only ever
  * verifies. 1-hour expiry, no refresh token -- see SPEC-auth-service.md's
- * Resolved Decisions.
+ * Resolved Decisions. Besides the subject and email it carries {@code role} (for the screens;
+ * the other services ignore it) and {@code pwdChange: true} only while the person still has to
+ * choose their own password.
  */
 @Component
 class JwtIssuer {
@@ -34,17 +38,20 @@ class JwtIssuer {
         this.secret = secret;
     }
 
-    String issue(UUID staffUserId, String email) {
+    String issue(UUID staffUserId, String email, StaffRole role, boolean mustChangePassword) {
         try {
             MACSigner signer = new MACSigner(secret.getBytes(StandardCharsets.UTF_8));
             Instant now = Instant.now();
-            JWTClaimsSet claims = new JWTClaimsSet.Builder()
+            JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
                     .subject(staffUserId.toString())
                     .claim("email", email)
+                    .claim("role", role.name())
                     .issueTime(Date.from(now))
-                    .expirationTime(Date.from(now.plus(EXPIRY_HOURS, ChronoUnit.HOURS)))
-                    .build();
-            SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
+                    .expirationTime(Date.from(now.plus(EXPIRY_HOURS, ChronoUnit.HOURS)));
+            if (mustChangePassword) {
+                claims.claim("pwdChange", true);
+            }
+            SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims.build());
             signedJwt.sign(signer);
             return signedJwt.serialize();
         } catch (JOSEException exception) {

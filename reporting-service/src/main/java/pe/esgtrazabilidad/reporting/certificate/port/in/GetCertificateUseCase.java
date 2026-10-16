@@ -3,6 +3,7 @@ package pe.esgtrazabilidad.reporting.certificate.port.in;
 import java.util.List;
 import java.util.UUID;
 
+import pe.esgtrazabilidad.reporting.certificate.HierarchyDeclaration;
 import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 
@@ -12,4 +13,7 @@ public interface GetCertificateUseCase {
 
     /** The SIGERSOL context of each district, as frozen when the certificate was issued. */
     List<DistrictLine> districtLines(UUID trackedCompanyId, UUID id);
+
+    /** Who declared the hierarchy figure of this certificate, with its origin and proof (see {@link HierarchyDeclaration}). */
+    HierarchyDeclaration declaration(EsgCertificate certificate);
 }

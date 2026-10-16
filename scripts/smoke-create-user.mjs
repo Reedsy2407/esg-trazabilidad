@@ -4,7 +4,7 @@
 //
 // Needs the e-mail already chosen (scripts/smoke-cred.ps1 -Mode Init). Opens a VISIBLE Chromium
 // at the login page and waits (up to 5 minutes) for a person to sign in there: this script never
-// asks for, reads or types anyone's password. Once a session exists it fills the form with the
+// asks for, reads or types anyone's password (the person must be an ADMIN: only an admin creates accounts). Once a session exists it fills the form with the
 // stored e-mail, reads the password the SCREEN generated (the form takes none: it is made in the
 // browser and shown once), pipes it straight into smoke-cred.ps1 -Mode Set (DPAPI) and signs out.
 // The password is never printed, logged, passed as an argument or written to a file in clear.

@@ -1,13 +1,6 @@
 .sub app-manual-tag {
   margin-right: var(--space-2);
 }
-.done {
-  margin: 0 0 var(--space-5);
-  padding: var(--space-3) var(--space-4);
-  border: 2px solid var(--ink);
-  background: var(--paper);
-  font-weight: 600;
-}
 .filter-row {
   width: min(100%, 420px);
   margin-bottom: var(--space-4);

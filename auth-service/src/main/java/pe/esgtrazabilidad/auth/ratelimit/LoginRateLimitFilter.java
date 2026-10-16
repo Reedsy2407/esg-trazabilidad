@@ -44,15 +44,24 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Changing your own password asks for the current one, so it is a password guessing surface
+     * for whoever holds a token: same limit as the login, counted apart (a bucket per path and client).
+     */
+    static final String CHANGE_PASSWORD_PATH = "/auth/me/password";
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !("POST".equals(request.getMethod()) && LOGIN_PATH.equals(request.getServletPath()));
+        String path = request.getServletPath();
+        return !("POST".equals(request.getMethod()) && (LOGIN_PATH.equals(path) || CHANGE_PASSWORD_PATH.equals(path)));
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        LoginRateLimiter.Decision decision = limiter.tryConsume(clientIpResolver.resolve(request));
+        String client = clientIpResolver.resolve(request);
+        String key = CHANGE_PASSWORD_PATH.equals(request.getServletPath()) ? "pwd:" + client : client;
+        LoginRateLimiter.Decision decision = limiter.tryConsume(key);
         if (decision.allowed()) {
             chain.doFilter(request, response);
             return;

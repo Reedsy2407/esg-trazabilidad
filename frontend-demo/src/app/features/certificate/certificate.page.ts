@@ -10,6 +10,7 @@ import { DistrictContext } from '../../shared/district-context';
 import { DownloadKind } from '../../shared/download-filename';
 import { loadErrorMessage, writeErrorText } from '../../shared/error-message';
 import { formatInstantDate, formatKg, formatLocalDate, formatPercent } from '../../shared/format';
+import { COMPLIANCE_LABEL, hierarchyNote } from '../sigersol/origin-label';
 import { ReasonConfirm } from '../../shared/reason-confirm';
 
 /** Opened right after issuing it (router state from CertificateIssuePage)? Read once, then dropped. */
@@ -59,6 +60,8 @@ export class CertificatePage {
     stream: ({ params: p }) => this.api.certificate(p.companyId, p.certificateId),
   });
 
+  protected readonly complianceLabel = COMPLIANCE_LABEL;
+
   protected readonly view = computed(() => {
     if (!this.certificate.hasValue()) {
       return null;
@@ -70,6 +73,7 @@ export class CertificatePage {
       ruc: c.companyRuc,
       kilos: formatKg(c.kilosTrazados),
       compliance: formatPercent(c.hierarchyCompliancePercent),
+      complianceNote: hierarchyNote(c),
       period: `${formatLocalDate(c.periodStart)} – ${formatLocalDate(c.periodEnd)}`,
       issued: formatInstantDate(c.issuedAt),
       districts: c.districtContext ?? null,

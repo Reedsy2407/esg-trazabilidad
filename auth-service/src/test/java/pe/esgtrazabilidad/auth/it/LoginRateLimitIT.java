@@ -16,6 +16,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import pe.esgtrazabilidad.auth.staffuser.domain.StaffRole;
 import pe.esgtrazabilidad.auth.staffuser.domain.StaffUser;
 import pe.esgtrazabilidad.auth.staffuser.port.out.StaffUserRepository;
 
@@ -156,8 +157,8 @@ class LoginRateLimitIT {
 
     @Test
     void theLimitDoesNotApplyToTheOtherAuthEndpoints() {
-        staffUserRepository.save(
-                StaffUser.create("otra@esgtrazabilidad.pe", passwordEncoder.encode("password-otra-123"), "Otra"));
+        staffUserRepository.save(StaffUser.create(
+                "otra@esgtrazabilidad.pe", passwordEncoder.encode("password-otra-123"), "Otra", StaffRole.ADMIN, false));
         String token = from("203.0.113.40").contentType("application/json")
                 .body("{\"email\": \"otra@esgtrazabilidad.pe\", \"password\": \"password-otra-123\"}")
                 .when()
@@ -183,11 +184,54 @@ class LoginRateLimitIT {
         from("203.0.113.40").header("Authorization", "Bearer " + token)
                 .contentType("application/json")
                 .body("""
-                        {"email": "sin-limite@esgtrazabilidad.pe", "password": "password-sin-limite", "fullName": "Sin Limite"}
+                        {"email": "sin-limite@esgtrazabilidad.pe", "password": "una-clave-bien-larga-y-propia", "fullName": "Sin Limite"}
                         """)
                 .when()
                 .post("/auth/staff-users")
                 .then()
                 .statusCode(201);
+    }
+
+    @Test
+    void changingYourPasswordIsLimitedLikeTheLoginButCountedApart() {
+        staffUserRepository.save(StaffUser.create(
+                "cambia@esgtrazabilidad.pe", passwordEncoder.encode("password-cambia-123"), "Cambia", StaffRole.STAFF, false));
+        String token = from("203.0.113.70").contentType("application/json")
+                .body("{\"email\": \"cambia@esgtrazabilidad.pe\", \"password\": \"password-cambia-123\"}")
+                .when()
+                .post("/auth/login")
+                .then()
+                .statusCode(200)
+                .extract()
+                .path("accessToken");
+
+        // Five wrong current passwords are 400 AUTH-008; the sixth try is refused before the password check.
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            from("203.0.113.70").header("Authorization", "Bearer " + token)
+                    .contentType("application/json")
+                    .body("{\"currentPassword\": \"nope-nope-nope-nope\", \"newPassword\": \"una-clave-nueva-bien-larga\"}")
+                    .when()
+                    .post("/auth/me/password")
+                    .then()
+                    .statusCode(400)
+                    .body("code", equalTo("AUTH-008"));
+        }
+        from("203.0.113.70").header("Authorization", "Bearer " + token)
+                .contentType("application/json")
+                .body("{\"currentPassword\": \"password-cambia-123\", \"newPassword\": \"una-clave-nueva-bien-larga\"}")
+                .when()
+                .post("/auth/me/password")
+                .then()
+                .statusCode(429)
+                .header("Retry-After", notNullValue())
+                .body("code", equalTo("AUTH-004"));
+
+        // Its own bucket: the same client can still log in (one login used, four left).
+        from("203.0.113.70").contentType("application/json")
+                .body("{\"email\": \"cambia@esgtrazabilidad.pe\", \"password\": \"password-cambia-123\"}")
+                .when()
+                .post("/auth/login")
+                .then()
+                .statusCode(200);
     }
 }

@@ -5,7 +5,11 @@ import { Observable, Subject } from 'rxjs';
 import { CreateStaffUserRequest, StaffUser } from '../../core/api/api.types';
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
+import { staffUser } from '../../testing/staff-user';
 import { StaffNewPage } from './staff-new.page';
+
+/** What the service answers for the account these tests create. */
+const created = () => staffUser({ id: 's-2', email: 'luis.ramos@asociacion.pe', fullName: 'Luis Ramos', createdAt: '2026-10-10T15:00:00Z', mustChangePassword: true });
 
 describe('StaffNewPage', () => {
   let el: HTMLElement;
@@ -101,10 +105,10 @@ describe('StaffNewPage', () => {
     await submit(); // ignored while sending
     expect(sent).toHaveLength(1);
     const password = sent[0].password;
-    expect(sent[0]).toEqual({ email: 'luis.ramos@asociacion.pe', fullName: 'Luis Ramos', password });
+    expect(sent[0]).toEqual({ email: 'luis.ramos@asociacion.pe', fullName: 'Luis Ramos', password, role: 'STAFF' });
     expect(password).toMatch(/^[A-HJ-NP-Za-km-np-z2-9]{16}$/);
 
-    answer.next({ id: 's-2', email: 'luis.ramos@asociacion.pe', fullName: 'Luis Ramos', active: true, createdAt: '2026-10-10T15:00:00Z' });
+    answer.next(created());
     await settle();
     expect(el.querySelector('#result-title')?.textContent).toContain('Cuenta creada para luis.ramos@asociacion.pe');
     expect(el.textContent).not.toContain(password); // hidden until "Mostrar"
@@ -201,7 +205,7 @@ describe('StaffNewPage', () => {
     button('Volver a intentar con los mismos datos').click();
     await settle();
     expect(sent[2].password).toBe(password);
-    answer.next({ id: 's-2', email: 'luis.ramos@asociacion.pe', fullName: 'Luis Ramos', active: true, createdAt: '2026-10-10T15:00:00Z' });
+    answer.next(created());
     await settle();
     expect(el.querySelector('#result-title')?.textContent).toBe('Cuenta creada para luis.ramos@asociacion.pe');
   });
@@ -209,7 +213,7 @@ describe('StaffNewPage', () => {
   it('"Mostrar" says whether it is pressed; hidden, the code reads as a hidden password', async () => {
     fill();
     await submit();
-    answer.next({ id: 's-2', email: 'luis.ramos@asociacion.pe', fullName: 'Luis Ramos', active: true, createdAt: '2026-10-10T15:00:00Z' });
+    answer.next(created());
     await settle();
     expect(button('Mostrar').getAttribute('aria-pressed')).toBe('false');
     expect(el.querySelector('.secret code')?.getAttribute('aria-label')).toBe('Contraseña oculta');
@@ -249,7 +253,7 @@ describe('StaffNewPage', () => {
     });
     fill();
     await submit();
-    answer.next({ id: 's-2', email: 'luis.ramos@asociacion.pe', fullName: 'Luis Ramos', active: true, createdAt: '2026-10-10T15:00:00Z' });
+    answer.next(created());
     await settle();
     button('Copiar').click();
     await settle();
@@ -261,7 +265,7 @@ describe('StaffNewPage', () => {
   it('leaving the page forgets the password', async () => {
     fill();
     await submit();
-    answer.next({ id: 's-2', email: 'luis.ramos@asociacion.pe', fullName: 'Luis Ramos', active: true, createdAt: '2026-10-10T15:00:00Z' });
+    answer.next(created());
     await settle();
     const memory = () => (component as unknown as { password(): string | null }).password();
     expect(memory()).toBe(sent[0].password);

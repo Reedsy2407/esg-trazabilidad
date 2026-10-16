@@ -39,7 +39,7 @@
 
       <dl class="lines">
         <div class="leader">
-          <dt>Cumplimiento de jerarquía</dt>
+          <dt>{{ complianceLabel }}</dt>
           <dd class="mono">{{ v.compliance }}</dd>
         </div>
         <div class="leader">
@@ -51,7 +51,7 @@
           <dd class="mono">{{ v.issued }}</dd>
         </div>
       </dl>
-      <p class="source">El cumplimiento de jerarquía es un dato SIGERSOL de ingreso manual.</p>
+      <p class="source">{{ v.complianceNote }}</p>
 
       <app-district-context [lines]="v.districts" idPrefix="doc-district" />
 

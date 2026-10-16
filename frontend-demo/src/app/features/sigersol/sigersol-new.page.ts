@@ -11,7 +11,7 @@ import { decimalValidator } from '../../shared/decimal';
 import { loadErrorMessage, writeErrorText } from '../../shared/error-message';
 import { periodLabel } from '../../shared/format';
 import { ManualTag } from './manual-tag';
-import { ORIGIN_OPTIONS } from './origin-label';
+import { COMPLIANCE_LABEL, DECLARED_STATEMENT, ORIGIN_OPTIONS } from './origin-label';
 
 export const SIGERSOL_UNCERTAIN =
   'No pudimos confirmar si el dato SIGERSOL quedó registrado. Revisa los registros de la asociación antes de volver a intentarlo.';
@@ -62,6 +62,8 @@ export class SigersolNewPage {
     reference: ['', Validators.maxLength(NOTE_MAX)],
   });
   protected readonly originOptions = ORIGIN_OPTIONS;
+  protected readonly complianceLabel = COMPLIANCE_LABEL;
+  protected readonly statement = DECLARED_STATEMENT;
 
   protected readonly associations = rxResource({ stream: () => this.api.associations() });
   protected readonly associationsTruncated = computed(
@@ -88,6 +90,8 @@ export class SigersolNewPage {
       : null;
   });
   protected readonly noteLength = computed(() => this.value().note.length);
+  /** The proof's reference is asked for, and required, only when the origin is «Con comprobante referenciado». */
+  protected readonly needsReference = computed(() => this.value().origin === 'REFERENCED_PROOF');
 
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
   protected readonly submitted = signal(false);
@@ -100,6 +104,18 @@ export class SigersolNewPage {
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.error.set(null);
       this.checkAssociation.set(null);
+    });
+    // The reference is required only with a referenced proof; with another origin it is not asked
+    // for, so a leftover value is dropped (it must not be sent).
+    this.form.controls.origin.valueChanges.pipe(takeUntilDestroyed()).subscribe((origin) => {
+      const reference = this.form.controls.reference;
+      if (origin === 'REFERENCED_PROOF') {
+        reference.setValidators([Validators.maxLength(NOTE_MAX), (c) => (c.value.trim() === '' ? { required: true } : null)]);
+      } else {
+        reference.clearValidators();
+        reference.setValue('');
+      }
+      reference.updateValueAndValidity();
     });
     // Prefill from the address once: dates at once, the association when it is listed.
     effect(() => {
@@ -155,7 +171,7 @@ export class SigersolNewPage {
       officialKilosDeclared: v.kilos.trim() === '' ? null : Number(v.kilos.trim()),
       sourceNote: v.note.trim() === '' ? null : v.note.trim(),
       origin: v.origin,
-      ...(v.reference.trim() !== '' && { reference: v.reference.trim() }),
+      ...(v.origin === 'REFERENCED_PROOF' && { reference: v.reference.trim() }),
     };
     this.submitting.set(true);
     this.api
@@ -173,6 +189,7 @@ export class SigersolNewPage {
               'RPT-006':
                 'Esta asociación ya tiene un registro SIGERSOL que se superpone con ese período (compartir un solo día también cuenta). Cada día puede estar en un solo registro.',
               'RPT-008': 'El servicio rechazó el período: la fecha final no puede ser anterior a la inicial.',
+              'RPT-021': 'El servicio exige la referencia del comprobante cuando el origen es «Con comprobante referenciado».',
             }),
           );
           const uncertain = !(error instanceof ApiError) || error.status === 0 || error.status === 408 || error.status >= 500;

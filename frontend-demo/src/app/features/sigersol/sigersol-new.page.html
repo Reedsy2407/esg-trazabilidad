@@ -3,7 +3,7 @@
 <header class="page-head">
   <h1>Registrar dato SIGERSOL</h1>
   <p class="sub lead">
-    <app-manual-tag /> Copia las cifras oficiales del período tal como aparecen en SIGERSOL. Quedarán marcadas como ingreso manual.
+    <app-manual-tag /> {{ statement }} Quedarán marcadas como ingreso manual.
   </p>
 </header>
 
@@ -79,7 +79,7 @@
 
   <div class="pair">
     <div class="field num-field">
-      <label for="compliance">Cumplimiento de jerarquía (%)</label>
+      <label for="compliance">{{ complianceLabel }}</label>
       <input
         id="compliance"
         class="control mono"
@@ -89,7 +89,7 @@
         [attr.aria-invalid]="invalid('compliance')"
         [attr.aria-describedby]="invalid('compliance') ? 'compliance-hint compliance-error' : 'compliance-hint'"
       />
-      <p class="hint" id="compliance-hint">De 0 a 100, con punto y hasta 2 decimales: 87.50</p>
+      <p class="hint" id="compliance-hint">Un porcentaje de 0 a 100, con punto y hasta 2 decimales: 87.50</p>
       @if (invalid('compliance')) {
         <p class="field-error" id="compliance-error">
           @if (form.controls.compliance.hasError('required')) {
@@ -113,7 +113,7 @@
         [attr.aria-invalid]="invalid('kilos')"
         [attr.aria-describedby]="invalid('kilos') ? 'kilos-hint kilos-error' : 'kilos-hint'"
       />
-      <p class="hint" id="kilos-hint">Si SIGERSOL los muestra. Con punto y hasta 2 decimales.</p>
+      <p class="hint" id="kilos-hint">Si el documento los muestra. Con punto y hasta 2 decimales.</p>
       @if (invalid('kilos')) {
         <p class="field-error" id="kilos-error">Escribe solo números, con punto y hasta 2 decimales (máximo 999999999999.99).</p>
       }
@@ -131,7 +131,7 @@
       aria-describedby="note-hint note-count"
       [attr.aria-invalid]="invalid('note')"
     ></textarea>
-    <p class="hint" id="note-hint">Por ejemplo, de qué reporte o pantalla de SIGERSOL salió y quién lo copió.</p>
+    <p class="hint" id="note-hint">Por ejemplo, de qué documento salió el dato y quién lo ingresó.</p>
     <p class="counter" id="note-count">{{ noteLength() }} de {{ noteMax }} caracteres</p>
   </div>
 
@@ -148,11 +148,38 @@
     </p>
   </div>
 
-  <div class="field">
-    <label for="reference">Referencia del comprobante <span class="optional">(opcional)</span></label>
-    <input id="reference" class="control" formControlName="reference" autocomplete="off" [attr.maxlength]="noteMax" />
-    <p class="hint" id="reference-hint">Un nombre de archivo, un número de constancia o un enlace interno.</p>
-  </div>
+  <!-- Only with «Con comprobante referenciado», and then required (the service answers RPT-021 otherwise). -->
+  @if (needsReference()) {
+    <div class="field">
+      <label for="reference">Referencia del comprobante</label>
+      <input
+        id="reference"
+        class="control"
+        formControlName="reference"
+        autocomplete="off"
+        [attr.maxlength]="noteMax"
+        [attr.aria-invalid]="invalid('reference')"
+        [attr.aria-describedby]="invalid('reference') ? 'reference-hint reference-error' : 'reference-hint'"
+      />
+      <div class="hint" id="reference-hint">
+        <p>Escribe a qué comprobante apunta el dato (no se sube ningún archivo). Según el caso:</p>
+        <ul>
+          <li>
+            <strong>Declaración de la empresa:</strong> el código de envío o el PDF «Informe», con el año y la fila de la asociación (su
+            RUC y las toneladas).
+          </li>
+          <li><strong>Facturas, boletas o liquidaciones de compra de la asociación:</strong> su número y su fecha.</li>
+        </ul>
+        <p>
+          Queda como «referenciado, no verificado por SIGERSOL». Las toneladas de una declaración son por año, no por el período del
+          certificado.
+        </p>
+      </div>
+      @if (invalid('reference')) {
+        <p class="field-error" id="reference-error">Escribe la referencia del comprobante: el código de envío, o el número y la fecha.</p>
+      }
+    </div>
+  }
 
   @if (error(); as message) {
     <div class="problem form-problem" role="alert">

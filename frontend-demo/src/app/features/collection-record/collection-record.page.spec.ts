@@ -313,6 +313,42 @@ describe('CollectionRecordPage', () => {
       expect(box().getAttribute('aria-expanded')).toBe('true'); // nothing was chosen, so nothing closed
     });
 
+    it('a click empties the box to browse the whole list; leaving without choosing puts the neighbour back', async () => {
+      await choose('neighbor', 'n-1');
+      expect(box().value).toBe('Rosa Quispe · Cercado de Lima');
+
+      box().click();
+      await settle();
+      expect(box().value).toBe('');
+      expect(rows()).toHaveLength(2); // the whole list, not narrowed by the old name
+      expect(el.querySelector('#schedule option[value="s-1"]')).not.toBeNull(); // the choice itself is kept
+
+      box().dispatchEvent(new Event('blur'));
+      await settle();
+      expect(box().value).toBe('Rosa Quispe · Cercado de Lima');
+      expect(el.querySelector('#schedule option[value="s-1"]')).not.toBeNull();
+    });
+
+    it('after a click, picking another neighbour replaces the choice, and Escape puts the first one back', async () => {
+      await choose('neighbor', 'n-1');
+      box().click();
+      await settle();
+      await key('Escape');
+      expect(box().value).toBe('Rosa Quispe · Cercado de Lima');
+
+      box().click();
+      await settle();
+      await choose('neighbor', 'n-2');
+      expect(box().value).toBe('Luis Ramos · San Martín de Porres (inactivo)');
+    });
+
+    it('a click on an empty box changes nothing', async () => {
+      box().click();
+      await settle();
+      expect(box().value).toBe('');
+      expect(box().getAttribute('aria-expanded')).toBe('true');
+    });
+
     it('arrows and Enter choose a row, Escape closes, and editing the text withdraws the choice', async () => {
       box().dispatchEvent(new Event('focus'));
       await settle();

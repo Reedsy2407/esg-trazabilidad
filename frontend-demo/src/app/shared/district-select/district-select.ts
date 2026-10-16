@@ -1,6 +1,7 @@
 import { Component, ElementRef, computed, forwardRef, input, signal, viewChild } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
+import { BrowseMode } from '../browse-mode';
 import { DISTRICTS, DISTRICT_AREAS, District, DistrictArea, districtByName, districtByUbigeo, foldForSearch } from '../districts';
 
 /** One row of the listbox: a district, or "Todos los distritos" (ubigeo null) when allowed. */
@@ -55,6 +56,8 @@ export class DistrictSelect implements ControlValueAccessor {
   protected readonly disabled = signal(false);
   /** True while the text is what the person typed, not the chosen district's name. */
   private readonly typing = signal(false);
+  /** A click empties the box to browse the list; leaving without choosing puts the district back. */
+  private readonly browse = new BrowseMode();
 
   private readonly inputEl = viewChild.required<ElementRef<HTMLInputElement>>('field');
   private readonly listboxEl = viewChild<ElementRef<HTMLElement>>('listbox');
@@ -69,7 +72,7 @@ export class DistrictSelect implements ControlValueAccessor {
   });
 
   /** What the input shows: the typed text while filtering, otherwise the chosen district. */
-  protected readonly text = computed(() => (this.typing() ? this.query() : this.selectedName()));
+  protected readonly text = computed(() => (this.typing() ? this.query() : this.browse.show(this.selectedName())));
 
   protected readonly groups = computed<readonly Group[]>(() => {
     const filter = this.typing() ? foldForSearch(this.query()) : '';
@@ -103,6 +106,7 @@ export class DistrictSelect implements ControlValueAccessor {
   writeValue(value: string | null): void {
     this.value.set(districtByUbigeo(value) === undefined ? null : value);
     this.typing.set(false);
+    this.browse.stop();
   }
 
   registerOnChange(fn: (value: string | null) => void): void {
@@ -120,7 +124,21 @@ export class DistrictSelect implements ControlValueAccessor {
     }
   }
 
+  /** A click on the box: the shown district is hidden while browsing (the choice itself stays). */
+  protected onClick(): void {
+    this.browse.start(this.selectedName());
+    if (!this.open()) {
+      this.toggle();
+    }
+  }
+
+  /** Focus by keyboard selects the text, so typing replaces it instead of continuing it. */
+  protected onFocus(event: FocusEvent): void {
+    (event.target as HTMLInputElement).select();
+  }
+
   protected onInput(event: Event): void {
+    this.browse.stop();
     this.query.set((event.target as HTMLInputElement).value);
     this.typing.set(true);
     this.openList(false);
@@ -169,6 +187,7 @@ export class DistrictSelect implements ControlValueAccessor {
           event.preventDefault();
           this.close();
           this.typing.set(false);
+          this.browse.stop();
         } else if (this.typing()) {
           this.typing.set(false);
         }
@@ -190,6 +209,7 @@ export class DistrictSelect implements ControlValueAccessor {
 
   protected choose(option: Option): void {
     this.typing.set(false);
+    this.browse.stop();
     this.close();
     if (option.ubigeo !== this.value()) {
       this.value.set(option.ubigeo);
@@ -215,6 +235,7 @@ export class DistrictSelect implements ControlValueAccessor {
       }
       this.typing.set(false);
     }
+    this.browse.stop();
     this.close();
     this.onTouched();
   }

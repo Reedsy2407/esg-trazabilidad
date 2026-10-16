@@ -135,6 +135,60 @@ describe('SigersolNewPage', () => {
     expect(navigate).toHaveBeenCalledWith(['/sigersol'], { queryParams: { asociacion: 'a-1' }, state: { registrado: true } });
   });
 
+  it('says the figures are declared by the operator and typed in, never read from or checked against SIGERSOL', async () => {
+    await setup();
+    const lead = el.querySelector('.lead')?.textContent ?? '';
+    expect(lead).toContain('Cifras declaradas por el operador, ingresadas a mano; esta aplicación no se conecta con SIGERSOL ni las verifica.');
+    expect(lead.toLowerCase()).not.toContain('oficiales');
+    expect(el.querySelector('label[for="compliance"]')?.textContent?.trim()).toBe('Cumplimiento de jerarquía (declarado)');
+  });
+
+  it('asks for the proof reference only with «Con comprobante referenciado», and then it is required', async () => {
+    await setup();
+    expect(el.querySelector('#reference')).toBeNull(); // «Declarado por el operador» by default
+    fill();
+    set('origin', 'REFERENCED_PROOF');
+    expect(el.querySelector('#reference')).not.toBeNull();
+    expect(el.querySelector('#reference-hint')?.textContent).toContain('código de envío');
+    expect(el.querySelector('#reference-hint')?.textContent).toContain('número y su fecha');
+    expect(el.querySelector('#reference-hint')?.textContent).toContain('referenciado, no verificado por SIGERSOL');
+    expect(el.querySelector('#reference-hint')?.textContent).toContain('por año, no por el período del certificado');
+
+    submit();
+    expect(sent).toEqual([]);
+    expect(el.querySelector('#reference-error')?.textContent).toContain('Escribe la referencia del comprobante');
+    expect(el.querySelector('#reference')?.getAttribute('aria-invalid')).toBe('true');
+
+    set('reference', '   ');
+    submit();
+    expect(sent).toEqual([]);
+
+    set('reference', 'Informe 2025, envío 8841');
+    submit();
+    expect(sent[0]).toMatchObject({ origin: 'REFERENCED_PROOF', reference: 'Informe 2025, envío 8841' });
+  });
+
+  it('going back to «Declarado por el operador» drops the reference: it is neither shown nor sent', async () => {
+    await setup();
+    fill();
+    set('origin', 'REFERENCED_PROOF');
+    set('reference', 'factura F001-123');
+    set('origin', 'DECLARED_BY_OPERATOR');
+    expect(el.querySelector('#reference')).toBeNull();
+    submit();
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).not.toHaveProperty('reference');
+  });
+
+  it('RPT-021 from the service is said in the form', async () => {
+    await setup();
+    fill();
+    submit();
+    answer.error(new ApiError(400, 'RPT-021', null, null));
+    TestBed.tick();
+    expect(el.querySelector('[role="alert"]')?.textContent).toContain('exige la referencia del comprobante');
+  });
+
   it('D1: the origin is chosen (never claims SIGERSOL validated it) and the reference is sent only when typed', async () => {
     await setup();
     expect(el.querySelector('#origin-hint')?.textContent).toContain('No significa que SIGERSOL la haya validado');

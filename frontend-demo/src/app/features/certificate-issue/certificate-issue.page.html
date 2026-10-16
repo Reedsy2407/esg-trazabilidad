@@ -108,7 +108,7 @@
               <div class="leader"><dt>Período</dt><dd>{{ d.label }} <span class="mono dates">({{ d.dates }})</span></dd></div>
               <div class="leader"><dt>Kilos trazados</dt><dd class="mono">{{ d.kilos }}</dd></div>
               <div class="leader">
-                <dt>Cumplimiento de jerarquía</dt>
+                <dt>{{ complianceLabel }}</dt>
                 <!-- &ngsp;: a real space Angular keeps; a whitespace-only text node before the tag would be dropped. -->
                 <dd><span class="mono">{{ d.compliance }}</span>@if (!d.missingSigersol) {&ngsp;<app-manual-tag />}</dd>
               </div>
@@ -124,10 +124,10 @@
             </div>
           } @else if (d.missingSigersol) {
             <div class="problem" role="alert">
-              <p>No hay un registro SIGERSOL de la asociación que cubra todo {{ d.label }}, así que no se puede emitir.</p>
+              <p>No hay un cumplimiento de jerarquía declarado para esa asociación que cubra todo {{ d.label }}, así que no se puede emitir.</p>
               <p>
                 <a routerLink="/sigersol/nuevo" [queryParams]="{ asociacion: d.associationId, desde: d.period.start, hasta: d.period.end }"
-                  >Registrar el dato SIGERSOL de este período</a
+                  >Registrar el cumplimiento declarado de este período</a
                 >
               </p>
             </div>
@@ -164,7 +164,7 @@
               @if (e.kind === 'sigersol') {
                 <p>
                   <a routerLink="/sigersol/nuevo" [queryParams]="{ asociacion: d.associationId, desde: d.period.start, hasta: d.period.end }"
-                    >Registrar el dato SIGERSOL de este período</a
+                    >Registrar el cumplimiento declarado de este período</a
                   >
                 </p>
               } @else if (e.kind === 'overlap' || e.kind === 'uncertain') {

@@ -11,19 +11,24 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import pe.esgtrazabilidad.auth.staffuser.domain.StaffRole;
 import pe.esgtrazabilidad.auth.staffuser.domain.StaffUser;
 import pe.esgtrazabilidad.auth.staffuser.port.out.StaffUserRepository;
 
 /**
- * Solves the chicken-and-egg problem: nothing can call the token-protected
- * POST /auth/staff-users before any account exists. Gated on table state
- * (existsAny()), not env var presence alone -- a later restart with
- * ADMIN_BOOTSTRAP_EMAIL still configured is a safe no-op, never a reset of
- * an existing account's credentials. The password is never env-supplied or
- * otherwise predictable: SecureRandom-generated here, bcrypt-hashed before
- * being persisted, and logged in plaintext exactly once for the operator to
- * retrieve from this one deploy's own startup log and rotate on first
- * login -- see SPEC-auth-service.md's Resolved Decisions.
+ * Solves the chicken-and-egg problem: nothing can call the admin-only
+ * POST /auth/staff-users before an ADMIN exists. Two cases, both gated on table state and on
+ * ADMIN_BOOTSTRAP_EMAIL, never on the variable alone:
+ * <ul>
+ *   <li>an empty table: creates the first account as ADMIN with a random password, logged in
+ *       plaintext exactly once for the operator (and flagged to be changed at the first sign-in);</li>
+ *   <li>accounts exist but none is an active ADMIN (the table predates roles, or every admin was
+ *       deactivated): promotes the account with that email, if it exists and is active. With an
+ *       admin already in place a restart with the variable still set is a safe no-op, never a
+ *       reset of anyone's credentials or role.</li>
+ * </ul>
+ * The password is never env-supplied or otherwise predictable: SecureRandom-generated here,
+ * bcrypt-hashed before being persisted -- see SPEC-auth-service.md's Resolved Decisions.
  */
 @Component
 public class AdminBootstrapRunner implements ApplicationRunner {
@@ -48,14 +53,24 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (bootstrapEmail == null || bootstrapEmail.isBlank()) {
+            if (staffUserRepository.existsAny() && !staffUserRepository.existsActiveAdmin()) {
+                log.warn("No active ADMIN account exists and ADMIN_BOOTSTRAP_EMAIL is not set: "
+                        + "nobody can create, deactivate or reset accounts until it names an existing account");
+            }
             return;
         }
-        if (staffUserRepository.existsAny()) {
-            return;
+        if (!staffUserRepository.existsAny()) {
+            createFirstAdmin();
+        } else if (!staffUserRepository.existsActiveAdmin()) {
+            promoteExisting();
         }
+    }
 
+    private void createFirstAdmin() {
         String rawPassword = generateRandomPassword();
-        StaffUser admin = StaffUser.create(bootstrapEmail, passwordEncoder.encode(rawPassword), "Administrador");
+        // mustChangePassword: nobody but the operator who reads the log knows it, and only once.
+        StaffUser admin =
+                StaffUser.create(bootstrapEmail, passwordEncoder.encode(rawPassword), "Administrador", StaffRole.ADMIN, true);
         staffUserRepository.save(admin);
 
         // Deliberate: the only place a raw password is ever logged in this
@@ -67,6 +82,18 @@ public class AdminBootstrapRunner implements ApplicationRunner {
                         + "(cámbiala después del primer login; este mensaje no se repetirá)",
                 bootstrapEmail,
                 rawPassword);
+    }
+
+    private void promoteExisting() {
+        staffUserRepository
+                .findByEmail(bootstrapEmail.toLowerCase())
+                .filter(StaffUser::isActive)
+                .ifPresentOrElse(
+                        user -> {
+                            staffUserRepository.save(user.promoteToAdmin());
+                            log.warn("Account {} promoted to ADMIN: no active ADMIN existed", user.getId());
+                        },
+                        () -> log.warn("ADMIN_BOOTSTRAP_EMAIL names no active account: no ADMIN was promoted"));
     }
 
     private String generateRandomPassword() {

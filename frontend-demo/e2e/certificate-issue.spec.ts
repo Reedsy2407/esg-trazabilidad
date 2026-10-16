@@ -97,9 +97,9 @@ test('0 kg is refused: no collections in the period', async ({ page }) => {
 test('without SIGERSOL coverage there is no button, only the prefilled form', async ({ page }) => {
   const { unmocked } = await open(page);
   await reviewMonth(page, '2026-08');
-  await expect(page.getByRole('alert')).toContainText('No hay un registro SIGERSOL de la asociación que cubra todo Agosto 2026');
+  await expect(page.getByRole('alert')).toContainText('No hay un cumplimiento de jerarquía declarado para esa asociación que cubra todo Agosto 2026');
   await expect(page.getByRole('button', { name: /Emitir certificado de/ })).toHaveCount(0);
-  await page.getByRole('link', { name: 'Registrar el dato SIGERSOL de este período' }).click();
+  await page.getByRole('link', { name: 'Registrar el cumplimiento declarado de este período' }).click();
   await expect(page.getByLabel('Asociación')).toHaveValue(ENVASES.associationId);
   await expect(page.getByLabel('Desde')).toHaveValue('2026-08-01');
   await expect(page.getByLabel('Hasta')).toHaveValue('2026-08-31');
@@ -109,7 +109,7 @@ test('without SIGERSOL coverage there is no button, only the prefilled form', as
 test('RPT-004 and RPT-005 from the service, and an unknown outcome', async ({ page }) => {
   for (const [failure, text] of [
     [{ status: 409, code: 'RPT-004' }, 'ya tiene un certificado que se superpone con Setiembre 2026'],
-    [{ status: 409, code: 'RPT-005' }, 'No hay un registro SIGERSOL de la asociación que cubra todo Setiembre 2026'],
+    [{ status: 409, code: 'RPT-005' }, 'No hay un cumplimiento de jerarquía declarado para esa asociación que cubra todo Setiembre 2026'],
     [{ status: 504, code: null }, 'No pudimos confirmar si el certificado se emitió'],
   ] as const) {
     const { writes, unmocked } = await open(page, { issueFailure: failure });

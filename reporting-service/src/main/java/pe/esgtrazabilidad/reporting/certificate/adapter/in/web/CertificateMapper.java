@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 import pe.esgtrazabilidad.reporting.certificate.CertificateSummary;
+import pe.esgtrazabilidad.reporting.certificate.HierarchyDeclaration;
 import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.port.in.IssueCertificateCommand;
@@ -30,12 +31,13 @@ class CertificateMapper {
         return new IssueCertificateCommand(trackedCompanyId, request.periodStart(), request.periodEnd());
     }
 
-    /** For a list page: the district context is read on the single certificate. */
+    /** For a list page: the district context and the declaration are read on the single certificate. */
     EsgCertificateResponse toResponse(EsgCertificate certificate) {
-        return toResponse(certificate, null);
+        return toResponse(certificate, null, null);
     }
 
-    EsgCertificateResponse toResponse(EsgCertificate certificate, List<DistrictLine> districtContext) {
+    EsgCertificateResponse toResponse(
+            EsgCertificate certificate, List<DistrictLine> districtContext, HierarchyDeclaration declaration) {
         return new EsgCertificateResponse(
                 certificate.getId(),
                 certificate.getTrackedCompanyId(),
@@ -52,6 +54,9 @@ class CertificateMapper {
                 certificate.getAnnulledById(),
                 certificate.getAnnulledByEmail(),
                 certificate.getAnnulmentReason(),
-                districtContext);
+                districtContext,
+                declaration == null ? null : declaration.origin(),
+                declaration == null ? null : declaration.registeredByEmail(),
+                declaration == null ? null : declaration.reference());
     }
 }

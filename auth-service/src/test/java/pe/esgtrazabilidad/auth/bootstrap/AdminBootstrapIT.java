@@ -89,6 +89,26 @@ class AdminBootstrapIT {
         assertThat(events.get(0).getLevel()).isEqualTo(Level.WARN);
         String loggedPassword = extractPassword(events.get(0).getFormattedMessage());
         assertThat(passwordEncoder.matches(loggedPassword, created.getPasswordHash())).isTrue();
+        assertThat(created.isAdmin()).isTrue();
+        assertThat(created.isMustChangePassword()).isTrue();
+    }
+
+    @Test
+    void anExistingTableWithNoAdminGetsTheNamedAccountPromotedOnceAndNothingElseChanges() {
+        String email = "humana@esgtrazabilidad.pe";
+        staffUserRepository.save(StaffUser.create(email, "hash-humana", "Humana"));
+        staffUserRepository.save(StaffUser.create("otra@esgtrazabilidad.pe", "hash-otra", "Otra"));
+        AdminBootstrapRunner runner = new AdminBootstrapRunner(staffUserRepository, passwordEncoder, email);
+
+        runner.run(new DefaultApplicationArguments());
+
+        assertThat(staffUserRepository.findByEmail(email).orElseThrow().isAdmin()).isTrue();
+        assertThat(staffUserRepository.findByEmail(email).orElseThrow().getPasswordHash()).isEqualTo("hash-humana");
+        assertThat(staffUserRepository.findByEmail("otra@esgtrazabilidad.pe").orElseThrow().isAdmin()).isFalse();
+
+        // A second start with the variable still set is a no-op: an admin exists now.
+        List<ILoggingEvent> events = captureLogsDuring(() -> runner.run(new DefaultApplicationArguments()));
+        assertThat(events).isEmpty();
     }
 
     @Test

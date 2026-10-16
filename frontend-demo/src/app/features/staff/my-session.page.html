@@ -10,8 +10,10 @@
     <dl class="facts">
       <div><dt>Nombre</dt><dd>{{ m.fullName }}</dd></div>
       <div><dt>Correo</dt><dd>{{ m.email }}</dd></div>
+      <div><dt>Rol</dt><dd>{{ m.role === 'ADMIN' ? 'Administrador' : 'Personal' }}</dd></div>
       <div><dt>Estado</dt><dd>{{ m.active ? 'Activa' : 'Inactiva' }}</dd></div>
       <div><dt>Creada el</dt><dd class="mono">{{ created() }}</dd></div>
+      <div><dt>Contraseña cambiada</dt><dd class="mono">{{ passwordChanged() }}</dd></div>
     </dl>
   } @else if (me.error(); as e) {
     <div class="problem" role="alert">
@@ -22,14 +24,22 @@
     <div aria-hidden="true"><span class="skel"></span><span class="skel"></span><span class="skel"></span></div>
     <p class="visually-hidden">Cargando tu cuenta</p>
   }
-  <button type="button" class="btn sign-out" (click)="signOut()">Cerrar sesión</button>
+  <div class="actions">
+    <a class="btn" routerLink="/mi-sesion/contrasena">Cambiar mi contraseña</a>
+    <button type="button" class="btn sign-out" (click)="signOut()">Cerrar sesión</button>
+  </div>
 </section>
 
-<section class="sheet-flat panel" aria-labelledby="staff-title">
-  <h2 id="staff-title">Personal</h2>
-  <p>
-    Cualquier persona del personal puede crear cuentas: la aplicación no tiene roles, así que cada cuenta nueva tiene acceso
-    completo.
-  </p>
-  <a class="btn" routerLink="/mi-sesion/personal/nueva">Crear una cuenta del personal</a>
-</section>
+@if (isAdmin()) {
+  <section class="sheet-flat panel" aria-labelledby="staff-title">
+    <h2 id="staff-title">Personal</h2>
+    <p>
+      Eres administrador: puedes crear cuentas, desactivarlas y restablecer la contraseña de otra persona. Cada cuenta nueva tiene
+      acceso completo a los datos.
+    </p>
+    <div class="actions">
+      <a class="btn" routerLink="/mi-sesion/personal">Cuentas del personal</a>
+      <a class="btn" routerLink="/mi-sesion/personal/nueva">Crear una cuenta del personal</a>
+    </div>
+  </section>
+}

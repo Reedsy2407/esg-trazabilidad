@@ -1,8 +1,8 @@
-<a class="back-link" routerLink="/mi-sesion">Volver a mi sesión</a>
+<a class="back-link" routerLink="/mi-sesion/personal">Volver a las cuentas</a>
 
 <header class="page-head">
   <h1>Crear una cuenta del personal</h1>
-  <p class="sub">La contraseña inicial la genera esta pantalla; no se escribe.</p>
+  <p class="sub">La contraseña inicial la genera esta pantalla; no se escribe. La persona elegirá la suya al entrar.</p>
 </header>
 
 <!-- Always in the DOM: copy and hand-over results are announced here. -->
@@ -14,13 +14,13 @@
     <h2 id="result-title" tabindex="-1" #resultTitle>{{ heading() }}</h2>
     @switch (o.kind) {
       @case ('created') {
-        <p>Esta es su contraseña inicial. Entrégala en persona: no se puede cambiar ni recuperar desde la aplicación, y no se volverá a mostrar.</p>
+        <p>Esta es su contraseña inicial. Entrégala en persona: no se volverá a mostrar. Al iniciar sesión, la aplicación le pedirá elegir la suya. Si la pierde antes, puedes restablecerla desde la lista de cuentas.</p>
       }
       @case ('exists') {
         <p class="warning">
           Si la creó el intento anterior, su contraseña es esta. Si esa cuenta ya existía antes, esta contraseña no es la suya.
-          Antes de entregarla, compruébalo iniciando sesión con ese correo y esta contraseña en una ventana privada u otro navegador (si sales de esta pantalla, la contraseña se borra): no se puede cambiar ni
-          recuperar desde la aplicación.
+          Antes de entregarla, compruébalo iniciando sesión con ese correo y esta contraseña en una ventana privada u otro navegador (si sales de esta pantalla, la contraseña se borra): si no
+          es la suya, restablécela desde la lista de cuentas.
         </p>
       }
       @case ('uncertain') {
@@ -70,7 +70,7 @@
     @if (confirmingDiscard()) {
       <div class="confirm-discard" role="group" aria-labelledby="discard-text">
         <p id="discard-text" tabindex="-1" #discardText>
-          Si la cuenta se creó, nadie podrá volver a ver su contraseña y no hay forma de cambiarla. ¿Descartarla igualmente?
+          Si la cuenta se creó, nadie podrá volver a ver su contraseña; habría que restablecerla desde la lista de cuentas. ¿Descartarla igualmente?
         </p>
         <div class="row">
           <button type="button" class="btn btn-primary" (click)="handedOver()">Sí, descartar la contraseña</button>
@@ -123,10 +123,19 @@
       }
     </div>
 
+    <div class="field">
+      <label for="role">Rol</label>
+      <select id="role" class="control" formControlName="role" aria-describedby="role-hint">
+        <option value="STAFF">Personal</option>
+        <option value="ADMIN">Administrador</option>
+      </select>
+      <p class="hint" id="role-hint">Un administrador, además, crea, desactiva y restablece cuentas. El personal no.</p>
+    </div>
+
     <div class="notice">
       <p>
-        La cuenta nueva tendrá acceso completo: podrá registrar datos, emitir certificados (que no se pueden anular) y crear otras
-        cuentas. Cualquier persona del personal puede crearlas; la aplicación no tiene roles.
+        La cuenta nueva tendrá acceso completo a los datos: podrá registrar vecinos, recojos y empresas y emitir certificados. Solo un
+        administrador crea cuentas.
       </p>
       <label class="check">
         <input type="checkbox" [checked]="acknowledged()" (change)="setAcknowledged($event)" [attr.aria-invalid]="submitted() && !acknowledged()" [attr.aria-describedby]="submitted() && !acknowledged() ? 'ack-error' : null" />

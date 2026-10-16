@@ -26,6 +26,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.reporting.certificate.CertificateSummary;
+import pe.esgtrazabilidad.reporting.certificate.HierarchyDeclaration;
+import pe.esgtrazabilidad.reporting.sigersolsync.domain.SigersolOrigin;
 import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
@@ -473,6 +475,41 @@ class CertificateServiceTest {
             records = parser.getRecords();
         }
         assertThat(records).anySatisfy(r -> assertThat(r).containsExactly(periodStart.toString(), "999.99"));
+    }
+
+    @Test
+    void theDeclarationIsReadFromTheRecordThatCoversTheCertificatesPeriod() {
+        EsgCertificate certificate = EsgCertificate.issue(
+                sampleTrackedCompany(), periodStart, periodEnd, new BigDecimal("12.00"), new BigDecimal("75.00"));
+        UUID registeredBy = UUID.randomUUID();
+        when(sigersolSyncRepository.findCovering(associationId, periodStart, periodEnd))
+                .thenReturn(Optional.of(SigersolSync.create(
+                        associationId,
+                        periodStart,
+                        periodEnd,
+                        new BigDecimal("75.00"),
+                        null,
+                        null,
+                        SigersolOrigin.REFERENCED_PROOF,
+                        registeredBy,
+                        "ana@asociacion.pe",
+                        "factura F001-9")));
+
+        HierarchyDeclaration declaration = service.declaration(certificate);
+
+        assertThat(declaration)
+                .isEqualTo(new HierarchyDeclaration(SigersolOrigin.REFERENCED_PROOF, "ana@asociacion.pe", "factura F001-9"));
+    }
+
+    @Test
+    void withNoRecordFoundTheDeclarationIsOriginNotRecordedAndTheExportsSayIt() {
+        EsgCertificate certificate = EsgCertificate.issue(
+                sampleTrackedCompany(), periodStart, periodEnd, new BigDecimal("12.00"), new BigDecimal("75.00"));
+        when(esgCertificateRepository.findById(certificate.getId())).thenReturn(Optional.of(certificate));
+
+        assertThat(service.declaration(certificate)).isEqualTo(HierarchyDeclaration.NOT_RECORDED);
+        byte[] csvBytes = service.exportCsv(trackedCompanyId, certificate.getId());
+        assertThat(new String(csvBytes, java.nio.charset.StandardCharsets.UTF_8)).contains("(origen: no registrado)");
     }
 
     @Test

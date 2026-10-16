@@ -15,8 +15,9 @@ export async function signedIn(page: Page, path: string, options: BackendOptions
   await page.getByLabel('Correo electrónico').fill(EMAIL);
   await page.getByLabel('Contraseña').fill(PASSWORD);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-  await expect(page).toHaveURL(/\/empresas$/);
-  if (path !== '/empresas') {
+  // A person who still has to choose their own password lands on that screen instead.
+  await expect(page).toHaveURL(options.pwdChange ? /\/mi-sesion\/contrasena$/ : /\/empresas$/);
+  if (path !== '/empresas' && !options.pwdChange) {
     // In-app navigation keeps the session (sessionStorage) and the same fake routes.
     await page.evaluate((target) => {
       history.pushState({}, '', target);

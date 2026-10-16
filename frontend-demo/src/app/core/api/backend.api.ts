@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import {
   Association,
   AssociationStatus,
+  ChangePasswordRequest,
   AssociationTransition,
   Certification,
   CreateAssociationRequest,
@@ -61,9 +62,34 @@ export class BackendApi {
     return this.http.get<StaffUser>(`${auth}/auth/me`);
   }
 
-  /** 201 with the new account (active). Any signed-in staff member may call it: there are no roles. Not idempotent. */
+  /** 201 with the new account (active, to change its password). ADMIN only (AUTH-006 otherwise). Not idempotent. */
   createStaffUser(request: CreateStaffUserRequest): Observable<StaffUser> {
     return this.http.post<StaffUser>(`${auth}/auth/staff-users`, request);
+  }
+
+  /** Every account, oldest first, with who last changed its status. ADMIN only. */
+  staffUsers(): Observable<StaffUser[]> {
+    return this.http.get<StaffUser[]>(`${auth}/auth/staff-users`);
+  }
+
+  /** 200 with the inactive account; AUTH-009 for your own, AUTH-010 if already inactive. ADMIN only. */
+  deactivateStaffUser(id: string, reason: string): Observable<StaffUser> {
+    return this.http.patch<StaffUser>(`${auth}/auth/staff-users/${encodeURIComponent(id)}/deactivate`, { reason });
+  }
+
+  /** 200 with the active account; AUTH-010 if already active. ADMIN only. */
+  reactivateStaffUser(id: string, reason: string): Observable<StaffUser> {
+    return this.http.patch<StaffUser>(`${auth}/auth/staff-users/${encodeURIComponent(id)}/reactivate`, { reason });
+  }
+
+  /** 204. Sets someone else's password (the browser generates it); AUTH-009 for your own, AUTH-007 if refused. ADMIN only. */
+  resetStaffPassword(id: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${auth}/auth/staff-users/${encodeURIComponent(id)}/password`, { newPassword });
+  }
+
+  /** 204. AUTH-008 if the current password is wrong (a 400, not a 401), AUTH-007 if the new one is refused. */
+  changeOwnPassword(request: ChangePasswordRequest): Observable<void> {
+    return this.http.post<void>(`${auth}/auth/me/password`, request);
   }
 
   /** Sorted by name by the backend; `page` is zero-based, 20 per page. */

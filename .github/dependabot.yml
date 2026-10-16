@@ -43,6 +43,14 @@ updates:
         update-types:
           - minor
           - patch
+    # The services run on Java 21, an LTS release. Dependabot reads "21-jre" -> "24-jre" as a
+    # major bump and offered Java 24 and 26 (not LTS, supported for six months). Every Java major
+    # is ignored here and the next LTS (25, then 29) is a deliberate migration, never an
+    # automatic PR; minor and patch updates of the same image keep arriving.
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types:
+          - version-update:semver-major
 
   # frontend-demo/'s npm dependencies (package.json + package-lock.json).
   - package-ecosystem: npm

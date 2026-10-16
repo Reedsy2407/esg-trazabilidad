@@ -16,7 +16,7 @@ test('the records are always labelled as manual entry, newest period first, filt
   await page.getByRole('navigation', { name: 'Secciones' }).getByRole('link', { name: 'SIGERSOL' }).click();
   await expect(page.getByRole('heading', { name: 'Registros SIGERSOL', level: 1 })).toBeVisible();
   await expect(page.locator('app-manual-tag')).toHaveText('Ingreso manual');
-  await expect(page.getByText('Esta aplicación no se conecta con SIGERSOL.')).toBeVisible();
+  await expect(page.getByText('Cifras declaradas por el operador, ingresadas a mano; esta aplicación no se conecta con SIGERSOL ni las verifica.')).toBeVisible();
 
   const rows = page.locator('table.ledger tbody tr');
   await expect(rows).toHaveCount(2);
@@ -54,7 +54,7 @@ test('register a record: the request is exactly the form, and it shows up as man
   await page.getByLabel('Desde').fill('2026-10-01');
   await page.getByLabel('Hasta').fill('2026-10-31');
   await expect(page.getByText('Ambas fechas incluidas: Octubre 2026.')).toBeVisible();
-  await page.getByLabel('Cumplimiento de jerarquía (%)').fill('84.25');
+  await page.getByLabel('Cumplimiento de jerarquía (declarado)').fill('84.25');
   await page.getByLabel('Kilos declarados (opcional)').fill('3200.5');
   await page.getByLabel('Nota sobre la fuente (opcional)').fill('Reporte mensual de octubre');
   await page.getByLabel('Origen del dato').selectOption('REFERENCED_PROOF');
@@ -91,7 +91,7 @@ test('a period sharing even one day with another record of the association is re
   await expect(page.getByLabel('Asociación')).toHaveValue(RIMAC.id);
   await page.getByLabel('Desde').fill('2026-09-30');
   await page.getByLabel('Hasta').fill('2026-10-31');
-  await page.getByLabel('Cumplimiento de jerarquía (%)').fill('90');
+  await page.getByLabel('Cumplimiento de jerarquía (declarado)').fill('90');
   await page.getByRole('button', { name: 'Registrar dato SIGERSOL' }).click();
   const alert = page.getByRole('alert');
   await expect(alert).toContainText('ya tiene un registro SIGERSOL que se superpone con ese período (compartir un solo día también cuenta)');
@@ -111,7 +111,7 @@ test('the prefilled form from an address (V5 links here on RPT-005)', async ({ p
 
 test('no answer: an unknown outcome, never a failure', async ({ page }) => {
   const { unmocked } = await open(page, `/sigersol/nuevo?asociacion=${RIMAC.id}&desde=2026-10-01&hasta=2026-10-31`);
-  await page.getByLabel('Cumplimiento de jerarquía (%)').fill('90');
+  await page.getByLabel('Cumplimiento de jerarquía (declarado)').fill('90');
   await page.route('**/svc/reporting/sigersol-syncs', (route) => route.fulfill({ status: 502, body: 'Bad Gateway' }));
   await page.getByRole('button', { name: 'Registrar dato SIGERSOL' }).click();
   await expect(page.getByRole('alert')).toHaveText(
@@ -120,11 +120,41 @@ test('no answer: an unknown outcome, never a failure', async ({ page }) => {
   expect(unmocked).toEqual([]);
 });
 
-test('the company summary and the certificate say the compliance is a manual SIGERSOL entry', async ({ page }) => {
+test('the company summary and the certificate say the compliance is declared, not an official SIGERSOL figure', async ({ page }) => {
   const { unmocked } = await open(page, `/empresas/${COMPANIES[0].id}`);
-  await expect(page.getByText('El cumplimiento es un dato SIGERSOL de ingreso manual.')).toBeVisible();
+  await expect(
+    page.getByText('El cumplimiento de jerarquía es un dato declarado por el operador de la asociación; no es una cifra oficial de SIGERSOL ni la verifica esta plataforma.'),
+  ).toBeVisible();
   await page.locator('table a.row-link').first().click();
-  await expect(page.getByText('El cumplimiento de jerarquía es un dato SIGERSOL de ingreso manual.')).toBeVisible();
+  const note = page.locator('article.sheet .source');
+  await expect(note).toContainText('El cumplimiento de jerarquía es un dato declarado por el operador de la asociación (origen: ');
+  await expect(note).toContainText('; no es una cifra oficial de SIGERSOL ni la verifica esta plataforma.');
+  await expect(page.getByText('Cumplimiento de jerarquía (declarado)')).toBeVisible();
+  expect(unmocked).toEqual([]);
+});
+
+test('the list and the form say the figures are declared and typed in; the proof reference is asked for only with a referenced proof', async ({ page }) => {
+  const { writes, unmocked } = await open(page, `/sigersol/nuevo?asociacion=${RIMAC.id}&desde=2026-10-01&hasta=2026-10-31`);
+  await expect(
+    page.getByText('Cifras declaradas por el operador, ingresadas a mano; esta aplicación no se conecta con SIGERSOL ni las verifica.'),
+  ).toBeVisible();
+  await expect(page.getByLabel(/Referencia del comprobante/)).toHaveCount(0);
+
+  await page.getByLabel('Cumplimiento de jerarquía (declarado)').fill('90');
+  await page.getByLabel('Origen del dato').selectOption('REFERENCED_PROOF');
+  const reference = page.getByLabel(/Referencia del comprobante/);
+  await expect(reference).toBeVisible();
+  await expect(page.getByText('Queda como «referenciado, no verificado por SIGERSOL».')).toBeVisible();
+  await page.getByRole('button', { name: 'Registrar dato SIGERSOL' }).click();
+  await expect(page.getByText('Escribe la referencia del comprobante: el código de envío, o el número y la fecha.')).toBeVisible();
+  await expect(reference).toBeFocused();
+  expect(writes).toEqual([]);
+
+  await reference.fill('Informe 2025 · envío 8841');
+  await page.getByRole('button', { name: 'Registrar dato SIGERSOL' }).click();
+  await expect(page).toHaveURL(new RegExp(`/sigersol\\?asociacion=${RIMAC.id}$`));
+  await expect(page.getByText('Cifras declaradas por el operador, ingresadas a mano; esta aplicación no se conecta con SIGERSOL ni las verifica.')).toBeVisible();
+  expect(writes[0]).toMatchObject({ body: { origin: 'REFERENCED_PROOF', reference: 'Informe 2025 · envío 8841' } });
   expect(unmocked).toEqual([]);
 });
 

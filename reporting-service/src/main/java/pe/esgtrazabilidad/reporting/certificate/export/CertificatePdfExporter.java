@@ -23,6 +23,7 @@ import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.util.Matrix;
 import org.springframework.stereotype.Component;
 
+import pe.esgtrazabilidad.reporting.certificate.HierarchyDeclaration;
 import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 
@@ -75,6 +76,10 @@ public class CertificatePdfExporter {
     }
 
     public byte[] export(EsgCertificate certificate, List<DistrictLine> districtLines) {
+        return export(certificate, districtLines, HierarchyDeclaration.NOT_RECORDED);
+    }
+
+    public byte[] export(EsgCertificate certificate, List<DistrictLine> districtLines, HierarchyDeclaration declaration) {
         try (PDDocument document = new PDDocument()) {
             PDFont bold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
             PDFont regular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
@@ -83,7 +88,7 @@ public class CertificatePdfExporter {
             try (Page page = new Page(document, regular, bold, certificate)) {
                 writeHeader(page, certificate);
                 writeCompany(page, certificate);
-                writeFigures(page, certificate, mono);
+                writeFigures(page, certificate, mono, declaration);
                 if (!districtLines.isEmpty()) {
                     writeDistricts(page, districtLines);
                 }
@@ -148,19 +153,21 @@ public class CertificatePdfExporter {
         page.y -= 26;
     }
 
-    private void writeFigures(Page page, EsgCertificate certificate, PDFont mono) throws IOException {
+    private void writeFigures(Page page, EsgCertificate certificate, PDFont mono, HierarchyDeclaration declaration)
+            throws IOException {
         page.ensureSpace(150);
         page.text(page.bold, 8, SOFT, MARGIN, page.y, "KILOS TRAZADOS");
         page.y -= 34;
         page.text(page.bold, 32, INK, MARGIN, page.y, kg(certificate.getKilosTrazados()));
         page.y -= 30;
 
-        row(page, 0, "Cumplimiento de jerarquía", percent(certificate.getHierarchyCompliancePercent()), page.regular, 11);
+        row(page, 0, HierarchyDeclaration.LABEL, percent(certificate.getHierarchyCompliancePercent()), page.regular, 11);
         row(page, 1, "Período", certificate.getPeriodStart().format(DATE_FORMAT) + " al " + certificate.getPeriodEnd().format(DATE_FORMAT), page.regular, 11);
         row(page, 2, "Emitido (hora de Lima)", dateTime(certificate.getIssuedAt()), page.regular, 11);
         row(page, 3, "Código del certificado", String.valueOf(certificate.getId()), mono, 10);
         page.y -= 4;
-        for (String line : wrap(page.regular, 8.5f, "El cumplimiento de jerarquía es un dato SIGERSOL de ingreso manual.", CONTENT_W)) {
+        for (String line : wrap(page.regular, 8.5f, declaration.note(), CONTENT_W)) {
+            page.ensureSpace(14);
             page.text(page.regular, 8.5f, SOFT, MARGIN, page.y, line);
             page.y -= 12;
         }
@@ -234,7 +241,10 @@ public class CertificatePdfExporter {
         if (index % 2 == 0) {
             page.fillRect(MARGIN, page.y - rowH + 4, CONTENT_W, rowH, STRIPE);
         }
-        page.text(page.regular, 10, SOFT, MARGIN + 8, page.y - 10, label);
+        // The longest label ("Cumplimiento de jerarquía (declarado)") shrinks a little instead of running into the value.
+        float labelRoom = VALUE_X - MARGIN - 8 - 8;
+        float labelWidth = page.regular.getStringWidth(label) / 1000f * 10;
+        page.text(page.regular, labelWidth > labelRoom ? 10 * labelRoom / labelWidth : 10, SOFT, MARGIN + 8, page.y - 10, label);
         float ty = page.y - 10;
         for (String line : lines) {
             page.text(valueFont, size, INK, VALUE_X, ty, line);

@@ -214,14 +214,6 @@ code {
   font-size: 13px;
 }
 
-.done {
-  margin: 0 0 var(--space-5);
-  padding: var(--space-3) var(--space-4);
-  border: 2px solid var(--ink);
-  background: var(--paper);
-  font-weight: 600;
-}
-
 /* ANULADO: heavy frame, the same ink as the rest of the ticket. */
 .stamp {
   margin: var(--space-4) 0 var(--space-2);

@@ -61,7 +61,7 @@ test('a certificate row on the company page opens its detail, and the detail sho
   // The whole UUID, not an 8-character prefix that can repeat.
   await expect(sheet(page).locator('code')).toHaveText(LATEST.id);
   // No status stamp and nothing implying third-party verification.
-  await expect(sheet(page)).not.toContainText(/verific|vigente|vencido/i);
+  await expect(sheet(page)).not.toContainText(/verificad[oa]|vigente|vencido/i);
 
   await page.getByRole('link', { name: `Volver a ${COMPANIES[0].name}` }).click();
   await expect(page).toHaveURL(new RegExp(`/empresas/${COMPANIES[0].id}$`));

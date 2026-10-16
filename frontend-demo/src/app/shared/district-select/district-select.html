@@ -18,7 +18,8 @@
     [attr.placeholder]="allowAll() ? null : 'Escribe o elige un distrito'"
     (input)="onInput($event)"
     (keydown)="onKeydown($event)"
-    (click)="open() || toggle()"
+    (focus)="onFocus($event)"
+    (click)="onClick()"
   />
   <button
     type="button"

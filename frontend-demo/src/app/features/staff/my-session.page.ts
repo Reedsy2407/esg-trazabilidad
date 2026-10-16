@@ -10,8 +10,8 @@ import { sessionExpiryText } from './session-expiry';
 
 /**
  * Mi sesión: who is signed in (GET /auth/me) and when the session ends, from the token's own
- * `exp` and `iat`. Never shows the token. Entry point to create staff accounts (no sixth section
- * in the top bar).
+ * `exp` and `iat`. Never shows the token. Entry point to change your own password and, for an
+ * admin, to the account screens (no sixth section in the top bar).
  */
 @Component({
   selector: 'app-my-session-page',
@@ -26,6 +26,15 @@ export class MySessionPage {
 
   protected readonly me = rxResource({ stream: () => this.api.me() });
   protected readonly created = computed(() => (this.me.hasValue() ? formatInstantDate(this.me.value().createdAt) : ''));
+  /** The role of the signed-in account, from the token: what decides whether the account screens show. */
+  protected readonly isAdmin = this.session.isAdmin;
+  protected readonly passwordChanged = computed(() => {
+    if (!this.me.hasValue()) {
+      return '';
+    }
+    const at = this.me.value().passwordChangedAt;
+    return at === null ? 'Nunca desde que se creó la cuenta' : formatInstantDate(at);
+  });
   protected readonly expiry = computed(() => {
     const expiresAt = this.session.expiresAt();
     return expiresAt === null ? '' : sessionExpiryText(expiresAt, this.session.issuedAt());

@@ -20,7 +20,7 @@ public enum ReportingErrors implements ApplicationError {
             HttpStatus.CONFLICT),
     MISSING_SIGERSOL_DATA_FOR_PERIOD(
             "RPT-005",
-            "No hay datos oficiales de SIGERSOL cargados para esa asociación y periodo",
+            "No hay un cumplimiento de jerarquía declarado para esa asociación que cubra todo el período",
             HttpStatus.CONFLICT),
     DUPLICATE_SIGERSOL_SYNC_PERIOD(
             "RPT-006",
@@ -62,7 +62,12 @@ public enum ReportingErrors implements ApplicationError {
             HttpStatus.CONFLICT),
     TRACKED_COMPANY_ALREADY_IN_STATUS(
             "RPT-018", "La empresa ya se encuentra en el estado solicitado", HttpStatus.CONFLICT),
-    CERTIFICATE_ALREADY_ANNULLED("RPT-019", "El certificado ya está anulado", HttpStatus.CONFLICT);
+    CERTIFICATE_ALREADY_ANNULLED("RPT-019", "El certificado ya está anulado", HttpStatus.CONFLICT),
+    // A SIGERSOL record whose origin is "con comprobante referenciado" must say which proof it points to.
+    MISSING_SIGERSOL_REFERENCE(
+            "RPT-021",
+            "Indica la referencia del comprobante: es obligatoria cuando el origen es «con comprobante referenciado»",
+            HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;

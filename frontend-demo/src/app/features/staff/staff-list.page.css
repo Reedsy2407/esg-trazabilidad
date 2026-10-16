@@ -1,0 +1,64 @@
+.accounts {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.accounts:focus {
+  outline: none;
+}
+.account {
+  padding: var(--space-4) var(--space-5);
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+.account.inactive {
+  border-style: dashed;
+  color: var(--ink-soft);
+}
+.who {
+  margin-bottom: var(--space-3);
+}
+.name {
+  margin: 0;
+  font-weight: 600;
+}
+.email {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+.tag {
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3) var(--space-5);
+  margin: 0 0 var(--space-4);
+}
+.facts dt {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.facts dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.me-note {
+  margin: 0;
+  font-size: 14px;
+}
+.account app-reason-confirm {
+  display: block;
+  margin-top: var(--space-4);
+}

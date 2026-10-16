@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard, guestGuard } from './core/auth/guards';
+import { adminGuard, authGuard, guestGuard, passwordChangeGuard } from './core/auth/guards';
 
 export const routes: Routes = [
   {
@@ -18,6 +18,7 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [authGuard],
+    canActivateChild: [passwordChangeGuard],
     loadComponent: () => import('./shell/shell').then((m) => m.Shell),
     children: [
       {
@@ -81,9 +82,27 @@ export const routes: Routes = [
         loadComponent: () => import('./features/staff/my-session.page').then((m) => m.MySessionPage),
       },
       {
+        path: 'mi-sesion/contrasena',
+        title: 'Cambiar mi contraseña · Trazabilidad ESG',
+        loadComponent: () => import('./features/staff/change-password.page').then((m) => m.ChangePasswordPage),
+      },
+      {
+        path: 'mi-sesion/personal',
+        title: 'Cuentas del personal · Trazabilidad ESG',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/staff/staff-list.page').then((m) => m.StaffListPage),
+      },
+      {
         path: 'mi-sesion/personal/nueva',
         title: 'Crear una cuenta del personal · Trazabilidad ESG',
+        canActivate: [adminGuard],
         loadComponent: () => import('./features/staff/staff-new.page').then((m) => m.StaffNewPage),
+      },
+      {
+        path: 'mi-sesion/personal/:id/restablecer',
+        title: 'Restablecer una contraseña · Trazabilidad ESG',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/staff/staff-reset.page').then((m) => m.StaffResetPage),
       },
       {
         path: 'recojos/nuevo',

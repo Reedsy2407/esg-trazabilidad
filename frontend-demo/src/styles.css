@@ -584,6 +584,23 @@ a.entry:hover {
   width: 100%;
   height: 40px;
 }
+/* The confirmation box above a list or a form ("Vecino eliminado", "Cuenta desactivada"): one rule for every page. */
+.done {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-weight: 600;
+}
+.skel.title {
+  width: 320px;
+  height: 22px;
+  margin-top: 0;
+}
+.skel.chart {
+  width: 100%;
+  height: 200px;
+}
 @keyframes skel-pulse {
   from {
     opacity: 0.45;

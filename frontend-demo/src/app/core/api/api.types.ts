@@ -13,26 +13,48 @@ export interface LoginResponse {
   readonly accessToken: string;
 }
 
-/** auth-service StaffUserResponse (GET /auth/me, POST /auth/staff-users). email is stored lower-cased. */
+/** auth-service roles: ADMIN creates, deactivates and resets accounts; STAFF does everything else. */
+export type StaffRole = 'ADMIN' | 'STAFF';
+
+/**
+ * auth-service StaffUserResponse (GET /auth/me, GET and POST /auth/staff-users, the status changes).
+ * email is stored lower-cased. `statusReason`, `statusChangedAt` and `statusChangedBy` (an email, only
+ * filled in the admin list) describe the last deactivation or reactivation and are null for an account
+ * that never had one; `passwordChangedAt` is null until the password is first changed.
+ */
 export interface StaffUser {
   readonly id: string;
   readonly email: string;
   readonly fullName: string;
+  readonly role: StaffRole;
   readonly active: boolean;
   readonly createdAt: string;
+  readonly passwordChangedAt: string | null;
+  readonly mustChangePassword: boolean;
+  readonly statusReason: string | null;
+  readonly statusChangedAt: string | null;
+  readonly statusChangedBy: string | null;
 }
 
 /**
- * auth-service CreateStaffUserRequest: all three @NotBlank, email @Email. The domain model also
- * requires a dot in the domain (^[^@\s]+@[^@\s]+\.[^@\s]+$), stricter than @Email: "a@b" passes
- * the annotation and the service answers AUTH-005 (400); the form checks it first. AUTH-002 (409)
- * for an email already registered. No password rule in the backend; the browser generates it
- * (16 characters).
+ * auth-service CreateStaffUserRequest: email, password and fullName @NotBlank, email @Email, `role`
+ * optional (STAFF by default). The domain model also requires a dot in the domain
+ * (^[^@\s]+@[^@\s]+\.[^@\s]+$), stricter than @Email: "a@b" passes the annotation and the service
+ * answers AUTH-005 (400); the form checks it first. AUTH-002 (409) for an email already registered,
+ * AUTH-007 (400) for a password the policy refuses, AUTH-006 (403) if the caller is not an admin.
+ * The browser generates the password (16 characters).
  */
 export interface CreateStaffUserRequest {
   readonly email: string;
   readonly password: string;
   readonly fullName: string;
+  readonly role?: StaffRole;
+}
+
+/** auth-service ChangePasswordRequest (POST /auth/me/password): AUTH-008 if the current one is wrong. */
+export interface ChangePasswordRequest {
+  readonly currentPassword: string;
+  readonly newPassword: string;
 }
 
 /** reporting-service TrackedCompanyStatus. */
@@ -138,7 +160,10 @@ export interface RegisterSigersolSyncRequest {
   readonly sourceNote: string | null;
   /** Required by the backend (D1): how the operator got the figure. */
   readonly origin: SigersolOrigin;
-  /** Optional pointer to the operator's proof, 255 characters at most. */
+  /**
+   * A pointer to the operator's proof (a text, not a file), 255 characters at most. Required (RPT-021,
+   * 400) when the origin is REFERENCED_PROOF; optional otherwise.
+   */
   readonly reference?: string;
 }
 
@@ -169,6 +194,14 @@ export interface EsgCertificate {
   readonly annulmentReason: string | null;
   /** Frozen at issue; absent in a list page (open the certificate to read it). */
   readonly districtContext?: readonly DistrictLine[] | null;
+  /**
+   * Where the declared hierarchy figure came from: how the operator got it, who registered it and the
+   * proof it points to. Null in a list page and, on a single certificate, for a record made before
+   * origins were kept (the reference is also null when none was given).
+   */
+  readonly hierarchyOrigin?: SigersolOrigin | null;
+  readonly hierarchyRegisteredByEmail?: string | null;
+  readonly hierarchyReference?: string | null;
 }
 
 /**

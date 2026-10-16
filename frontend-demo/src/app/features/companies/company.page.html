@@ -36,8 +36,8 @@
     </div>
   } @else {
     <div class="head" aria-hidden="true">
-      <span class="bone title"></span>
-      <span class="bone"></span>
+      <span class="skel title"></span>
+      <span class="skel"></span>
     </div>
     <p class="visually-hidden">Cargando empresa</p>
   }
@@ -180,10 +180,10 @@
         <dl class="lines">
           <div class="period"><dt>Último período certificado</dt><dd>{{ s.period }}</dd></div>
           <div class="figure"><dt>Kilos trazados</dt><dd class="mono">{{ s.kilos }}</dd></div>
-          <div class="figure"><dt>Cumplimiento de jerarquía</dt><dd class="mono">{{ s.compliance }}</dd></div>
+          <div class="figure"><dt>{{ complianceLabel }}</dt><dd class="mono">{{ s.compliance }}</dd></div>
         </dl>
         @if (!s.missingSigersol) {
-          <p class="source">El cumplimiento es un dato SIGERSOL de ingreso manual.</p>
+          <p class="source">El cumplimiento de jerarquía es un dato declarado por el operador de la asociación; no es una cifra oficial de SIGERSOL ni la verifica esta plataforma.</p>
         }
         <p class="source" data-testid="coverage">{{ s.coverage }}</p>
       } @else if (summary.error(); as error) {
@@ -197,7 +197,7 @@
         <p class="problem">El resumen no está disponible porque no se pudieron cargar los certificados.</p>
       } @else {
         <div aria-hidden="true">
-          <span class="bone"></span><span class="bone"></span><span class="bone"></span>
+          <span class="skel"></span><span class="skel"></span><span class="skel"></span>
         </div>
       }
     </section>
@@ -212,7 +212,7 @@
       } @else if (certificates.error()) {
         <p class="problem">La gráfica no está disponible porque no se pudieron cargar los certificados.</p>
       } @else {
-        <div class="bone chart" aria-hidden="true"></div>
+        <div class="skel chart" aria-hidden="true"></div>
       }
     </section>
   </div>
@@ -230,7 +230,7 @@
               <tr>
                 <th scope="col">Período</th>
                 <th scope="col" class="num">Kilos trazados</th>
-                <th scope="col" class="num">Cumplimiento de jerarquía</th>
+                <th scope="col" class="num">{{ complianceLabel }}</th>
                 <th scope="col" class="num">Emitido</th>
                 <th scope="col" class="chev"><span class="visually-hidden">Abrir</span></th>
               </tr>
@@ -260,7 +260,7 @@
                 @if (row.annulled) { <span class="annulled-tag">Anulado</span> }
                 <dl>
                   <div><dt>Kilos trazados</dt><dd class="mono">{{ row.kilos }}</dd></div>
-                  <div><dt>Cumplimiento</dt><dd class="mono">{{ row.compliance }}</dd></div>
+                  <div><dt>Cumplimiento (declarado)</dt><dd class="mono">{{ row.compliance }}</dd></div>
                   <div><dt>Emitido</dt><dd class="mono">{{ row.issued }}</dd></div>
                 </dl>
               </a>
@@ -276,7 +276,7 @@
       </div>
     } @else {
       <div aria-hidden="true">
-        <span class="bone wide"></span><span class="bone wide"></span><span class="bone wide"></span>
+        <span class="skel wide"></span><span class="skel wide"></span><span class="skel wide"></span>
       </div>
       <p class="visually-hidden">Cargando certificados</p>
     }

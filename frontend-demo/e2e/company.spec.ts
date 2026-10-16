@@ -34,7 +34,7 @@ test('company page at 1280 px: header, summary, 12-period chart and the certific
   await expect(summary(page).locator('dt')).toHaveText([
     'Último período certificado',
     'Kilos trazados',
-    'Cumplimiento de jerarquía',
+    'Cumplimiento de jerarquía (declarado)',
   ]);
   await expect(summary(page).locator('dd').first()).toHaveText('Diciembre 2024');
   await expect(summary(page)).toContainText('12,480.50 kg');

@@ -48,12 +48,25 @@ export const SUNAT_NAMES: Readonly<Record<string, string>> = { '20548712336': 'P
 export const PASSWORD = 'clave-correcta';
 export const EMAIL = 'ana.paredes@asociacion.pe';
 
-export function jwtFor(email: string, expiresInSeconds = 3600): string {
+export function jwtFor(
+  email: string,
+  expiresInSeconds = 3600,
+  claims: { role?: 'ADMIN' | 'STAFF'; pwdChange?: boolean } = {},
+): string {
   const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
-  // As auth-service's JwtIssuer: sub, email, iat and exp (one hour after iat there).
+  // As auth-service's JwtIssuer: sub, email, role, iat and exp (one hour after iat there), and
+  // `pwdChange: true` only while the person still has to choose their own password.
   const iat = Math.floor(Date.now() / 1000);
   const exp = iat + expiresInSeconds;
-  return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: 'staff-1', email, iat, exp })}.signature`;
+  const payload = {
+    sub: 'staff-1',
+    email,
+    role: claims.role ?? 'ADMIN',
+    ...(claims.pwdChange ? { pwdChange: true } : {}),
+    iat,
+    exp,
+  };
+  return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode(payload)}.signature`;
 }
 
 const problem = (route: Route, status: number, code: string, detail: string, headers: Record<string, string> = {}) =>
@@ -171,6 +184,12 @@ export interface BackendOptions {
   tokenLifetimeSeconds?: number;
   /** GET /auth/me fails with this status (a bare 5xx). */
   meStatus?: number;
+  /** The role of the signed-in account (default ADMIN, so the account screens are open). */
+  role?: 'ADMIN' | 'STAFF';
+  /** The login issues a token that says "choose your own password" (a new account, an admin's reset). */
+  pwdChange?: boolean;
+  /** POST /auth/me/password answers this problem instead of 204. */
+  changePasswordFailure?: { status: number; code: string };
   /**
    * Answers to successive POST /auth/staff-users, in order: a status for a bare gateway failure
    * (nothing created), 'applied' (created, but the answer is a 504), or 'pass' (the normal answer).
@@ -350,13 +369,51 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     if (password !== PASSWORD) {
       return problem(route, 401, 'AUTH-001', 'Credenciales inválidas');
     }
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ accessToken: jwtFor(email, options.tokenLifetimeSeconds) }) });
+    const accessToken = jwtFor(email, options.tokenLifetimeSeconds, { role: options.role, pwdChange: options.pwdChange });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ accessToken }) });
   });
 
   // auth-service staff accounts, with state. Emails are stored lower-cased, as the real service does.
-  const staff: { id: string; email: string; fullName: string; active: boolean; createdAt: string }[] = [
-    { id: 'staff-1', email: EMAIL, fullName: 'Ana Paredes Quispe', active: true, createdAt: '2026-08-14T15:20:00Z' },
+  interface FakeStaff {
+    id: string;
+    email: string;
+    fullName: string;
+    role: 'ADMIN' | 'STAFF';
+    active: boolean;
+    createdAt: string;
+    passwordChangedAt: string | null;
+    mustChangePassword: boolean;
+    statusReason: string | null;
+    statusChangedAt: string | null;
+    statusChangedBy: string | null;
+  }
+  const newStaff = (over: Partial<FakeStaff> & Pick<FakeStaff, 'id' | 'email' | 'fullName'>): FakeStaff => ({
+    role: 'STAFF',
+    active: true,
+    createdAt: '2026-08-14T15:20:00Z',
+    passwordChangedAt: null,
+    mustChangePassword: false,
+    statusReason: null,
+    statusChangedAt: null,
+    statusChangedBy: null,
+    ...over,
+  });
+  const staff: FakeStaff[] = [
+    newStaff({ id: 'staff-1', email: EMAIL, fullName: 'Ana Paredes Quispe', role: options.role ?? 'ADMIN', mustChangePassword: options.pwdChange ?? false }),
+    newStaff({ id: 'staff-9', email: 'luis.inactivo@asociacion.pe', fullName: 'Luis Inactivo Rojas', active: false, statusReason: 'Dejó la asociación', statusChangedAt: '2026-10-01T15:00:00Z', statusChangedBy: EMAIL }),
+    newStaff({ id: 'staff-8', email: 'rosa.quispe@asociacion.pe', fullName: 'Rosa Quispe Mamani' }),
   ];
+  const adminOnly = (route: Route) => {
+    if (options.rejectTokens || !route.request().headers()['authorization']?.startsWith('Bearer ')) {
+      void problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+      return false;
+    }
+    if ((options.role ?? 'ADMIN') !== 'ADMIN') {
+      void problem(route, 403, 'AUTH-006', 'Solo un administrador puede hacer esto');
+      return false;
+    }
+    return true;
+  };
   await page.route('**/svc/auth/auth/me', (route) => {
     const authorization = route.request().headers()['authorization'];
     if (options.rejectTokens || authorization === undefined || !authorization.startsWith('Bearer ')) {
@@ -367,18 +424,64 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(staff[0]) });
   });
+  await page.route('**/svc/auth/auth/me/password', (route) => {
+    if (!authorized(route)) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    options.writes?.push({ method: 'POST', path: new URL(route.request().url()).pathname, body: route.request().postDataJSON() });
+    if (options.changePasswordFailure !== undefined) {
+      return problem(route, options.changePasswordFailure.status, options.changePasswordFailure.code, 'rechazada');
+    }
+    staff[0].passwordChangedAt = new Date().toISOString();
+    staff[0].mustChangePassword = false;
+    return route.fulfill({ status: 204 });
+  });
+  await page.route('**/svc/auth/auth/staff-users/*/*', (route) => {
+    if (!adminOnly(route)) {
+      return;
+    }
+    const [id, action] = new URL(route.request().url()).pathname.split('/').slice(-2);
+    const body = route.request().postDataJSON() as { reason?: string; newPassword?: string };
+    options.writes?.push({ method: route.request().method(), path: new URL(route.request().url()).pathname, body });
+    const target = staff.find((u) => u.id === id);
+    if (target === undefined) {
+      return problem(route, 404, 'AUTH-003', 'Cuenta de staff no encontrada');
+    }
+    if (target.id === 'staff-1') {
+      return problem(route, 409, 'AUTH-009', 'No puedes hacer esto con tu propia cuenta');
+    }
+    if (action === 'password') {
+      target.mustChangePassword = true;
+      target.passwordChangedAt = new Date().toISOString();
+      return route.fulfill({ status: 204 });
+    }
+    if ((action === 'deactivate') === !target.active) {
+      return problem(route, 409, 'AUTH-010', 'La cuenta ya está en ese estado');
+    }
+    target.active = action === 'reactivate';
+    target.statusReason = body.reason ?? null;
+    target.statusChangedAt = new Date().toISOString();
+    target.statusChangedBy = EMAIL;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(target) });
+  });
   await page.route('**/svc/auth/auth/staff-users', (route) => {
     const authorization = route.request().headers()['authorization'];
     if (options.rejectTokens || authorization === undefined || !authorization.startsWith('Bearer ')) {
       return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
     }
-    const body = route.request().postDataJSON() as { email?: string; password?: string; fullName?: string };
+    if (route.request().method() === 'GET') {
+      return adminOnly(route) ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(staff) }) : undefined;
+    }
+    if (!adminOnly(route)) {
+      return;
+    }
+    const body = route.request().postDataJSON() as { email?: string; password?: string; fullName?: string; role?: 'ADMIN' | 'STAFF' };
     options.writes?.push({ method: 'POST', path: new URL(route.request().url()).pathname, body });
     const failure = options.staffFailures?.shift();
     if (failure !== undefined && failure !== 'pass') {
       // 'applied': the account IS created, but the answer never arrives (a gateway timeout).
       if (failure === 'applied' && body.email && body.password && body.fullName) {
-        staff.push({ id: `staff-${staff.length + 1}`, email: body.email.toLowerCase(), fullName: body.fullName, active: true, createdAt: new Date().toISOString() });
+        staff.push(newStaff({ id: `staff-${staff.length + 1}`, email: body.email.toLowerCase(), fullName: body.fullName, role: body.role ?? 'STAFF', mustChangePassword: true, createdAt: new Date().toISOString() }));
         return gatewayError(route, 504);
       }
       return gatewayError(route, failure === 'applied' ? 504 : failure);
@@ -393,7 +496,7 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     if (staff.some((u) => u.email === body.email!.toLowerCase())) {
       return problem(route, 409, 'AUTH-002', 'Ya existe una cuenta de staff con ese email');
     }
-    const created = { id: `staff-${staff.length + 1}`, email: body.email.toLowerCase(), fullName: body.fullName, active: true, createdAt: new Date().toISOString() };
+    const created = newStaff({ id: `staff-${staff.length + 1}`, email: body.email.toLowerCase(), fullName: body.fullName, role: body.role ?? 'STAFF', mustChangePassword: true, createdAt: new Date().toISOString() });
     staff.push(created);
     return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(created) });
   });
@@ -880,6 +983,18 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     return { kilos: Math.round(kilos * 100) / 100, compliance: covering?.hierarchyCompliancePercent ?? null };
   };
 
+  /** Who declared a certificate's hierarchy figure: the SIGERSOL record covering its period (it never changes once registered). */
+  const declarationOf = (certificate: { associationId: string; periodStart: string; periodEnd: string }) => {
+    const covering = syncs.find(
+      (s) => s.associationId === certificate.associationId && s.periodStart <= certificate.periodStart && s.periodEnd >= certificate.periodEnd,
+    );
+    return {
+      hierarchyOrigin: covering?.origin ?? null,
+      hierarchyRegisteredByEmail: covering?.registeredByEmail ?? null,
+      hierarchyReference: covering?.reference ?? null,
+    };
+  };
+
   // Tracked companies with state: one registered by a test is listed and opens afterwards.
   const companies: { id: string; name: string; ruc: string; associationId: string; status: string }[] = COMPANIES.map((c) => ({ ...c }));
   const sunatNameFor = (ruc: string) => SUNAT_NAMES[ruc] ?? `EMPRESA SUNAT ${ruc}`;
@@ -1059,11 +1174,11 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
           annulledByEmail: EMAIL,
           annulmentReason: body.reason.trim(),
         });
-        return json({ ...certificate, districtContext: DISTRICT_LINES });
+        return json({ ...certificate, districtContext: DISTRICT_LINES, ...declarationOf(certificate) });
       }
       if (file === undefined) {
         // A single certificate carries the context frozen at issue; a list page does not.
-        return json({ ...certificate, districtContext: DISTRICT_LINES });
+        return json({ ...certificate, districtContext: DISTRICT_LINES, ...declarationOf(certificate) });
       }
       if (options.downloadFailure === 'network') {
         return route.abort('failed');
@@ -1114,7 +1229,7 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
       }
       const figures = recompute(company.associationId, periodStart, periodEnd);
       if (figures.compliance === null) {
-        return problem(route, 409, 'RPT-005', 'No hay datos oficiales de SIGERSOL cargados para esa asociación y periodo');
+        return problem(route, 409, 'RPT-005', 'No hay un cumplimiento de jerarquía declarado para esa asociación que cubra todo el período');
       }
       const issued = {
         id: `0192f3a8-c000-7000-8000-${String(900 + certificates.length).padStart(12, '0')}`,

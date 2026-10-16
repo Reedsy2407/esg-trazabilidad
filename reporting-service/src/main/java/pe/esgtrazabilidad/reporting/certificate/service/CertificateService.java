@@ -19,6 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.kernel.security.CurrentActor;
 import pe.esgtrazabilidad.reporting.certificate.CertificateSummary;
+import pe.esgtrazabilidad.reporting.certificate.HierarchyDeclaration;
 import pe.esgtrazabilidad.reporting.certificate.domain.DistrictLine;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
 import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateLineItem;
@@ -209,7 +210,8 @@ class CertificateService
     public byte[] exportPdf(UUID trackedCompanyId, UUID id) {
         EsgCertificate certificate = getById(trackedCompanyId, id);
         // Frozen at issue: exporting never asks SIGERSOL again.
-        return certificatePdfExporter.export(certificate, esgCertificateRepository.findDistrictLines(certificate.getId()));
+        return certificatePdfExporter.export(
+                certificate, esgCertificateRepository.findDistrictLines(certificate.getId()), declaration(certificate));
     }
 
     @Override
@@ -217,7 +219,10 @@ class CertificateService
         EsgCertificate certificate = getById(trackedCompanyId, id);
         List<EsgCertificateLineItem> lineItems = esgCertificateRepository.findLineItems(certificate.getId());
         return certificateCsvExporter.export(
-                certificate, lineItems, esgCertificateRepository.findDistrictLines(certificate.getId()));
+                certificate,
+                lineItems,
+                esgCertificateRepository.findDistrictLines(certificate.getId()),
+                declaration(certificate));
     }
 
     // Both dates are @NotNull / required params at the HTTP edge; only their order is checked here.
@@ -267,5 +272,13 @@ class CertificateService
     @Override
     public List<DistrictLine> districtLines(UUID trackedCompanyId, UUID id) {
         return esgCertificateRepository.findDistrictLines(getById(trackedCompanyId, id).getId());
+    }
+
+    @Override
+    public HierarchyDeclaration declaration(EsgCertificate certificate) {
+        return sigersolSyncRepository
+                .findCovering(certificate.getAssociationId(), certificate.getPeriodStart(), certificate.getPeriodEnd())
+                .map(sync -> new HierarchyDeclaration(sync.getOrigin(), sync.getRegisteredByEmail(), sync.getReference()))
+                .orElse(HierarchyDeclaration.NOT_RECORDED);
     }
 }

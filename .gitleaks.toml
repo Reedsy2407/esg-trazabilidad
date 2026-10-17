@@ -59,3 +59,15 @@ commits = ["f50ba2068377cc69b6e4b83abef9281843140cf0"]
 paths = ['''^frontend-demo/src/app/features/staff/initial-password\.ts$''']
 regexTarget = "line"
 regexes = ['''^\s*export const PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';\s*$''']
+
+# A made-up shared value used only by the email adapter unit tests (not a secret).
+[[allowlists]]
+description = "auth-service email unit tests webhook value"
+condition = "AND"
+commits = ["3d75ac21cd1e6b27c4e1e652b0f5ea293d21ae34"]
+paths = [
+  '''^auth-service/src/test/java/pe/esgtrazabilidad/auth/email/EmailConfigTest\.java$''',
+  '''^auth-service/src/test/java/pe/esgtrazabilidad/auth/email/AppsScriptEmailSenderTest\.java$''',
+]
+regexTarget = "line"
+regexes = ['''^\s*private static final String SECRET = "un-secreto-compartido-de-prueba-de-32-caracteres";\s*$''']

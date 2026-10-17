@@ -1,7 +1,7 @@
 import { Component, DestroyRef, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Subject, catchError, forkJoin, of, retry, take, takeUntil, timeout, timer } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
@@ -22,7 +22,7 @@ const SERVICE_KEYS: readonly ServiceKey[] = ['auth', 'recycler', 'collection', '
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './login.page.html',
   styleUrl: './login.page.css',
 })

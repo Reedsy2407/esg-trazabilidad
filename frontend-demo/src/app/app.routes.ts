@@ -16,6 +16,18 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/login.page').then((m) => m.LoginPage),
   },
   {
+    path: 'olvide-contrasena',
+    title: '¿Olvidaste tu contraseña? · Trazabilidad ESG',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/recovery/forgot-password.page').then((m) => m.ForgotPasswordPage),
+  },
+  {
+    path: 'restablecer-contrasena',
+    title: 'Restablecer la contraseña · Trazabilidad ESG',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/recovery/reset-password.page').then((m) => m.ResetPasswordPage),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     canActivateChild: [passwordChangeGuard],

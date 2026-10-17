@@ -44,11 +44,19 @@ describe('HTTP interceptors', () => {
     );
   });
 
-  it('never sends the token to the login, the public actuator or a foreign host', () => {
-    const urls = [`${auth}/auth/login`, `${reporting}/actuator/health/liveness`, 'https://example.org/data'];
+  it('never sends the token to the login, password recovery, the public actuator or a foreign host', () => {
+    const urls = [
+      `${auth}/auth/login`,
+      `${reporting}/actuator/health/liveness`,
+      'https://example.org/data',
+      `${auth}/auth/password-reset/request`,
+      `${auth}/auth/password-reset/confirm`,
+    ];
     http.post(urls[0], {}).subscribe();
     http.get(urls[1]).subscribe();
     http.get(urls[2]).subscribe();
+    http.post(urls[3], {}).subscribe();
+    http.post(urls[4], {}).subscribe();
 
     for (const url of urls) {
       expect(backend.expectOne(url).request.headers.has('Authorization')).toBe(false);

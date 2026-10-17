@@ -18,6 +18,8 @@ export const CODE_MESSAGES: Readonly<Record<string, string>> = {
   'AUTH-008': 'La contraseña actual no es correcta.',
   'AUTH-009': 'No puedes hacer esto con tu propia cuenta.',
   'AUTH-010': 'La cuenta ya está en ese estado.',
+  'AUTH-011': 'El código no es válido o venció. Pide uno nuevo.',
+  'AUTH-012': 'Demasiados intentos. Prueba de nuevo más tarde.',
   'ASO-001': 'La asociación no existe.',
   'ASO-002': 'Ya hay una asociación registrada con ese RUC.',
   'ASO-003': 'La asociación ya está en ese estado.',

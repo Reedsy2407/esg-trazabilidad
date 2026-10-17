@@ -36,7 +36,9 @@ public final class ServiceProcess {
     private static final Set<String> SERVICE_CONFIG_KEYS = Set.of(
             "DB_URL", "DB_USERNAME", "DB_PASSWORD", "POSTGRES_PASSWORD",
             "RABBITMQ_HOST", "RABBITMQ_PORT", "RABBITMQ_USER", "RABBITMQ_PASSWORD",
-            "JWT_SECRET", "ADMIN_BOOTSTRAP_EMAIL", "SERVER_PORT");
+            "JWT_SECRET", "ADMIN_BOOTSTRAP_EMAIL", "SERVER_PORT",
+            "EMAIL_PROVIDER", "EMAIL_WEBHOOK_URL", "EMAIL_WEBHOOK_SECRET",
+            "PASSWORD_RESET_PEPPER", "PASSWORD_RESET_EMAIL_ENABLED");
 
     private final String name;
     private final int port;

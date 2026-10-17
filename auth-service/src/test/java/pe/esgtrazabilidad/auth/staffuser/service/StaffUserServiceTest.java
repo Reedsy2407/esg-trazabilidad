@@ -16,6 +16,7 @@ import pe.esgtrazabilidad.auth.exception.AuthErrors;
 import pe.esgtrazabilidad.auth.staffuser.domain.StaffRole;
 import pe.esgtrazabilidad.auth.staffuser.domain.StaffUser;
 import pe.esgtrazabilidad.auth.staffuser.port.in.CreateStaffUserCommand;
+import pe.esgtrazabilidad.auth.staffuser.port.out.PasswordChangeNotifier;
 import pe.esgtrazabilidad.auth.staffuser.port.out.StaffUserRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 
@@ -41,12 +42,15 @@ class StaffUserServiceTest {
     @Mock
     private JwtIssuer jwtIssuer;
 
+    @Mock
+    private PasswordChangeNotifier passwordChangeNotifier;
+
     private StaffUserService service;
     private StaffUser admin;
 
     @BeforeEach
     void setUp() {
-        service = new StaffUserService(staffUserRepository, passwordEncoder, jwtIssuer);
+        service = new StaffUserService(staffUserRepository, passwordEncoder, jwtIssuer, passwordChangeNotifier);
         admin = StaffUser.create("admin@esgtrazabilidad.pe", "hashed-admin", "Admin", StaffRole.ADMIN, false);
     }
 
@@ -330,6 +334,25 @@ class StaffUserServiceTest {
         // Only the password columns are written, never the whole row (a concurrent deactivation survives).
         verify(staffUserRepository).updatePassword(eq(target.getId()), eq("new-hash"), eq(true), any(Instant.class));
         verify(staffUserRepository, never()).save(any());
+        // The person is told by email that their password changed (M9, cut 2).
+        verify(passwordChangeNotifier).passwordChanged(eq("ana@esgtrazabilidad.pe"), any(Instant.class));
+    }
+
+    @Test
+    void changingYourOwnPasswordSendsTheNoticeAndARefusedChangeSendsNone() {
+        StaffUser staff = StaffUser.create("ana@esgtrazabilidad.pe", "old-hash", "Ana");
+        when(staffUserRepository.findById(staff.getId())).thenReturn(Optional.of(staff));
+        when(passwordEncoder.matches("la-clave-actual-de-ana", "old-hash")).thenReturn(true);
+        when(passwordEncoder.encode(STRONG)).thenReturn("new-hash");
+
+        service.changeOwnPassword(staff.getId(), "la-clave-actual-de-ana", STRONG);
+
+        verify(passwordChangeNotifier).passwordChanged(eq("ana@esgtrazabilidad.pe"), any(Instant.class));
+
+        when(passwordEncoder.matches("equivocada-equivocada", "old-hash")).thenReturn(false);
+        assertThatThrownBy(() -> service.changeOwnPassword(staff.getId(), "equivocada-equivocada", STRONG))
+                .satisfies(thrown -> assertError(thrown, AuthErrors.WRONG_CURRENT_PASSWORD));
+        org.mockito.Mockito.verifyNoMoreInteractions(passwordChangeNotifier);
     }
 
     @Test

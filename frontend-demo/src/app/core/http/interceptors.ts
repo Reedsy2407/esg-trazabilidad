@@ -9,9 +9,9 @@ import { toApiError } from './api-error';
 
 const serviceBases = Object.values(environment.services);
 
-/** Requests that never carry a token: the login itself and the public actuator. */
+/** Requests that never carry a token: the login, password recovery (the person has no session) and the public actuator. */
 function isPublic(url: string): boolean {
-  return url.endsWith('/auth/login') || url.includes('/actuator/');
+  return url.endsWith('/auth/login') || url.includes('/auth/password-reset/') || url.includes('/actuator/');
 }
 
 /**

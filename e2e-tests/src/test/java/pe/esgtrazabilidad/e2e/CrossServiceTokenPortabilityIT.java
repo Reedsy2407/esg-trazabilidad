@@ -65,7 +65,14 @@ class CrossServiceTokenPortabilityIT {
 
     @BeforeAll
     static void startServices() throws Exception {
-        auth = launch("auth-service", Map.of("ADMIN_BOOTSTRAP_EMAIL", BOOTSTRAP_EMAIL));
+        // Password recovery has no defaults: a fake email provider, switched off, and a test-only pepper.
+        auth = launch(
+                "auth-service",
+                Map.of(
+                        "ADMIN_BOOTSTRAP_EMAIL", BOOTSTRAP_EMAIL,
+                        "EMAIL_PROVIDER", "fake",
+                        "PASSWORD_RESET_EMAIL_ENABLED", "false",
+                        "PASSWORD_RESET_PEPPER", "e2e-test-only-pepper-of-at-least-32-bytes"));
         recycler = launch("recycler-service", Map.of());
         collection = launch("collection-service", Map.of());
         reporting = launch(

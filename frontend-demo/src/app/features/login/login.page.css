@@ -97,6 +97,15 @@ label {
   width: 100%;
   margin-top: var(--space-2);
 }
+.forgot {
+  margin: var(--space-4) 0 0;
+  text-align: center;
+  font-size: 14px;
+}
+.forgot a {
+  display: inline-block;
+  padding: var(--space-2);
+}
 /* Phones: the ticket first (signing in is the task), the statement after it, smaller. */
 @media (max-width: 900px) {
   .page {

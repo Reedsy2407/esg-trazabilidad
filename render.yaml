@@ -113,6 +113,19 @@ services:
       # dashboard; sync: false keeps later Blueprint syncs from touching it.
       - key: ADMIN_BOOTSTRAP_EMAIL
         sync: false
+      # Password recovery (M9). The email goes out through a Google Apps Script web app
+      # that sends from the project's Gmail account. No defaults in code: without these the
+      # service does not start. The three secrets are typed once in the dashboard.
+      - key: EMAIL_PROVIDER
+        value: appsscript
+      - key: PASSWORD_RESET_EMAIL_ENABLED
+        value: "true"
+      - key: EMAIL_WEBHOOK_URL
+        sync: false
+      - key: EMAIL_WEBHOOK_SECRET
+        sync: false
+      - key: PASSWORD_RESET_PEPPER
+        sync: false
 
   # The Angular demo (frontend-demo/), a static site: no server, no secrets.
   # It calls the four services above straight from the browser, so each needs

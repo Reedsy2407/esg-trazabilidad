@@ -17,6 +17,7 @@ import pe.esgtrazabilidad.auth.staffuser.port.in.CreateStaffUserUseCase;
 import pe.esgtrazabilidad.auth.staffuser.port.in.GetCurrentStaffUserUseCase;
 import pe.esgtrazabilidad.auth.staffuser.port.in.LoginUseCase;
 import pe.esgtrazabilidad.auth.staffuser.port.in.ManageStaffAccountsUseCase;
+import pe.esgtrazabilidad.auth.staffuser.port.out.PasswordChangeNotifier;
 import pe.esgtrazabilidad.auth.staffuser.port.out.StaffUserRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 
@@ -35,11 +36,17 @@ class StaffUserService
     private final StaffUserRepository staffUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtIssuer jwtIssuer;
+    private final PasswordChangeNotifier passwordChangeNotifier;
 
-    StaffUserService(StaffUserRepository staffUserRepository, PasswordEncoder passwordEncoder, JwtIssuer jwtIssuer) {
+    StaffUserService(
+            StaffUserRepository staffUserRepository,
+            PasswordEncoder passwordEncoder,
+            JwtIssuer jwtIssuer,
+            PasswordChangeNotifier passwordChangeNotifier) {
         this.staffUserRepository = staffUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtIssuer = jwtIssuer;
+        this.passwordChangeNotifier = passwordChangeNotifier;
     }
 
     /**
@@ -144,8 +151,10 @@ class StaffUserService
         String password = PasswordPolicy.normalize(newRawPassword);
         PasswordPolicy.validate(password, target.getEmail());
         // Only the password columns are written: another admin may have changed the account meanwhile.
-        staffUserRepository.updatePassword(targetId, passwordEncoder.encode(password), true, Instant.now());
+        Instant now = Instant.now();
+        staffUserRepository.updatePassword(targetId, passwordEncoder.encode(password), true, now);
         auditLog.info("event=password_reset_by_admin actor={} target={}", actorId, targetId);
+        passwordChangeNotifier.passwordChanged(target.getEmail(), now);
     }
 
     /** Not @Transactional: two bcrypt runs (compare, encode) must not hold a connection. */
@@ -166,8 +175,10 @@ class StaffUserService
         if (password.equals(PasswordPolicy.normalize(currentRawPassword))) {
             throw new ApplicationException(AuthErrors.WEAK_PASSWORD);
         }
-        staffUserRepository.updatePassword(staffUserId, passwordEncoder.encode(password), false, Instant.now());
+        Instant now = Instant.now();
+        staffUserRepository.updatePassword(staffUserId, passwordEncoder.encode(password), false, now);
         auditLog.info("event=password_changed actor={}", staffUserId);
+        passwordChangeNotifier.passwordChanged(staffUser.getEmail(), now);
     }
 
     /** From the database, not the token: a deactivated or demoted admin loses the power at once. */

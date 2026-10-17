@@ -46,6 +46,8 @@ export const COMPANIES = [
 export const SUNAT_NAMES: Readonly<Record<string, string>> = { '20548712336': 'PLÁSTICOS ANDINOS S.A.C.' };
 
 export const PASSWORD = 'clave-correcta';
+/** The only code the fake password recovery accepts. */
+export const RESET_CODE = '04271983';
 export const EMAIL = 'ana.paredes@asociacion.pe';
 
 export function jwtFor(
@@ -190,6 +192,10 @@ export interface BackendOptions {
   pwdChange?: boolean;
   /** POST /auth/me/password answers this problem instead of 204. */
   changePasswordFailure?: { status: number; code: string };
+  /** POST /auth/password-reset/request answers this instead of 202 (code null: a bare gateway answer). */
+  resetRequestFailure?: { status: number; code: string | null; retryAfter?: number };
+  /** POST /auth/password-reset/confirm answers this instead of 204 when the code is the right one. */
+  resetConfirmFailure?: { status: number; code: string; retryAfter?: number };
   /**
    * Answers to successive POST /auth/staff-users, in order: a status for a bare gateway failure
    * (nothing created), 'applied' (created, but the answer is a 504), or 'pass' (the normal answer).
@@ -371,6 +377,31 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     }
     const accessToken = jwtFor(email, options.tokenLifetimeSeconds, { role: options.role, pwdChange: options.pwdChange });
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ accessToken }) });
+  });
+
+  // Password recovery (public). The request always answers 202, whether or not the account exists;
+  // only RESET_CODE works, and any other code is AUTH-011, the same message for every reason.
+  await page.route('**/svc/auth/auth/password-reset/request', (route) => {
+    options.writes?.push({ method: 'POST', path: new URL(route.request().url()).pathname, body: route.request().postDataJSON() });
+    const failure = options.resetRequestFailure;
+    if (failure !== undefined) {
+      const headers = failure.retryAfter === undefined ? {} : { 'Retry-After': String(failure.retryAfter) };
+      return failure.code === null ? gatewayError(route, failure.status) : problem(route, failure.status, failure.code, 'rechazada', headers);
+    }
+    return route.fulfill({ status: 202 });
+  });
+  await page.route('**/svc/auth/auth/password-reset/confirm', (route) => {
+    options.writes?.push({ method: 'POST', path: new URL(route.request().url()).pathname, body: route.request().postDataJSON() });
+    const { code } = route.request().postDataJSON() as { code: string };
+    if (code !== RESET_CODE) {
+      return problem(route, 400, 'AUTH-011', 'El código no es válido o venció. Pide uno nuevo.');
+    }
+    const failure = options.resetConfirmFailure;
+    if (failure !== undefined) {
+      const headers = failure.retryAfter === undefined ? {} : { 'Retry-After': String(failure.retryAfter) };
+      return problem(route, failure.status, failure.code, 'rechazada', headers);
+    }
+    return route.fulfill({ status: 204 });
   });
 
   // auth-service staff accounts, with state. Emails are stored lower-cased, as the real service does.

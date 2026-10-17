@@ -57,6 +57,13 @@ export interface ChangePasswordRequest {
   readonly newPassword: string;
 }
 
+/** auth-service ConfirmPasswordResetRequest (POST /auth/password-reset/confirm). The code may carry spaces. */
+export interface ConfirmPasswordResetRequest {
+  readonly email: string;
+  readonly code: string;
+  readonly newPassword: string;
+}
+
 /** reporting-service TrackedCompanyStatus. */
 export type TrackedCompanyStatus = 'ACTIVE' | 'INACTIVE';
 

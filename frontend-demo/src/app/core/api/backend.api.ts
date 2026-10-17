@@ -7,6 +7,7 @@ import {
   Association,
   AssociationStatus,
   ChangePasswordRequest,
+  ConfirmPasswordResetRequest,
   AssociationTransition,
   Certification,
   CreateAssociationRequest,
@@ -55,6 +56,22 @@ export class BackendApi {
 
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${auth}/auth/login`, request);
+  }
+
+  /**
+   * 202 with no body, always: the same answer whether or not the account exists or an email went out
+   * (public, no token). AUTH-012 (429, Retry-After) only when this address asks too often.
+   */
+  requestPasswordReset(email: string): Observable<void> {
+    return this.http.post<void>(`${auth}/auth/password-reset/request`, { email });
+  }
+
+  /**
+   * 204: the code is spent and the password changed (no session starts). AUTH-011 for any code that does not
+   * work, AUTH-007 for a refused password, AUTH-012 (429) for too many tries from this address. Public.
+   */
+  confirmPasswordReset(request: ConfirmPasswordResetRequest): Observable<void> {
+    return this.http.post<void>(`${auth}/auth/password-reset/confirm`, request);
   }
 
   /** The signed-in staff member (the token's `sub`). */

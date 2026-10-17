@@ -10,6 +10,8 @@ The Angular app in `frontend-demo/` is the staff console for the four services. 
 |---|---|---|
 | auth | `POST /auth/login` | Iniciar sesión |
 | auth | `GET /auth/me` | Mi sesión |
+| auth | `POST /auth/password-reset/request` | Public, no session: Iniciar sesión → «¿Olvidaste tu contraseña?» (`/olvide-contrasena`, M9) |
+| auth | `POST /auth/password-reset/confirm` | Public: Restablecer la contraseña (`/restablecer-contrasena`, M9) |
 | auth | `POST /auth/me/password` | Mi sesión → Cambiar mi contraseña (M7) |
 | auth | `GET /auth/staff-users` | Mi sesión → Cuentas del personal (ADMIN only, M7) |
 | auth | `POST /auth/staff-users` | Cuentas del personal → Crear una cuenta del personal (ADMIN only) |
@@ -79,6 +81,7 @@ The backend doesn't enforce these; the screens do, and say so.
   - Emails need a dot in the domain, checked before sending: `@Email` accepts `a@b`, which the service then refuses with AUTH-005.
 - **Roles and accounts (M7):** the role comes from the token and only steers the screens: «Cuentas del personal» and its actions show for an ADMIN, and the route guards send a STAFF member away from them; the server decides from the database (AUTH-006 for a non-admin). Passwords are 15 to 64 characters (NIST SP 800-63B); the form shows the rule and the server's `AUTH-007`/`AUTH-008` answers. After an account is created or reset, the person is sent to «Cambiar mi contraseña» before anything else (a guard, not a backend rule). Deactivate and reset say that a token already issued stays valid until it expires (at most one hour).
 - **Session:** "Tu sesión vence a las HH:MM (dura X y no se renueva)" takes the time from the token's `exp` (shown in Lima) and the length from `exp − iat` (one hour, no revocation). auth-service issues no refresh token.
+- **«¿Olvidaste tu contraseña?» (M9).** A link under the login opens two public screens (no top bar; a signed-in person is sent to Empresas). **Paso 1** (`/olvide-contrasena`): the email and «Enviar código»; it goes on to step 2 whatever the answer, so the screen never says whether the account exists. **Paso 2** (`/restablecer-contrasena`): the email (filled in from step 1, editable), the code (`inputmode="numeric"`, `autocomplete="one-time-code"`, pasted with spaces is fine: only the digits are sent), the new password twice with the M7 rules, «Mostrar las contraseñas» and «Cambiar contraseña». The fixed message «Si el correo está registrado, te enviamos un código de 8 dígitos. Vence en 10 minutos. Revisa también la carpeta de spam.» reads the same for every account. «Enviar otro código» is disabled for 60 s with a visible countdown, outside the live region; only the end («Ya puedes pedir un código nuevo.») is announced, politely. Every code that does not work gets the same text («El código no es válido o venció. Pide uno nuevo.»), under the code field; after **five** the person goes back to step 1 with their email and a notice. `AUTH-007` is said under the password, a `429` says «Demasiados intentos. Prueba de nuevo en N minutos.» (from `Retry-After`), and a bare 5xx never claims the code was not sent or the password not changed. On success the form is emptied and the login shows «Contraseña cambiada. Inicia sesión con la nueva.» (no session starts). The email travels only in the browser's history state (never in the URL), and no password or code is stored, logged or put in a DOM attribute (a Playwright test checks the places). Each step moves focus to its title; errors use `role="alert"`; both steps are tested at 360, 768 and 1280 px with AXE and by keyboard.
 - **Combobox browsing (M7):** the district select and the neighbour combobox open with the full list on click (an empty search box), and leaving without choosing restores the previous choice.
 - **Unknown outcomes:** a write with no answer, a 408 or a 5xx (Render answers 502/504 while a service wakes) never claims it failed. The message says how to check before retrying.
 
@@ -110,7 +113,7 @@ reporting-service's **tracked company** (`/tracked-companies`) is the company ce
 ## Pending in the backend
 
 - Edit, deactivate or delete: SIGERSOL records. (Neighbours got all three in M2, tracked companies in M4, staff accounts in M7: deactivate/reactivate, no delete.)
-- Password recovery without an admin («Olvidé mi contraseña»): designed, not built. Changing your own password and an admin reset exist since M7.
+- Recovery codes as a backup for accounts with no real mailbox (cut 3 of the recovery design): not built. Changing your own password and an admin reset exist since M7, and the emailed code since M9.
 - Finer permissions than ADMIN/STAFF (who may issue certificates).
 - Search neighbours by name (the list only filters by state and exact district).
 - The association's name on the certificate (`EsgCertificateResponse` has only `associationId`).

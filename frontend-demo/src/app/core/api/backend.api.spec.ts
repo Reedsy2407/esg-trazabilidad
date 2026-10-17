@@ -42,3 +42,36 @@ describe('BackendApi (reporting endpoints of the company page)', () => {
     backend.expectOne((r) => r.url === `${reporting}/tracked-companies/a%2Fb/certificates`);
   });
 });
+
+describe('BackendApi (password recovery, public)', () => {
+  let api: BackendApi;
+  let backend: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    api = TestBed.inject(BackendApi);
+    backend = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => backend.verify());
+
+  it('asks for a code with only the email', () => {
+    api.requestPasswordReset('ana@asociacion.pe').subscribe();
+
+    const request = backend.expectOne(`${environment.services.auth}/auth/password-reset/request`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ email: 'ana@asociacion.pe' });
+  });
+
+  it('spends the code and sets the new password in one request', () => {
+    api.confirmPasswordReset({ email: 'ana@asociacion.pe', code: '04271983', newPassword: 'una frase larga que solo yo uso' }).subscribe();
+
+    const request = backend.expectOne(`${environment.services.auth}/auth/password-reset/confirm`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      email: 'ana@asociacion.pe',
+      code: '04271983',
+      newPassword: 'una frase larga que solo yo uso',
+    });
+  });
+});

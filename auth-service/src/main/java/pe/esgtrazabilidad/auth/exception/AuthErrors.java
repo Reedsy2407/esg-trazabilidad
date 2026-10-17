@@ -37,7 +37,12 @@ public enum AuthErrors implements ApplicationError {
     WRONG_CURRENT_PASSWORD("AUTH-008", "La contraseña actual no es correcta", HttpStatus.BAD_REQUEST),
     // Deactivating or resetting your own account from the admin screens.
     CANNOT_ACT_ON_OWN_ACCOUNT("AUTH-009", "No puedes hacer esto con tu propia cuenta", HttpStatus.CONFLICT),
-    STATUS_UNCHANGED("AUTH-010", "La cuenta ya está en ese estado", HttpStatus.CONFLICT);
+    STATUS_UNCHANGED("AUTH-010", "La cuenta ya está en ese estado", HttpStatus.CONFLICT),
+    // Password recovery (POST /auth/password-reset/*). The same answer for a wrong, expired, spent or
+    // never-issued code and for an unknown or inactive account: the caller learns nothing about accounts.
+    INVALID_RESET_CODE("AUTH-011", "El código no es válido o venció. Pide uno nuevo.", HttpStatus.BAD_REQUEST),
+    // A limit about the caller (their address), never about an account. Carries Retry-After.
+    TOO_MANY_RESET_ATTEMPTS("AUTH-012", "Demasiados intentos, prueba de nuevo más tarde", HttpStatus.TOO_MANY_REQUESTS);
 
     private final String code;
     private final String message;

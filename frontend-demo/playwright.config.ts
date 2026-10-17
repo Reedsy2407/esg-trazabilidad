@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Not 4200: on Windows hosts with Hyper-V/WSL2 that port can sit in a reserved range (EACCES).
-const PORT = 5201;
+// Not 4200: on Windows hosts with Hyper-V/WSL2 that port can sit in a reserved range (EACCES), and the
+// reserved ranges move: `E2E_PORT` picks another one (see `netsh interface ipv4 show excludedportrange protocol=tcp`).
+const PORT = Number(process.env['E2E_PORT'] ?? 5201);
 
 /** Browser flows against `ng serve`; the backend is replaced per test with page.route (see e2e/backend.ts). */
 export default defineConfig({

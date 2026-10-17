@@ -25,7 +25,7 @@ import pe.esgtrazabilidad.kernel.error.ApplicationException;
  * corpora: an external lookup would add a dependency (and send hash prefixes to a third party) for a
  * handful of staff accounts. It is meant to catch the obvious, not to replace a password manager.
  */
-final class PasswordPolicy {
+public final class PasswordPolicy {
 
     static final int MIN_LENGTH = 15;
     static final int MAX_LENGTH = 64;
@@ -35,12 +35,12 @@ final class PasswordPolicy {
     private PasswordPolicy() {}
 
     /** Applied to the password at every point it is read: creation, change, reset and login. */
-    static String normalize(String raw) {
+    public static String normalize(String raw) {
         return raw == null ? "" : Normalizer.normalize(raw, Normalizer.Form.NFKC);
     }
 
     /** Throws WEAK_PASSWORD (AUTH-007) when the (already normalised) password is not acceptable. */
-    static void validate(String password, String email) {
+    public static void validate(String password, String email) {
         if (!isAcceptable(password, email)) {
             throw new ApplicationException(AuthErrors.WEAK_PASSWORD);
         }

@@ -2,7 +2,7 @@
 
 - **Estado:** Implementada (M9: `request`, código con HMAC y pepper, límites en la base, respuesta uniforme, aviso de cambio).
 - **Fecha:** 2026-10-15
-- **Dónde se aplica:** auth-service, recuperación de contraseña; [Recuperar la contraseña en dos pasos](recuperar-contrasena.md), `docs/security.md`
+- **Dónde se aplica:** auth-service, recuperación de contraseña; [Recuperar la contraseña en dos pasos](recuperar-contrasena.md), [Operación y seguridad](operacion-y-seguridad.md)
 - **Reemplaza a:** —
 - **Reemplazada por:** —
 

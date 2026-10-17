@@ -2,7 +2,7 @@
 
 - **Estado:** Implementada (M10: manejador compartido en shared-kernel, `DatabaseDownApiIT`, texto único en el frontend).
 - **Fecha:** 2026-10-17
-- **Dónde se aplica:** shared-kernel (los cuatro servicios) y consola; [Servicio caído o despertando](servicio-caido.md), `docs/frontend.md`, `docs/security.md`
+- **Dónde se aplica:** shared-kernel (los cuatro servicios) y consola; [Servicio caído o despertando](servicio-caido.md), [Operación y seguridad](operacion-y-seguridad.md)
 - **Reemplaza a:** —
 - **Reemplazada por:** —
 

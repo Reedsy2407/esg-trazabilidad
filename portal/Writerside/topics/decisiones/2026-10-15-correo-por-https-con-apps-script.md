@@ -2,8 +2,7 @@
 
 - **Estado:** Implementada (M9: puerto `EmailSender`, adaptadores `appsscript`, `fake` y no disponible; plantilla HTML con respaldo en texto plano).
 - **Fecha:** 2026-10-15
-- **Dónde se aplica:** auth-service, envío de correos; [Correo por HTTPS con Google Apps Script](correo-apps-script.md), `docs/deployment.md`
-- **Reemplaza a:** —
+- **Dónde se aplica:** auth-service, envío de correos; [Correo por HTTPS con Google Apps Script](correo-apps-script.md)- **Reemplaza a:** —
 - **Reemplazada por:** —
 
 ## Contexto

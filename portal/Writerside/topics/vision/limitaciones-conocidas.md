@@ -35,4 +35,4 @@ Lo que esta plataforma no hace, o hace con un límite aceptado a propósito. Es 
 
 ## Dónde está la fuente
 
-Esta página reproduce `docs/known-limitations.md` del repositorio ([repositorio](%repo%)). Cuando difieran, manda el repositorio.
+Esta página resume las limitaciones vigentes del proyecto. Cuando difiera del comportamiento real, manda el código.

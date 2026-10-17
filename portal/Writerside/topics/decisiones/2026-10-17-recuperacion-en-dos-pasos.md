@@ -2,13 +2,13 @@
 
 - **Estado:** Implementada (M9c: `POST /auth/password-reset/verify`, `confirm` con `resetToken`, migración `v0.4.0`).
 - **Fecha:** 2026-10-17
-- **Dónde se aplica:** auth-service y consola, recuperación de contraseña; [Recuperar la contraseña en dos pasos](recuperar-contrasena.md), `docs/security.md`
+- **Dónde se aplica:** auth-service y consola, recuperación de contraseña; [Recuperar la contraseña en dos pasos](recuperar-contrasena.md), [Operación y seguridad](operacion-y-seguridad.md)
 - **Reemplaza a:** —
 - **Reemplazada por:** —
 
 ## Contexto
 
-En M9 el endpoint `confirm` recibía a la vez el correo, el código y la contraseña nueva. Una persona que escribía bien el código pero una contraseña rechazada por la política tenía que volver a pedir el código, y un código mal escrito se descubría después de escribir la contraseña. Servicios como GitHub piden primero el código y solo después la contraseña.
+En M9 el endpoint `confirm` recibía a la vez el correo, el código y la contraseña nueva. Una persona que escribía bien el código pero una contraseña rechazada por la política tenía que volver a pedir el código, y un código mal escrito se descubría después de escribir la contraseña. Muchos servicios piden primero el código y solo después la contraseña.
 
 ## Decisión
 

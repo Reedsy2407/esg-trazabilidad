@@ -7,4 +7,4 @@ Una página por operación, escrita para quien necesita entender qué hace el si
 - [collection-service: vecinos, cronogramas y recojos](referencia-collection.md): 20 operaciones. Los vecinos que entregan residuos, el cronograma de cada uno y el libro de recojos (kilos por fecha y asociación).
 - [reporting-service: empresas, certificados y SIGERSOL](referencia-reporting.md): 19 operaciones. Las empresas a las que se emite el certificado, los certificados ESG (en pantalla, PDF y CSV) y los datos de cumplimiento de jerarquía declarados.
 
-Todas las rutas de ejemplo usan datos ficticios. Las pantallas de la consola que usan cada endpoint están en `docs/frontend.md` del repositorio.
+Todas las rutas de ejemplo usan datos ficticios. La consola web (Angular) llama a estos mismos endpoints: empresas, recojos, registros SIGERSOL y certificados cada uno con su pantalla.

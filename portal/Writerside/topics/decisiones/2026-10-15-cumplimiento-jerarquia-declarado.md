@@ -2,7 +2,7 @@
 
 - **Estado:** Implementada (M5: origen del dato; M7: rotulado «declarado» en pantallas, PDF y CSV; `RPT-005` y `RPT-021`).
 - **Fecha:** 2026-10-15
-- **Dónde se aplica:** reporting-service, registros SIGERSOL y emisión de certificados; [Cumplimiento de jerarquía declarado](sigersol-declarado.md), `docs/known-limitations.md`
+- **Dónde se aplica:** reporting-service, registros SIGERSOL y emisión de certificados; [Cumplimiento de jerarquía declarado](sigersol-declarado.md), [Limitaciones conocidas](limitaciones-conocidas.md)
 - **Reemplaza a:** —
 - **Reemplazada por:** —
 

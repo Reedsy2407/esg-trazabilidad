@@ -2,7 +2,7 @@
 
 - **Estado:** Implementada (`JwtIssuer`, validación por firma en shared-kernel).
 - **Fecha:** 2026-10-15
-- **Dónde se aplica:** auth-service (emisión) y los cuatro servicios (validación); [La sesión](sesion-jwt.md), `docs/security.md`
+- **Dónde se aplica:** auth-service (emisión) y los cuatro servicios (validación); [La sesión](sesion-jwt.md), [Operación y seguridad](operacion-y-seguridad.md)
 - **Reemplaza a:** —
 - **Reemplazada por:** —
 

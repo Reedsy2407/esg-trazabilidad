@@ -1,10 +1,9 @@
 # Operación y seguridad
 
-Cómo se despliega, cómo se protege la base de datos al migrar y cómo se comprueba que todo sigue en pie. El detalle técnico está en `docs/deployment.md` y `docs/security.md` del repositorio ([repositorio](%repo%)).
-
+Cómo se despliega, cómo se protege la base de datos al migrar y cómo se comprueba que todo sigue en pie.
 ## Despliegue: Render Blueprint
 
-Los cuatro servicios y el sitio estático se describen en un solo archivo, `render.yaml` (un *Blueprint* de Render): cinco recursos en el plan gratuito, región Oregon. Cada servicio construye su imagen desde la raíz del repositorio y Render lo da por vivo cuando `GET /actuator/health/liveness` responde 200.
+Los cuatro servicios y el sitio estático se describen en un solo archivo, `render.yaml` (un *Blueprint* de Render): cinco recursos en el plan gratuito, región Oregon. Cada servicio construye su imagen desde la raíz del código fuente y Render lo da por vivo cuando `GET /actuator/health/liveness` responde 200.
 
 - **Solo se despliega con el CI en verde** (`autoDeployTrigger: checksPass`) y solo cuando cambia algo que el servicio usa (`buildFilter`): un cambio del frontend no reconstruye los servicios.
 - **Ningún secreto con valor por defecto.** `JWT_SECRET`, `DB_PASSWORD`, `RABBITMQ_PASSWORD`, `PASSWORD_RESET_PEPPER` y las variables del correo se fijan en el panel de Render (`sync: false`); si faltan, el servicio **no arranca**, a propósito.

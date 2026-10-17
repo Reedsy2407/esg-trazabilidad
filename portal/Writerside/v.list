@@ -2,5 +2,4 @@
 <!DOCTYPE vars SYSTEM "https://resources.jetbrains.com/writerside/1.0/vars.dtd">
 <vars>
     <var name="product" value="ESG Trazabilidad"/>
-    <var name="repo" value="https://github.com/Reedsy2407/esg-trazabilidad"/>
 </vars>

@@ -12,7 +12,7 @@ SIGERSOL Municipal "Acceso Libre" tiene endpoints REST públicos de solo lectura
 datos agregados por distrito y año: recicladores formalizados, asociaciones, residuos
 inorgánicos valorizados y lugares de acopio. No están documentados, no se verificaron
 sus términos de uso y pueden cambiar sin aviso. Responden desde EE. UU. (spike S2,
-runner de GitHub), así que no se espera bloqueo desde Render. Los datos son anuales:
+servidor de integración continua), así que no se espera bloqueo desde Render. Los datos son anuales:
 2024 es el último año con filas (spike S1).
 
 No traen RUC ni kilos por empresa. El dato por empresa está en SIGERSOL No Municipal,

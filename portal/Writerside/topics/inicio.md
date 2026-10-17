@@ -38,5 +38,4 @@ Decisiones
 
 Cuando este portal y el código no coinciden, manda el código. El desfase se revisa
 de forma automática: las especificaciones OpenAPI y el catálogo de errores se
-comparan con el código en cada ejecución del flujo del portal (solo informan). Ver
-[el repositorio](%repo%).
+comparan con el código en cada ejecución del flujo del portal (solo informan).

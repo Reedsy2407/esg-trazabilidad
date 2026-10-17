@@ -2,7 +2,7 @@
 
 - **Estado:** Implementada (M7: `PasswordPolicy`, `AUTH-007`).
 - **Fecha:** 2026-10-15
-- **Dónde se aplica:** auth-service, crear, cambiar, restablecer y recuperar contraseñas; [Política de contraseñas](politica-contrasenas.md), `docs/security.md`
+- **Dónde se aplica:** auth-service, crear, cambiar, restablecer y recuperar contraseñas; [Política de contraseñas](politica-contrasenas.md), [Operación y seguridad](operacion-y-seguridad.md)
 - **Reemplaza a:** —
 - **Reemplazada por:** —
 

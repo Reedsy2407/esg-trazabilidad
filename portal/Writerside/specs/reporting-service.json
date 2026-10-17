@@ -157,6 +157,19 @@
           "hierarchyCompliancePercent" : {
             "type" : "number"
           },
+          "hierarchyOrigin" : {
+            "enum" : [
+              "DECLARED_BY_OPERATOR",
+              "REFERENCED_PROOF"
+            ],
+            "type" : "string"
+          },
+          "hierarchyReference" : {
+            "type" : "string"
+          },
+          "hierarchyRegisteredByEmail" : {
+            "type" : "string"
+          },
           "id" : {
             "format" : "uuid",
             "type" : "string"

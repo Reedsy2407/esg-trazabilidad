@@ -1,15 +1,66 @@
 {
   "components" : {
     "schemas" : {
+      "ChangePasswordRequest" : {
+        "properties" : {
+          "currentPassword" : {
+            "maxLength" : 256,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "newPassword" : {
+            "maxLength" : 256,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "currentPassword",
+          "newPassword"
+        ],
+        "type" : "object"
+      },
+      "ConfirmPasswordResetRequest" : {
+        "properties" : {
+          "newPassword" : {
+            "maxLength" : 256,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "resetToken" : {
+            "maxLength" : 128,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "newPassword",
+          "resetToken"
+        ],
+        "type" : "object"
+      },
       "CreateStaffUserRequest" : {
         "properties" : {
           "email" : {
+            "maxLength" : 255,
+            "minLength" : 0,
             "type" : "string"
           },
           "fullName" : {
+            "maxLength" : 255,
+            "minLength" : 0,
             "type" : "string"
           },
           "password" : {
+            "maxLength" : 256,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "role" : {
+            "enum" : [
+              "ADMIN",
+              "STAFF"
+            ],
             "type" : "string"
           }
         },
@@ -43,6 +94,32 @@
         },
         "type" : "object"
       },
+      "RequestPasswordResetRequest" : {
+        "properties" : {
+          "email" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "email"
+        ],
+        "type" : "object"
+      },
+      "ResetPasswordRequest" : {
+        "properties" : {
+          "newPassword" : {
+            "maxLength" : 256,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "newPassword"
+        ],
+        "type" : "object"
+      },
       "StaffUserResponse" : {
         "properties" : {
           "active" : {
@@ -60,6 +137,70 @@
           },
           "id" : {
             "format" : "uuid",
+            "type" : "string"
+          },
+          "mustChangePassword" : {
+            "type" : "boolean"
+          },
+          "passwordChangedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "role" : {
+            "enum" : [
+              "ADMIN",
+              "STAFF"
+            ],
+            "type" : "string"
+          },
+          "statusChangedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "statusChangedBy" : {
+            "type" : "string"
+          },
+          "statusReason" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "StatusReasonRequest" : {
+        "properties" : {
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "reason"
+        ],
+        "type" : "object"
+      },
+      "VerifyPasswordResetRequest" : {
+        "properties" : {
+          "code" : {
+            "maxLength" : 32,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "email" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "code",
+          "email"
+        ],
+        "type" : "object"
+      },
+      "VerifyPasswordResetResponse" : {
+        "properties" : {
+          "resetToken" : {
             "type" : "string"
           }
         },
@@ -123,7 +264,127 @@
         ]
       }
     },
+    "/auth/me/password" : {
+      "post" : {
+        "operationId" : "changePassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "auth-controller"
+        ]
+      }
+    },
+    "/auth/password-reset/confirm" : {
+      "post" : {
+        "operationId" : "confirm",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfirmPasswordResetRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "password-reset-controller"
+        ]
+      }
+    },
+    "/auth/password-reset/request" : {
+      "post" : {
+        "operationId" : "request",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RequestPasswordResetRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "202" : {
+            "description" : "Accepted"
+          }
+        },
+        "tags" : [
+          "password-reset-controller"
+        ]
+      }
+    },
+    "/auth/password-reset/verify" : {
+      "post" : {
+        "operationId" : "verify",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/VerifyPasswordResetRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VerifyPasswordResetResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "password-reset-controller"
+        ]
+      }
+    },
     "/auth/staff-users" : {
+      "get" : {
+        "operationId" : "list",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/StaffUserResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "staff-user-controller"
+        ]
+      },
       "post" : {
         "operationId" : "create",
         "requestBody" : {
@@ -146,6 +407,122 @@
               }
             },
             "description" : "Created"
+          }
+        },
+        "tags" : [
+          "staff-user-controller"
+        ]
+      }
+    },
+    "/auth/staff-users/{id}/deactivate" : {
+      "patch" : {
+        "operationId" : "deactivate",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StatusReasonRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StaffUserResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "staff-user-controller"
+        ]
+      }
+    },
+    "/auth/staff-users/{id}/password" : {
+      "post" : {
+        "operationId" : "resetPassword",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "staff-user-controller"
+        ]
+      }
+    },
+    "/auth/staff-users/{id}/reactivate" : {
+      "patch" : {
+        "operationId" : "reactivate",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StatusReasonRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StaffUserResponse"
+                }
+              }
+            },
+            "description" : "OK"
           }
         },
         "tags" : [

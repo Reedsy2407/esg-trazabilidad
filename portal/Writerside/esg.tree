@@ -5,6 +5,110 @@
 <instance-profile id="esg" name="ESG Trazabilidad" start-page="inicio.md">
 
     <toc-element topic="inicio.md"/>
+    <toc-element topic="vision.md">
+            <toc-element topic="vision-y-servicios.md"/>
+            <toc-element topic="modelo-de-dominio.md"/>
+            <toc-element topic="empresas-estados-independientes.md"/>
+            <toc-element topic="cronogramas-del-vecino.md"/>
+            <toc-element topic="recojos-inmutables.md"/>
+            <toc-element topic="eliminar-empresa.md"/>
+            <toc-element topic="sigersol-declarado.md"/>
+            <toc-element topic="certificados-pdf-csv.md"/>
+            <toc-element topic="roles-y-cuentas.md"/>
+            <toc-element topic="politica-contrasenas.md"/>
+            <toc-element topic="sesion-jwt.md"/>
+            <toc-element topic="recuperar-contrasena.md"/>
+            <toc-element topic="correo-apps-script.md"/>
+            <toc-element topic="servicio-caido.md"/>
+            <toc-element topic="operacion-y-seguridad.md"/>
+            <toc-element topic="limitaciones-conocidas.md"/>
+    </toc-element>
+    <toc-element topic="glosario.md">
+            <toc-element topic="estados-auth.md"/>
+            <toc-element topic="estados-recycler.md"/>
+            <toc-element topic="estados-collection.md"/>
+            <toc-element topic="estados-reporting.md"/>
+    </toc-element>
+    <toc-element topic="endpoints.md">
+            <toc-element topic="referencia-auth.md">
+                <toc-element topic="auth-iniciar-sesion.md"/>
+                <toc-element topic="auth-mi-cuenta.md"/>
+                <toc-element topic="auth-cambiar-mi-contrasena.md"/>
+                <toc-element topic="auth-recuperar-pedir-codigo.md"/>
+                <toc-element topic="auth-recuperar-verificar-codigo.md"/>
+                <toc-element topic="auth-recuperar-confirmar.md"/>
+                <toc-element topic="auth-listar-cuentas.md"/>
+                <toc-element topic="auth-crear-cuenta.md"/>
+                <toc-element topic="auth-desactivar-cuenta.md"/>
+                <toc-element topic="auth-reactivar-cuenta.md"/>
+                <toc-element topic="auth-restablecer-contrasena-cuenta.md"/>
+            </toc-element>
+            <toc-element topic="referencia-recycler.md">
+                <toc-element topic="recycler-listar-asociaciones.md"/>
+                <toc-element topic="recycler-crear-asociacion.md"/>
+                <toc-element topic="recycler-ver-asociacion.md"/>
+                <toc-element topic="recycler-suspender-asociacion.md"/>
+                <toc-element topic="recycler-activar-asociacion.md"/>
+                <toc-element topic="recycler-listar-certificaciones.md"/>
+                <toc-element topic="recycler-crear-certificacion.md"/>
+                <toc-element topic="recycler-ver-certificacion.md"/>
+                <toc-element topic="recycler-renovar-certificacion.md"/>
+                <toc-element topic="recycler-listar-recicladores.md"/>
+                <toc-element topic="recycler-crear-reciclador.md"/>
+                <toc-element topic="recycler-ver-reciclador.md"/>
+                <toc-element topic="recycler-activar-reciclador.md"/>
+                <toc-element topic="recycler-desactivar-reciclador.md"/>
+            </toc-element>
+            <toc-element topic="referencia-collection.md">
+                <toc-element topic="collection-listar-vecinos.md"/>
+                <toc-element topic="collection-registrar-vecino.md"/>
+                <toc-element topic="collection-ver-vecino.md"/>
+                <toc-element topic="collection-editar-vecino.md"/>
+                <toc-element topic="collection-desactivar-vecino.md"/>
+                <toc-element topic="collection-activar-vecino.md"/>
+                <toc-element topic="collection-eliminar-vecino.md"/>
+                <toc-element topic="collection-bitacora-vecino.md"/>
+                <toc-element topic="collection-listar-cronogramas.md"/>
+                <toc-element topic="collection-crear-cronograma.md"/>
+                <toc-element topic="collection-ver-cronograma.md"/>
+                <toc-element topic="collection-pausar-cronograma.md"/>
+                <toc-element topic="collection-cancelar-cronograma.md"/>
+                <toc-element topic="collection-reactivar-cronograma.md"/>
+                <toc-element topic="collection-registrar-recojo.md"/>
+                <toc-element topic="collection-listar-recojos.md"/>
+                <toc-element topic="collection-ver-recojo.md"/>
+                <toc-element topic="collection-listar-empresas.md"/>
+                <toc-element topic="collection-crear-empresa.md"/>
+                <toc-element topic="collection-ver-empresa.md"/>
+            </toc-element>
+            <toc-element topic="referencia-reporting.md">
+                <toc-element topic="reporting-listar-empresas.md"/>
+                <toc-element topic="reporting-registrar-empresa.md"/>
+                <toc-element topic="reporting-registrar-empresa-no-verificada.md"/>
+                <toc-element topic="reporting-ver-empresa.md"/>
+                <toc-element topic="reporting-editar-empresa.md"/>
+                <toc-element topic="reporting-desactivar-empresa.md"/>
+                <toc-element topic="reporting-activar-empresa.md"/>
+                <toc-element topic="reporting-eliminar-empresa.md"/>
+                <toc-element topic="reporting-verificar-empresa-sunat.md"/>
+                <toc-element topic="reporting-resumen-periodo.md"/>
+                <toc-element topic="reporting-listar-certificados.md"/>
+                <toc-element topic="reporting-emitir-certificado.md"/>
+                <toc-element topic="reporting-ver-certificado.md"/>
+                <toc-element topic="reporting-anular-certificado.md"/>
+                <toc-element topic="reporting-descargar-pdf.md"/>
+                <toc-element topic="reporting-descargar-csv.md"/>
+                <toc-element topic="reporting-listar-sigersol.md"/>
+                <toc-element topic="reporting-registrar-sigersol.md"/>
+                <toc-element topic="reporting-ver-sigersol.md"/>
+            </toc-element>
+    </toc-element>
+    <toc-element topic="errores.md">
+            <toc-element topic="errores-auth.md"/>
+            <toc-element topic="errores-recycler.md"/>
+            <toc-element topic="errores-collection.md"/>
+            <toc-element topic="errores-reporting.md"/>
+    </toc-element>
     <toc-element topic="decisiones.md">
         <!-- ADR-TOC -->
     </toc-element>

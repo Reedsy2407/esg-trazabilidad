@@ -642,6 +642,10 @@ Estado previo al merge (2026-10-16): código, pruebas y docs hechos en la rama (
 - [x] Higiene: borrar la rama `v3/m1-draft` (ya no existe en local ni en origin: confirmar); PR de Dependabot de acciones del CI (#2, #4, #15, #16, #24) con `scripts/merge-dependabot-actions.sh` cuando el CI esté verde, e `ignore` de imágenes Java no LTS en `.github/dependabot.yml`. Las de Java 24/26 (#9 a #12, #22) ya se cerraron; el resto (Angular 22, vitest 5, Spring Boot 4, springdoc 3, rest-assured 6, grupos maven y npm) sigue abierto.
 - Después de M7 (fuera de su alcance): M8 (incluye corregir `SPEC-reporting-service.md` y la guía para que no digan «oficial de MINAM» ni «official compliance backing»), portal, README con capturas, informe, «Olvidé mi contraseña», caso 503.
 
+## README y portal (2026-10-17)
+
+README.md en la raíz (problema, arquitectura con diagrama, stack, cómo correrlo y probarlo, seguridad en 5 líneas, 5 capturas optimizadas en `docs/img/` tomadas de las ya enmascaradas) y portal Writerside completo: specs OpenAPI regeneradas, 64 páginas de endpoint, 16 de negocio, glosario y catálogos de errores, 7 diagramas PlantUML, 8 ADR nuevos (12 en total) y `catalog-drift` informativo. Construcción local sin errores. Detalle en `portal/PLAN.md`.
+
 ## M10 (2026-10-17, desplegado): caso 503 «servicio caído» (#5 de la hoja de ruta)
 
 Desplegado: squash `f3fecf1` (rama con 4 commits; shared-kernel, auth-service, recycler, collection y reporting reciben solo el squash), los cinco servicios sirven `f3fecf1`, `smoke-prod.sh` con 0 estados inesperados. Sin migración, así que no hubo rama Neon `pre-m10`. Flaky visto en el `verify` local, sin relación: `SigersolSyncApiIT` falló una vez por «error SSL» al conectar con el Postgres del contenedor y `SigersolSyncConcurrencyApiIT` otra bajo carga; ambos pasaron solos y el `verify` completo quedó en verde.

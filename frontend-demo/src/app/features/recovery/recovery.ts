@@ -18,6 +18,8 @@ export const INVALID_CODE_MESSAGE = 'El código no es válido o venció. Pide un
 export const TOO_MANY_FAILURES_MESSAGE = 'Escribiste varios códigos que no sirven. Pide un código nuevo.';
 export const REQUEST_UNCERTAIN =
   'No pudimos confirmar si se envió el código. Si ya te llegó, escríbelo en el siguiente paso; si no, inténtalo de nuevo en un momento.';
+export const EXPIRED_MESSAGE = 'La verificación venció (dura 10 minutos y sirve una vez). Pide un código nuevo.';
+export const VERIFY_UNCERTAIN = 'No pudimos verificar el código. Inténtalo de nuevo en un momento.';
 export const CONFIRM_UNCERTAIN =
   'No pudimos confirmar si se cambió la contraseña. Prueba a iniciar sesión con la nueva; si no funciona, pide otro código.';
 

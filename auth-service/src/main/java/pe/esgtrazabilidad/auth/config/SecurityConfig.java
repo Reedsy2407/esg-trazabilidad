@@ -57,6 +57,7 @@ public class SecurityConfig {
                                 // Password recovery: the person has no session. Limited by client
                                 // address in the database (PasswordResetService).
                                 "/auth/password-reset/request",
+                                "/auth/password-reset/verify",
                                 "/auth/password-reset/confirm",
                                 // springdoc's documented entry point; it 302s into /swagger-ui/index.html.
                                 "/swagger-ui.html",

@@ -34,6 +34,22 @@ h1:focus {
   color: var(--ink-soft);
   text-align: center;
 }
+.fixed-email {
+  margin: var(--space-2) 0 0;
+  font-weight: 600;
+  font-size: 15px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.change-email {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+}
+.change-email a {
+  display: inline-block;
+  padding: var(--space-3) var(--space-2);
+}
 .notice {
   margin: 0 0 var(--space-4);
   padding: var(--space-3);

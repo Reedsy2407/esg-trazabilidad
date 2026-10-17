@@ -14,7 +14,7 @@ import pe.esgtrazabilidad.auth.passwordreset.port.in.PasswordResetUseCase;
 import pe.esgtrazabilidad.auth.ratelimit.ClientIpResolver;
 
 /**
- * Public (no token): the person has no session. Both routes are limited by client address in the
+ * Public (no token): the person has no session. All three routes are limited by client address in the
  * database, not in memory. {@code request} always answers 202 with no body, whether or not an email was sent.
  */
 @RestController
@@ -35,9 +35,14 @@ class PasswordResetController {
         useCase.request(body.email(), clientIpResolver.resolve(http));
     }
 
+    @PostMapping("/verify")
+    VerifyPasswordResetResponse verify(@Valid @RequestBody VerifyPasswordResetRequest body, HttpServletRequest http) {
+        return new VerifyPasswordResetResponse(useCase.verify(body.email(), body.code(), clientIpResolver.resolve(http)));
+    }
+
     @PostMapping("/confirm")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void confirm(@Valid @RequestBody ConfirmPasswordResetRequest body, HttpServletRequest http) {
-        useCase.confirm(body.email(), body.code(), body.newPassword(), clientIpResolver.resolve(http));
+        useCase.confirm(body.resetToken(), body.newPassword(), clientIpResolver.resolve(http));
     }
 }

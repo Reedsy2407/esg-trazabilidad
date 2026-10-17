@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { adminGuard, authGuard, guestGuard, passwordChangeGuard } from './core/auth/guards';
+import { recoveryTokenGuard } from './features/recovery/recovery-session';
 
 export const routes: Routes = [
   {
@@ -25,7 +26,13 @@ export const routes: Routes = [
     path: 'restablecer-contrasena',
     title: 'Restablecer la contraseña · Trazabilidad ESG',
     canActivate: [guestGuard],
-    loadComponent: () => import('./features/recovery/reset-password.page').then((m) => m.ResetPasswordPage),
+    loadComponent: () => import('./features/recovery/verify-code.page').then((m) => m.VerifyCodePage),
+  },
+  {
+    path: 'nueva-contrasena',
+    title: 'Contraseña nueva · Trazabilidad ESG',
+    canActivate: [guestGuard, recoveryTokenGuard],
+    loadComponent: () => import('./features/recovery/new-password.page').then((m) => m.NewPasswordPage),
   },
   {
     path: '',

@@ -11,7 +11,7 @@ import java.util.function.Predicate;
  */
 public interface PasswordResetStore {
 
-    enum Kind { REQUEST, CONFIRM, NOTICE }
+    enum Kind { REQUEST, VERIFY, CONFIRM, NOTICE }
 
     record LiveCode(UUID id, String codeHmac) {}
 
@@ -49,4 +49,18 @@ public interface PasswordResetStore {
 
     /** Spends the code if it is still live; false means somebody else spent it first. */
     boolean consume(UUID codeId, Instant now);
+
+    record LiveToken(UUID staffUserId, String tokenHmac) {}
+
+    /** Spends the account's live token (if any) and stores the new one, in one transaction. */
+    void replaceToken(UUID tokenId, UUID staffUserId, String tokenHmac, Instant now, Instant expiresAt);
+
+    /** The token with this id if it is unspent and unexpired. */
+    java.util.Optional<LiveToken> findLiveToken(UUID tokenId, Instant now);
+
+    /** Spends the token if it is still live; false means somebody else spent it first. */
+    boolean consumeToken(UUID tokenId, Instant now);
+
+    /** Spends any unspent code of the account: a password change makes them useless. */
+    void spendLiveCodes(UUID staffUserId, Instant now);
 }

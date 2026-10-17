@@ -63,15 +63,22 @@ describe('BackendApi (password recovery, public)', () => {
     expect(request.request.body).toEqual({ email: 'ana@asociacion.pe' });
   });
 
-  it('spends the code and sets the new password in one request', () => {
-    api.confirmPasswordReset({ email: 'ana@asociacion.pe', code: '04271983', newPassword: 'una frase larga que solo yo uso' }).subscribe();
+  it('trades the code for a reset token with the email and the code only', () => {
+    let token = '';
+    api.verifyPasswordReset({ email: 'ana@asociacion.pe', code: '04271983' }).subscribe((r) => (token = r.resetToken));
+
+    const request = backend.expectOne(`${environment.services.auth}/auth/password-reset/verify`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ email: 'ana@asociacion.pe', code: '04271983' });
+    request.flush({ resetToken: 'abc.def' });
+    expect(token).toBe('abc.def');
+  });
+
+  it('sets the new password with the reset token, without the email or the code', () => {
+    api.confirmPasswordReset({ resetToken: 'abc.def', newPassword: 'una frase larga que solo yo uso' }).subscribe();
 
     const request = backend.expectOne(`${environment.services.auth}/auth/password-reset/confirm`);
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({
-      email: 'ana@asociacion.pe',
-      code: '04271983',
-      newPassword: 'una frase larga que solo yo uso',
-    });
+    expect(request.request.body).toEqual({ resetToken: 'abc.def', newPassword: 'una frase larga que solo yo uso' });
   });
 });

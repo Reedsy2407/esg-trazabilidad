@@ -2,25 +2,18 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
 
-import { ConfirmPasswordResetRequest } from '../../core/api/api.types';
+import { VerifyPasswordResetRequest, VerifyPasswordResetResponse } from '../../core/api/api.types';
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
-import {
-  CONFIRM_UNCERTAIN,
-  INVALID_CODE_MESSAGE,
-  RESENT_MESSAGE,
-  SENT_MESSAGE,
-  TOO_MANY_FAILURES_MESSAGE,
-} from './recovery';
-import { ResetPasswordPage } from './reset-password.page';
+import { INVALID_CODE_MESSAGE, RESENT_MESSAGE, SENT_MESSAGE, TOO_MANY_FAILURES_MESSAGE, VERIFY_UNCERTAIN } from './recovery';
+import { RecoverySession } from './recovery-session';
+import { VerifyCodePage } from './verify-code.page';
 
-const GOOD = 'una frase larga que solo yo uso';
-
-describe('ResetPasswordPage', () => {
+describe('VerifyCodePage', () => {
   let el: HTMLElement;
-  let confirmed: ConfirmPasswordResetRequest[];
+  let verified: VerifyPasswordResetRequest[];
   let requested: string[];
-  let confirmAnswer: Subject<void>;
+  let verifyAnswer: Subject<VerifyPasswordResetResponse>;
   let requestAnswer: Subject<void>;
   let navigate: ReturnType<typeof vi.spyOn>;
 
@@ -39,31 +32,25 @@ describe('ResetPasswordPage', () => {
     (el.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
     await settle();
   };
-  const fill = (code = '0427 1983', next = GOOD, confirm = next) => {
-    type('email', 'ana@asociacion.pe');
-    type('code', code);
-    type('next', next);
-    type('confirm', confirm);
-  };
   const errors = () => [...el.querySelectorAll('.field-error')].map((e) => e.textContent?.trim());
   const resendButton = () => el.querySelector('.secondary button') as HTMLButtonElement;
 
   const setup = async (state: object | null = { email: 'ana@asociacion.pe', sentAt: Date.now() }) => {
-    confirmed = [];
+    verified = [];
     requested = [];
-    confirmAnswer = new Subject<void>();
+    verifyAnswer = new Subject<VerifyPasswordResetResponse>();
     requestAnswer = new Subject<void>();
     history.replaceState(state, '');
     TestBed.configureTestingModule({
-      imports: [ResetPasswordPage],
+      imports: [VerifyCodePage],
       providers: [
         provideRouter([]),
         {
           provide: BackendApi,
           useValue: {
-            confirmPasswordReset: (request: ConfirmPasswordResetRequest): Observable<void> => {
-              confirmed.push(request);
-              return confirmAnswer;
+            verifyPasswordReset: (request: VerifyPasswordResetRequest): Observable<VerifyPasswordResetResponse> => {
+              verified.push(request);
+              return verifyAnswer;
             },
             requestPasswordReset: (email: string): Observable<void> => {
               requested.push(email);
@@ -74,7 +61,7 @@ describe('ResetPasswordPage', () => {
       ],
     });
     navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    const fixture = TestBed.createComponent(ResetPasswordPage);
+    const fixture = TestBed.createComponent(VerifyCodePage);
     el = fixture.nativeElement as HTMLElement;
     await settle();
   };
@@ -84,65 +71,58 @@ describe('ResetPasswordPage', () => {
     vi.useRealTimers();
   });
 
-  it('arrives from step 1 with the email filled in, the fixed message, and the code field made for a one-time code', async () => {
+  it('shows the email from the previous step as fixed text with a link to change it, and a code field made for a one-time code', async () => {
     await setup();
-    expect(input('email').value).toBe('ana@asociacion.pe');
+    expect(el.querySelector('[data-testid="fixed-email"]')?.textContent?.trim()).toBe('ana@asociacion.pe');
+    expect(el.querySelector('input[type="email"]')).toBeNull(); // not editable here
+    expect(el.querySelector('.change-email a')?.textContent?.trim()).toBe('¿No es tu correo? Cambiar');
+    expect(el.querySelector('.change-email a')?.getAttribute('href')).toBe('/olvide-contrasena');
     expect(el.querySelector('.notice')?.textContent?.trim()).toBe(SENT_MESSAGE);
     expect(input('code').inputMode).toBe('numeric');
     expect(input('code').autocomplete).toBe('one-time-code');
-    expect(['next', 'confirm'].map((id) => input(id).type)).toEqual(['password', 'password']);
-    expect(input('next').autocomplete).toBe('new-password');
-    expect(el.querySelector('#next-hint')?.textContent).toContain('Entre 15 y 64 caracteres');
+    expect(el.querySelector('#next')).toBeNull(); // the password is asked for after the code is verified
   });
 
-  it('without a previous step the email is empty and no message claims a code was sent', async () => {
+  it('without an email from the previous step it goes back to step 1', async () => {
     await setup(null);
-    expect(input('email').value).toBe('');
-    expect(el.querySelector('.notice')?.textContent?.trim()).toBe('');
-    expect(el.querySelector('.notice')?.classList.contains('visually-hidden')).toBe(true);
-    expect(resendButton().disabled).toBe(false); // nothing to wait for
+    expect(navigate).toHaveBeenCalledWith(['/olvide-contrasena'], { replaceUrl: true });
   });
 
-  it('says what is wrong before sending anything, field by field', async () => {
-    await setup(null);
-    await submit();
-    expect(errors()).toEqual([
-      'Escribe tu correo electrónico.',
-      'Escribe el código de 8 dígitos que te enviamos.',
-      'Escribe la contraseña.',
-      'Repite la contraseña nueva.',
-    ]);
-    expect(input('email').getAttribute('aria-invalid')).toBe('true');
-
-    fill('1234567', 'corta', 'otra');
-    await submit();
-    expect(errors()).toEqual([
-      'Escribe el código de 8 dígitos que te enviamos.',
-      'Debe tener al menos 15 caracteres.',
-      'Las dos contraseñas no coinciden.',
-    ]);
-    expect(confirmed).toEqual([]);
-  });
-
-  it('sends only the digits of the code, then empties the form and goes to the login with the notice flag', async () => {
+  it('says what is wrong before sending anything', async () => {
     await setup();
-    fill('0427 1983');
     await submit();
-    expect(confirmed).toEqual([{ email: 'ana@asociacion.pe', code: '04271983', newPassword: GOOD }]);
+    expect(errors()).toEqual(['Escribe el código de 8 dígitos que te enviamos.']);
+    expect(input('code').getAttribute('aria-invalid')).toBe('true');
 
-    confirmAnswer.next();
-    confirmAnswer.complete();
+    type('code', '1234567');
+    await submit();
+    expect(errors()).toEqual(['Escribe el código de 8 dígitos que te enviamos.']);
+    expect(verified).toEqual([]);
+  });
+
+  it('sends only the digits, keeps the token in memory, empties the form and goes to the new-password step', async () => {
+    await setup();
+    type('code', '0427 1983');
+    await submit();
+    expect(verified).toEqual([{ email: 'ana@asociacion.pe', code: '04271983' }]);
+
+    verifyAnswer.next({ resetToken: 'id.secret' });
+    verifyAnswer.complete();
     await settle();
-    expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { motivo: 'clave' }, replaceUrl: true });
-    expect(input('next').value).toBe('');
-    expect(el.textContent).not.toContain(GOOD);
+    expect(TestBed.inject(RecoverySession).current()).toBe('id.secret');
+    expect(navigate).toHaveBeenCalledWith(['/nueva-contrasena'], { replaceUrl: true, state: { email: 'ana@asociacion.pe' } });
+    expect(input('code').value).toBe('');
+    // The token is nowhere a page could leave it: not in the DOM, not in the history state, not in storage.
+    expect(el.innerHTML).not.toContain('id.secret');
+    expect(JSON.stringify(history.state)).not.toContain('id.secret');
+    expect(JSON.stringify({ ...localStorage, ...sessionStorage })).not.toContain('id.secret');
   });
 
   it('a code that does not work says one thing, under the code field, and editing withdraws it', async () => {
     await setup();
-    fill();
+    type('code', '04271983');
     await submit();
-    confirmAnswer.error(new ApiError(400, 'AUTH-011', null, null));
+    verifyAnswer.error(new ApiError(400, 'AUTH-011', null, null));
     await settle();
     expect(errors()).toEqual([INVALID_CODE_MESSAGE]);
     expect(input('code').getAttribute('aria-invalid')).toBe('true');
@@ -155,10 +135,10 @@ describe('ResetPasswordPage', () => {
   it('after five codes that do not work the person is sent back to ask for a new one', async () => {
     await setup();
     for (let attempt = 1; attempt <= 5; attempt++) {
-      confirmAnswer = new Subject<void>();
-      fill(`1111000${attempt}`);
+      verifyAnswer = new Subject<VerifyPasswordResetResponse>();
+      type('code', `1111000${attempt}`);
       await submit();
-      confirmAnswer.error(new ApiError(400, 'AUTH-011', null, null));
+      verifyAnswer.error(new ApiError(400, 'AUTH-011', null, null));
       await settle();
     }
     expect(navigate).toHaveBeenCalledTimes(1);
@@ -167,30 +147,26 @@ describe('ResetPasswordPage', () => {
     });
   });
 
-  it('a password the service refuses (AUTH-007) is said under the new field; a limit says how long to wait', async () => {
+  it('a limit says how long to wait and a bare 5xx says the outcome is unknown', async () => {
     await setup();
-    fill();
+    type('code', '04271983');
     await submit();
-    confirmAnswer.error(new ApiError(400, 'AUTH-007', null, null));
-    await settle();
-    expect(errors()[0]).toContain('El servicio no acepta esa contraseña');
-    expect(input('next').getAttribute('aria-invalid')).toBe('true');
-
-    confirmAnswer = new Subject<void>();
-    type('confirm', GOOD);
-    await submit();
-    confirmAnswer.error(new ApiError(429, 'AUTH-012', null, 600));
+    verifyAnswer.error(new ApiError(429, 'AUTH-012', null, 600));
     await settle();
     expect(el.querySelector('[role="alert"]')?.textContent?.trim()).toBe('Demasiados intentos. Prueba de nuevo en 10 minutos.');
+
+    verifyAnswer = new Subject<VerifyPasswordResetResponse>();
+    type('code', '04271984');
+    await submit();
+    verifyAnswer.error(new ApiError(504, null, null, null));
+    await settle();
+    expect(el.querySelector('[role="alert"]')?.textContent?.trim()).toBe(VERIFY_UNCERTAIN);
   });
 
-  it('a bare 5xx says the outcome is unknown instead of claiming the password did not change', async () => {
-    await setup();
-    fill();
-    await submit();
-    confirmAnswer.error(new ApiError(504, null, null, null));
-    await settle();
-    expect(el.querySelector('[role="alert"]')?.textContent?.trim()).toBe(CONFIRM_UNCERTAIN);
+  it('arriving with a notice (the token expired) shows it and lets the person ask for a new code at once', async () => {
+    await setup({ email: 'ana@asociacion.pe', notice: 'La verificación venció.' });
+    expect(el.querySelector('.notice')?.textContent?.trim()).toBe('La verificación venció.');
+    expect(resendButton().disabled).toBe(false);
   });
 
   it('the resend button waits 60 seconds, announces only the end, and sends another code after it', async () => {

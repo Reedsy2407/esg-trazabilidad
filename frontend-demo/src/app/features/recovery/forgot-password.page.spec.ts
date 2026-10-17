@@ -61,7 +61,7 @@ describe('ForgotPasswordPage', () => {
     expect(input().autocomplete).toBe('username');
     // Focusable by code (not in the tab order): the page moves focus to it when the step opens.
     expect(el.querySelector('h1')?.getAttribute('tabindex')).toBe('-1');
-    expect(el.querySelector('a[href="/restablecer-contrasena"]')?.textContent).toBe('Ya tengo un código');
+    expect(el.querySelector('a[href="/login"]')?.textContent).toBe('Volver a iniciar sesión');
   });
 
   it('says what is wrong with the email before sending anything', async () => {

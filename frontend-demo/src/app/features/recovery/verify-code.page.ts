@@ -7,9 +7,8 @@ import { finalize } from 'rxjs';
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
 import { writeErrorText } from '../../shared/error-message';
-import { PASSWORD_RULES_TEXT, passwordProblem, passwordProblemText } from '../staff/password-rules';
+import { RecoverySession } from './recovery-session';
 import {
-  CONFIRM_UNCERTAIN,
   INVALID_CODE_MESSAGE,
   MAX_CODE_FAILURES,
   REQUEST_UNCERTAIN,
@@ -17,6 +16,7 @@ import {
   RESEND_SECONDS,
   SENT_MESSAGE,
   TOO_MANY_FAILURES_MESSAGE,
+  VERIFY_UNCERTAIN,
   codeDigits,
   isCodeComplete,
   isRateLimited,
@@ -24,48 +24,41 @@ import {
   waitText,
 } from './recovery';
 
-/** The same rule as the backend's StaffUser.isValidEmail: stricter than Angular's, which accepts "a@b". */
-const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-
 /**
- * Paso 2: the code from the email and the new password, in one request. Nothing the person types here
- * is stored, logged or put in a URL; the form is emptied on success and the session is not started: they
- * go to the login with the new password. The same message answers every code that does not work; after
- * five of them the person is sent back to ask for a new one (the service spends the code at five too).
+ * Paso 2 de «¿Olvidaste tu contraseña?»: the code from the email. The service checks it before anything
+ * else is asked: a right code is spent and trades for a reset token that stays in memory (RecoverySession)
+ * while the person goes on to choose the new password. The email is shown as fixed text (it came from step
+ * 1) with a link to change it. The same message answers every code that does not work; after five of them
+ * the person is sent back to ask for a new one (the service spends the code at five too).
  */
 @Component({
-  selector: 'app-reset-password-page',
+  selector: 'app-verify-code-page',
   imports: [ReactiveFormsModule, RouterLink],
-  templateUrl: './reset-password.page.html',
+  templateUrl: './verify-code.page.html',
   styleUrl: './recovery.css',
 })
-export class ResetPasswordPage implements AfterViewInit {
+export class VerifyCodePage implements AfterViewInit {
   private readonly api = inject(BackendApi);
   private readonly router = inject(Router);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly session = inject(RecoverySession);
 
   private readonly previous = readRecoveryState(this.router);
-  protected readonly rules = PASSWORD_RULES_TEXT;
+  /** From step 1; without it (a typed address) the person is sent to step 1. */
+  protected readonly email = this.previous.email ?? '';
+  protected readonly emailState = { email: this.email };
 
-  protected readonly form = this.fb.group({
-    email: [this.previous.email ?? ''],
-    code: [''],
-    next: [''],
-    confirm: [''],
-  });
+  protected readonly form = this.fb.group({ code: [''] });
 
-  protected readonly show = signal(false);
   protected readonly submitted = signal(false);
   protected readonly sending = signal(false);
   protected readonly resending = signal(false);
   protected readonly error = signal<string | null>(null);
-  /** What the last request for a code told the person (always the same, whether or not the account exists). */
-  protected readonly info = signal<string>(this.previous.email === undefined ? '' : SENT_MESSAGE);
+  /** What the last step told the person (always the same, whether or not the account exists). */
+  protected readonly info = signal<string>(this.previous.notice ?? (this.email === '' ? '' : SENT_MESSAGE));
   /** The service said the code does not work (AUTH-011): shown under the code field. */
   protected readonly codeRefused = signal(false);
-  /** The service refused the new password (AUTH-007). */
-  protected readonly nextRefused = signal(false);
   /** Set once, when the wait ends, inside the polite live region. */
   protected readonly announcement = signal('');
 
@@ -79,29 +72,22 @@ export class ResetPasswordPage implements AfterViewInit {
   protected readonly waiting = computed(() => this.secondsLeft() > 0);
   private ticker: ReturnType<typeof setInterval> | null = null;
 
-  private readonly formValue = signal(0);
-  protected readonly problems = computed(() => {
-    // Read the controls through the form's own change signal so the messages follow every keystroke.
-    this.formValue();
-    const v = this.form.getRawValue();
-    const next = passwordProblem(v.next);
-    return {
-      email: v.email.trim() === '' ? 'Escribe tu correo electrónico.' : EMAIL_PATTERN.test(v.email.trim()) ? null : 'Escribe un correo válido, por ejemplo nombre@asociacion.pe.',
-      code: isCodeComplete(v.code) ? null : 'Escribe el código de 8 dígitos que te enviamos.',
-      next: next !== null ? passwordProblemText(next) : null,
-      confirm: v.confirm === '' ? 'Repite la contraseña nueva.' : v.confirm !== v.next ? 'Las dos contraseñas no coinciden.' : null,
-    };
-  });
+  private readonly codeValue = signal('');
+  protected readonly codeProblem = computed(() =>
+    isCodeComplete(this.codeValue()) ? null : 'Escribe el código de 8 dígitos que te enviamos.',
+  );
 
-  private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
+  private readonly codeInput = viewChild<ElementRef<HTMLInputElement>>('codeInput');
 
   constructor() {
-    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
-      this.formValue.update((n) => n + 1);
+    if (this.email === '') {
+      void this.router.navigate(['/olvide-contrasena'], { replaceUrl: true });
+    }
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      this.codeValue.set(value.code ?? '');
       this.error.set(null);
       this.codeRefused.set(false);
-      this.nextRefused.set(false);
     });
     this.destroyRef.onDestroy(() => this.stopTicker());
     if (this.waiting()) {
@@ -113,12 +99,12 @@ export class ResetPasswordPage implements AfterViewInit {
     this.title()?.nativeElement.focus();
   }
 
-  protected shown(field: 'email' | 'code' | 'next' | 'confirm'): string | null {
-    return this.submitted() ? this.problems()[field] : null;
+  protected showError(): string | null {
+    return this.submitted() ? this.codeProblem() : null;
   }
 
-  private focusFirstProblem(): void {
-    setTimeout(() => this.formElement()?.nativeElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+  private focusCode(): void {
+    setTimeout(() => this.codeInput()?.nativeElement.focus());
   }
 
   protected submit(): void {
@@ -126,30 +112,28 @@ export class ResetPasswordPage implements AfterViewInit {
     if (this.sending()) {
       return;
     }
-    const p = this.problems();
-    if (p.email !== null || p.code !== null || p.next !== null || p.confirm !== null) {
-      this.focusFirstProblem();
+    if (this.codeProblem() !== null) {
+      this.focusCode();
       return;
     }
-    const v = this.form.getRawValue();
     this.error.set(null);
     this.sending.set(true);
     this.api
-      .confirmPasswordReset({ email: v.email.trim(), code: codeDigits(v.code), newPassword: v.next })
+      .verifyPasswordReset({ email: this.email, code: codeDigits(this.form.controls.code.value) })
       .pipe(
         finalize(() => this.sending.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: () => this.changed(),
+        next: ({ resetToken }) => this.verified(resetToken),
         error: (error: unknown) => this.refused(error),
       });
   }
 
-  private changed(): void {
-    this.form.reset({ email: '', code: '', next: '', confirm: '' });
-    this.show.set(false);
-    void this.router.navigate(['/login'], { queryParams: { motivo: 'clave' }, replaceUrl: true });
+  private verified(resetToken: string): void {
+    this.session.hold(resetToken);
+    this.form.reset({ code: '' });
+    void this.router.navigate(['/nueva-contrasena'], { replaceUrl: true, state: { email: this.email } });
   }
 
   private refused(error: unknown): void {
@@ -158,37 +142,29 @@ export class ResetPasswordPage implements AfterViewInit {
       this.failures += 1;
       if (this.failures >= MAX_CODE_FAILURES) {
         void this.router.navigate(['/olvide-contrasena'], {
-          state: { email: this.form.controls.email.value.trim(), notice: TOO_MANY_FAILURES_MESSAGE },
+          state: { email: this.email, notice: TOO_MANY_FAILURES_MESSAGE },
         });
         return;
       }
       this.codeRefused.set(true);
-      this.focusFirstProblem();
-      return;
-    }
-    if (code === 'AUTH-007') {
-      this.nextRefused.set(true);
-      this.focusFirstProblem();
+      this.focusCode();
       return;
     }
     if (isRateLimited(error)) {
       this.error.set(waitText(error.retryAfterSeconds));
       return;
     }
-    this.error.set(writeErrorText(error, CONFIRM_UNCERTAIN));
+    this.error.set(writeErrorText(error, VERIFY_UNCERTAIN));
   }
 
   protected resend(): void {
-    const email = this.form.controls.email.value.trim();
-    if (this.waiting() || this.resending() || this.problems().email !== null) {
-      this.submitted.set(true);
-      this.focusFirstProblem();
+    if (this.waiting() || this.resending()) {
       return;
     }
     this.error.set(null);
     this.resending.set(true);
     this.api
-      .requestPasswordReset(email)
+      .requestPasswordReset(this.email)
       .pipe(
         finalize(() => this.resending.set(false)),
         takeUntilDestroyed(this.destroyRef),
@@ -206,10 +182,6 @@ export class ResetPasswordPage implements AfterViewInit {
         error: (error: unknown) =>
           this.error.set(isRateLimited(error) ? waitText(error.retryAfterSeconds) : REQUEST_UNCERTAIN),
       });
-  }
-
-  protected setShow(event: Event): void {
-    this.show.set((event.target as HTMLInputElement).checked);
   }
 
   private startTicker(): void {

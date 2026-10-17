@@ -109,11 +109,24 @@ class PasswordResetApiIT {
                 .post("/auth/password-reset/request");
     }
 
-    private Response confirm(String email, String code, String password, String ip) {
+    private Response verify(String email, String code, String ip) {
         return given().contentType("application/json")
                 .header("X-Forwarded-For", ip)
-                .body(Map.of("email", email, "code", code, "newPassword", password))
+                .body(Map.of("email", email, "code", code))
+                .post("/auth/password-reset/verify");
+    }
+
+    private Response confirm(String token, String password, String ip) {
+        return given().contentType("application/json")
+                .header("X-Forwarded-For", ip)
+                .body(Map.of("resetToken", token, "newPassword", password))
                 .post("/auth/password-reset/confirm");
+    }
+
+    /** Asks for a code, reads it from the fake mailbox and trades it for a reset token. */
+    private String tokenFor(String email) {
+        request(email, freshIp()).then().statusCode(202);
+        return verify(email, codeSentTo(email), freshIp()).then().statusCode(200).extract().path("resetToken");
     }
 
     private String codeSentTo(String email) {
@@ -146,15 +159,21 @@ class PasswordResetApiIT {
         request(email, ip).then().statusCode(202);
         String code = codeSentTo(email);
         assertThat(code).matches("\\d{8}");
-        confirm(email, code, NEW_PASSWORD, ip).then().statusCode(204);
+        String token = verify(email, code, ip).then().statusCode(200).extract().path("resetToken");
+        // The token is a UUID, a dot and 43 URL-safe characters (32 random bytes), and the password is still the old one.
+        assertThat(token).matches("[0-9a-f-]{36}\\.[A-Za-z0-9_-]{43}");
+        assertThat(loginStatus(email, STRONG)).isEqualTo(200);
+        // The code was spent by the verification.
+        verify(email, code, ip).then().statusCode(400).body("code", equalTo("AUTH-011"));
+        confirm(token, NEW_PASSWORD, ip).then().statusCode(204);
 
         assertThat(loginStatus(email, STRONG)).isEqualTo(401);
         assertThat(loginStatus(email, NEW_PASSWORD)).isEqualTo(200);
         StaffUser after = staffUsers.findById(user.getId()).orElseThrow();
         assertThat(after.getPasswordChangedAt()).isNotNull();
         assertThat(after.isMustChangePassword()).isFalse();
-        // A used code cannot be used again.
-        confirm(email, code, "una-tercera-clave-larga-y-distinta", ip).then().statusCode(400).body("code", equalTo("AUTH-011"));
+        // A used token cannot be used again.
+        confirm(token, "una-tercera-clave-larga-y-distinta", ip).then().statusCode(400).body("code", equalTo("AUTH-011"));
         // The notice goes out once, to that address, and says nothing secret.
         await().atMost(5, TimeUnit.SECONDS)
                 .until(() -> fake.sent().stream().anyMatch(s -> s.kind().equals("password_changed") && s.to().equals(email)));
@@ -195,6 +214,7 @@ class PasswordResetApiIT {
     @Test
     void theRoutesArePublicAndRejectBodiesWithoutAnEmail() {
         given().contentType("application/json").body("{}").post("/auth/password-reset/request").then().statusCode(400);
+        given().contentType("application/json").body("{}").post("/auth/password-reset/verify").then().statusCode(400);
         given().contentType("application/json").body("{}").post("/auth/password-reset/confirm").then().statusCode(400);
         request("no-es-un-correo", freshIp()).then().statusCode(202); // the same answer for any format
     }
@@ -236,13 +256,19 @@ class PasswordResetApiIT {
     }
 
     @Test
-    void twentyFirstConfirmationFromOneAddressIsRefusedWith429() {
+    void twentyFirstVerificationAndTwentyFirstConfirmationFromOneAddressAreRefusedWith429() {
         String ip = freshIp();
         for (int i = 0; i < 20; i++) {
-            confirm(freshEmail(), "12345678", NEW_PASSWORD, ip).then().statusCode(400);
+            verify(freshEmail(), "12345678", ip).then().statusCode(400);
         }
+        verify(freshEmail(), "12345678", ip).then().statusCode(429).body("code", equalTo("AUTH-012")).header("Retry-After", notNullValue());
 
-        confirm(freshEmail(), "12345678", NEW_PASSWORD, ip).then().statusCode(429).body("code", equalTo("AUTH-012"));
+        String other = freshIp();
+        for (int i = 0; i < 20; i++) {
+            confirm(java.util.UUID.randomUUID() + "." + "a".repeat(43), NEW_PASSWORD, other).then().statusCode(400);
+        }
+        confirm(java.util.UUID.randomUUID() + "." + "a".repeat(43), NEW_PASSWORD, other)
+                .then().statusCode(429).body("code", equalTo("AUTH-012"));
     }
 
     @Test
@@ -255,15 +281,15 @@ class PasswordResetApiIT {
         String ip = freshIp();
 
         for (int i = 0; i < 5; i++) {
-            confirm(email, wrong, NEW_PASSWORD, ip).then().statusCode(400).body("code", equalTo("AUTH-011"));
+            verify(email, wrong, ip).then().statusCode(400).body("code", equalTo("AUTH-011"));
         }
 
-        confirm(email, right, NEW_PASSWORD, ip).then().statusCode(400).body("code", equalTo("AUTH-011"));
+        verify(email, right, ip).then().statusCode(400).body("code", equalTo("AUTH-011"));
         assertThat(loginStatus(email, STRONG)).isEqualTo(200); // nothing changed, the account is not locked
     }
 
     @Test
-    void anExpiredCodeAndACodeForAnotherAccountAreRefusedWithTheSameError() {
+    void anExpiredCodeACodeForAnotherAccountAndAnUnknownEmailAreRefusedWithTheSameStatusAndBody() {
         String email = freshEmail();
         account(email);
         String other = freshEmail();
@@ -271,12 +297,69 @@ class PasswordResetApiIT {
         request(email, freshIp()).then().statusCode(202);
         String code = codeSentTo(email);
 
-        // The right code, but for another account.
-        confirm(other, code, NEW_PASSWORD, freshIp()).then().statusCode(400).body("code", equalTo("AUTH-011"));
+        // The right code, but for another account; and for an email that does not exist.
+        Response otherAccount = verify(other, code, freshIp());
+        Response unknown = verify(freshEmail(), code, freshIp());
+        otherAccount.then().statusCode(400).body("code", equalTo("AUTH-011"));
+        assertThat(unknown.statusCode()).isEqualTo(400);
+        assertThat(unknown.jsonPath().getString("code")).isEqualTo("AUTH-011");
+        assertThat(unknown.jsonPath().getString("message")).isEqualTo(otherAccount.jsonPath().getString("message"));
 
         jdbc.update("UPDATE password_reset_code SET expires_at = now() - interval '1 minute'");
-        confirm(email, code, NEW_PASSWORD, freshIp()).then().statusCode(400).body("code", equalTo("AUTH-011"));
+        verify(email, code, freshIp()).then().statusCode(400).body("code", equalTo("AUTH-011"));
         assertThat(loginStatus(email, NEW_PASSWORD)).isEqualTo(401);
+    }
+
+    @Test
+    void aTokenIsStoredOnlyAsAnHmacExpiresAfterTenMinutesAndAFakeOrTamperedOneIsRefused() {
+        String email = freshEmail();
+        account(email);
+        String token = tokenFor(email);
+        String secret = token.substring(token.indexOf('.') + 1);
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM password_reset_token WHERE token_hmac = ?", Integer.class, secret)).isZero();
+        assertThat(jdbc.queryForObject("SELECT length(token_hmac) FROM password_reset_token WHERE id = ?::uuid", Integer.class,
+                        token.substring(0, token.indexOf('.'))))
+                .isEqualTo(64);
+        // Right id, wrong secret; a random id; garbage.
+        confirm(token.substring(0, token.indexOf('.')) + "." + "x".repeat(43), NEW_PASSWORD, freshIp()).then().statusCode(400).body("code", equalTo("AUTH-011"));
+        confirm(java.util.UUID.randomUUID() + "." + secret, NEW_PASSWORD, freshIp()).then().statusCode(400).body("code", equalTo("AUTH-011"));
+        confirm("basura", NEW_PASSWORD, freshIp()).then().statusCode(400).body("code", equalTo("AUTH-011"));
+
+        jdbc.update("UPDATE password_reset_token SET expires_at = now() - interval '1 minute'");
+        confirm(token, NEW_PASSWORD, freshIp()).then().statusCode(400).body("code", equalTo("AUTH-011"));
+        assertThat(loginStatus(email, NEW_PASSWORD)).isEqualTo(401);
+    }
+
+    @Test
+    void aSecondVerificationReplacesTheTokenSoOnlyTheNewestWorks() {
+        String email = freshEmail();
+        StaffUser user = account(email);
+        String first = tokenFor(email);
+        ageRequests();
+        String second = tokenFor(email);
+
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM password_reset_token WHERE staff_user_id = ?::uuid AND consumed_at IS NULL",
+                        Integer.class,
+                        user.getId().toString()))
+                .isEqualTo(1);
+        confirm(first, NEW_PASSWORD, freshIp()).then().statusCode(400).body("code", equalTo("AUTH-011"));
+        confirm(second, NEW_PASSWORD, freshIp()).then().statusCode(204);
+    }
+
+    @Test
+    void aTokenOnlyWorksForItsOwnAccountAndPasswordOfTheOtherIsUntouched() {
+        String email = freshEmail();
+        account(email);
+        String other = freshEmail();
+        account(other);
+        String token = tokenFor(email);
+
+        confirm(token, NEW_PASSWORD, freshIp()).then().statusCode(204);
+
+        assertThat(loginStatus(email, NEW_PASSWORD)).isEqualTo(200);
+        assertThat(loginStatus(other, STRONG)).isEqualTo(200);
     }
 
     @Test
@@ -296,29 +379,42 @@ class PasswordResetApiIT {
                         user.getId().toString()))
                 .isEqualTo(1);
         if (!first.equals(second)) {
-            confirm(email, first, NEW_PASSWORD, freshIp()).then().statusCode(400);
+            verify(email, first, freshIp()).then().statusCode(400);
         }
-        confirm(email, second, NEW_PASSWORD, freshIp()).then().statusCode(204);
+        verify(email, second, freshIp()).then().statusCode(200);
     }
 
     @Test
-    void aWeakPasswordOrTheCurrentOneIsRefusedWithoutSpendingTheCode() {
+    void aWeakPasswordOrTheCurrentOneIsRefusedWithoutSpendingTheToken() {
         String email = freshEmail();
         account(email);
-        request(email, freshIp()).then().statusCode(202);
-        String code = codeSentTo(email);
+        String token = tokenFor(email);
 
-        confirm(email, code, "corta", freshIp()).then().statusCode(400).body("code", equalTo("AUTH-007"));
-        confirm(email, code, STRONG, freshIp()).then().statusCode(400).body("code", equalTo("AUTH-007"));
-        confirm(email, code, NEW_PASSWORD, freshIp()).then().statusCode(204);
+        confirm(token, "corta", freshIp()).then().statusCode(400).body("code", equalTo("AUTH-007"));
+        confirm(token, STRONG, freshIp()).then().statusCode(400).body("code", equalTo("AUTH-007"));
+        confirm(token, NEW_PASSWORD, freshIp()).then().statusCode(204);
     }
 
     @Test
-    void twoSimultaneousConfirmationsOfTheSameCodeLetExactlyOneWin() throws Exception {
+    void changingThePasswordSpendsACodeRequestedAfterTheVerification() {
         String email = freshEmail();
         account(email);
+        String token = tokenFor(email);
+        ageRequests();
         request(email, freshIp()).then().statusCode(202);
-        String code = codeSentTo(email);
+        await().atMost(5, TimeUnit.SECONDS).until(() -> codesSent() == 2);
+        String lateCode = fake.lastCodeFor(email).orElseThrow();
+
+        confirm(token, NEW_PASSWORD, freshIp()).then().statusCode(204);
+
+        verify(email, lateCode, freshIp()).then().statusCode(400).body("code", equalTo("AUTH-011"));
+    }
+
+    @Test
+    void twoSimultaneousConfirmationsOfTheSameTokenLetExactlyOneWin() throws Exception {
+        String email = freshEmail();
+        account(email);
+        String code = tokenFor(email);
         ExecutorService pool = Executors.newFixedThreadPool(2);
         CountDownLatch start = new CountDownLatch(1);
         try {
@@ -327,7 +423,7 @@ class PasswordResetApiIT {
                 String ip = freshIp();
                 results.add(pool.submit(() -> {
                     start.await();
-                    return confirm(email, code, password, ip).statusCode();
+                    return confirm(code, password, ip).statusCode();
                 }));
             }
             start.countDown();
@@ -336,6 +432,39 @@ class PasswordResetApiIT {
                 statuses.add(result.get(30, TimeUnit.SECONDS));
             }
             assertThat(statuses).containsExactlyInAnyOrder(204, 400);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void twoSimultaneousVerificationsOfTheSameCodeIssueExactlyOneToken() throws Exception {
+        String email = freshEmail();
+        StaffUser user = account(email);
+        request(email, freshIp()).then().statusCode(202);
+        String code = codeSentTo(email);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            List<Future<Integer>> results = new ArrayList<>();
+            for (int i = 0; i < 2; i++) {
+                String ip = freshIp();
+                results.add(pool.submit(() -> {
+                    start.await();
+                    return verify(email, code, ip).statusCode();
+                }));
+            }
+            start.countDown();
+            List<Integer> statuses = new ArrayList<>();
+            for (Future<Integer> result : results) {
+                statuses.add(result.get(30, TimeUnit.SECONDS));
+            }
+            assertThat(statuses).containsExactlyInAnyOrder(200, 400);
+            assertThat(jdbc.queryForObject(
+                            "SELECT count(*) FROM password_reset_token WHERE staff_user_id = ?::uuid AND consumed_at IS NULL",
+                            Integer.class,
+                            user.getId().toString()))
+                    .isEqualTo(1);
         } finally {
             pool.shutdownNow();
         }
@@ -430,6 +559,28 @@ class PasswordResetApiIT {
             existing.add((System.nanoTime() - start) / 1_000_000);
             start = System.nanoTime();
             request(freshEmail(), freshIp()).then().statusCode(202);
+            unknown.add((System.nanoTime() - start) / 1_000_000);
+        }
+
+        long difference = Math.abs(median(existing) - median(unknown));
+        assertThat(difference).as("median ms existing %s vs unknown %s", median(existing), median(unknown)).isLessThan(250);
+    }
+
+    @Test
+    void aWrongCodeTakesAboutAsLongForAnExistingAndForAnUnknownAccount() {
+        List<Long> existing = new ArrayList<>();
+        List<Long> unknown = new ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            String email = freshEmail();
+            account(email);
+            request(email, freshIp()).then().statusCode(202);
+            String right = codeSentTo(email);
+            String wrong = right.equals("00000000") ? "00000001" : "00000000";
+            long start = System.nanoTime();
+            verify(email, wrong, freshIp()).then().statusCode(400);
+            existing.add((System.nanoTime() - start) / 1_000_000);
+            start = System.nanoTime();
+            verify(freshEmail(), wrong, freshIp()).then().statusCode(400);
             unknown.add((System.nanoTime() - start) / 1_000_000);
         }
 

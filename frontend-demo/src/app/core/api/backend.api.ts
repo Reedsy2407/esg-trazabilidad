@@ -8,6 +8,8 @@ import {
   AssociationStatus,
   ChangePasswordRequest,
   ConfirmPasswordResetRequest,
+  VerifyPasswordResetRequest,
+  VerifyPasswordResetResponse,
   AssociationTransition,
   Certification,
   CreateAssociationRequest,
@@ -67,8 +69,16 @@ export class BackendApi {
   }
 
   /**
-   * 204: the code is spent and the password changed (no session starts). AUTH-011 for any code that does not
-   * work, AUTH-007 for a refused password, AUTH-012 (429) for too many tries from this address. Public.
+   * 200 with a reset token when the code is right (the code is spent). AUTH-011 for any code that does not
+   * work (the same for an unknown account), AUTH-012 (429) for too many tries from this address. Public.
+   */
+  verifyPasswordReset(request: VerifyPasswordResetRequest): Observable<VerifyPasswordResetResponse> {
+    return this.http.post<VerifyPasswordResetResponse>(`${auth}/auth/password-reset/verify`, request);
+  }
+
+  /**
+   * 204: the token is spent and the password changed (no session starts). AUTH-011 for a token that does not
+   * work, AUTH-007 for a refused password (the token is not spent), AUTH-012 (429) for too many tries. Public.
    */
   confirmPasswordReset(request: ConfirmPasswordResetRequest): Observable<void> {
     return this.http.post<void>(`${auth}/auth/password-reset/confirm`, request);

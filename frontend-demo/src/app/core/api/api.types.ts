@@ -57,10 +57,20 @@ export interface ChangePasswordRequest {
   readonly newPassword: string;
 }
 
-/** auth-service ConfirmPasswordResetRequest (POST /auth/password-reset/confirm). The code may carry spaces. */
-export interface ConfirmPasswordResetRequest {
+/** auth-service VerifyPasswordResetRequest (POST /auth/password-reset/verify). The code may carry spaces. */
+export interface VerifyPasswordResetRequest {
   readonly email: string;
   readonly code: string;
+}
+
+/** auth-service VerifyPasswordResetResponse: proof that the code was right, good for 10 minutes and one use. */
+export interface VerifyPasswordResetResponse {
+  readonly resetToken: string;
+}
+
+/** auth-service ConfirmPasswordResetRequest (POST /auth/password-reset/confirm). */
+export interface ConfirmPasswordResetRequest {
+  readonly resetToken: string;
   readonly newPassword: string;
 }
 

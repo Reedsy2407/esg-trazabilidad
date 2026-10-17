@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 
@@ -38,6 +39,10 @@ class JdbcPasswordResetStore implements PasswordResetStore {
         jdbc.update("DELETE FROM password_reset_request WHERE requested_at < ?", utc(cutoff));
         jdbc.update(
                 "DELETE FROM password_reset_code WHERE created_at < ? AND (consumed_at IS NOT NULL OR expires_at < ?)",
+                utc(cutoff),
+                utc(cutoff));
+        jdbc.update(
+                "DELETE FROM password_reset_token WHERE created_at < ? AND (consumed_at IS NOT NULL OR expires_at < ?)",
                 utc(cutoff),
                 utc(cutoff));
     }
@@ -136,6 +141,14 @@ class JdbcPasswordResetStore implements PasswordResetStore {
                 staffUserId,
                 utc(now));
         if (live.isEmpty()) {
+            // Same statements as a mismatch, matching no row: an account with no live code, or no account
+            // at all, costs the database what a wrong code costs.
+            jdbc.update(
+                    "UPDATE password_reset_code SET attempts = attempts + 1,"
+                            + " consumed_at = CASE WHEN attempts + 1 >= ? THEN ? ELSE NULL END WHERE id = ?",
+                    maxAttempts,
+                    utc(now),
+                    UUID.randomUUID());
             return new CheckResult(Outcome.NONE, null);
         }
         LiveCode code = live.get(0);
@@ -160,5 +173,53 @@ class JdbcPasswordResetStore implements PasswordResetStore {
                         codeId,
                         utc(now))
                 == 1;
+    }
+
+    @Override
+    @Transactional
+    public void replaceToken(UUID tokenId, UUID staffUserId, String tokenHmac, Instant now, Instant expiresAt) {
+        jdbc.update(
+                "UPDATE password_reset_token SET consumed_at = ? WHERE staff_user_id = ? AND consumed_at IS NULL",
+                utc(now),
+                staffUserId);
+        jdbc.update(
+                "INSERT INTO password_reset_token (id, staff_user_id, token_hmac, created_at, expires_at)"
+                        + " VALUES (?, ?, ?, ?, ?)",
+                tokenId,
+                staffUserId,
+                tokenHmac,
+                utc(now),
+                utc(expiresAt));
+    }
+
+    @Override
+    public Optional<LiveToken> findLiveToken(UUID tokenId, Instant now) {
+        return jdbc.query(
+                        "SELECT staff_user_id, token_hmac FROM password_reset_token"
+                                + " WHERE id = ? AND consumed_at IS NULL AND expires_at > ?",
+                        (rs, row) -> new LiveToken(rs.getObject(1, UUID.class), rs.getString(2)),
+                        tokenId,
+                        utc(now))
+                .stream()
+                .findFirst();
+    }
+
+    @Override
+    public boolean consumeToken(UUID tokenId, Instant now) {
+        return jdbc.update(
+                        "UPDATE password_reset_token SET consumed_at = ?"
+                                + " WHERE id = ? AND consumed_at IS NULL AND expires_at > ?",
+                        utc(now),
+                        tokenId,
+                        utc(now))
+                == 1;
+    }
+
+    @Override
+    public void spendLiveCodes(UUID staffUserId, Instant now) {
+        jdbc.update(
+                "UPDATE password_reset_code SET consumed_at = ? WHERE staff_user_id = ? AND consumed_at IS NULL",
+                utc(now),
+                staffUserId);
     }
 }

@@ -39,6 +39,17 @@ class CodeHasher {
         return hmac("code:" + staffUserId + ":" + codeId + ":" + code);
     }
 
+    /** The reset token's secret part, bound to the account and to the token's own record like a code. */
+    String token(UUID staffUserId, UUID tokenId, String secret) {
+        return hmac("token:" + staffUserId + ":" + tokenId + ":" + secret);
+    }
+
+    boolean tokenMatches(UUID staffUserId, UUID tokenId, String secret, String storedHmac) {
+        return MessageDigest.isEqual(
+                token(staffUserId, tokenId, secret).getBytes(StandardCharsets.US_ASCII),
+                storedHmac.getBytes(StandardCharsets.US_ASCII));
+    }
+
     /** For the email and the address the limits count: {@code label} is "email" or "ip". */
     String label(String label, String value) {
         return hmac(label + ":" + value);

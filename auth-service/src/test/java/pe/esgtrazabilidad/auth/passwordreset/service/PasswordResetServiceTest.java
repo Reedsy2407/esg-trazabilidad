@@ -196,97 +196,176 @@ class PasswordResetServiceTest {
         verify(dispatcher, never()).resetCode(any(), anyString(), anyString());
     }
 
-    // --- confirm -----------------------------------------------------------------------------------
+    // --- verify ------------------------------------------------------------------------------------
 
-    private void liveCode(Outcome outcome, UUID codeId) {
-        when(store.check(eq(account.getId()), eq(NOW), eq(5), any())).thenReturn(new CheckResult(outcome, codeId));
+    private static final String SECRET = "s".repeat(43);
+
+    private void liveCode(UUID accountId, Outcome outcome, UUID codeId) {
+        when(store.check(eq(accountId), eq(NOW), eq(5), any())).thenReturn(new CheckResult(outcome, codeId));
+    }
+
+    private void unknownAccountHasNoCode() {
+        when(store.check(eq(new UUID(0L, 0L)), eq(NOW), eq(5), any())).thenReturn(new CheckResult(Outcome.NONE, null));
     }
 
     @Test
-    void theRightCodeSpendsItChangesThePasswordWithoutAPendingChangeAndSendsTheNotice() {
+    void theRightCodeIsSpentAndAnHmacOnlyTokenBoundToTheAccountIsStored() {
         UUID codeId = UUID.randomUUID();
-        liveCode(Outcome.MATCH, codeId);
-        when(passwordEncoder.matches(anyString(), eq("current-hash"))).thenReturn(false);
-        when(passwordEncoder.encode(STRONG)).thenReturn("new-hash");
+        liveCode(account.getId(), Outcome.MATCH, codeId);
+        when(generator.tokenSecret()).thenReturn(SECRET);
         when(store.consume(codeId, NOW)).thenReturn(true);
 
-        service(true).confirm(EMAIL, "1234 5678", STRONG, IP);
+        String token = service(true).verify(EMAIL, "1234 5678", IP);
 
-        verify(staffUsers).updatePassword(account.getId(), "new-hash", false, NOW);
-        verify(store).recordRequest(eq(Kind.NOTICE), anyString(), anyString(), eq(NOW), eq(true));
-        verify(dispatcher).passwordChanged(any(), eq(EMAIL), eq(NOW));
+        ArgumentCaptor<UUID> tokenId = ArgumentCaptor.forClass(UUID.class);
+        ArgumentCaptor<String> hmac = ArgumentCaptor.forClass(String.class);
+        verify(store).replaceToken(tokenId.capture(), eq(account.getId()), hmac.capture(), eq(NOW), eq(NOW.plusSeconds(600)));
+        assertThat(token).isEqualTo(tokenId.getValue() + "." + SECRET);
+        assertThat(hmac.getValue()).isEqualTo(hasher.token(account.getId(), tokenId.getValue(), SECRET)).doesNotContain(SECRET);
+        verify(dispatcher, never()).passwordChanged(any(), anyString(), any());
     }
 
     @Test
     void theMatcherAcceptsOnlyTheCodeThatWasStoredForThatRecord() {
-        liveCode(Outcome.MISMATCH, UUID.randomUUID());
-        assertThatThrownBy(() -> service(true).confirm(EMAIL, "12345678", STRONG, IP))
+        liveCode(account.getId(), Outcome.MISMATCH, UUID.randomUUID());
+        assertThatThrownBy(() -> service(true).verify(EMAIL, "12345678", IP))
                 .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Predicate<LiveCode>> matcher = ArgumentCaptor.forClass(Predicate.class);
         verify(store).check(eq(account.getId()), eq(NOW), eq(5), matcher.capture());
         UUID codeId = UUID.randomUUID();
-        LiveCode stored = new LiveCode(codeId, hasher.code(account.getId(), codeId, "12345678"));
-        assertThat(matcher.getValue().test(stored)).isTrue();
+        assertThat(matcher.getValue().test(new LiveCode(codeId, hasher.code(account.getId(), codeId, "12345678")))).isTrue();
         assertThat(matcher.getValue().test(new LiveCode(codeId, hasher.code(account.getId(), codeId, "87654321")))).isFalse();
     }
 
     @Test
-    void aWrongCodeAndAMissingLiveCodeAreTheSameError() {
-        liveCode(Outcome.MISMATCH, UUID.randomUUID());
-        assertThatThrownBy(() -> service(true).confirm(EMAIL, "00000000", STRONG, IP))
+    void everyKindOfFailureIsTheSameErrorAndGoesThroughTheSameCheck() {
+        liveCode(account.getId(), Outcome.MISMATCH, UUID.randomUUID());
+        assertThatThrownBy(() -> service(true).verify(EMAIL, "00000000", IP))
                 .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
 
-        liveCode(Outcome.NONE, null);
-        assertThatThrownBy(() -> service(true).confirm(EMAIL, "00000000", STRONG, IP))
+        liveCode(account.getId(), Outcome.NONE, null);
+        assertThatThrownBy(() -> service(true).verify(EMAIL, "00000000", IP))
                 .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
+
+        unknownAccountHasNoCode();
+        when(staffUsers.findByEmail("nadie@esgtrazabilidad.pe")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service(true).verify("nadie@esgtrazabilidad.pe", "00000000", IP))
+                .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
+
+        when(staffUsers.findByEmail(EMAIL)).thenReturn(Optional.of(account.deactivate("baja", UUID.randomUUID(), NOW)));
+        assertThatThrownBy(() -> service(true).verify(EMAIL, "00000000", IP))
+                .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
+
+        // A malformed code is not special-cased either: it is checked (and counted) like any wrong code.
+        when(staffUsers.findByEmail(EMAIL)).thenReturn(Optional.of(account));
+        liveCode(account.getId(), Outcome.MISMATCH, UUID.randomUUID());
+        assertThatThrownBy(() -> service(true).verify(EMAIL, "12ab5678", IP))
+                .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
+
+        verify(store, never()).replaceToken(any(), any(), anyString(), any(), any());
+        verify(store, org.mockito.Mockito.times(5)).check(any(), any(), org.mockito.ArgumentMatchers.anyInt(), any());
+    }
+
+    @Test
+    void ifSomebodyElseSpentTheCodeFirstNoTokenIsIssued() {
+        UUID codeId = UUID.randomUUID();
+        liveCode(account.getId(), Outcome.MATCH, codeId);
+        when(store.consume(codeId, NOW)).thenReturn(false);
+
+        assertThatThrownBy(() -> service(true).verify(EMAIL, "12345678", IP))
+                .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
+
+        verify(store, never()).replaceToken(any(), any(), anyString(), any(), any());
+    }
+
+    @Test
+    void twentyVerificationsAnHourFromOneAddressAreRefusedBeforeAnythingIsChecked() {
+        when(store.acceptedByIpSince(eq(Kind.VERIFY), anyString(), any()))
+                .thenReturn(java.util.Collections.nCopies(20, NOW.minusSeconds(60)));
+
+        assertThatThrownBy(() -> service(true).verify(EMAIL, "12345678", IP))
+                .isInstanceOf(ResetRateLimitedException.class);
+
+        verify(store, never()).check(any(), any(), org.mockito.ArgumentMatchers.anyInt(), any());
+    }
+
+    // --- confirm -----------------------------------------------------------------------------------
+
+    private String liveToken(UUID tokenId) {
+        when(store.findLiveToken(tokenId, NOW))
+                .thenReturn(Optional.of(new PasswordResetStore.LiveToken(account.getId(), hasher.token(account.getId(), tokenId, SECRET))));
+        when(staffUsers.findById(account.getId())).thenReturn(Optional.of(account));
+        return tokenId + "." + SECRET;
+    }
+
+    @Test
+    void theTokenIsSpentThePasswordChangedLiveCodesSpentAndTheNoticeSent() {
+        UUID tokenId = UUID.randomUUID();
+        String token = liveToken(tokenId);
+        when(passwordEncoder.matches(anyString(), eq("current-hash"))).thenReturn(false);
+        when(passwordEncoder.encode(STRONG)).thenReturn("new-hash");
+        when(store.consumeToken(tokenId, NOW)).thenReturn(true);
+
+        service(true).confirm(token, STRONG, IP);
+
+        verify(staffUsers).updatePassword(account.getId(), "new-hash", false, NOW);
+        verify(store).spendLiveCodes(account.getId(), NOW);
+        verify(store).recordRequest(eq(Kind.NOTICE), anyString(), anyString(), eq(NOW), eq(true));
+        verify(dispatcher).passwordChanged(any(), eq(EMAIL), eq(NOW));
+    }
+
+    @Test
+    void aTokenThatDoesNotWorkIsAlwaysTheSameError() {
+        UUID tokenId = UUID.randomUUID();
+        // Unknown, expired or spent: the store finds no live token.
+        when(store.findLiveToken(tokenId, NOW)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service(true).confirm(tokenId + "." + SECRET, STRONG, IP))
+                .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
+
+        // Right id, wrong secret.
+        liveToken(tokenId);
+        assertThatThrownBy(() -> service(true).confirm(tokenId + "." + "x".repeat(43), STRONG, IP))
+                .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
+
+        // Malformed.
+        for (String malformed : new String[] {"sin-punto", "no-uuid." + SECRET, ".", ""}) {
+            assertThatThrownBy(() -> service(true).confirm(malformed, STRONG, IP))
+                    .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
+        }
+
+        // The account was deactivated after the token was issued.
+        when(staffUsers.findById(account.getId())).thenReturn(Optional.of(account.deactivate("baja", UUID.randomUUID(), NOW)));
+        assertThatThrownBy(() -> service(true).confirm(tokenId + "." + SECRET, STRONG, IP))
+                .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
+
+        verify(store, never()).consumeToken(any(), any());
         verify(staffUsers, never()).updatePassword(any(), anyString(), anyBoolean(), any());
     }
 
     @Test
-    void anUnknownOrInactiveAccountAndAMalformedCodeGetTheSameErrorWithoutLookingAtCodes() {
-        when(staffUsers.findByEmail("nadie@esgtrazabilidad.pe")).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service(true).confirm("nadie@esgtrazabilidad.pe", "12345678", STRONG, IP))
-                .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
-
-        when(staffUsers.findByEmail(EMAIL)).thenReturn(Optional.of(account.deactivate("baja", UUID.randomUUID(), NOW)));
-        assertThatThrownBy(() -> service(true).confirm(EMAIL, "12345678", STRONG, IP))
-                .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
-
-        when(staffUsers.findByEmail(EMAIL)).thenReturn(Optional.of(account));
-        assertThatThrownBy(() -> service(true).confirm(EMAIL, "12ab5678", STRONG, IP))
-                .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
-        verify(store, never()).check(any(), any(), org.mockito.ArgumentMatchers.anyInt(), any());
-    }
-
-    @Test
-    void aWeakPasswordIsRefusedBeforeTheCodeIsLookedAtSoItCostsNoAttempt() {
-        assertThatThrownBy(() -> service(true).confirm(EMAIL, "12345678", "corta", IP))
+    void aWeakOrRepeatedPasswordIsRefusedAndDoesNotSpendTheToken() {
+        UUID tokenId = UUID.randomUUID();
+        String token = liveToken(tokenId);
+        assertThatThrownBy(() -> service(true).confirm(token, "corta", IP))
                 .satisfies(thrown -> assertError(thrown, AuthErrors.WEAK_PASSWORD));
 
-        verify(store, never()).check(any(), any(), org.mockito.ArgumentMatchers.anyInt(), any());
-    }
-
-    @Test
-    void thePasswordMayNotRepeatTheCurrentOneAndTheCodeIsNotSpent() {
-        liveCode(Outcome.MATCH, UUID.randomUUID());
         when(passwordEncoder.matches(STRONG, "current-hash")).thenReturn(true);
-
-        assertThatThrownBy(() -> service(true).confirm(EMAIL, "12345678", STRONG, IP))
+        assertThatThrownBy(() -> service(true).confirm(token, STRONG, IP))
                 .satisfies(thrown -> assertError(thrown, AuthErrors.WEAK_PASSWORD));
 
-        verify(store, never()).consume(any(), any());
+        verify(store, never()).consumeToken(any(), any());
     }
 
     @Test
-    void ifSomebodyElseSpentTheCodeFirstThePasswordIsNotWritten() {
-        UUID codeId = UUID.randomUUID();
-        liveCode(Outcome.MATCH, codeId);
+    void ifSomebodyElseSpentTheTokenFirstThePasswordIsNotWritten() {
+        UUID tokenId = UUID.randomUUID();
+        String token = liveToken(tokenId);
         when(passwordEncoder.encode(STRONG)).thenReturn("new-hash");
-        when(store.consume(codeId, NOW)).thenReturn(false);
+        when(store.consumeToken(tokenId, NOW)).thenReturn(false);
 
-        assertThatThrownBy(() -> service(true).confirm(EMAIL, "12345678", STRONG, IP))
+        assertThatThrownBy(() -> service(true).confirm(token, STRONG, IP))
                 .satisfies(thrown -> assertError(thrown, AuthErrors.INVALID_RESET_CODE));
 
         verify(staffUsers, never()).updatePassword(any(), anyString(), anyBoolean(), any());
@@ -294,14 +373,14 @@ class PasswordResetServiceTest {
     }
 
     @Test
-    void twentyConfirmationsAnHourFromOneAddressAreRefusedBeforeAnythingIsChecked() {
+    void twentyConfirmationsAnHourFromOneAddressAreRefusedBeforeAnythingIsLookedAt() {
         when(store.acceptedByIpSince(eq(Kind.CONFIRM), anyString(), any()))
                 .thenReturn(java.util.Collections.nCopies(20, NOW.minusSeconds(60)));
 
-        assertThatThrownBy(() -> service(true).confirm(EMAIL, "12345678", STRONG, IP))
+        assertThatThrownBy(() -> service(true).confirm(UUID.randomUUID() + "." + SECRET, STRONG, IP))
                 .isInstanceOf(ResetRateLimitedException.class);
 
-        verify(store, never()).check(any(), any(), org.mockito.ArgumentMatchers.anyInt(), any());
+        verify(store, never()).findLiveToken(any(), any());
     }
 
     // --- the notice --------------------------------------------------------------------------------

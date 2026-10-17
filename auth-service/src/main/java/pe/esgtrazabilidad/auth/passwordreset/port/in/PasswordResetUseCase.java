@@ -10,9 +10,18 @@ public interface PasswordResetUseCase {
     void request(String email, String clientIp);
 
     /**
-     * Spends the code and sets the new password in one step. AUTH-011 for any code that does not work
-     * (wrong, expired, spent, never issued, unknown or inactive account), AUTH-007 for a password the
-     * policy refuses or that repeats the current one, AUTH-012 when the caller's address is over its limit.
+     * Step 1 of the recovery: checks the code and, if it is right, spends it and returns a reset token
+     * (valid 10 minutes, one use). AUTH-011 for any code that does not work (wrong, expired, spent, never
+     * issued, unknown or inactive account, malformed), with the same work in every case; AUTH-012 when the
+     * caller's address is over its limit.
      */
-    void confirm(String email, String code, String newRawPassword, String clientIp);
+    String verify(String email, String code, String clientIp);
+
+    /**
+     * Step 2: spends the token and sets the new password in one step. AUTH-011 for a token that does not
+     * work (unknown, expired, spent, malformed), AUTH-007 for a password the policy refuses or that repeats
+     * the current one (the token is NOT spent, so the person can try another), AUTH-012 when the caller's
+     * address is over its limit.
+     */
+    void confirm(String resetToken, String newRawPassword, String clientIp);
 }

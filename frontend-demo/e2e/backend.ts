@@ -48,6 +48,8 @@ export const SUNAT_NAMES: Readonly<Record<string, string>> = { '20548712336': 'P
 export const PASSWORD = 'clave-correcta';
 /** The only code the fake password recovery accepts. */
 export const RESET_CODE = '04271983';
+/** What /verify hands back for RESET_CODE; the only token /confirm accepts. */
+export const RESET_TOKEN = 'token-de-prueba.de-la-recuperacion-solo-en-los-tests';
 export const EMAIL = 'ana.paredes@asociacion.pe';
 
 export function jwtFor(
@@ -194,7 +196,9 @@ export interface BackendOptions {
   changePasswordFailure?: { status: number; code: string };
   /** POST /auth/password-reset/request answers this instead of 202 (code null: a bare gateway answer). */
   resetRequestFailure?: { status: number; code: string | null; retryAfter?: number };
-  /** POST /auth/password-reset/confirm answers this instead of 204 when the code is the right one. */
+  /** POST /auth/password-reset/verify answers this instead of the token when the code is the right one. */
+  resetVerifyFailure?: { status: number; code: string | null; retryAfter?: number };
+  /** POST /auth/password-reset/confirm answers this instead of 204 when the token is the right one. */
   resetConfirmFailure?: { status: number; code: string; retryAfter?: number };
   /**
    * Answers to successive POST /auth/staff-users, in order: a status for a bare gateway failure
@@ -390,10 +394,23 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     }
     return route.fulfill({ status: 202 });
   });
-  await page.route('**/svc/auth/auth/password-reset/confirm', (route) => {
+  await page.route('**/svc/auth/auth/password-reset/verify', (route) => {
     options.writes?.push({ method: 'POST', path: new URL(route.request().url()).pathname, body: route.request().postDataJSON() });
     const { code } = route.request().postDataJSON() as { code: string };
     if (code !== RESET_CODE) {
+      return problem(route, 400, 'AUTH-011', 'El código no es válido o venció. Pide uno nuevo.');
+    }
+    const failure = options.resetVerifyFailure;
+    if (failure !== undefined) {
+      const headers = failure.retryAfter === undefined ? {} : { 'Retry-After': String(failure.retryAfter) };
+      return failure.code === null ? gatewayError(route, failure.status) : problem(route, failure.status, failure.code, 'rechazada', headers);
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ resetToken: RESET_TOKEN }) });
+  });
+  await page.route('**/svc/auth/auth/password-reset/confirm', (route) => {
+    options.writes?.push({ method: 'POST', path: new URL(route.request().url()).pathname, body: route.request().postDataJSON() });
+    const { resetToken } = route.request().postDataJSON() as { resetToken: string };
+    if (resetToken !== RESET_TOKEN) {
       return problem(route, 400, 'AUTH-011', 'El código no es válido o venció. Pide uno nuevo.');
     }
     const failure = options.resetConfirmFailure;

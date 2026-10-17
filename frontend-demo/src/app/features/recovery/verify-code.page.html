@@ -1,0 +1,63 @@
+<main class="page">
+  <div class="printout">
+    <div class="printer" aria-hidden="true"></div>
+    <section class="ticket card" aria-labelledby="verify-title">
+      <h1 id="verify-title" tabindex="-1" #title>Revisa tu correo</h1>
+      <p class="lead">Escribe el código de 8 dígitos que enviamos a:</p>
+      <p class="fixed-email mono" data-testid="fixed-email">{{ email }}</p>
+      <p class="change-email"><a routerLink="/olvide-contrasena" [state]="emailState">¿No es tu correo? Cambiar</a></p>
+      <hr class="dots" />
+
+      <!-- Always in the DOM: a live region that appears together with its text isn't reliably announced. -->
+      <p class="notice" role="status" [class.visually-hidden]="info() === ''">{{ info() }}</p>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate aria-labelledby="verify-title">
+        <div class="field">
+          <label for="code">Código de 8 dígitos</label>
+          <input
+            class="control code mono"
+            id="code"
+            #codeInput
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="16"
+            spellcheck="false"
+            formControlName="code"
+            [attr.aria-invalid]="showError() !== null || codeRefused()"
+            [attr.aria-describedby]="showError() !== null || codeRefused() ? 'code-hint code-error' : 'code-hint'"
+          />
+          <p class="hint" id="code-hint">Puedes pegarlo con espacios. Vence a los 10 minutos y sirve una sola vez.</p>
+          @if (showError(); as message) {
+            <p class="field-error" id="code-error">{{ message }}</p>
+          } @else if (codeRefused()) {
+            <p class="field-error" id="code-error">{{ invalidCodeText }}</p>
+          }
+        </div>
+
+        @if (error(); as message) {
+          <p class="problem form-problem" role="alert">{{ message }}</p>
+        }
+
+        <button class="btn btn-primary submit" type="submit" [disabled]="sending()">
+          {{ sending() ? 'Verificando…' : 'Verificar código' }}
+        </button>
+      </form>
+
+      <div class="secondary">
+        <button class="btn" type="button" (click)="resend()" [disabled]="waiting() || resending()">
+          {{ resending() ? 'Enviando…' : 'Enviar otro código' }}
+        </button>
+        @if (waiting()) {
+          <p class="wait">Podrás pedir otro código en <span class="mono">{{ secondsLeft() }} s</span>.</p>
+        }
+        <!-- Announced once, when the wait ends; the ticking number above is outside this region. -->
+        <p class="visually-hidden" role="status" aria-live="polite">{{ announcement() }}</p>
+      </div>
+
+      <p class="links">
+        <a routerLink="/login">Volver a iniciar sesión</a>
+      </p>
+    </section>
+  </div>
+</main>

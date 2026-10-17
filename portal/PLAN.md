@@ -104,9 +104,18 @@ cambio a un job se pruebe con su mismo push.
     plantilla `plantillas/adr.md`, `scripts/gen-adr-toc.mjs` (con tests) e índice de
     decisiones.
 3. ✅ Specs OpenAPI y `openapi-drift` (rama `portal/openapi-export`).
-4. Glosario de estados y catálogo de errores por servicio, más `catalog-drift`.
-5b. Los 6 ADR del brief y 4 ADR ya implementados.
-6. Visión del producto y páginas de endpoints, un servicio por vez.
+4. ✅ Glosario de estados y catálogo de errores por servicio, más `catalog-drift` (informativo).
+5b. ✅ ADR: los 4 anteriores más 8 (empresa con dos estados, cumplimiento declarado, contraseñas NIST, JWT sin revocación, recuperación por código, recuperación en dos pasos, correo por HTTPS con Apps Script, servicio caído 503), todos Implementada.
+6. ✅ Visión del producto, modelo de dominio y una página por operación de los cuatro servicios (64 páginas), con diagramas PlantUML.
+
+## Estado del contenido (M9 a M10)
+
+- **Specs OpenAPI** regeneradas con `export-openapi.mjs` (auth 12 rutas, recycler 14, collection 20, reporting 19). La ruta `/test/ping` de auth-service sale de un controlador de prueba y no tiene página.
+- **Endpoints:** una página por operación, 64 en total, con `<api-endpoint>` sobre la spec, rol, ejemplo de petición y respuesta, reglas y errores, y una etiqueta de estabilidad (Estable; Reciente = añadido o cambiado entre M7 y M10; Interno = `/companies`). Las páginas son fuentes: se editan a mano.
+- **Páginas de negocio** en `topics/vision/` (16), glosario de estados (1 + 4) y catálogo de errores (1 + 4, con los comunes).
+- **Diagramas** en `Writerside/puml/` (7 PlantUML: flujo de punta a punta, modelo de dominio, ciclo del cronograma, ciclo del certificado, secuencia y estados de la recuperación, servicio caído), incluidos con `<code-block lang="plantuml" src="…"/>`. El builder los renderiza (secuencia, estados y clases) sin Graphviz; un diagrama muy ancho se desplaza en horizontal dentro de la página. Se prefirió `code-block src` a `<img src="x.puml">`, que exige además una variante `_dark` por archivo (inspección VIS011).
+- **`catalog-drift`:** `scripts/catalog-drift.mjs` compara los códigos de los `*Errors.java` con la primera columna de cada `errores-<servicio>.md`; job informativo en `portal.yml`. No cubre los códigos de shared-kernel (`AUTH-000`, `VALIDATION_ERROR`, `DATA_CONFLICT`, `SERVICE_UNAVAILABLE`).
+- **Pendiente:** confirmar en el sitio publicado que la interfaz se ve en español (la barra y el buscador salen en `es-ES`; los textos fijos del componente `api-endpoint`, como «Request parameters», salen en inglés).
 
 ## Generación de los specs OpenAPI (task 3)
 

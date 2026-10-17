@@ -16,8 +16,11 @@
 #                 this workflow's path filter: it never runs on a
 #                 *-service/src push, so it can't enter Render's
 #                 checksPass gate either way. See portal/PLAN.md.
+# - catalog-drift: compares the error codes the services declare
+#                 (*Errors.java) with the catalog pages under
+#                 Writerside/topics/errores/. Informational too.
 # - deploy:       main only, and only after build and check. openapi-drift
-#                 never gates it.
+#                 and catalog-drift never gate it.
 name: Portal
 
 on:
@@ -50,7 +53,7 @@ jobs:
 
       # The runner's preinstalled Node is enough: the scripts use builtins only.
       - name: Portal script tests
-        run: node --test portal/scripts/gen-adr-toc.test.mjs portal/scripts/export-openapi.test.mjs
+        run: node --test portal/scripts/gen-adr-toc.test.mjs portal/scripts/export-openapi.test.mjs portal/scripts/catalog-drift.test.mjs
 
       # build-local.sh also validates every ADR (gen-adr-toc.mjs) and stops on
       # an invalid one before the builder runs.
@@ -128,6 +131,18 @@ jobs:
             echo "::warning::Las specs OpenAPI commiteadas están desfasadas del código. Corre 'node portal/scripts/export-openapi.mjs' (tras un 'mvn verify' por servicio) y commitea el resultado."
             exit 1
           fi
+
+  # Informational only, same as openapi-drift: a missing or stale code in the
+  # catalog is reported as a warning and never blocks the deploy.
+  catalog-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare the declared error codes with the catalog pages
+        run: node portal/scripts/catalog-drift.mjs
 
   deploy:
     needs: [build, check]

@@ -94,3 +94,30 @@ El job `openapi-drift` de `.github/workflows/portal.yml` corre lo mismo para los
 4 servicios y compara contra lo commiteado, pero **solo informa**
 (`continue-on-error: true`): un desfase no bloquea el deploy. No es un sustituto
 de este paso manual, es su red de seguridad.
+
+## Catálogo de errores y su desfase
+
+Cada servicio tiene su página `Writerside/topics/errores/errores-<servicio>.md`, con una
+tabla cuya **primera columna** es el código entre comillas invertidas (`` `AUTH-011` ``).
+Quien agrega un código a un `*Errors.java` agrega su fila en la misma página y, si el
+código se usa en un endpoint, lo lista en la página de ese endpoint.
+
+```bash
+node portal/scripts/catalog-drift.mjs
+```
+
+compara los códigos declarados en los `*Errors.java` con los de las páginas y dice
+cuáles faltan o sobran. El job `catalog-drift` de `portal.yml` corre lo mismo y **solo
+informa** (`continue-on-error: true`), igual que `openapi-drift`. Los códigos comunes
+de `shared-kernel` (`AUTH-000`, `VALIDATION_ERROR`, `DATA_CONFLICT`,
+`SERVICE_UNAVAILABLE`) viven en `errores.md` y el script no los compara.
+
+## Páginas de endpoint y diagramas
+
+- Una página por operación en `Writerside/topics/endpoints/`, con `<api-endpoint
+  openapi-path="../../specs/<servicio>.json" endpoint="…" method="…"/>` y una etiqueta de
+  estabilidad (`estable`, `reciente`, `interno`, en `labels.list`). Son fuentes: se editan a mano.
+- Los diagramas PlantUML viven en `Writerside/puml/*.puml` y se incluyen con
+  `<code-block lang="plantuml" src="../../puml/<archivo>.puml"/>` (la ruta es relativa a la
+  página). Usa secuencia, estados o clases; otros tipos pueden exigir Graphviz, que el
+  builder no trae.

@@ -642,7 +642,10 @@ Estado previo al merge (2026-10-16): código, pruebas y docs hechos en la rama (
 - [x] Higiene: borrar la rama `v3/m1-draft` (ya no existe en local ni en origin: confirmar); PR de Dependabot de acciones del CI (#2, #4, #15, #16, #24) con `scripts/merge-dependabot-actions.sh` cuando el CI esté verde, e `ignore` de imágenes Java no LTS en `.github/dependabot.yml`. Las de Java 24/26 (#9 a #12, #22) ya se cerraron; el resto (Angular 22, vitest 5, Spring Boot 4, springdoc 3, rest-assured 6, grupos maven y npm) sigue abierto.
 - Después de M7 (fuera de su alcance): M8 (incluye corregir `SPEC-reporting-service.md` y la guía para que no digan «oficial de MINAM» ni «official compliance backing»), portal, README con capturas, informe, «Olvidé mi contraseña», caso 503.
 
-## M9 (2026-10-16, en revisión): «¿Olvidaste tu contraseña?», cortes 1 y 2
+## M9 (2026-10-17, desplegado; falta la prueba real de envío): «¿Olvidaste tu contraseña?», cortes 1 y 2
+
+Desplegado: squash `3d75ac2` en `main` (rama `v3/m9` con 3 commits; contadores tras el squash: auth-service 25, frontend-demo 38, e2e-tests 6). El CI del squash falló en gitleaks (dos constantes de prueba `SECRET`), se exceptuaron por commit+archivo+línea en `dbf6511`, y Render no desplegó hasta que pasó el CI. El primer arranque de auth-service falló por falta de `PASSWORD_RESET_PEPPER` en Render (fallo por diseño); con las variables puestas arrancó y `verify-deploy.sh` muestra auth y frontend en `dbf6511`; `smoke-prod.sh` con 0 estados inesperados. Rama Neon `pre-m9` viva (expira 2026-10-24; no borrar hasta que Angel confirme). **Pendiente:** la prueba real de envío (Angel, desde el login, con su propio correo): secuencia 302/GET, HTTP 200, nombre «Trazabilidad ESG» y entrega.
+
 
 Rama `v3/m9` (diseño: `DISENO-OLVIDE-CONTRASENA.md` v3; el corte 3, códigos de recuperación, NO entra). Hecho y verificado en local: `mvn verify` de auth-service (119 pruebas unitarias y 69 ITs con Postgres real), cadena e2e (`CrossServiceTokenPortabilityIT` con auth arrancando con las variables nuevas), `ng lint`, `ng test` (44 archivos, 314 pruebas), `ng build` y Playwright (166 de 168 pasan a la primera; las 2 que fallaron pasan solas: `page.goto` abortado por el servidor de desarrollo, ajeno al cambio).
 

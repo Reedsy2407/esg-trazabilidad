@@ -161,7 +161,7 @@ describe('downloadErrorText', () => {
     expect(downloadErrorText(e(404), 'pdf')).toContain('el certificado ya no existe');
     expect(downloadErrorText(e(0), 'csv')).toContain('No se pudo conectar');
     expect(downloadErrorText(e(429, 20), 'pdf')).toBe('Demasiadas solicitudes. Vuelve a descargar el PDF en 20 s.');
-    expect(downloadErrorText(e(500), 'csv')).toBe('No se pudo descargar el CSV (HTTP 500). Inténtalo de nuevo.');
+    expect(downloadErrorText(e(500), 'csv')).toBe('No se pudo descargar el CSV. Inténtalo de nuevo en un momento.');
     expect(downloadErrorText(new UnexpectedDownloadError('pdf'), 'pdf')).toBe(
       'El servicio de reportes no devolvió un PDF válido. Inténtalo de nuevo.',
     );

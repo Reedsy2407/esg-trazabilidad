@@ -513,7 +513,7 @@ describe('submitErrorText', () => {
     expect(submitErrorText(e(409, 'COL-009'))).toContain('certificación vencida');
     expect(submitErrorText(e(400, 'VALIDATION_ERROR'))).toContain('Revisa la fecha y el peso');
     expect(submitErrorText(e(429, null, 9))).toBe('Demasiadas solicitudes. Vuelve a intentarlo en 9 s.');
-    expect(submitErrorText(e(418))).toBe('No se pudo registrar el recojo (HTTP 418). Inténtalo de nuevo.');
+    expect(submitErrorText(e(418))).toBe('No se pudo registrar el recojo. Inténtalo de nuevo.');
   });
 
   it('with no answer, a 408 or any 5xx it never claims the record was not saved: the POST may have gone through', () => {

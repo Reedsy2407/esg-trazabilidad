@@ -69,9 +69,9 @@ test('pages of 20, announced once loaded', async ({ page }) => {
 
 test('the neighbours list fails: the reason and a retry', async ({ page }) => {
   const { unmocked } = await open(page, '/vecinos', { neighborsStatus: 503 });
-  await expect(page.getByRole('alert')).toContainText('No se pudieron cargar los vecinos: el servicio de recojos no respondió (HTTP 503).');
+  await expect(page.getByRole('alert')).toContainText('No se pudieron cargar los vecinos: el servicio de recojos no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.');
   await page.getByRole('button', { name: 'Volver a intentar' }).click();
-  await expect(page.getByRole('alert')).toContainText('(HTTP 503)'); // still failing: asked again, same answer
+  await expect(page.getByRole('alert')).toContainText('no está disponible en este momento'); // still failing: asked again, same answer
   expect(unmocked).toEqual([]);
 });
 
@@ -217,9 +217,9 @@ test('unknown neighbour, and blocks that fail on their own', async ({ page }) =>
   const { unmocked } = await open(page, `/vecinos/${ROSA.id}`, { schedulesStatus: 503, recordsStatus: 502 });
   await expect(page.getByRole('heading', { name: ROSA.fullName, level: 1 })).toBeVisible();
   await expect(page.getByRole('alert').filter({ hasText: 'los cronogramas' })).toContainText(
-    'No se pudieron cargar los cronogramas: el servicio de recojos no respondió (HTTP 503).',
+    'No se pudieron cargar los cronogramas: el servicio de recojos no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.',
   );
-  await expect(page.getByRole('alert').filter({ hasText: 'los recojos' })).toContainText('(HTTP 502)');
+  await expect(page.getByRole('alert').filter({ hasText: 'los recojos' })).toContainText('no está disponible en este momento');
 
   await page.evaluate(() => {
     history.pushState({}, '', '/vecinos/0192f3a8-a000-7000-8000-0000000000aa');

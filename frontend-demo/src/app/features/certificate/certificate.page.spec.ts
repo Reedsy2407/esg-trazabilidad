@@ -134,7 +134,7 @@ describe('CertificatePage', () => {
     await render();
     const cases: [unknown, DownloadKind, string][] = [
       [new ApiError(404, 'RPT-003', null, null), 'csv', 'el certificado ya no existe'],
-      [new ApiError(503, null, null, null), 'pdf', '(HTTP 503)'],
+      [new ApiError(503, null, null, null), 'pdf', 'no está disponible en este momento'],
       [new UnexpectedDownloadError('pdf'), 'pdf', 'no devolvió un PDF válido'],
     ];
     for (const [error, kind, expected] of cases) {

@@ -152,7 +152,7 @@ test('if the associations fail to load, the form says so and offers a retry', as
   await expect(page).toHaveURL(/\/empresas$/);
   await page.goto('/recojos/nuevo');
 
-  await expect(page.getByRole('alert')).toContainText('No se pudieron cargar las asociaciones: el servicio de recicladores no respondió (HTTP 503).');
+  await expect(page.getByRole('alert')).toContainText('No se pudieron cargar las asociaciones: el servicio de recicladores no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.');
   await expect(page.getByRole('alert').getByRole('button', { name: 'Volver a intentar' })).toBeVisible();
 });
 

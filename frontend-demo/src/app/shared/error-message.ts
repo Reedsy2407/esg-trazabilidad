@@ -63,6 +63,7 @@ export const CODE_MESSAGES: Readonly<Record<string, string>> = {
   'RPT-018': 'La empresa ya se encuentra en el estado solicitado.',
   'RPT-019':'El certificado ya está anulado.',
   'RPT-021': 'Falta la referencia del comprobante: es obligatoria cuando el origen es «Con comprobante referenciado».',
+  SERVICE_UNAVAILABLE: 'El servicio no está disponible en este momento. Vuelve a intentarlo en un momento.',
   VALIDATION_ERROR: 'El servicio rechazó los datos enviados. Revisa los campos.',
   DATA_CONFLICT: 'La operación choca con datos ya registrados.',
 };
@@ -70,6 +71,24 @@ export const CODE_MESSAGES: Readonly<Record<string, string>> = {
 /** The catalog's sentence for this error's code, or null when it has none. */
 export function codeMessage(error: unknown): string | null {
   return error instanceof ApiError && error.code !== null ? (CODE_MESSAGES[error.code] ?? null) : null;
+}
+
+/**
+ * The service did not answer: a gateway while it wakes (Render's free plan puts services to sleep and
+ * answers 502/503/504 until they are up), the service itself saying it cannot reach its database
+ * (503, SERVICE_UNAVAILABLE), or a request that got no answer at all (status 0).
+ */
+export function isUnavailable(error: unknown): boolean {
+  return error instanceof ApiError && [0, 502, 503, 504].includes(error.status);
+}
+
+/** What a person is told when `service` is down or waking: no status codes, and what to do next. */
+export function unavailableText(service: string): string {
+  return `${capitalize(service)} no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.`;
+}
+
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function lowerFirst(text: string): string {
@@ -84,8 +103,9 @@ const notFound = (what: string) => (plural(what) ? 'No se encontraron' : 'No se 
 /**
  * One sentence for a block that failed to load, in es-PE. `what` names the
  * thing ("los certificados"), `service` the service it comes from. A known
- * code speaks through CODE_MESSAGES; a bare 5xx (a gateway or a waking
- * service, no problem detail) says the service didn't answer. 401 never gets
+ * code speaks through CODE_MESSAGES; a 502/503/504 (a gateway or a waking
+ * service, or the service's own SERVICE_UNAVAILABLE) says the service is unavailable and to try again;
+ * any other 5xx says it had an unexpected problem. No status code is ever shown. 401 never gets
  * here: errorInterceptor already ends the session and goes to the login.
  */
 export function loadErrorMessage(error: unknown, what: string, service = 'el servicio de reportes'): string {
@@ -96,6 +116,10 @@ export function loadErrorMessage(error: unknown, what: string, service = 'el ser
   switch (error.status) {
     case 0:
       return `No se pudo conectar con ${service} para cargar ${what}. Comprueba tu conexión.`;
+    case 502:
+    case 503:
+    case 504:
+      return `${couldNot(what)} cargar ${what}: ${lowerFirst(unavailableText(service))}`;
     case 403:
       return `No tienes permiso para ver ${what}.`;
     case 404:
@@ -109,9 +133,9 @@ export function loadErrorMessage(error: unknown, what: string, service = 'el ser
     return `${couldNot(what)} cargar ${what}: ${lowerFirst(known)}`;
   }
   if (error.status >= 500) {
-    return `${couldNot(what)} cargar ${what}: ${service} no respondió (HTTP ${error.status}). Vuelve a intentarlo en un momento.`;
+    return `${couldNot(what)} cargar ${what}: ${service} tuvo un problema inesperado. Vuelve a intentarlo en un momento.`;
   }
-  return `${couldNot(what)} cargar ${what} (${error.code ?? `HTTP ${error.status}`}).`;
+  return `${couldNot(what)} cargar ${what}. Vuelve a intentarlo.`;
 }
 
 /**
@@ -137,5 +161,5 @@ export function writeErrorText(
       ? 'Demasiadas solicitudes. Espera un momento y vuelve a intentarlo.'
       : `Demasiadas solicitudes. Vuelve a intentarlo en ${error.retryAfterSeconds} s.`;
   }
-  return codeMessage(error) ?? `El servicio no aceptó la operación (${error.code ?? `HTTP ${error.status}`}).`;
+  return codeMessage(error) ?? 'El servicio no aceptó la operación. Revisa los datos e inténtalo de nuevo.';
 }

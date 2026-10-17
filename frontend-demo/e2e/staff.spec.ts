@@ -154,7 +154,7 @@ test('Mi sesión: when /auth/me fails, the reason and a retry; the expiry still 
   const unmocked = await signedIn(page, '/empresas', { meStatus: 503 });
   await page.getByRole('link', { name: `Mi sesión: ${EMAIL}` }).click();
   await expect(page.getByRole('alert')).toContainText(
-    'No se pudieron cargar los datos de tu cuenta: el servicio de autenticación no respondió (HTTP 503).',
+    'No se pudieron cargar los datos de tu cuenta: el servicio de autenticación no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.',
   );
   await expect(page.getByRole('button', { name: 'Volver a intentar' })).toBeVisible();
   await expect(page.getByText(/dura 1 hora y no se renueva/)).toBeVisible();

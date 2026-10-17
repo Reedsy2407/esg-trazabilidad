@@ -1,5 +1,5 @@
 import { ApiError } from '../core/http/api-error';
-import { codeMessage, loadErrorMessage, writeErrorText } from './error-message';
+import { codeMessage, isUnavailable, loadErrorMessage, unavailableText, writeErrorText } from './error-message';
 
 const error = (status: number, code: string | null = null, retryAfter: number | null = null) =>
   new ApiError(status, code, null, retryAfter);
@@ -9,8 +9,8 @@ describe('loadErrorMessage', () => {
     expect(loadErrorMessage(error(0), 'los certificados')).toContain('No se pudo conectar');
     expect(loadErrorMessage(error(403, 'AUTH-000'), 'los certificados')).toBe('No tienes permiso para ver los certificados.');
     expect(loadErrorMessage(error(404, 'RPT-001'), 'los certificados')).toContain('la empresa no existe');
-    expect(loadErrorMessage(error(400, 'X-1'), 'los certificados')).toBe('No se pudieron cargar los certificados (X-1).');
-    expect(loadErrorMessage(error(400, 'X-1'), 'el certificado')).toBe('No se pudo cargar el certificado (X-1).');
+    expect(loadErrorMessage(error(400, 'X-1'), 'los certificados')).toBe('No se pudieron cargar los certificados. Vuelve a intentarlo.');
+    expect(loadErrorMessage(error(400, 'X-1'), 'el certificado')).toBe('No se pudo cargar el certificado. Vuelve a intentarlo.');
     expect(loadErrorMessage(error(404, 'ASO-001'), 'los datos de la asociación')).toBe(
       'No se encontraron los datos de la asociación: la asociación no existe.',
     );
@@ -23,7 +23,32 @@ describe('loadErrorMessage', () => {
 
   it('a bare 5xx (no problem detail) says the service did not answer', () => {
     expect(loadErrorMessage(error(503), 'las asociaciones', 'el servicio de recicladores')).toBe(
-      'No se pudieron cargar las asociaciones: el servicio de recicladores no respondió (HTTP 503). Vuelve a intentarlo en un momento.',
+      'No se pudieron cargar las asociaciones: el servicio de recicladores no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.',
+    );
+  });
+
+  it('a service that is down or waking is told the same way everywhere, without any status code', () => {
+    for (const status of [502, 503, 504]) {
+      const text = loadErrorMessage(error(status), 'los vecinos', 'el servicio de recojos');
+      expect(text).toBe(
+        'No se pudieron cargar los vecinos: el servicio de recojos no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.',
+      );
+      expect(text).not.toMatch(/HTTP|\d{3}/);
+    }
+    // The service's own 503 (database unreachable) is the same sentence, whatever its code.
+    expect(loadErrorMessage(error(503, 'SERVICE_UNAVAILABLE'), 'los vecinos', 'el servicio de recojos')).toContain('no está disponible');
+    // Any other 5xx is an unexpected problem, still with no code in the text.
+    expect(loadErrorMessage(error(500), 'los vecinos', 'el servicio de recojos')).toBe(
+      'No se pudieron cargar los vecinos: el servicio de recojos tuvo un problema inesperado. Vuelve a intentarlo en un momento.',
+    );
+  });
+
+  it('isUnavailable covers no answer and the gateway statuses only', () => {
+    expect([0, 502, 503, 504].map((status) => isUnavailable(error(status)))).toEqual([true, true, true, true]);
+    expect([400, 404, 409, 429, 500].map((status) => isUnavailable(error(status)))).toEqual([false, false, false, false, false]);
+    expect(isUnavailable(new Error('x'))).toBe(false);
+    expect(unavailableText('el servicio de autenticación')).toBe(
+      'El servicio de autenticación no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.',
     );
   });
 
@@ -60,7 +85,7 @@ describe('writeErrorText', () => {
   it('a page override, then the catalog, then the bare code', () => {
     expect(writeErrorText(error(409, 'RPT-002'), UNCERTAIN, { 'RPT-002': 'Ese RUC ya está.' })).toBe('Ese RUC ya está.');
     expect(writeErrorText(error(409, 'COL-002'), UNCERTAIN)).toBe('Este vecino ya tiene un cronograma activo ese día de la semana.');
-    expect(writeErrorText(error(409, 'ZZZ-1'), UNCERTAIN)).toBe('El servicio no aceptó la operación (ZZZ-1).');
+    expect(writeErrorText(error(409, 'ZZZ-1'), UNCERTAIN)).toBe('El servicio no aceptó la operación. Revisa los datos e inténtalo de nuevo.');
     expect(writeErrorText(error(429, null, 9), UNCERTAIN)).toBe('Demasiadas solicitudes. Vuelve a intentarlo en 9 s.');
   });
 });

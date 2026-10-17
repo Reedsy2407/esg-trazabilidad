@@ -161,7 +161,7 @@ test('the list and the form say the figures are declared and typed in; the proof
 test('the list fails: the reason and a retry', async ({ page }) => {
   const { unmocked } = await open(page, '/sigersol', { sigersolStatus: 503 });
   await expect(page.getByRole('alert')).toContainText(
-    'No se pudieron cargar los registros SIGERSOL: el servicio de reportes no respondió (HTTP 503).',
+    'No se pudieron cargar los registros SIGERSOL: el servicio de reportes no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.',
   );
   await expect(page.getByRole('button', { name: 'Volver a intentar' })).toBeVisible();
   expect(unmocked).toEqual([]);

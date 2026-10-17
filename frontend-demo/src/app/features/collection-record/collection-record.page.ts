@@ -75,7 +75,7 @@ export function submitErrorText(error: unknown): string {
         ? 'Demasiadas solicitudes. Espera un momento y vuelve a intentarlo.'
         : `Demasiadas solicitudes. Vuelve a intentarlo en ${error.retryAfterSeconds} s.`;
     default:
-      return `No se pudo registrar el recojo (${error.code ?? `HTTP ${error.status}`}). Inténtalo de nuevo.`;
+      return 'No se pudo registrar el recojo. Inténtalo de nuevo.';
   }
 }
 

@@ -95,14 +95,14 @@ test('detail: no certifications, and an unknown association or id', async ({ pag
 test('detail: failing certifications keep the header and offer a retry', async ({ page }) => {
   const unmocked = await signedIn(page, `/asociaciones/${RIMAC.id}`, { certificationsStatus: 503 });
   await expect(page.getByRole('heading', { name: RIMAC.name, level: 1 })).toBeVisible();
-  await expect(page.getByRole('alert')).toContainText('No se pudieron cargar las certificaciones: el servicio de recicladores no respondió (HTTP 503).');
+  await expect(page.getByRole('alert')).toContainText('No se pudieron cargar las certificaciones: el servicio de recicladores no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.');
   await expect(page.getByRole('button', { name: 'Volver a intentar' })).toBeVisible();
   expect(unmocked).toEqual([]);
 });
 
 test('list: a failing service offers a retry', async ({ page }) => {
   const unmocked = await signedIn(page, '/asociaciones', { associationsStatus: 503 });
-  await expect(page.getByRole('alert')).toContainText('No se pudieron cargar las asociaciones: el servicio de recicladores no respondió (HTTP 503).');
+  await expect(page.getByRole('alert')).toContainText('No se pudieron cargar las asociaciones: el servicio de recicladores no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.');
   await expect(page.getByRole('button', { name: 'Volver a intentar' })).toBeVisible();
   expect(unmocked).toEqual([]);
 });

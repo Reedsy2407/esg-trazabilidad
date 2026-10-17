@@ -202,7 +202,11 @@ export function downloadErrorText(error: unknown, kind: DownloadKind): string {
       return error.retryAfterSeconds === null
         ? `Demasiadas solicitudes. Espera un momento y vuelve a descargar ${file}.`
         : `Demasiadas solicitudes. Vuelve a descargar ${file} en ${error.retryAfterSeconds} s.`;
+    case 502:
+    case 503:
+    case 504:
+      return `No se pudo descargar ${file}: el servicio de reportes no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.`;
     default:
-      return `No se pudo descargar ${file} (HTTP ${error.status}). Inténtalo de nuevo.`;
+      return `No se pudo descargar ${file}. Inténtalo de nuevo en un momento.`;
   }
 }

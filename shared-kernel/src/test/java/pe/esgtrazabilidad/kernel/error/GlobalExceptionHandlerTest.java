@@ -109,6 +109,26 @@ class GlobalExceptionHandlerTest {
         assertThat(problemDetail.getProperties()).containsEntry("code", "VALIDATION_ERROR");
     }
 
+    @Test
+    void mapsAnUnreachableDatabaseToA503WithAStableCodeRetryAfterAndNoInternalDetail() {
+        java.util.List<Exception> causes = java.util.List.of(
+                new org.springframework.dao.DataAccessResourceFailureException("Connection to db.internal:5432 refused"),
+                new org.springframework.dao.TransientDataAccessResourceException("could not connect to host 10.0.0.7"),
+                new org.springframework.dao.QueryTimeoutException("statement timeout: select * from staff_user"),
+                new org.springframework.transaction.CannotCreateTransactionException("Could not open JPA EntityManager"));
+
+        for (Exception cause : causes) {
+            org.springframework.http.ResponseEntity<ProblemDetail> response = handler.handleUnavailable(cause);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+            assertThat(response.getHeaders().getFirst("Retry-After")).isEqualTo("10");
+            ProblemDetail body = response.getBody();
+            assertThat(body.getStatus()).isEqualTo(503);
+            assertThat(body.getProperties()).containsEntry("code", "SERVICE_UNAVAILABLE");
+            assertThat(body.getDetail()).doesNotContain("db.internal", "10.0.0.7", "select", "JPA");
+        }
+    }
+
     private void dummyHandlerMethod(String arg) {
     }
 }

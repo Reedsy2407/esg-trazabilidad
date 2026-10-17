@@ -161,6 +161,21 @@ describe('LoginPage', () => {
 
     expect(page.querySelector('[role=alert]')?.textContent).toContain('No se pudo conectar con el servicio de autenticación.');
   });
+
+  it('says the auth service is unavailable, without a status code, when it answers 503 or a bare 502/504', () => {
+    for (const status of [503, 502, 504]) {
+      type('#email', 'ana.paredes@asociacion.pe');
+      type('#password', 'x');
+      submit();
+
+      backend.expectOne(LOGIN_URL).flush(null, { status, statusText: 'Service Unavailable' });
+      fixture.detectChanges();
+
+      const text = page.querySelector('[role=alert]')?.textContent ?? '';
+      expect(text).toContain('El servicio de autenticación no está disponible en este momento');
+      expect(text).not.toMatch(/HTTP|\d{3}/);
+    }
+  });
 });
 
 describe('LoginPage waking the services', () => {

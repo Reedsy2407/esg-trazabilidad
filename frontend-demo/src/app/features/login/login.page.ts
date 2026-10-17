@@ -10,6 +10,7 @@ import { ServiceKey } from '../../../environments/environment.model';
 import { BackendApi } from '../../core/api/backend.api';
 import { SessionService } from '../../core/auth/session.service';
 import { ApiError } from '../../core/http/api-error';
+import { isUnavailable, unavailableText } from '../../shared/error-message';
 
 /** Used when a 429 arrives without a readable Retry-After (the limiter refills one attempt every 12 s). */
 const FALLBACK_LOCK_SECONDS = 60;
@@ -144,7 +145,9 @@ export class LoginPage {
         this.error.set(
           error.status === 0
             ? 'No se pudo conectar con el servicio de autenticación. Comprueba tu conexión e inténtalo de nuevo.'
-            : `No se pudo iniciar sesión (${error.code ?? `HTTP ${error.status}`}). Inténtalo de nuevo.`,
+            : isUnavailable(error)
+              ? unavailableText('el servicio de autenticación')
+              : 'No se pudo iniciar sesión. Inténtalo de nuevo en un momento.',
         );
     }
   }

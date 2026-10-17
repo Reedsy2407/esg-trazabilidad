@@ -121,7 +121,7 @@ describe('NeighborsPage', () => {
     pending().flush('Bad Gateway', { status: 502, statusText: 'Bad Gateway' });
     await settle();
     expect(page.querySelector('[role="alert"]')?.textContent).toContain(
-      'No se pudieron cargar los vecinos: el servicio de recojos no respondió (HTTP 502).',
+      'No se pudieron cargar los vecinos: el servicio de recojos no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.',
     );
     (page.querySelector('[role="alert"] button') as HTMLButtonElement).click();
     TestBed.tick();

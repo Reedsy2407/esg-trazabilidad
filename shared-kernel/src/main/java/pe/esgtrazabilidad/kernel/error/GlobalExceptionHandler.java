@@ -2,11 +2,19 @@ package pe.esgtrazabilidad.kernel.error;
 
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.dao.TransientDataAccessResourceException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,6 +31,10 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    /** About how long a free-plan database takes to wake; a hint, not a promise. */
+    static final int RETRY_AFTER_SECONDS = 10;
 
     @ExceptionHandler(ApplicationException.class)
     public ProblemDetail handleApplicationException(ApplicationException exception) {
@@ -48,6 +60,29 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT, "La operación viola una restricción de integridad de datos");
         problemDetail.setProperty("code", "DATA_CONFLICT");
         return problemDetail;
+    }
+
+    /**
+     * The database cannot be reached or did not answer in time (it is waking, restarting, out of
+     * connections or down). Without this handler the caller gets a raw 500 whose body says nothing it
+     * can act on. A 503 with a stable code and Retry-After tells a client the request can be repeated
+     * later; nothing about the cause (host, SQL, driver message) leaves the service, and the log line
+     * carries only the exception's class.
+     */
+    @ExceptionHandler({
+        DataAccessResourceFailureException.class,
+        TransientDataAccessResourceException.class,
+        QueryTimeoutException.class,
+        CannotCreateTransactionException.class
+    })
+    public ResponseEntity<ProblemDetail> handleUnavailable(Exception exception) {
+        log.warn("event=service_unavailable cause={}", exception.getClass().getSimpleName());
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE, "El servicio no está disponible en este momento. Inténtalo de nuevo en un momento.");
+        problemDetail.setProperty("code", "SERVICE_UNAVAILABLE");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(RETRY_AFTER_SECONDS))
+                .body(problemDetail);
     }
 
     /**

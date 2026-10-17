@@ -76,7 +76,7 @@ describe('MySessionPage', () => {
     });
     answer.error(new ApiError(503, null, null, null));
     await settle();
-    expect(el.querySelector('[role="alert"]')?.textContent).toContain('el servicio de autenticación no respondió (HTTP 503)');
+    expect(el.querySelector('[role="alert"]')?.textContent).toContain('el servicio de autenticación no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.');
     (el.querySelector('[role="alert"] button') as HTMLButtonElement).click();
     await settle();
     expect(calls).toBe(2);

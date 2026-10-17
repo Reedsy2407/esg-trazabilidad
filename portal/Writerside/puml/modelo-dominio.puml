@@ -1,0 +1,75 @@
+@startuml
+title Modelo de dominio
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "auth-service" {
+  class CuentaDelPersonal {
+    correo
+    rol : ADMIN | STAFF
+    activa
+    contraseñaPendiente
+    cambioDeContraseña
+  }
+}
+
+package "recycler-service" {
+  class Asociacion {
+    RUC
+    estado : ACTIVE | SUSPENDED
+  }
+  class Reciclador {
+    DNI
+    estado : ACTIVE | INACTIVE
+  }
+  class Certificacion {
+    tipo
+    emision
+    vencimiento
+  }
+}
+
+package "collection-service" {
+  class Vecino {
+    distrito (INEI)
+    estado : ACTIVE | INACTIVE
+  }
+  class Cronograma {
+    diaDeLaSemana
+    hora
+    estado : ACTIVE | PAUSED | CANCELLED
+  }
+  class Recojo {
+    fecha
+    kilos
+  }
+}
+
+package "reporting-service" {
+  class Empresa {
+    RUC
+    estado : ACTIVE | INACTIVE
+    verificacion : VERIFIED | UNVERIFIED
+  }
+  class RegistroSigersol {
+    periodo
+    cumplimientoDeJerarquia (declarado)
+    origen
+  }
+  class Certificado {
+    periodo
+    kilosTrazados (congelado)
+    estado : ISSUED | ANNULLED
+  }
+}
+
+Asociacion "1" *-- "*" Reciclador
+Asociacion "1" *-- "*" Certificacion
+Vecino "1" *-- "*" Cronograma
+Vecino "1" *-- "*" Recojo
+Recojo "*" ..> "1" Asociacion : kilos de
+Empresa "*" --> "1" Asociacion : vinculada a
+Empresa "1" *-- "*" Certificado
+RegistroSigersol "*" ..> "1" Asociacion : declarado para
+@enduml

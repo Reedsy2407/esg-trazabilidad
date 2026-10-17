@@ -9,6 +9,11 @@
     <primary-label id="collection" name="collection-service" short-name="collection">Vecinos, empresas, cronogramas y recojos.</primary-label>
     <primary-label id="reporting" name="reporting-service" short-name="reporting">Certificados ESG y contexto SIGERSOL.</primary-label>
 
+    <!-- Estabilidad de un endpoint (ver «Etiquetas de estabilidad» en cada página de referencia). -->
+    <secondary-label id="estable" name="Estable" color="green">En uso por la consola, cubierto por pruebas y sin cambios previstos.</secondary-label>
+    <secondary-label id="reciente" name="Reciente" color="tangerine">Añadido o cambiado entre M7 y M10; puede ajustarse.</secondary-label>
+    <secondary-label id="interno" name="Interno" color="purple">Existe, pero la consola no lo usa.</secondary-label>
+
     <!-- Estado de una decisión (ADR). No se escribe a mano: gen-adr-toc.mjs lo deriva
          de la línea "Estado" de cada ADR al construir. -->
     <secondary-label id="adr-pendiente" name="Aceptada, pendiente de implementación" color="tangerine">Decisión aceptada que el código todavía no refleja.</secondary-label>

@@ -1,0 +1,36 @@
+@startuml
+title Recuperar la contraseña en dos pasos
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+autonumber
+
+actor Persona
+participant "Consola" as C
+participant "auth-service" as A
+database "Base de datos" as DB
+participant "Apps Script\n(correo por HTTPS)" as M
+
+== Paso 1: pedir el código ==
+Persona -> C : escribe su correo
+C -> A : POST /auth/password-reset/request
+A -> DB : límites (correo, IP, tope diario)\ny código nuevo como HMAC
+A --> C : 202, siempre, con el mismo trabajo\nexista o no la cuenta
+A ->> M : código de 8 dígitos (otro hilo)
+M ->> Persona : correo «Tu código para restablecer la contraseña»
+
+== Paso 2: verificar el código ==
+Persona -> C : escribe el código
+C -> A : POST /auth/password-reset/verify
+A -> DB : revisa el código (5 intentos)\ngasta el código y guarda el token como HMAC
+A --> C : 200 { resetToken }\n(código malo: 400 AUTH-011, el mismo para todo)
+note right of C : El token vive solo en memoria\n(no va en la URL ni en el storage)
+
+== Paso 3: elegir la contraseña nueva ==
+Persona -> C : escribe la contraseña nueva
+C -> A : POST /auth/password-reset/confirm { resetToken, newPassword }
+A -> DB : revisa la política (AUTH-007 no gasta el token)\ngasta el token y cambia la contraseña\nen una sola transacción
+A --> C : 204
+A ->> M : aviso «tu contraseña fue cambiada»
+M ->> Persona : correo de aviso
+C -> Persona : va al inicio de sesión
+@enduml

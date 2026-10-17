@@ -1,0 +1,26 @@
+@startuml
+title Qué pasa cuando la base de datos no responde
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+autonumber
+
+actor Persona
+participant "Consola" as C
+participant "Servicio\n(recycler, collection,\nreporting o auth)" as S
+database "Base de datos\n(Neon)" as DB
+
+Persona -> C : abre «Vecinos»
+C -> S : GET /neighbors
+S -> DB : consulta
+DB -[#red]-> S : sin respuesta / sin conexión / tiempo agotado
+S --> C : 503 SERVICE_UNAVAILABLE\nRetry-After: 10 (mensaje fijo)
+C --> Persona : «El servicio de recojos no está disponible\nen este momento. Suele volver en menos de un minuto:\nvuelve a intentarlo.»
+
+note over S : /actuator/health = 503 (el monitor lo ve)\n/actuator/health/liveness = UP (Render no reinicia)
+
+Persona -> C : reintenta
+C -> S : GET /neighbors
+S -> DB : consulta
+DB --> S : filas
+S --> C : 200
+@enduml

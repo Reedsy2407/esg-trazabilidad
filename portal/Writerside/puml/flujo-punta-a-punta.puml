@@ -1,0 +1,31 @@
+@startuml
+title Del kilo al certificado
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+autonumber
+
+actor "Personal" as P
+participant "collection-service" as C
+queue "RabbitMQ" as MQ
+participant "recycler-service" as R
+participant "reporting-service" as G
+
+P -> C : registra el vecino y su cronograma
+P -> C : registra el recojo (kilos, fecha, asociación)
+C -> C : ¿asociación bloqueada? (COL-009)\nguarda el recojo (inmutable)
+C ->> MQ : CollectionRegisteredEvent (con el distrito)
+MQ ->> G : el recojo entra a su libro
+MQ ->> R : lo recibe recycler-service
+
+R ->> MQ : CertificationExpired / CertificationRenewed
+MQ ->> C : bloquea o desbloquea a la asociación
+
+P -> G : registra la empresa por RUC (SUNAT)
+P -> G : registra el cumplimiento de jerarquía declarado
+P -> G : GET certificate-summary (borrador del período)
+P -> G : POST certificates (emitir el período)
+G -> G : empresa activa y verificada\nun registro declarado cubre el período\nsin superposición (RPT-004, RPT-005)\ncopia congelada de kilos y cifras
+G --> P : 201 certificado (ISSUED)
+P -> G : descarga el PDF y el CSV
+P -> G : si hay un error: POST annul (con motivo)
+@enduml

@@ -1,0 +1,14 @@
+@startuml
+title Ciclo de un certificado
+skinparam shadowing false
+
+[*] --> ISSUED : emitir\n(cifras congeladas)
+ISSUED --> ANNULLED : anular\n(motivo, quién y cuándo)
+ANNULLED --> [*]
+
+note right of ANNULLED
+  Final. Sigue en la lista con sus cifras,
+  libera su período y no cuenta en los
+  resúmenes. Para corregir, se emite uno nuevo.
+end note
+@enduml

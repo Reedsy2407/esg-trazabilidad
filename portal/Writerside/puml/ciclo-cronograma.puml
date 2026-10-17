@@ -1,0 +1,17 @@
+@startuml
+title Ciclo de un cronograma
+skinparam shadowing false
+
+[*] --> ACTIVE : crear
+ACTIVE --> PAUSED : pausar\n(o desactivar al vecino)
+PAUSED --> ACTIVE : reactivar\n(COL-002 si otro ACTIVE tomó el día)
+ACTIVE --> CANCELLED : cancelar
+PAUSED --> CANCELLED : cancelar
+CANCELLED --> [*]
+
+note right of CANCELLED
+  Final: no tiene salida.
+  Si el vecino vuelve, se crea
+  un cronograma nuevo.
+end note
+@enduml

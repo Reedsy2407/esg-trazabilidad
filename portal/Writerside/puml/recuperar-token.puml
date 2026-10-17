@@ -1,0 +1,29 @@
+@startuml
+title Ciclo del código y del token de recuperación
+skinparam shadowing false
+
+state "Código" as K {
+  [*] --> CodigoVivo : request (el anterior se gasta)
+  CodigoVivo --> CodigoGastado : verify correcto
+  CodigoVivo --> CodigoGastado : 5.º intento fallido
+  CodigoVivo --> CodigoGastado : otro request
+  CodigoVivo --> CodigoVencido : 10 minutos
+}
+
+state "Token" as T {
+  [*] --> TokenVivo : verify correcto
+  TokenVivo --> TokenGastado : confirm correcto
+  TokenVivo --> TokenGastado : otro verify
+  TokenVivo --> TokenVencido : 10 minutos
+}
+
+CodigoGastado --> [*]
+CodigoVencido --> [*]
+TokenGastado --> [*]
+TokenVencido --> [*]
+
+note bottom of TokenVivo
+  AUTH-007 (contraseña rechazada)
+  no gasta el token
+end note
+@enduml

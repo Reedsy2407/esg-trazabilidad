@@ -92,6 +92,7 @@ function fakeBackend({ lagKilos = false, failPost = null } = {}) {
     }
     if (svc === 'reporting' && p === '/sigersol-syncs') {
       if (method === 'GET') return page(db.syncs.filter((s) => !url.searchParams.get('associationId') || s.associationId === url.searchParams.get('associationId')), url);
+      if (!['DECLARED_BY_OPERATOR', 'REFERENCED_PROOF'].includes(body.origin)) return problem(400, 'VALIDATION_ERROR');
       const s = { id: id(), declaredAt: NOW.toISOString(), ...body };
       db.syncs.push(s);
       return json(201, s);
@@ -156,6 +157,8 @@ test('--apply creates everything in order, linking each collection to its schedu
     'reporting /sigersol-syncs',
   ]);
   const { db } = backend;
+  assert.equal(db.syncs.length, 1);
+  assert.equal(db.syncs[0].origin, 'DECLARED_BY_OPERATOR');
   assert.equal(db.associations[0].name, 'Asociación de Recicladores Demo Norte (ficticia)');
   assert.deepEqual(db.certifications.map((c) => [c.certificationType, c.issuedDate, c.expirationDate]), [['Registro municipal (demo)', '2026-01-15', '2027-01-15']]);
   assert.equal(db.records.reduce((s, r) => s + Math.round(r.weightKg * 100), 0), 6695);

@@ -642,6 +642,10 @@ Estado previo al merge (2026-10-16): código, pruebas y docs hechos en la rama (
 - [x] Higiene: borrar la rama `v3/m1-draft` (ya no existe en local ni en origin: confirmar); PR de Dependabot de acciones del CI (#2, #4, #15, #16, #24) con `scripts/merge-dependabot-actions.sh` cuando el CI esté verde, e `ignore` de imágenes Java no LTS en `.github/dependabot.yml`. Las de Java 24/26 (#9 a #12, #22) ya se cerraron; el resto (Angular 22, vitest 5, Spring Boot 4, springdoc 3, rest-assured 6, grupos maven y npm) sigue abierto.
 - Después de M7 (fuera de su alcance): M8 (incluye corregir `SPEC-reporting-service.md` y la guía para que no digan «oficial de MINAM» ni «official compliance backing»), portal, README con capturas, informe, «Olvidé mi contraseña», caso 503.
 
+## fix-demo-seed-origin (2026-10-17, sin deploy: solo scripts)
+
+- [x] `scripts/demo-seed/data.mjs`: el dato SIGERSOL envía `origin: 'DECLARED_BY_OPERATOR'` (obligatorio desde M7; valores válidos `DECLARED_BY_OPERATOR` y `REFERENCED_PROOF`, este último exige `reference`, RPT-021; no falta ningún otro campo). `seed.test.mjs`: el mock responde 400 sin `origin` y el test comprueba que el seed lo envía. README al día. Resultado: 35/35 pruebas de scripts, gitleaks limpio, revisor independiente PASS. Rama de 1 commit, squash en `main`.
+
 ## README y portal (2026-10-17)
 
 README.md en la raíz (problema, arquitectura con diagrama, stack, cómo correrlo y probarlo, seguridad en 5 líneas, 5 capturas optimizadas en `docs/img/` tomadas de las ya enmascaradas) y portal Writerside completo: specs OpenAPI regeneradas, 64 páginas de endpoint, 16 de negocio, glosario y catálogos de errores, 7 diagramas PlantUML, 8 ADR nuevos (12 en total) y `catalog-drift` informativo. Construcción local sin errores. Detalle en `portal/PLAN.md`.

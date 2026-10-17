@@ -56,6 +56,7 @@ export const SIGERSOL = {
   hierarchyCompliancePercent: 85.5,
   officialKilosDeclared: 70,
   sourceNote: 'Dato de demostración, no oficial',
+  origin: 'DECLARED_BY_OPERATOR',
 };
 
 /** What the certificate must come out with; the script refuses to issue it otherwise. */

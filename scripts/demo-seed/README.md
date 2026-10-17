@@ -5,7 +5,7 @@ Carga, a través de las APIs públicas, la lista de datos de demo aprobada (ver 
 - la asociación "Asociación de Recicladores Demo Norte (ficticia)" y su certificación;
 - 3 vecinos con sus cronogramas y 6 recojos de setiembre de 2026 (66.95 kg en total; el certificado cubre solo del 17 al 30, 35.30 kg);
 - la empresa "Empresa Demo Envases S.A.C. (ficticia)";
-- el dato SIGERSOL de setiembre (ingreso manual);
+- el dato SIGERSOL de setiembre (ingreso manual, con origen `DECLARED_BY_OPERATOR`, obligatorio desde M7);
 - y, solo si se pide, el certificado del 17 al 30 de setiembre de 2026 (el 16 de setiembre hay un recojo de prueba ajeno al seed, fuera del período).
 
 Todo es ficticio, con "(demo)" o "(ficticia)" en el nombre. No crea cuentas del personal.

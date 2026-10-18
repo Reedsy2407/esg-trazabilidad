@@ -129,6 +129,35 @@ class GlobalExceptionHandlerTest {
         }
     }
 
+    @Test
+    void mapsAConnectionLostMidQueryTo503ButLeavesOtherUncategorisedFailuresAs500() {
+        for (String state : java.util.List.of("57P01", "57P02", "57P03", "08006", "08003")) {
+            org.springframework.dao.UncategorizedDataAccessException lost = uncategorised(new java.sql.SQLException("FATAL: terminating connection", state));
+            org.springframework.http.ResponseEntity<ProblemDetail> response = org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+                    () -> handler.handleConnectionLost(lost));
+
+            assertThat(response.getStatusCode()).as(state).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+            assertThat(response.getHeaders().getFirst("Retry-After")).isEqualTo("10");
+            assertThat(response.getBody().getProperties()).containsEntry("code", "SERVICE_UNAVAILABLE");
+            assertThat(response.getBody().getDetail()).doesNotContain("staff_user", "terminating");
+        }
+        // The state sits on a nested cause, as the driver's error does inside Hibernate's wrapper.
+        org.springframework.dao.UncategorizedDataAccessException wrapped = uncategorised(new java.sql.SQLException("wrapper", "HY000", new java.sql.SQLException("FATAL", "57P01")));
+        assertThat(org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> handler.handleConnectionLost(wrapped)).getStatusCode())
+                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+
+        org.springframework.dao.UncategorizedDataAccessException other = uncategorised(new java.sql.SQLException("division by zero", "22012"));
+        org.junit.jupiter.api.Assertions.assertSame(other,
+                org.junit.jupiter.api.Assertions.assertThrows(org.springframework.dao.UncategorizedDataAccessException.class,
+                        () -> handler.handleConnectionLost(other)));
+    }
+
+    /** What Spring’s JPA and JDBC translators produce for a driver error they cannot classify. */
+    private static org.springframework.dao.UncategorizedDataAccessException uncategorised(java.sql.SQLException cause) {
+        return new org.springframework.dao.UncategorizedDataAccessException("uncategorised", cause) {
+        };
+    }
+
     private void dummyHandlerMethod(String arg) {
     }
 }

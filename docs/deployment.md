@@ -232,8 +232,8 @@ The site's response headers (in `render.yaml`) include a Content-Security-Policy
 - **One auth-service instance.** The login rate limit is in memory and resets when that instance restarts or sleeps.
 - **The Swagger UI is public on purpose.** It is the demo's front door and only documents the API; every business call behind it still needs a token.
 
-More limits (SIGERSOL, sessions, CSV, demo, zero cost) are in [known-limitations.md](known-limitations.md).
+More limits (SIGERSOL, sessions, CSV, demo, zero cost) are in [limitaciones conocidas (portal)](../portal/Writerside/topics/vision/limitaciones-conocidas.md).
 
 ## The production demo (since M7)
 
-The demo data was rebuilt on 2026-10-16 with real public RUC: the company is MINAM (RUC 20492966658, name from SUNAT, «MINISTERIO DEL AMBIENTE»), its association is "Demo Sur" (RUC 20521286769, OEFA), and the issued certificate covers 17 to 30 September 2026 with **35,30 kg** traced and **85,5 %** declared hierarchy compliance. The seed (`scripts/demo-seed/`) expects exactly that and looks the month's records up by the SIGERSOL period. The earlier test certificates and companies were annulled or deactivated, not deleted. The district table of that certificate reads «Distrito desconocido» (see [known-limitations.md](known-limitations.md)).
+The demo data was rebuilt on 2026-10-16 with real public RUC: the company is MINAM (RUC 20492966658, name from SUNAT, «MINISTERIO DEL AMBIENTE»), its association is "Demo Sur" (RUC 20521286769, OEFA), and the issued certificate covers 17 to 30 September 2026 with **35,30 kg** traced and **85,5 %** declared hierarchy compliance. The seed (`scripts/demo-seed/`) expects exactly that and looks the month's records up by the SIGERSOL period. The earlier test certificates and companies were annulled or deactivated, not deleted. The district table of that certificate reads «Distrito desconocido» (see [limitaciones conocidas (portal)](../portal/Writerside/topics/vision/limitaciones-conocidas.md)).

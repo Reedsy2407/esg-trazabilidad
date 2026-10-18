@@ -113,14 +113,20 @@ class SigersolSyncConcurrencyApiIT {
             executor.shutdown();
         }
 
-        long successCount =
-                responses.stream().filter(response -> response.statusCode() == 201).count();
-        long conflictCount = responses.stream()
-                .filter(response -> response.statusCode() == 409
-                        && "RPT-006".equals(response.jsonPath().getString("code")))
-                .count();
-        assertThat(successCount).isEqualTo(1);
-        assertThat(conflictCount).isEqualTo(1);
+        // The invariant, not the order: whichever request gets in first wins, the other one is told the period is taken
+        // (409 RPT-006), whether it lost to a committed row (exclusion violation) or as the victim of a simultaneous
+        // insert (deadlock). Never a 500.
+        List<String> seen = responses.stream().map(r -> r.statusCode() + " " + r.asString()).toList();
+        assertThat(responses).as("responses: %s", seen).noneMatch(response -> response.statusCode() >= 500);
+        assertThat(responses.stream().filter(response -> response.statusCode() / 100 == 2).count())
+                .as("responses: %s", seen)
+                .isEqualTo(1);
+        assertThat(responses.stream()
+                        .filter(response -> response.statusCode() == 409
+                                && "RPT-006".equals(response.jsonPath().getString("code")))
+                        .count())
+                .as("responses: %s", seen)
+                .isEqualTo(1);
         assertThat(sigersolSyncRepository.findAll(associationId, org.springframework.data.domain.Pageable.unpaged())
                         .getTotalElements())
                 .isEqualTo(1);

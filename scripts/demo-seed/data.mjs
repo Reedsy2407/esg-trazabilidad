@@ -1,4 +1,4 @@
-// The demo data approved by Angel (tasks/todo.md, "Handoff v2"). Fictitious on purpose: every
+// The demo data approved by Angel (handoff v2). Fictitious on purpose: every
 // name carries "(demo)" or "(ficticia)", RUCs start with 20999. No real person or company.
 
 export const ASSOCIATION = {

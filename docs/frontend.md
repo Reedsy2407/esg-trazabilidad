@@ -90,7 +90,7 @@ The backend doesn't enforce these; the screens do, and say so.
 
 ## Known limitations
 
-- **Two roles only** (M7). Account administration is ADMIN-only; any signed-in staff member can still issue certificates, cancel schedules and register companies or SIGERSOL figures. The screens ask for an explicit confirmation before the irreversible or sensitive actions. See [Limitaciones conocidas](known-limitations.md).
+- **Two roles only** (M7). Account administration is ADMIN-only; any signed-in staff member can still issue certificates, cancel schedules and register companies or SIGERSOL figures. The screens ask for an explicit confirmation before the irreversible or sensitive actions. See [Limitaciones conocidas](../portal/Writerside/topics/vision/limitaciones-conocidas.md).
 - **Pickers load one page of 100** (the services' `max-page-size`). They say so when there are more. Neighbour search filters only what was loaded.
 - **The district filter** is the same combobox used to register or edit a neighbour (M2): it picks one of the 50 districts by `districtUbigeo`, so it can't miss on case or accents. It still can't match free text, because the backend filters by the ubigeo code, not by name.
 - **The session log (bitácora)** lives in the tab's sessionStorage, tied to one sign-in. It is not a server record.

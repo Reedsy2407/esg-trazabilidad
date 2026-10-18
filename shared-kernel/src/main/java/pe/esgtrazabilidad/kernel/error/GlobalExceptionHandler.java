@@ -1,5 +1,6 @@
 package pe.esgtrazabilidad.kernel.error;
 
+import java.sql.SQLException;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.dao.TransientDataAccessResourceException;
+import org.springframework.dao.UncategorizedDataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -76,6 +78,35 @@ public class GlobalExceptionHandler {
         CannotCreateTransactionException.class
     })
     public ResponseEntity<ProblemDetail> handleUnavailable(Exception exception) {
+        return unavailable(exception);
+    }
+
+    /**
+     * A request that takes a pooled connection the database already closed (it went down a moment ago; the
+     * pool only checks a connection that has been idle for a while) fails inside the query, not when
+     * connecting, so the driver's error arrives wrapped as a generic, uncategorised data-access exception
+     * (JpaSystemException, UncategorizedSQLException) that the handler above does not see. When the cause
+     * chain shows the connection was lost (SQLState class 08, or 57P01/57P02/57P03: the server is shutting
+     * down or crashed) it is the same outage and answers the same 503. Any other uncategorised failure is a
+     * real fault: it is rethrown and stays a 500.
+     */
+    @ExceptionHandler(UncategorizedDataAccessException.class)
+    public ResponseEntity<ProblemDetail> handleConnectionLost(UncategorizedDataAccessException exception)
+            throws UncategorizedDataAccessException {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause() == cause ? null : cause.getCause()) {
+            if (cause instanceof SQLException sql && isConnectionLost(sql.getSQLState())) {
+                return unavailable(exception);
+            }
+        }
+        throw exception;
+    }
+
+    static boolean isConnectionLost(String sqlState) {
+        return sqlState != null
+                && (sqlState.startsWith("08") || sqlState.equals("57P01") || sqlState.equals("57P02") || sqlState.equals("57P03"));
+    }
+
+    private ResponseEntity<ProblemDetail> unavailable(Exception exception) {
         log.warn("event=service_unavailable cause={}", exception.getClass().getSimpleName());
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.SERVICE_UNAVAILABLE, "El servicio no está disponible en este momento. Inténtalo de nuevo en un momento.");

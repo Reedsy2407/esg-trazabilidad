@@ -3,6 +3,7 @@ package pe.esgtrazabilidad.auth.it;
 import java.util.Map;
 
 import io.restassured.RestAssured;
+import io.restassured.response.Response;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,11 +73,11 @@ class DatabaseDownApiIT {
 
         postgres.stop();
 
-        String body = given().contentType("application/json")
+        Response down = given().contentType("application/json")
                 .body(Map.of("email", "caida@esgtrazabilidad.pe", "password", PASSWORD))
-                .post("/auth/login")
-                .then()
-                .statusCode(503)
+                .post("/auth/login");
+        assertThat(down.statusCode()).as("login with the database down: %s", down.asString()).isEqualTo(503);
+        String body = down.then()
                 .body("code", equalTo("SERVICE_UNAVAILABLE"))
                 .header("Retry-After", equalTo("10"))
                 .body("detail", not(containsString("jdbc")))

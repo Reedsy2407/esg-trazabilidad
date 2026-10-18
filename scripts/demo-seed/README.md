@@ -1,6 +1,6 @@
 # demo-seed: datos de demo ficticios
 
-Carga, a través de las APIs públicas, la lista de datos de demo aprobada (ver `tasks/todo.md`, "Handoff v2"):
+Carga, a través de las APIs públicas, la lista de datos de demo aprobada (la aprobada por Angel en el handoff v2):
 
 - la asociación "Asociación de Recicladores Demo Norte (ficticia)" y su certificación;
 - 3 vecinos con sus cronogramas y 6 recojos de setiembre de 2026 (66.95 kg en total; el certificado cubre solo del 17 al 30, 35.30 kg);

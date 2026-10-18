@@ -16,7 +16,7 @@ Esta plataforma es la consola del **personal de una operadora** (rol STAFF) y de
 3. Registra las **empresas** (verificadas contra SUNAT por su RUC), cada una vinculada a una asociación, y el **cumplimiento de jerarquía** que declara el operador de la asociación (SIGERSOL).
 4. **Emite el certificado** de una empresa para un período: kilos trazados (los recojos de su asociación en ese período), cumplimiento declarado y contexto del distrito, en pantalla, PDF y CSV. Un certificado nunca se borra: si hay un error se **anula** con motivo y se emite el correcto.
 
-> El cumplimiento de jerarquía es una cifra **declarada** por el operador; esta aplicación no se conecta con SIGERSOL ni la verifica (una integración real exigiría un convenio con el MINAM), y no es una cifra oficial. Los límites completos están en [docs/known-limitations.md](docs/known-limitations.md).
+> El cumplimiento de jerarquía es una cifra **declarada** por el operador; esta aplicación no se conecta con SIGERSOL ni la verifica (una integración real exigiría un convenio con el MINAM), y no es una cifra oficial. Los límites completos están en [limitaciones conocidas](portal/Writerside/topics/vision/limitaciones-conocidas.md).
 
 ## Capturas
 
@@ -129,6 +129,6 @@ Los documentos de `docs/` están en inglés; el portal, en español.
 - [docs/security.md](docs/security.md): controles y decisiones de seguridad.
 - [docs/deployment.md](docs/deployment.md): despliegue en Render, variables y verificación.
 - [docs/frontend.md](docs/frontend.md): qué pantalla usa cada endpoint y las reglas que viven solo en el frontend.
-- [docs/known-limitations.md](docs/known-limitations.md): **límites conocidos** (SIGERSOL, sesiones, correo, CSV, servicios que se duermen).
+- [limitaciones conocidas](portal/Writerside/topics/vision/limitaciones-conocidas.md): **límites conocidos** (SIGERSOL, sesiones, correo, CSV, servicios que se duermen).
 - [docs/performance.md](docs/performance.md) y [docs/render-logs.md](docs/render-logs.md): mediciones y lectura de logs de producción.
 - [portal/README.md](portal/README.md): cómo se construye el portal.

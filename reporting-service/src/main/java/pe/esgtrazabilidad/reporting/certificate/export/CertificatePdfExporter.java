@@ -64,7 +64,7 @@ public class CertificatePdfExporter {
 
     private static final float[] INK = {0.10f, 0.10f, 0.10f};
     private static final float[] SOFT = {0.42f, 0.42f, 0.40f};
-    /** The brand blue #1A576C (--brand in frontend-demo/src/styles.css): white on it is 8.0:1, the band's soft text 5.65:1. */
+    /** The brand blue #1A576C (--brand in frontend/src/styles.css): white on it is 8.0:1, the band's soft text 5.65:1. */
     static final float[] BAND = {26 / 255f, 87 / 255f, 108 / 255f};
     static final float[] WHITE = {1f, 1f, 1f};
     /** --brand-soft #C4DDE6: the band's secondary text, 5.65:1 on the brand blue. */

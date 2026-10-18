@@ -15,7 +15,7 @@ import { pathToFileURL } from 'node:url';
 
 import * as DATA from './data.mjs';
 
-/** The only bases this script will ever call: frontend-demo/src/environments/environment.ts. */
+/** The only bases this script will ever call: frontend/src/environments/environment.ts. */
 export const SERVICE_BASES = Object.freeze({
   auth: 'https://esg-auth-service.onrender.com',
   recycler: 'https://esg-recycler-service.onrender.com',

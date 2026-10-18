@@ -1,11 +1,11 @@
-# DESIGN-BRIEF — frontend-demo
+# DESIGN-BRIEF — frontend
 
 Única fuente de verdad del diseño. Stitch, Claude Design y Claude Code trabajan contra este archivo.
 
 - **Audiencia:** operadores y personal de asociaciones de recicladores en Lima; uso diario, pantalla de escritorio.
 - **Tres adjetivos:** preciso, sobrio, legible.
 - **Personalidad:** herramienta de trabajo seria y calmada con el mundo del **ticket de balanza**: el ticket térmico que imprime la balanza del centro de acopio (dirección A, elegida el 2026-10-10 tras la crítica de Impeccable y tres maquetas; ver `refs/direcciones/`, local, no versionado). No es una web de marketing.
-- **Dirección vigente (2026-10-18): «Visor y regla»**, evolución de la dirección A. El kilo trazado va en un **visor** de balanza (panel azul petróleo, cifras mono de hasta ~170 px que cuentan hacia arriba); el cumplimiento declarado se dibuja como una **regla 0–100 con aguja**; la lista de empresas es **un solo rollo continuo** de papel térmico; el certificado sale de una ranura. Elegida por el dueño tras comparar tres direcciones (`tasks/rediseno-direcciones-2026-10-18.md`).
+- **Dirección vigente (2026-10-18): «Visor y regla»**, evolución de la dirección A. El kilo trazado va en un **visor** de balanza (panel azul petróleo, cifras mono de hasta ~170 px que cuentan hacia arriba); el cumplimiento declarado se dibuja como una **regla 0–100 con aguja**; la lista de empresas es **un solo rollo continuo** de papel térmico; el certificado sale de una ranura. Elegida por el dueño tras comparar tres direcciones (documento de exploración local, no versionado).
 - **Elemento firma:** la pantalla del certificado como el ticket del mes: papel térmico con borde dentado, una sola tinta. El título del documento es el h1 ("Certificado de trazabilidad ESG"); debajo, como líneas impresas: empresa, RUC, kilos trazados en grande, cumplimiento, período y emisión con guías punteadas, y el código (UUID completo en mono, con botón Copiar). No lleva sello de estado (el certificado no tiene estado) ni tabla de pesadas (van en el CSV). No existe verificación pública por terceros: nada en la pantalla debe sugerirla.
 
 ## Identidad y logo (decisión del 2026-10-18)

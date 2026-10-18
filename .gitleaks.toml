@@ -53,10 +53,10 @@ regexes = ['''^\s*private static final String TOKEN_SUBJECT = "01a0d8cb-f219-72a
 
 # The alphabet the browser draws initial staff passwords from (public by design).
 [[allowlists]]
-description = "frontend-demo initial-password alphabet"
+description = "frontend initial-password alphabet (the directory was frontend-demo/ when the commit was made)"
 condition = "AND"
 commits = ["f50ba2068377cc69b6e4b83abef9281843140cf0"]
-paths = ['''^frontend-demo/src/app/features/staff/initial-password\.ts$''']
+paths = ['''^frontend(-demo)?/src/app/features/staff/initial-password\.ts$''']
 regexTarget = "line"
 regexes = ['''^\s*export const PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';\s*$''']
 

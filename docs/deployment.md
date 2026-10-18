@@ -193,7 +193,7 @@ The first call to a service that is asleep waits for its cold start (see Known l
 
 ## 7. The frontend (static site) and CORS
 
-`render.yaml` declares a fifth resource, **`esg-frontend`**, a static site built from `frontend-demo/` (`npm ci && npm run build`, published from `frontend-demo/dist/esg-frontend/browser`). It has no secrets and no environment group. It deploys only after CI passes (`autoDeployTrigger: checksPass`), and only when `frontend-demo/**` changes. Its build writes `/version.json` (`{"commit": "<sha>"}`) so that `scripts/verify-deploy.sh` checks it like the APIs.
+`render.yaml` declares a fifth resource, **`esg-frontend`**, a static site built from `frontend/` (`npm ci && npm run build`, published from `frontend/dist/esg-frontend/browser`). It has no secrets and no environment group. It deploys only after CI passes (`autoDeployTrigger: checksPass`), and only when `frontend/**` changes. Its build writes `/version.json` (`{"commit": "<sha>"}`) so that `scripts/verify-deploy.sh` checks it like the APIs.
 
 The browser calls the four APIs directly, cross-origin, so they must allow the site's origin:
 

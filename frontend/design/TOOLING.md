@@ -1,10 +1,10 @@
-# TOOLING — skills de diseño del frontend-demo
+# TOOLING — skills de diseño del frontend
 
 Skills de Claude Code instaladas en ámbito de proyecto (`.claude/skills/`, gitignored). Este archivo es el registro versionado de qué se instaló, de dónde y por qué. Instaladas el 2026-10-02 tras una auditoría de cada repo; se copiaron archivos desde un commit fijado, sin ejecutar ningún instalador, `npx` ni script de terceros.
 
 ## Regla de uso
 
-- **La fuente de verdad del diseño es `frontend-demo/design/DESIGN-BRIEF.md`.** Ninguna skill la sustituye ni la contradice. Si una skill sugiere otra dirección, gana el brief.
+- **La fuente de verdad del diseño es `frontend/design/DESIGN-BRIEF.md`.** Ninguna skill la sustituye ni la contradice. Si una skill sugiere otra dirección, gana el brief.
 - **frontend-design genera**: es la skill que se usa para construir pantallas.
 - **Impeccable revisa y orienta**: crítica, auditoría y, desde el rediseño de 2026-10-10, dirección visual (en modo degradado, ver abajo). No genera código.
 - **enhance-prompt** solo prepara prompts para Stitch (`STITCH-PROMPTS.md`), tomando el sistema de diseño del brief.

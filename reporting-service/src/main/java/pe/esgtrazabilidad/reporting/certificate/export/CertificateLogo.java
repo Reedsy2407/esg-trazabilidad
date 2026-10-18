@@ -7,7 +7,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 /**
  * The platform's logo mark (a «T» with its top-right corner folded, and a leaf) drawn as vector paths in a
  * PDF content stream, so it stays sharp at any zoom and in print, with no image resource and no new
- * dependency. The geometry is the one of frontend-demo/public/brand/logo-mono.svg (white on the brand blue):
+ * dependency. The geometry is the one of frontend/public/brand/logo-mono.svg (white on the brand blue):
  * the mark without its rounded tile, because the header band already is the blue.
  *
  * The leaf is cut out of the «T» by a halo in the band's colour, as in the SVG (where a mask does it).

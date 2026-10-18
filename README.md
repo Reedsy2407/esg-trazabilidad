@@ -60,7 +60,7 @@ flowchart LR
 | `collection-service` | Vecinos, cronogramas y recojos (libro append-only). |
 | `reporting-service` | Empresas, certificados ESG (PDF y CSV), registros SIGERSOL declarados y contexto distrital. |
 | `shared-kernel` | Errores tipados, identificadores UUID v7, outbox/inbox, seguridad JWT común. |
-| `frontend-demo` | Consola Angular (componentes standalone, señales, rutas perezosas, CSS propio). |
+| `frontend` | Consola Angular (componentes standalone, señales, rutas perezosas, CSS propio). |
 
 **Decisiones de diseño que importan**
 
@@ -92,8 +92,8 @@ mvn -pl recycler-service   spring-boot:run        # puerto 8081
 mvn -pl collection-service spring-boot:run        # puerto 8082
 mvn -pl reporting-service  spring-boot:run        # puerto 8083
 
-# 4. El frontend (por defecto apunta a los servicios públicos; ver frontend-demo/README.md)
-cd frontend-demo && npm ci && npm start           # http://localhost:5200
+# 4. El frontend (por defecto apunta a los servicios públicos; ver frontend/README.md)
+cd frontend && npm ci && npm start           # http://localhost:5200
 ```
 
 Ningún secreto tiene valor por defecto: sin las variables, el servicio **no arranca**. En el primer arranque con la tabla de cuentas vacía, `auth-service` crea la cuenta de `ADMIN_BOOTSTRAP_EMAIL` con una contraseña aleatoria que escribe una sola vez en el log.
@@ -108,8 +108,8 @@ Ningún secreto tiene valor por defecto: sin las variables, el servicio **no arr
 
 ```bash
 mvn verify                                  # todos los módulos (unitarias + integración)
-cd frontend-demo && npx ng lint && npm test -- --watch=false && npx ng build
-cd frontend-demo && npx playwright test     # flujos del navegador
+cd frontend && npx ng lint && npm test -- --watch=false && npx ng build
+cd frontend && npx playwright test     # flujos del navegador
 ```
 
 ## Seguridad en 5 líneas

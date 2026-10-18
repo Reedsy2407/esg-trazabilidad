@@ -52,9 +52,9 @@ updates:
         update-types:
           - version-update:semver-major
 
-  # frontend-demo/'s npm dependencies (package.json + package-lock.json).
+  # frontend/'s npm dependencies (package.json + package-lock.json).
   - package-ecosystem: npm
-    directory: /frontend-demo
+    directory: /frontend
     schedule:
       interval: weekly
     groups:

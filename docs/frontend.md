@@ -1,6 +1,6 @@
-# Frontend (frontend-demo): coverage, rules and limitations
+# Frontend (frontend): coverage, rules and limitations
 
-The Angular app in `frontend-demo/` is the staff console for the four services. This page records which backend endpoint each screen uses, the rules that live only in the frontend, the known limitations and what the backend still lacks. How to run and test it is in `frontend-demo/README.md`.
+The Angular app in `frontend/` is the staff console for the four services. This page records which backend endpoint each screen uses, the rules that live only in the frontend, the known limitations and what the backend still lacks. How to run and test it is in `frontend/README.md`.
 
 ## Endpoint → screen
 

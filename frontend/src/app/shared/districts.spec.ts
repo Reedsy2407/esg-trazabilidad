@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { DISTRICTS, districtByName, districtByUbigeo, foldForSearch } from './districts';
 
-// Vitest runs with frontend-demo/ as its working directory; the backend's catalog lives next door.
+// Vitest runs with frontend/ as its working directory; the backend's catalog lives next door.
 const CATALOG = '../shared-kernel/src/main/resources/pe/esgtrazabilidad/kernel/ubigeo/lima-callao-districts.csv';
 
 describe('district catalog', () => {

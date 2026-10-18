@@ -95,7 +95,7 @@ jobs:
           changed="$(git diff --name-only "$BASE" HEAD)"
           # Each path-gated job also runs when this workflow itself changes, so a
           # change to the job is always exercised by its own push.
-          if grep -qE '^frontend-demo/|^\.github/workflows/ci\.yml$' <<<"$changed"; then
+          if grep -qE '^frontend/|^\.github/workflows/ci\.yml$' <<<"$changed"; then
             echo "frontend=true" >> "$GITHUB_OUTPUT"
           else
             echo "frontend=false" >> "$GITHUB_OUTPUT"
@@ -106,7 +106,7 @@ jobs:
             echo "scripts=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # frontend-demo/ only: lint, unit tests (Vitest on jsdom, no browser) and the
+  # frontend/ only: lint, unit tests (Vitest on jsdom, no browser) and the
   # production build, then the Playwright browser flows.
   frontend:
     needs: changes
@@ -114,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend-demo
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -122,7 +122,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: frontend-demo/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install (lockfile only)
         run: npm ci
@@ -155,5 +155,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-traces
-          path: frontend-demo/test-results/
+          path: frontend/test-results/
           retention-days: 7

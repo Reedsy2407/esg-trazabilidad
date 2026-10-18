@@ -127,7 +127,7 @@ services:
       - key: PASSWORD_RESET_PEPPER
         sync: false
 
-  # The Angular demo (frontend-demo/), a static site: no server, no secrets.
+  # The Angular demo (frontend/), a static site: no server, no secrets.
   # It calls the four services above straight from the browser, so each needs
   # this site's origin in CORS_ALLOWED_ORIGINS (esg-shared). The build writes
   # version.json with the deployed commit, which scripts/verify-deploy.sh
@@ -140,13 +140,13 @@ services:
     name: esg-frontend
     runtime: static
     buildCommand: >-
-      cd frontend-demo && npm ci && npm run build &&
+      cd frontend && npm ci && npm run build &&
       printf '{"commit":"%s"}' "$RENDER_GIT_COMMIT" > dist/esg-frontend/browser/version.json
-    staticPublishPath: frontend-demo/dist/esg-frontend/browser
+    staticPublishPath: frontend/dist/esg-frontend/browser
     autoDeployTrigger: checksPass
     buildFilter:
       paths:
-        - frontend-demo/**
+        - frontend/**
     envVars:
       - key: NODE_VERSION
         value: "22"

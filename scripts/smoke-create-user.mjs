@@ -14,7 +14,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const require = createRequire(join(here, '..', 'frontend-demo', 'package.json'));
+const require = createRequire(join(here, '..', 'frontend', 'package.json'));
 const { chromium } = require('@playwright/test');
 
 const BASE = process.argv[2] ?? 'https://esg-frontend-egcf.onrender.com';

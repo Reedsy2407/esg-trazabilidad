@@ -1,4 +1,4 @@
-# frontend-demo
+# frontend
 
 Angular client for the ESG traceability platform. It talks to the four Spring Boot services on Render.
 The design source of truth is [`design/DESIGN-BRIEF.md`](design/DESIGN-BRIEF.md); design tooling is recorded in [`design/TOOLING.md`](design/TOOLING.md).

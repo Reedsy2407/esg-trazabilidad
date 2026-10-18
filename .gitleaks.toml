@@ -3,7 +3,7 @@
 # entry needs ALL of: the commit that added the line, the file, and the exact
 # line text (gitleaks has no line-number field, so the line is pinned by its
 # content). Nothing is allowlisted by rule, so a new match anywhere else, or a
-# changed line here, still fails CI. Reviewed 2026-10-10 (docs/security.md).
+# changed line here, still fails CI. Reviewed 2026-10-10 (portal: lista de seguridad).
 # The line regexes start with \s* because gitleaks may hand the line over with
 # its leading newline.
 

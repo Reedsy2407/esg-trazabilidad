@@ -25,7 +25,6 @@ Lo que esta plataforma no hace, o hace con un límite aceptado a propósito. Es 
 
 - **CSV en Windows con coma decimal.** El CSV usa coma como separador (RFC 4180, BOM, CRLF, números con punto decimal). En un Windows con coma decimal, como es-ES, Excel lo abre en una sola columna: usar Datos > Desde texto/CSV y elegir «,». Con la configuración de Perú, México o en-US abre en columnas.
 - **«Distrito desconocido» en la demo.** Los recojos de la siembra son anteriores a la función de distrito, así que el contexto distrital del certificado de demostración lo muestra así.
-- **Prueba sensible a la carga.** `SigersolSyncConcurrencyApiIT` falló una vez con la máquina cargada y pasó 3 de 3 sola y en el `verify` completo; si falla en el CI, repetirla antes de buscar un defecto.
 
 ## Gasto cero
 

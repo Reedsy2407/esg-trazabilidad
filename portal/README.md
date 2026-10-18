@@ -65,7 +65,7 @@ un detalle (`Implementada (v2)`, `Aceptada, pendiente de implementación. Se imp
 | Reemplazada | Ya no aplica; `Reemplazada por` enlaza la que la reemplaza. |
 
 **Quien implementa una decisión cambia su estado a "Implementada" en el mismo commit
-que el código**, y agrega en "Dónde se aplica" un enlace al código o a `docs/`.
+que el código**, y agrega en "Dónde se aplica" un enlace al código o a otro capítulo del portal.
 
 ## Specs OpenAPI (`Writerside/specs/`)
 

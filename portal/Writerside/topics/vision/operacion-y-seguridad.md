@@ -7,7 +7,7 @@ Los cuatro servicios y el sitio estático se describen en un solo archivo, `rend
 
 - **Solo se despliega con el CI en verde** (`autoDeployTrigger: checksPass`) y solo cuando cambia algo que el servicio usa (`buildFilter`): un cambio del frontend no reconstruye los servicios.
 - **Ningún secreto con valor por defecto.** `JWT_SECRET`, `DB_PASSWORD`, `RABBITMQ_PASSWORD`, `PASSWORD_RESET_PEPPER` y las variables del correo se fijan en el panel de Render (`sync: false`); si faltan, el servicio **no arranca**, a propósito.
-- **Verificación tras cada despliegue.** `scripts/verify-deploy.sh` compara el commit que sirve cada servicio (`/actuator/info`, y `version.json` en el frontend) con el esperado, y `scripts/smoke-prod.sh` recorre un flujo real contra producción y mide tiempos.
+- **Verificación tras cada despliegue.** Cada servicio publica el commit que sirve en `/actuator/info` (y el sitio, en `/version.json`), que se compara con el esperado; además se recorre un flujo real contra producción y se miden tiempos. El procedimiento y las comprobaciones están en [Despliegue paso a paso](despliegue-paso-a-paso.md).
 
 ## Ramas de la base de datos por etapa
 
@@ -33,4 +33,4 @@ El CI corre **gitleaks** sobre todo el historial en cada empujón. Un falso posi
 - Recuperación de contraseña con respuesta que no revela cuentas, límites en la base y aviso de cambio ([Recuperar la contraseña](recuperar-contrasena.md)).
 - Frontend con CSP y el token en `sessionStorage`.
 
-Lo que **no** se hace a propósito está en [Limitaciones conocidas](limitaciones-conocidas.md).
+El detalle de cada control está en [Lista de seguridad: los 20 puntos](lista-de-seguridad.md). Lo que **no** se hace a propósito está en [Limitaciones conocidas](limitaciones-conocidas.md).

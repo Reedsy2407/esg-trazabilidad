@@ -1,4 +1,4 @@
-// node --test scripts/demo-seed/seed.test.mjs
+// node --test frontend/demo-seed/seed.test.mjs
 // Unit tests with a fake fetch: an in-memory stand-in for the four services. Nothing here
 // touches the network or production.
 

@@ -22,11 +22,11 @@ Esta plataforma es la consola del **personal de una operadora** (rol STAFF) y de
 
 | | |
 |---|---|
-| ![Lista de empresas](docs/img/01-empresas.jpg) | ![Empresa con resumen del período](docs/img/02-empresa.jpg) |
+| ![Lista de empresas](portal/Writerside/images/01-empresas.jpg) | ![Empresa con resumen del período](portal/Writerside/images/02-empresa.jpg) |
 | Empresas, con su estado | Una empresa: resumen del período y kilos por período |
-| ![Certificado de trazabilidad](docs/img/03-certificado.jpg) | ![Registrar recojo](docs/img/04-registrar-recojo.jpg) |
+| ![Certificado de trazabilidad](portal/Writerside/images/03-certificado.jpg) | ![Registrar recojo](portal/Writerside/images/04-registrar-recojo.jpg) |
 | Certificado con PDF y CSV | Registrar un recojo |
-| ![Registrar dato SIGERSOL](docs/img/05-sigersol-registro.jpg) | |
+| ![Registrar dato SIGERSOL](portal/Writerside/images/05-sigersol-registro.jpg) | |
 | Registrar el dato declarado de SIGERSOL | |
 
 Datos de demostración: las empresas y vecinos de las capturas son ficticios o entidades públicas usadas como ejemplo, y la cuenta de personal aparece enmascarada.
@@ -98,6 +98,21 @@ cd frontend && npm ci && npm start           # http://localhost:5200
 
 Ningún secreto tiene valor por defecto: sin las variables, el servicio **no arranca**. En el primer arranque con la tabla de cuentas vacía, `auth-service` crea la cuenta de `ADMIN_BOOTSTRAP_EMAIL` con una contraseña aleatoria que escribe una sola vez en el log.
 
+## Cómo desplegarlo (Render, Neon y CloudAMQP, solo planes gratuitos)
+
+Con este repositorio, `render.yaml` y el portal alcanza para ponerlo en una URL pública desde cero. Lo que es del repositorio está aquí; el detalle de cada proveedor y de cada variable está en el capítulo [Despliegue paso a paso](https://reedsy2407.github.io/esg-trazabilidad/despliegue-paso-a-paso.html) del portal (fuente: [portal/Writerside/topics/vision/despliegue-paso-a-paso.md](portal/Writerside/topics/vision/despliegue-paso-a-paso.md)).
+
+1. **Copia el repositorio:** haz un fork o clónalo (`git clone https://github.com/Reedsy2407/esg-trazabilidad`) y súbelo a tu cuenta de GitHub. El CI vive en `.github/workflows/ci.yml` y Render solo despliega cuando ese CI queda en verde (`autoDeployTrigger: checksPass`), así que deja GitHub Actions habilitado.
+2. **Crea la base y el broker** en la misma región de AWS que Render (el Blueprint usa `oregon`, es decir AWS `us-west-2`): un proyecto de **Neon** (usa el host de conexión *directa*, no el agrupado) y una instancia **Little Lemur** de **CloudAMQP**.
+3. **Crea a mano el grupo de variables `esg-shared`** en Render (no en el Blueprint) con `JWT_SECRET` (≥ 32 bytes aleatorios), `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `RABBITMQ_HOST`, `RABBITMQ_PORT` (`5671`), `RABBITMQ_USER`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST` y `RABBITMQ_SSL_ENABLED` (`true`). Ningún secreto tiene valor por defecto: sin ellos el servicio no arranca.
+4. **Variables propias de dos servicios** (se fijan en cada servicio, no en el grupo): `reporting-service` necesita `RUC_LOOKUP_PROVIDER` y `RUC_LOOKUP_TOKEN` (token de Decolecta); `auth-service` necesita `EMAIL_WEBHOOK_URL`, `EMAIL_WEBHOOK_SECRET` y `PASSWORD_RESET_PEPPER` (el correo sale por un Google Apps Script). Los valores y cómo obtenerlos están en el capítulo del portal.
+5. **Aplica el Blueprint:** en Render, **New → Blueprint**, elige tu repositorio y la rama `main`. Render lee `render.yaml` y muestra cuatro servicios web (`esg-recycler-service`, `esg-collection-service`, `esg-reporting-service`, `esg-auth-service`) y el sitio estático `esg-frontend`. Cuando pida `ADMIN_BOOTSTRAP_EMAIL`, escribe el correo de la primera cuenta del personal.
+6. **Lee la contraseña inicial** en **esg-auth-service → Logs** justo tras el primer despliegue (se escribe una sola vez, en una línea `email=… password=…`) y guárdala de inmediato. Si un servicio falla en su paso de Liquibase en el primer arranque, un *Manual Deploy* de ese servicio lo resuelve.
+7. **Permite el origen del sitio:** en el grupo `esg-shared`, agrega `CORS_ALLOWED_ORIGINS` con la URL del sitio (`https://<tu-sitio>.onrender.com`, sin barra final y nunca `*`) y, si tus servicios tienen otros nombres, cambia las cuatro URL de `services` en `frontend/src/environments/environment.ts` y los hosts de `connect-src` en los encabezados del sitio de `render.yaml`.
+8. **Comprueba:** cada servicio responde su commit en `GET /actuator/info` (el sitio, en `GET /version.json`), y la sonda `GET /actuator/health/liveness` da 200. La primera petición a un servicio dormido puede tardar hasta 2 minutos. Las pruebas manuales de extremo a extremo (token compartido entre servicios, evento por el broker, límite de intentos) están en el capítulo del portal.
+
+Datos de demostración (opcional): `frontend/demo-seed/` carga, por las APIs públicas, una empresa, una asociación y recojos de ejemplo; su [README](frontend/demo-seed/README.md) explica cómo.
+
 ## Cómo se prueba
 
 - **Unitarias** en cada módulo (JUnit 5, Mockito) y en el frontend (Vitest).
@@ -120,15 +135,14 @@ cd frontend && npx playwright test     # flujos del navegador
 4. «Olvidé mi contraseña» en dos pasos: código de 8 dígitos (10 minutos, 5 intentos) y luego un token de un solo uso; ambos guardados como HMAC, con respuesta que no revela si la cuenta existe.
 5. Errores tipados sin trazas ni datos internos; CORS con lista explícita; el frontend guarda el token solo en `sessionStorage`, con CSP.
 
-Detalle y limitaciones aceptadas (por ejemplo, un JWT no se puede revocar antes de vencer) en [docs/security.md](docs/security.md).
+Detalle de los 20 puntos y limitaciones aceptadas (por ejemplo, un JWT no se puede revocar antes de vencer) en el portal: [lista de seguridad](portal/Writerside/topics/vision/lista-de-seguridad.md) y [limitaciones conocidas](portal/Writerside/topics/vision/limitaciones-conocidas.md).
 
 ## Documentación
 
-Los documentos de `docs/` están en inglés; el portal, en español.
+Toda la documentación está en el [portal](https://reedsy2407.github.io/esg-trazabilidad/), en español. Sus fuentes están en `portal/` (cómo se construye: [portal/README.md](portal/README.md)):
 
-- [docs/security.md](docs/security.md): controles y decisiones de seguridad.
-- [docs/deployment.md](docs/deployment.md): despliegue en Render, variables y verificación.
-- [docs/frontend.md](docs/frontend.md): qué pantalla usa cada endpoint y las reglas que viven solo en el frontend.
-- [limitaciones conocidas](portal/Writerside/topics/vision/limitaciones-conocidas.md): **límites conocidos** (SIGERSOL, sesiones, correo, CSV, servicios que se duermen).
-- [docs/performance.md](docs/performance.md) y [docs/render-logs.md](docs/render-logs.md): mediciones y lectura de logs de producción.
-- [portal/README.md](portal/README.md): cómo se construye el portal.
+- [Despliegue paso a paso](portal/Writerside/topics/vision/despliegue-paso-a-paso.md): Neon, CloudAMQP, Render, variables y comprobación.
+- [Lista de seguridad](portal/Writerside/topics/vision/lista-de-seguridad.md): los 20 puntos y las decisiones tomadas a propósito.
+- [La consola del personal](portal/Writerside/topics/vision/consola-del-personal.md): qué pantalla usa cada endpoint y las reglas que viven solo en el frontend.
+- [Rendimiento](portal/Writerside/topics/vision/rendimiento.md): qué se midió y qué cambió.
+- [Limitaciones conocidas](portal/Writerside/topics/vision/limitaciones-conocidas.md): SIGERSOL, sesiones, correo, CSV y servicios que se duermen.

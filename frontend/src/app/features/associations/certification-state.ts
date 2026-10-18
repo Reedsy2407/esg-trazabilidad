@@ -6,7 +6,7 @@ export type CertificationState = 'vigente' | 'por-vencer' | 'vencido';
 /**
  * "Por vencer" is a rule of this frontend, not a backend state (the backend only says `expired`):
  * an unexpired certification that expires in less than this many days, counted on Lima's
- * calendar. Confirmed by the product owner on 2026-10-10; see docs/frontend.md.
+ * calendar. Confirmed by the product owner on 2026-10-10; see the portal chapter «La consola del personal».
  */
 export const EXPIRING_SOON_DAYS = 30;
 

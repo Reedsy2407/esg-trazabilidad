@@ -45,6 +45,6 @@ Cómo llenar esta plantilla (este comentario se borra):
    [título](AAAA-MM-DD-slug.md). Si el estado es Reemplazada, "Reemplazada por"
    es obligatorio.
 5. Quien implementa una decisión cambia su estado a "Implementada" en el mismo
-   commit que el código, y agrega en "Dónde se aplica" un enlace al código o a docs/.
+   commit que el código, y agrega en "Dónde se aplica" un enlace al código o a otro capítulo del portal.
 6. Comprueba antes de commitear: node portal/scripts/gen-adr-toc.mjs --check
 -->

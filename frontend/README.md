@@ -5,7 +5,7 @@ The design source of truth is [`design/DESIGN-BRIEF.md`](design/DESIGN-BRIEF.md)
 
 Angular 21.2 (standalone, signals, zoneless, lazy routes, Reactive Forms). No NgRx, SSR or component library: own CSS with the brief's tokens.
 
-Which screen uses which endpoint, the rules that live only in the frontend (such as "por vencer" and what can't be issued), the known limitations and what the backend still lacks are in [`docs/frontend.md`](../docs/frontend.md).
+Which screen uses which endpoint, the rules that live only in the frontend (such as "por vencer" and what can't be issued), the known limitations and what the backend still lacks are in the portal chapter [La consola del personal](../portal/Writerside/topics/vision/consola-del-personal.md).
 
 ## Run
 

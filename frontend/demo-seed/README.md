@@ -31,17 +31,17 @@ $env:ESG_STAFF_PASSWORD = [System.Net.NetworkCredential]::new("", $secure).Passw
 Remove-Variable secure
 
 # 2. Simulación (no escribe nada). Revisa la salida.
-node scripts/demo-seed/seed.mjs
+node frontend/demo-seed/seed.mjs
 
 # 3. Crear lo que falta.
-node scripts/demo-seed/seed.mjs --apply
+node frontend/demo-seed/seed.mjs --apply
 
 # 4. Comprobar: debe decir "0 altas pendientes".
-node scripts/demo-seed/seed.mjs
+node frontend/demo-seed/seed.mjs
 
 # 5. Certificado (IRREVERSIBLE). Primero en simulación: debe decir "se emitiría con 35.3 kg y 85.5 %".
-node scripts/demo-seed/seed.mjs --emit-certificate
-node scripts/demo-seed/seed.mjs --apply --emit-certificate
+node frontend/demo-seed/seed.mjs --emit-certificate
+node frontend/demo-seed/seed.mjs --apply --emit-certificate
 
 # 6. Al terminar, borrar las variables de entorno (o cerrar la ventana).
 Remove-Item Env:ESG_STAFF_EMAIL, Env:ESG_STAFF_PASSWORD
@@ -52,8 +52,8 @@ La primera llamada puede tardar hasta ~2 minutos: los servicios del plan gratuit
 Opcional: `--extra-association` agrega una segunda asociación ("Asociación de Recicladores Demo Sur (ficticia)", RUC 20521286769, el de una entidad pública real; sin validez legal). Su certificación vence 20 días después de la fecha en que se corre, así que sale con el chip "por vencer". Está apagada por defecto y también pasa por la simulación. Si esa asociación ya tiene una certificación "Registro municipal (demo)", no se crea otra, aunque ya haya vencido:
 
 ```powershell
-node scripts/demo-seed/seed.mjs --extra-association
-node scripts/demo-seed/seed.mjs --apply --extra-association
+node frontend/demo-seed/seed.mjs --extra-association
+node frontend/demo-seed/seed.mjs --apply --extra-association
 ```
 
 Códigos de salida: `0` terminó, `1` se detuvo por un conflicto o un error del servicio (la salida dice cuál), y `2` hay un problema de uso (faltan variables, opción desconocida o URL no permitida).
@@ -61,7 +61,7 @@ Códigos de salida: `0` terminó, `1` se detuvo por un conflicto o un error del 
 ## Pruebas
 
 ```powershell
-node --test scripts/demo-seed/seed.test.mjs
+node --test frontend/demo-seed/seed.test.mjs
 ```
 
 Usan un `fetch` simulado en memoria: nunca tocan la red ni producción.

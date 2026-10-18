@@ -28,3 +28,13 @@ frontend/design/STITCH-PROMPTS.md
 
 # Planning notes stay local, not versioned (user decision)
 tasks/
+
+# Local operating tools and runbooks: they stay on this machine and in the agent kit, not in the product repo
+scripts/merge-dependabot-actions.sh
+scripts/perf-summary.sh
+scripts/services.txt
+scripts/smoke-create-user.mjs
+scripts/smoke-cred.ps1
+scripts/smoke-prod.sh
+scripts/verify-deploy.sh
+docs/

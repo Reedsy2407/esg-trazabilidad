@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Loads the approved fictitious demo data into the platform through its public APIs.
 //
-//   node scripts/demo-seed/seed.mjs                                  simulation: reads only
-//   node scripts/demo-seed/seed.mjs --apply                          writes what is missing
-//   node scripts/demo-seed/seed.mjs --apply --emit-certificate       also issues the certificate (irreversible)
-//   node scripts/demo-seed/seed.mjs ... --extra-association          also a 2nd association, certification "por vencer"
+//   node frontend/demo-seed/seed.mjs                                  simulation: reads only
+//   node frontend/demo-seed/seed.mjs --apply                          writes what is missing
+//   node frontend/demo-seed/seed.mjs --apply --emit-certificate       also issues the certificate (irreversible)
+//   node frontend/demo-seed/seed.mjs ... --extra-association          also a 2nd association, certification "por vencer"
 //
 // Credentials come only from ESG_STAFF_EMAIL / ESG_STAFF_PASSWORD. Neither the password nor the
 // token is ever printed or stored. It talks only to the four known Render services (the same
@@ -29,7 +29,7 @@ export function isAllowedUrl(url) {
   return ALLOWED_BASES.some((base) => url === base || url.startsWith(`${base}/`) || url.startsWith(`${base}?`));
 }
 
-const USAGE = `Uso: node scripts/demo-seed/seed.mjs [--apply] [--emit-certificate] [--extra-association]
+const USAGE = `Uso: node frontend/demo-seed/seed.mjs [--apply] [--emit-certificate] [--extra-association]
   (sin opciones)        simulación: solo lecturas, muestra qué crearía y qué ya existe
   --apply               crea lo que falta
   --emit-certificate    con --apply, emite el certificado del 17 al 30 de setiembre de 2026 (IRREVERSIBLE)
@@ -131,7 +131,7 @@ export async function run({
     const { ESG_STAFF_EMAIL: email, ESG_STAFF_PASSWORD: pass } = env;
     if (pass) secrets.push(pass);
     if (!email || !pass) {
-      throw usageError('Faltan las variables de entorno ESG_STAFF_EMAIL y/o ESG_STAFF_PASSWORD (ver scripts/demo-seed/README.md).');
+      throw usageError('Faltan las variables de entorno ESG_STAFF_EMAIL y/o ESG_STAFF_PASSWORD (ver frontend/demo-seed/README.md).');
     }
 
     const api = client({ bases, fetchImpl, sleep, say, secrets });

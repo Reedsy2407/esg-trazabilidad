@@ -15,7 +15,7 @@ import { Component } from '@angular/core';
       padding: 1px 8px;
       border: 1.5px dashed var(--ink);
       color: var(--ink);
-      font-size: 13px;
+      font-size: var(--t-note);
       font-weight: 600;
       white-space: nowrap;
       vertical-align: middle;

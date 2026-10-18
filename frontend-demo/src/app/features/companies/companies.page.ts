@@ -6,11 +6,12 @@ import { Router, RouterLink } from '@angular/router';
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
 import { ChevronIcon } from '../../shared/chevron-icon';
+import { Tally } from '../../shared/tally';
 import { StatusLabel } from './status-label';
 
 @Component({
   selector: 'app-companies-page',
-  imports: [RouterLink, DecimalPipe, ChevronIcon, StatusLabel],
+  imports: [RouterLink, DecimalPipe, ChevronIcon, StatusLabel, Tally],
   templateUrl: './companies.page.html',
   styleUrl: './companies.page.css',
 })
@@ -27,6 +28,15 @@ export class CompaniesPage {
   });
 
   protected readonly page = computed(() => (this.companies.hasValue() ? this.companies.value() : null));
+
+  /** Active companies among the ones on this page (the API pages; the page cannot count the rest). */
+  protected readonly activeOnPage = computed(() => (this.page()?.content ?? []).filter((c) => c.status === 'ACTIVE').length);
+  protected readonly inactiveOnPage = computed(() => (this.page()?.content.length ?? 0) - this.activeOnPage());
+
+  protected readonly tallyRows = computed(() => [
+    { label: 'Activas', value: this.activeOnPage() },
+    { label: 'Inactivas', value: this.inactiveOnPage() },
+  ]);
 
   protected readonly range = computed(() => {
     const current = this.page();

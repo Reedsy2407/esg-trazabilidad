@@ -1,49 +1,103 @@
-.back {
-  display: inline-block;
-  margin-bottom: var(--space-5);
-}
-
-/* The ticket centred on the concrete, the downloads beside it; stacked on narrow screens. */
+/* El certificado: la pantalla firma. El ticket del mes sale de la ranura, papel térmico con una esquina doblada como
+   la «T» del logo; las descargas y el contexto distrital, al lado. Apilado en pantallas angostas. */
 .cert-layout {
   display: grid;
-  grid-template-columns: minmax(0, 560px) minmax(0, 280px);
-  justify-content: center;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: var(--space-8);
 }
+@media (min-width: 1100px) {
+  .cert-layout {
+    grid-template-columns: minmax(0, 1040px) minmax(360px, 560px);
+    justify-content: center;
+    gap: clamp(40px, 5vw, 96px);
+  }
+}
+/* La ranura: una barra del azul del logo, 14 px más ancha que el papel; el ticket sale por debajo. */
+.slot-wrap {
+  position: relative;
+  overflow: hidden;
+  padding: 0 14px 8px;
+}
+.slot {
+  position: relative;
+  z-index: 2;
+  height: 26px;
+  margin: 0 -14px;
+  background: var(--brand-deep);
+}
+.slot::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 6px;
+  height: 4px;
+  background: var(--ink);
+  opacity: 0.55;
+}
 .sheet {
-  padding-left: var(--space-8);
-  padding-right: var(--space-8);
+  container-type: inline-size;
+  padding-left: clamp(var(--space-5), 3vw, 48px);
+  padding-right: clamp(var(--space-5), 3vw, 48px);
 }
-/* Printed once when it opens, in printer-like steps; already printed when motion is reduced. */
 article.sheet {
-  animation: feed 1s steps(20, end) both;
+  position: relative;
+  z-index: 1;
+  margin-top: -10px;
+  padding-top: calc(var(--tear) + var(--space-8));
+  padding-bottom: calc(var(--tear) + var(--space-8));
 }
-@keyframes feed {
+/* Sale de la ranura una vez, en pasos como una impresora; con reduced-motion la regla global la reduce a un instante. */
+article.sheet {
+  animation: out 1.6s steps(24, end) 0.2s both;
+}
+@keyframes out {
   from {
-    clip-path: inset(0 0 100% 0);
+    transform: translateY(-100%);
   }
-  to {
-    clip-path: inset(0 0 0 0);
+}
+/* Marca de agua tenue del símbolo: no estorba al leer y no se imprime. */
+article.sheet::before {
+  content: '';
+  position: absolute;
+  right: -5%;
+  bottom: -3%;
+  width: 40%;
+  aspect-ratio: 1;
+  background: url('/brand/symbol.svg') center / contain no-repeat;
+  opacity: 0.035;
+  pointer-events: none;
+}
+@media print {
+  article.sheet::before {
+    display: none;
   }
+}
+article.sheet > * {
+  position: relative;
 }
 
-/* The title is the largest line on the ticket after the total; the company comes below it. */
+/* Encabezado del documento: el logo y el título. */
+.doc-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
 h1 {
-  font-size: 30px;
+  font-size: clamp(30px, 3.2vw, 56px);
   font-weight: 800;
-  line-height: 1.1;
-  text-align: center;
+  line-height: 1.02;
+  text-wrap: balance;
 }
 .label,
 dt {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 14px;
 }
 .company {
   margin: var(--space-1) 0 0;
-  font-size: 24px;
+  font-size: var(--t-3);
   font-weight: 800;
   line-height: 1.08;
   letter-spacing: -0.03em;
@@ -62,28 +116,39 @@ dl {
 dd {
   margin: 0;
 }
+/* El total: kilos grandes en mono, que cuentan hacia arriba. */
 .total dd {
   margin-top: var(--space-1);
-  font-size: 52px;
+}
+.kilos-fig {
+  display: block;
+  font-size: 13.4cqw;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: -0.05em;
-  overflow-wrap: anywhere;
+  letter-spacing: -0.06em;
+  white-space: nowrap;
 }
-/* Ticket lines: label, dotted leader, value. When the value doesn't fit beside the label
-   it drops to its own line, right-aligned, and the leader fills the rest of the first. */
+.kilos-fig small {
+  margin-left: 0.2em;
+  font-size: 0.34em;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+/* Líneas del ticket: rótulo, guía punteada, valor. Si el valor no cabe junto al rótulo, baja a su propia línea,
+   alineado a la derecha, y la guía rellena el resto de la primera. */
 .leader {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0 var(--space-2);
   padding: var(--space-1) 0;
+  font-size: var(--t-1);
 }
 .leader::after {
   content: '';
   order: 1;
   flex: 1 1 var(--space-4);
-  border-bottom: 2px dotted var(--rule-dots);
+  border-bottom: 3px dotted var(--rule-dots);
   transform: translateY(-4px);
 }
 .leader dd {
@@ -92,7 +157,7 @@ dd {
   font-weight: 600;
 }
 
-/* The certificate id, whole: a UUID v7's first 8 characters can repeat. */
+/* El código del certificado, entero: los 8 primeros caracteres de un UUID v7 pueden repetirse. */
 .code {
   display: flex;
   flex-wrap: wrap;
@@ -107,21 +172,19 @@ dd {
 .code .label {
   display: block;
 }
-/* The id wraps after one of its hyphens, never inside a group, wherever a hyphen break fits
-   (no break-all). `anywhere` is only the last resort for engines that won't break between a
-   hyphen and a digit (Safari, per UAX#14 LB25): there a group may split rather than overflow
-   the ticket at 320 px. Copying is unaffected; the text itself has no breaks. */
+/* El id se parte tras un guion, nunca dentro de un grupo, donde quepa un corte de guion (sin break-all).
+   `anywhere` es solo el último recurso para motores que no cortan entre guion y dígito (Safari, UAX#14 LB25):
+   ahí un grupo puede partirse antes que desbordar el ticket a 320 px. Copiar no cambia: el texto no tiene cortes. */
 code {
   display: block;
   margin-top: var(--space-1);
-  font-size: 14px;
+  font-size: var(--t-note);
   overflow-wrap: anywhere;
 }
 .copy-status {
   min-height: 1.5em;
   margin: var(--space-2) 0 0;
   color: var(--ink-soft);
-  font-size: 14px;
 }
 
 .actions {
@@ -134,10 +197,15 @@ code {
 .hint {
   margin: var(--space-3) 0 0;
   color: var(--ink-soft);
-  font-size: 14px;
 }
 .side .problem {
   margin-top: var(--space-4);
+}
+.side .panel {
+  display: block;
+  margin-top: var(--space-6);
+  padding: var(--space-5);
+  background: var(--paper);
 }
 
 .bone {
@@ -167,37 +235,21 @@ code {
   }
 }
 
-@media (max-width: 900px) {
-  .cert-layout {
-    grid-template-columns: minmax(0, 560px);
-    gap: var(--space-5);
-  }
-}
 @media (max-width: 639.98px) {
-  .sheet {
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
-  }
-  h1 {
-    font-size: 24px;
+  .doc-head {
+    gap: var(--space-3);
   }
   .company {
-    font-size: 21px;
-  }
-  .total dd {
-    font-size: 38px;
+    font-size: var(--t-2);
   }
 }
 @media (max-width: 400px) {
-  /* "12,480.50 kg" stays on one line on a 360 px phone. */
-  .total dd {
-    font-size: 30px;
-  }
-  /* The period doesn't fit beside its label: all three lines switch to label above, value
-     below, so they stay alike instead of one dropping its value onto a second line. */
+  /* El período no cabe junto a su rótulo: las tres líneas pasan a rótulo arriba y valor abajo, para que sean
+     iguales en vez de que una baje su valor a una segunda línea. */
   .leader {
     display: block;
     padding: var(--space-2) 0;
+    font-size: var(--t-0);
   }
   .leader::after {
     content: none;
@@ -207,14 +259,14 @@ code {
   }
 }
 
-/* Where the compliance figure comes from (brief: SIGERSOL is always "ingreso manual"). */
+/* De dónde sale el cumplimiento (brief: SIGERSOL es siempre «ingreso manual»). */
 .source {
   margin: var(--space-3) 0 0;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
 }
 
-/* ANULADO: heavy frame, the same ink as the rest of the ticket. */
+/* ANULADO: marco grueso, la misma tinta que el resto del ticket. */
 .stamp {
   margin: var(--space-4) 0 var(--space-2);
   padding: var(--space-2) var(--space-3);
@@ -229,7 +281,7 @@ code {
   margin: 0;
   overflow-wrap: anywhere;
 }
-/* Same two-column grid as the ticket: the section sits in the ticket's column, apart from it. */
+/* La misma grilla del ticket: la sección va en su columna, aparte de él. */
 .annul-row {
   margin-top: var(--space-8);
 }

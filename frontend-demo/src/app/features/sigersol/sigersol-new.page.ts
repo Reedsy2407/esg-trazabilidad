@@ -35,7 +35,7 @@ const optionalDate = (value: string | undefined) => (value !== undefined && LOCA
   styles: `
     .lead app-manual-tag { margin-right: var(--space-2); }
     .num-field .control { max-width: 260px; text-align: right; }
-    .counter { margin: var(--space-1) 0 0; color: var(--ink-soft); font-size: 13px; text-align: right; }
+    .counter { margin: var(--space-1) 0 0; color: var(--ink-soft); font-size: var(--t-note); text-align: right; }
     textarea.control { height: auto; min-height: 92px; padding-top: var(--space-2); resize: vertical; }
     .load-problem { margin-bottom: var(--space-2); }
   `,

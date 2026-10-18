@@ -32,12 +32,12 @@ import { formatKg } from './format';
   `,
   styles: `
     .district-context { margin-top: var(--space-5); }
-    .note { margin: 0 0 var(--space-3); color: var(--ink-soft); font-size: 14px; }
+    .note { margin: 0 0 var(--space-3); color: var(--ink-soft); font-size: var(--t-note); }
     ul { margin: 0; padding: 0; list-style: none; }
     li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 var(--space-4); padding: var(--space-2) 0; border-top: 1px solid var(--ink-soft); }
     .name { font-weight: 600; }
     .kilos { text-align: right; }
-    .detail { grid-column: 1 / -1; color: var(--ink-soft); font-size: 14px; }
+    .detail { grid-column: 1 / -1; color: var(--ink-soft); font-size: var(--t-note); }
   `,
 })
 export class DistrictContext {

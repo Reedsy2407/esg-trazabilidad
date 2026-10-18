@@ -13,22 +13,29 @@
 /* The scale's printer head, with the status ticket hanging from it. */
 .printout {
   width: 100%;
-  max-width: 560px;
+  max-width: 640px;
 }
 .printer {
   height: 22px;
   margin: 0 -10px;
-  background: var(--ink);
+  background: var(--brand-deep);
+}
+.brand-mark {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-3);
 }
 .sheet {
   padding-left: var(--space-8);
   padding-right: var(--space-8);
 }
 h1 {
-  font-size: 26px;
+  font-size: var(--t-3);
+  text-align: center;
 }
 .sub {
   margin: var(--space-2) 0 0;
+  text-align: center;
   color: var(--ink-soft);
 }
 table {
@@ -57,7 +64,7 @@ th {
   display: block;
   white-space: nowrap;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
   font-weight: 400;
 }
 .status {
@@ -66,7 +73,7 @@ th {
   color: var(--ink);
 }
 .time {
-  width: 64px;
+  width: 72px;
   text-align: right;
   color: var(--ink-soft);
 }
@@ -75,10 +82,10 @@ th {
    The word always carries the meaning; the mark reinforces it in greyscale too. */
 .mark {
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   margin-right: var(--space-2);
-  border: 1.5px solid currentColor;
+  border: 2px solid currentColor;
 }
 tr[data-status='ready'] .mark {
   background: currentColor;

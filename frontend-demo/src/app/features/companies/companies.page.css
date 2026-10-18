@@ -1,86 +1,127 @@
-.head {
-  margin-bottom: var(--space-6);
-}
-h1 {
-  font-size: 44px;
-  line-height: 1.02;
-}
-.sub {
-  margin: var(--space-2) 0 0;
-  color: var(--ink-soft);
-}
-
-/* The list: ticket stubs stacked on the concrete, each one a link to its company. */
+/* La lista: un rollo de papel térmico continuo (dentado arriba y abajo del rollo), cada fila un enlace. */
 .stubs {
-  display: grid;
-  outline: none; /* focused only by script after a refresh; the stubs carry their own focus */
-  /* Wide enough that two stubs' serrated edges read as two tickets, not one band. */
-  gap: var(--space-8);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  container-type: inline-size;
+  outline: none; /* se enfoca por script tras una actualización; las filas llevan su propio foco */
 }
 .card {
+  position: relative;
   display: grid;
-  /* Fixed tracks so RUC and state line up from one stub to the next. */
-  grid-template-columns: minmax(0, 1fr) 190px 96px 20px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'n c' 'r c' 's c';
   align-items: center;
-  gap: var(--space-2) var(--space-8);
-  min-height: 44px;
-  padding-left: var(--space-6);
-  padding-right: var(--space-6);
-  padding-top: calc(var(--tear) + var(--space-4));
-  padding-bottom: calc(var(--tear) + var(--space-4));
+  gap: var(--space-2) var(--space-4);
+  min-height: 96px;
+  padding: var(--space-5) var(--space-6);
   color: var(--ink);
   text-decoration: none;
+  background-image: linear-gradient(var(--row-hover), var(--row-hover));
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  --fold-size: 0px;
 }
-a.card:hover .card-name {
-  color: var(--accent);
+@media (prefers-reduced-motion: no-preference) {
+  .card {
+    transition:
+      background-size 0.3s var(--ease),
+      --fold-size 0.3s var(--ease);
+  }
+  .card-chev {
+    transition: transform 0.3s var(--ease);
+  }
 }
-/* The mask would clip an outline drawn outside the stub: draw focus inside it. */
-a.card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: calc(-1 * var(--tear) - 4px);
+.card:hover,
+.card:focus-visible {
+  background-size: 100% 100%;
+  --fold-size: 22px;
+}
+.card:hover .card-chev,
+.card:focus-visible .card-chev {
+  transform: translateX(8px);
+}
+/* El pliegue de la fila: aparece al pasar el cursor, la esquina de la «T» doblándose. */
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: var(--paper-fold);
+  clip-path: polygon(calc(100% - var(--fold-size)) 0, 100% var(--fold-size), calc(100% - var(--fold-size)) var(--fold-size));
+  pointer-events: none;
+}
+/* La máscara del rollo recortaría un foco dibujado por fuera: se dibuja dentro de la fila. */
+.card:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -6px;
 }
 .card-name {
+  grid-area: n;
   font-weight: 600;
-  font-size: 19px;
-  letter-spacing: -0.01em;
+  font-size: var(--t-2);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
 .card-ruc {
+  grid-area: r;
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--t-0);
   white-space: nowrap;
 }
 .card-ruc .mono {
   color: var(--ink);
-  font-size: 14px;
+  font-size: var(--t-1);
 }
 .card-status {
-  font-size: 14px;
+  grid-area: s;
+  font-size: var(--t-0);
 }
 .card-chev {
-  color: var(--ink-soft);
+  grid-area: c;
+  color: var(--ink);
   justify-self: end;
 }
+/* Rollo ancho: nombre, RUC y estado en una sola línea, alineados de una fila a la siguiente. */
+@container (min-width: 820px) {
+  .card {
+    grid-template-columns: minmax(0, 1fr) 270px 170px 40px;
+    grid-template-areas: 'n r s c';
+    min-height: 104px;
+  }
+}
 .empty {
-  padding: var(--space-6);
+  padding: var(--space-8) var(--space-6);
   color: var(--ink-soft);
+  font-size: var(--t-1);
+}
+.empty p {
+  margin: 0;
+}
+.empty .empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
+  margin-top: var(--space-4);
 }
 
+.stub-skel {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
 .bone {
   display: block;
-  width: 96px;
-  height: 12px;
+  width: 120px;
+  height: 14px;
   background: var(--line);
   animation: pulse 1.2s ease-in-out infinite alternate;
 }
 .bone.wide {
-  width: 240px;
-}
-.card.skeleton {
-  grid-template-columns: minmax(0, 1fr) auto;
+  width: 320px;
+  max-width: 80%;
+  height: 22px;
 }
 @keyframes pulse {
   from {
@@ -97,12 +138,11 @@ a.card:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin-top: var(--space-4);
+  margin-top: var(--space-5);
 }
 .count {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 14px;
 }
 .pages {
   display: flex;
@@ -111,32 +151,5 @@ a.card:focus-visible {
 }
 .where {
   color: var(--ink-soft);
-  font-size: 14px;
 }
 
-/* Phones: name on top, RUC and state below it, chevron at the side. */
-@media (max-width: 639.98px) {
-  h1 {
-    font-size: 34px;
-  }
-  .card {
-    grid-template-columns: minmax(0, 1fr) 20px;
-    gap: var(--space-1) var(--space-3);
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
-  }
-  .card-name {
-    font-size: 17px;
-  }
-  .card-ruc,
-  .card-status {
-    grid-column: 1;
-  }
-  .card-chev {
-    grid-column: 2;
-    grid-row: 1 / span 3;
-  }
-  .bone.wide {
-    width: 70%;
-  }
-}

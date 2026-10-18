@@ -173,8 +173,9 @@ for (const width of [360, 768, 1280]) {
 test('with prefers-reduced-motion the tickets are already printed: no feed animation runs', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await fakeBackend(page);
-  // Fully printed: no clip, or an inset whose every side is zero (e.g. "inset(0px 0px 0%)").
-  const unclipped = /^(none|inset\((0(px|%)?\s*)+\))$/;
+  // Fully printed: no clip, an inset whose every side is zero (e.g. "inset(0px 0px 0%)"), or the fold's polygon
+  // (the cut corner of the ticket: the paper itself is whole).
+  const unclipped = /^(none|inset\((0(px|%)?\s*)+\)|polygon\(.*100% 100%.*\))$/;
   // The feed's effective duration: with the global reduced-motion rule it is 0.01 ms, without
   // it 900-1000 ms. Deterministic, unlike sampling whether it is still running.
   const longest = (selector: string) =>

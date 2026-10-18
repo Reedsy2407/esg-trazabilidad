@@ -9,6 +9,7 @@ import { BackendApi } from '../../core/api/backend.api';
 import { DistrictSelect } from '../../shared/district-select/district-select';
 import { districtByName, districtByUbigeo } from '../../shared/districts';
 import { loadErrorMessage } from '../../shared/error-message';
+import { Tally } from '../../shared/tally';
 
 const FILTERS = [
   { estado: null, status: null, label: 'Todos' },
@@ -46,7 +47,7 @@ function justDeleted(): string | null {
  */
 @Component({
   selector: 'app-neighbors-page',
-  imports: [RouterLink, DecimalPipe, ReactiveFormsModule, DistrictSelect],
+  imports: [RouterLink, DecimalPipe, ReactiveFormsModule, DistrictSelect, Tally],
   templateUrl: './neighbors.page.html',
   styleUrl: './neighbors.page.css',
 })
@@ -76,6 +77,12 @@ export class NeighborsPage {
     source: () => (this.neighbors.hasValue() ? this.neighbors.value() : undefined),
     computation: (current, previous) => current ?? previous?.value ?? null,
   });
+
+  private readonly activeOnPage = computed(() => (this.page()?.content ?? []).filter((n) => n.status === 'ACTIVE').length);
+  protected readonly tallyRows = computed(() => [
+    { label: 'Activos', value: this.activeOnPage() },
+    { label: 'Inactivos', value: (this.page()?.content.length ?? 0) - this.activeOnPage() },
+  ]);
 
   protected readonly range = computed(() => {
     const current = this.page();

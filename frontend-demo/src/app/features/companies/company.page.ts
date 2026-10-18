@@ -15,7 +15,7 @@ const STATUS_UNCERTAIN =
   'No pudimos confirmar si cambió el estado de la empresa. Recarga la página para ver el actual antes de volver a intentarlo.';
 const DELETE_UNCERTAIN =
   'No pudimos confirmar si la empresa quedó eliminada. Revisa la lista de empresas antes de volver a intentarlo.';
-import { formatInstantDate, formatKg, formatPercent, periodLabel } from '../../shared/format';
+import { formatInstantDate, formatKg, formatPercent, kiloParts, periodLabel } from '../../shared/format';
 import { buildKilosChart, latestCertificate } from './kilos-chart';
 import { KilosChart } from './kilos-chart.component';
 import { ChevronIcon } from '../../shared/chevron-icon';
@@ -112,6 +112,8 @@ export class CompanyPage {
     return {
       period: periodLabel(s.periodStart, s.periodEnd),
       kilos: formatKg(s.kilosTrazados),
+      kiloParts: kiloParts(s.kilosTrazados),
+      complianceValue: s.hierarchyCompliancePercent,
       compliance: formatPercent(s.hierarchyCompliancePercent),
       missingSigersol: s.hierarchyCompliancePercent === null,
       coverage: coverageNote(s),

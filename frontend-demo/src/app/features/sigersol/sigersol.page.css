@@ -8,22 +8,22 @@
 .filter-row label {
   display: block;
   margin-bottom: var(--space-2);
-  font-size: 14px;
+  font-size: var(--t-note);
   font-weight: 600;
 }
 .origin {
-  max-width: 20ch;
-  font-size: 14px;
-  overflow-wrap: anywhere;
+  min-width: 260px;
+  font-size: var(--t-note);
+  overflow-wrap: break-word;
 }
 .origin .note {
-  max-width: 20ch;
+  max-width: none;
 }
 .note {
   display: block;
   max-width: 32ch;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -31,5 +31,15 @@
 .names-note {
   margin: 0 0 var(--space-3);
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--t-note);
+}
+
+/* La tabla de siete columnas no cabe con el texto de 18 px por debajo de 900 px: entradas apiladas desde ahí. */
+@media (max-width: 899.98px) {
+  .ledger-wide {
+    display: none;
+  }
+  .entries {
+    display: block;
+  }
 }

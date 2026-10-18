@@ -10,6 +10,7 @@ import { writeErrorText } from '../../shared/error-message';
 import { PASSWORD_RULES_TEXT, passwordProblem, passwordProblemText } from '../staff/password-rules';
 import { RecoverySession } from './recovery-session';
 import { CONFIRM_UNCERTAIN, EXPIRED_MESSAGE, isRateLimited, readRecoveryState, waitText } from './recovery';
+import { Logo } from '../../shared/logo';
 
 /**
  * Paso 3: the new password, sent with the reset token that step 2 earned (kept in memory by RecoverySession,
@@ -20,7 +21,7 @@ import { CONFIRM_UNCERTAIN, EXPIRED_MESSAGE, isRateLimited, readRecoveryState, w
  */
 @Component({
   selector: 'app-new-password-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, Logo],
   templateUrl: './new-password.page.html',
   styleUrl: './recovery.css',
 })

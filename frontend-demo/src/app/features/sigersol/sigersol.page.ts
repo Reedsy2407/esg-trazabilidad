@@ -6,6 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Page, SigersolSync } from '../../core/api/api.types';
 import { BackendApi } from '../../core/api/backend.api';
 import { loadErrorMessage } from '../../shared/error-message';
+import { Tally } from '../../shared/tally';
 import { formatInstantDate, formatKg, formatPercentExact, periodLabel } from '../../shared/format';
 import { ManualTag } from './manual-tag';
 import { COMPLIANCE_LABEL, DECLARED_STATEMENT, originLabel } from './origin-label';
@@ -26,7 +27,7 @@ function justRegistered(): boolean {
  */
 @Component({
   selector: 'app-sigersol-page',
-  imports: [RouterLink, DecimalPipe, ManualTag],
+  imports: [RouterLink, DecimalPipe, ManualTag, Tally],
   templateUrl: './sigersol.page.html',
   styleUrl: './sigersol.page.css',
 })
@@ -80,6 +81,15 @@ export class SigersolPage {
       author: s.registeredByEmail ?? null,
       reference: s.reference ?? null,
     }));
+  });
+
+  protected readonly tallyRows = computed(() => {
+    const content = this.page()?.content ?? [];
+    const withOrigin = content.filter((s) => s.origin != null).length;
+    return [
+      { label: 'Con origen registrado', value: withOrigin },
+      { label: 'Anteriores al registro de origen', value: content.length - withOrigin },
+    ];
   });
 
   protected readonly range = computed(() => {

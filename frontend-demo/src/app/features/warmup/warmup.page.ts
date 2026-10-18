@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 import { ServiceKey } from '../../../environments/environment.model';
 import { BackendApi } from '../../core/api/backend.api';
 import { SessionService } from '../../core/auth/session.service';
+import { Logo } from '../../shared/logo';
 
 /** If all four answer this fast, the screen never shows. */
 export const SHOW_AFTER_MS = 1_500;
@@ -47,6 +48,7 @@ const STATUS_TEXT: Record<Status, string> = {
  */
 @Component({
   selector: 'app-warmup-page',
+  imports: [Logo],
   templateUrl: './warmup.page.html',
   styleUrl: './warmup.page.css',
 })

@@ -193,6 +193,14 @@ export class CollectionRecordPage {
     };
   });
 
+  /** The preview's big figure: the typed weight, or 0.00 (dimmed) until it is valid. */
+  protected readonly previewFigure = computed(() => this.preview().kilos?.replace(' kg', '') ?? '0.00');
+  /** Longer weights get a smaller figure so "99,999,999.99" still fits the display. */
+  protected readonly previewSize = computed(() => {
+    const length = this.previewFigure().length;
+    return length <= 6 ? '20cqw' : length <= 9 ? '14cqw' : '10.5cqw';
+  });
+
   /** More rows than one picker page: say so instead of silently cutting the list. */
   protected readonly neighborsTruncated = computed(
     () => this.neighbors.hasValue() && this.neighbors.value().totalElements > this.neighbors.value().content.length,
@@ -279,10 +287,15 @@ export class CollectionRecordPage {
     this.openNeighbors();
   }
 
+  /** Set while validation moves the focus to the first field to fix: the list must not open over that field's own error. */
+  private focusedByValidation = false;
+
   /** Focus by keyboard selects the text, so typing replaces it instead of continuing it. */
   protected focusNeighbors(event: FocusEvent): void {
     (event.target as HTMLInputElement).select();
-    this.openNeighbors();
+    if (!this.focusedByValidation) {
+      this.openNeighbors();
+    }
   }
 
   private setActive(index: number): void {
@@ -366,9 +379,11 @@ export class CollectionRecordPage {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       // Take the user to the first field to fix, after the errors render.
-      setTimeout(() =>
-        this.formElement()?.nativeElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(),
-      );
+      setTimeout(() => {
+        this.focusedByValidation = true;
+        this.formElement()?.nativeElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+        this.focusedByValidation = false;
+      });
       return;
     }
     const value = this.form.getRawValue();

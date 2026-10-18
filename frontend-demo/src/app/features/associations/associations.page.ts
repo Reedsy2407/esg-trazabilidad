@@ -6,6 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Association, AssociationStatus, Page } from '../../core/api/api.types';
 import { BackendApi } from '../../core/api/backend.api';
 import { loadErrorMessage } from '../../shared/error-message';
+import { Tally } from '../../shared/tally';
 import { StatusLabel } from '../companies/status-label';
 
 /** ?estado= in Spanish for people, the backend's enum for the API. */
@@ -21,7 +22,7 @@ const FILTERS = [
  */
 @Component({
   selector: 'app-associations-page',
-  imports: [RouterLink, DecimalPipe, StatusLabel],
+  imports: [RouterLink, DecimalPipe, StatusLabel, Tally],
   templateUrl: './associations.page.html',
 })
 export class AssociationsPage {
@@ -56,6 +57,12 @@ export class AssociationsPage {
     const r = this.range();
     return r === null ? '' : `Mostrando ${r.first}–${r.last} de ${r.total} ${r.total === 1 ? 'asociación' : 'asociaciones'}.`;
   });
+
+  private readonly activeOnPage = computed(() => (this.page()?.content ?? []).filter((a) => a.status === 'ACTIVE').length);
+  protected readonly tallyRows = computed(() => [
+    { label: 'Activas', value: this.activeOnPage() },
+    { label: 'Suspendidas', value: (this.page()?.content.length ?? 0) - this.activeOnPage() },
+  ]);
 
   protected readonly range = computed(() => {
     const current = this.page();

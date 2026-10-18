@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Trazabilidad ESG">
+  <defs>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect width="512" height="512" fill="#fff"/>
+      <path d="M285 396C272 345 320 300 391 294C392 345 370 395 300 400C295 400 289 398 285 396Z" fill="#000" stroke="#000" stroke-width="16" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <rect x="27" y="27" width="458" height="458" rx="68" fill="#1a576c"/>
+  <g fill="#fff" mask="url(#cut)">
+    <path d="M118.3 111.9H329.8L297.6 186.4V399.7H216.2V191.1H118.3Z"/>
+    <path d="M331.6 111.9L392.5 178.2H331.6Z"/>
+    <path d="M338.4 190.4L392.5 180V189.3Z"/>
+  </g>
+  <path d="M285 396C272 345 320 300 391 294C392 345 370 395 300 400C295 400 289 398 285 396Z" fill="#46a972"/>
+  <path d="M349.5 335.2C330 358 312 372 297.5 385.4" fill="none" stroke="#1a576c" stroke-width="5" stroke-linecap="round"/>
+</svg>

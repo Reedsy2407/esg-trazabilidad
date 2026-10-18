@@ -8,6 +8,7 @@ import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
 import { writeErrorText } from '../../shared/error-message';
 import { RecoverySession } from './recovery-session';
+import { Logo } from '../../shared/logo';
 import {
   INVALID_CODE_MESSAGE,
   MAX_CODE_FAILURES,
@@ -33,7 +34,7 @@ import {
  */
 @Component({
   selector: 'app-verify-code-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, Logo],
   templateUrl: './verify-code.page.html',
   styleUrl: './recovery.css',
 })

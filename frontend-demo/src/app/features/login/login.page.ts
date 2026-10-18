@@ -11,6 +11,7 @@ import { BackendApi } from '../../core/api/backend.api';
 import { SessionService } from '../../core/auth/session.service';
 import { ApiError } from '../../core/http/api-error';
 import { isUnavailable, unavailableText } from '../../shared/error-message';
+import { Logo } from '../../shared/logo';
 
 /** Used when a 429 arrives without a readable Retry-After (the limiter refills one attempt every 12 s). */
 const FALLBACK_LOCK_SECONDS = 60;
@@ -23,7 +24,7 @@ const SERVICE_KEYS: readonly ServiceKey[] = ['auth', 'recycler', 'collection', '
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, Logo],
   templateUrl: './login.page.html',
   styleUrl: './login.page.css',
 })

@@ -1,79 +1,25 @@
-.head {
-  margin-bottom: var(--space-6);
-}
-h1 {
-  font-size: 44px;
-  line-height: 1.02;
-}
-.lead {
-  margin: var(--space-2) 0 0;
-  color: var(--ink-soft);
-}
-
-/* The form, flat paper, with the preview ticket beside it (below it on narrow screens). */
-.record-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
-  align-items: start;
-  gap: var(--space-6);
-  max-width: 1080px;
-}
+/* El formulario en papel plano; a su lado, el visor con la vista previa (debajo en pantallas angostas). */
 .sheet {
-  padding: var(--space-8);
+  padding: clamp(var(--space-5), 2.4vw, 44px);
   background: var(--paper);
 }
-/* The record's ticket: a literal ticket, so it gets the serrated edge. */
-.preview {
-  padding-left: var(--space-6);
-  padding-right: var(--space-6);
-}
-.preview-title {
-  margin: 0;
-  font-weight: 800;
-  font-size: 17px;
-}
-.preview dl {
-  margin: 0;
-  display: grid;
-  gap: var(--space-3);
-}
-.preview dt {
-  color: var(--ink-soft);
-  font-size: 13px;
-}
-.preview dd {
-  margin: 0;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-.preview-kilos {
-  margin: 0;
-  text-align: right;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.04em;
-  white-space: nowrap; /* "99,999,999.99 kg" stays on one line, unit included */
-}
-@media (max-width: 1000px) {
-  .record-layout {
-    grid-template-columns: minmax(0, 1fr);
-    max-width: 760px;
-  }
-}
-
 .field {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
   min-width: 0;
 }
 .pair {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 var(--space-5);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 var(--space-6);
+}
+@media (min-width: 700px) {
+  .pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 label {
   display: block;
   margin-bottom: var(--space-2);
-  font-size: 14px;
   font-weight: 600;
 }
 .optional {
@@ -83,23 +29,15 @@ label {
 input.num {
   text-align: right;
 }
-/* The weight is the slip's one big figure, with its unit printed beside it. */
+/* El peso, con su unidad impresa al lado. Mide lo mismo que todos los controles (56 px): la cifra grande va en el visor. */
 .weigh-box {
   position: relative;
 }
 .weigh-box input.control {
-  height: 64px;
-  padding-right: 56px;
-  font-size: 30px;
+  padding-right: 64px;
+  font-size: var(--t-1);
   font-weight: 600;
   letter-spacing: -0.04em;
-}
-/* Narrow columns, the largest weight (99999999.99) must still fit: two columns at 640-768 px,
-   and again at 1001-1199 px, where the preview ticket takes 300 px beside the form. */
-@media (min-width: 640px) and (max-width: 767.98px), (min-width: 1001px) and (max-width: 1199.98px) {
-  .weigh-box input.control {
-    font-size: 24px;
-  }
 }
 .weigh-box .unit {
   position: absolute;
@@ -107,7 +45,7 @@ input.num {
   top: 50%;
   transform: translateY(-50%);
   font-family: var(--font-mono);
-  font-size: 17px;
+  font-size: var(--t-0);
   font-weight: 600;
   color: var(--ink-soft);
   pointer-events: none;
@@ -115,7 +53,7 @@ input.num {
 .hint {
   margin: var(--space-2) 0 0;
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--t-note);
 }
 .form-problem {
   margin: 0 0 var(--space-4);
@@ -124,7 +62,32 @@ input.num {
   margin-bottom: var(--space-2);
 }
 
-/* Ink, not --vigente: that green belongs to certification states (brief). */
+/* La vista previa: el visor con lo que se imprimirá, a medida que se escribe. */
+.preview .big {
+  margin: var(--space-3) 0 var(--space-5);
+  font-weight: 600;
+}
+.preview .big.empty {
+  color: var(--brand-soft);
+}
+.preview dl {
+  margin: 0;
+}
+.preview .row {
+  margin: 0;
+  font-size: var(--t-0);
+}
+.preview dt {
+  color: var(--brand-soft);
+}
+.preview dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* Tinta, no --vigente: ese verde es de los estados de certificación (brief). */
 .saved {
   padding: var(--space-5);
   border: 2px solid var(--ink);
@@ -135,12 +98,12 @@ input.num {
 }
 .saved-title {
   color: var(--ink);
-  font-size: 18px;
+  font-size: var(--t-2);
   font-weight: 800;
 }
 .saved-code {
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--t-note);
 }
 .saved-code code {
   color: var(--ink);
@@ -151,21 +114,15 @@ input.num {
 }
 
 @media (max-width: 639.98px) {
-  h1 {
-    font-size: 32px;
-  }
   .sheet {
     padding: var(--space-5) var(--space-4);
-  }
-  .pair {
-    grid-template-columns: minmax(0, 1fr);
   }
   .submit {
     width: 100%;
   }
 }
 
-/* Neighbour combobox: the list opens right under the box, over what follows. */
+/* Combo de vecinos: la lista se abre justo debajo del campo, sobre lo que sigue. */
 .combo {
   position: relative;
 }
@@ -174,7 +131,7 @@ input.num {
   z-index: 5;
   left: 0;
   right: 0;
-  max-height: 264px;
+  max-height: 288px;
   margin: 2px 0 0;
   padding: 0;
   overflow-y: auto;
@@ -186,7 +143,7 @@ input.num {
   display: none;
 }
 .options li {
-  min-height: 44px;
+  min-height: var(--touch);
   padding: var(--space-3) var(--space-4);
   cursor: pointer;
   overflow-wrap: anywhere;
@@ -195,7 +152,7 @@ input.num {
   font-weight: 800;
 }
 .options li.active {
-  background: var(--ink);
+  background: var(--brand);
   color: var(--paper);
 }
 .options li.none {
@@ -203,20 +160,17 @@ input.num {
   cursor: default;
 }
 
-/* Bitácora: a till roll of this session's tickets, kilos first, as the scale prints them. */
+/* Bitácora: un rollo de tickets de esta sesión, con los kilos primero, como los imprime la balanza. */
 .log {
-  max-width: 1080px;
-  margin-top: var(--space-8);
+  margin-top: var(--space-10);
 }
 .log h2 {
   margin-bottom: var(--space-3);
-  font-size: 15px;
 }
 .log-empty,
 .log-note {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 14px;
 }
 .log-empty {
   padding: var(--space-5) var(--space-4);
@@ -233,7 +187,7 @@ input.num {
 }
 .log-list li {
   display: grid;
-  grid-template-columns: 170px minmax(0, 1fr) auto;
+  grid-template-columns: 200px minmax(0, 1fr) auto;
   align-items: baseline;
   gap: var(--space-1) var(--space-5);
   padding: var(--space-3) var(--space-4);
@@ -243,7 +197,7 @@ input.num {
   border-bottom: 0;
 }
 .log-kilos {
-  font-size: 17px;
+  font-size: var(--t-1);
   font-weight: 600;
   text-align: right;
   white-space: nowrap;
@@ -255,12 +209,12 @@ input.num {
 .log-meta {
   display: block;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
   font-weight: 400;
 }
 .log-code {
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--t-note);
   overflow-wrap: anywhere;
 }
 @media (max-width: 767.98px) {

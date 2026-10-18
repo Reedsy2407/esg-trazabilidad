@@ -237,20 +237,35 @@ describe('CollectionRecordPage', () => {
     }
   });
 
-  it('the preview ticket follows the form as it is filled, from the real fields only, and is hidden from screen readers', async () => {
-    const preview = () => el.querySelector('aside.preview') as HTMLElement;
+  it('submitting with nothing chosen takes the focus to the neighbour box without opening its list over its own error', async () => {
+    vi.useFakeTimers();
+    try {
+      submitButton().click();
+      await settle();
+      vi.runAllTimers();
+      expect(document.activeElement).toBe(input('neighbor'));
+      expect(input('neighbor').getAttribute('aria-expanded')).toBe('false');
+      expect(el.querySelector('#neighbor-error')?.textContent).toContain('Elige el vecino del recojo.');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('the preview display follows the form as it is filled, from the real fields only, and is hidden from screen readers', async () => {
+    const aside = () => el.querySelector('aside[aria-hidden]') as HTMLElement;
+    const preview = () => aside().querySelector('.preview') as HTMLElement;
     // [Vecino, Asociación, Fecha, Cronograma] then the kilos line.
-    const values = () => [...Array.from(preview().querySelectorAll('dd'), (d) => d.textContent!.trim()), preview().querySelector('.preview-kilos')!.textContent!.trim()];
-    expect(preview().getAttribute('aria-hidden')).toBe('true');
-    expect(values()).toEqual(['—', '—', todayInLimaText(), 'Sin cronograma', '— kg']);
+    const values = () => [...Array.from(preview().querySelectorAll('dd'), (d) => d.textContent!.trim()), preview().querySelector('.big')!.textContent!.trim()];
+    expect(aside().getAttribute('aria-hidden')).toBe('true');
+    expect(values()).toEqual(['—', '—', todayInLimaText(), 'Sin cronograma', '0.00kg']);
 
     await fillValid();
     await type('date', '2026-10-05');
     await choose('schedule', 's-1');
-    expect(values()).toEqual(['Rosa Quispe · Cercado de Lima', 'Asociación Recicla Rímac', '05/10/2026', 'Lunes 08:00', '12.50 kg']);
+    expect(values()).toEqual(['Rosa Quispe · Cercado de Lima', 'Asociación Recicla Rímac', '05/10/2026', 'Lunes 08:00', '12.50kg']);
 
-    await type('weight', '12,5'); // invalid: the preview shows no number rather than a wrong one
-    expect(values()[4]).toBe('— kg');
+    await type('weight', '12,5'); // invalid: the display shows a dimmed 0.00 rather than a wrong number
+    expect(values()[4]).toBe('0.00kg');
     await choose('schedule', '');
     expect(values()[3]).toBe('Sin cronograma');
   });
@@ -500,7 +515,7 @@ describe('CollectionRecordPage with more neighbors than one page', () => {
     TestBed.tick();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('#neighbor-more')?.textContent).toContain('Se muestran los primeros 2 vecinos');
-    expect(el.querySelector('#neighbor')?.getAttribute('aria-describedby')).toBe('neighbor-more');
+    expect(el.querySelector('#neighbor')?.getAttribute('aria-describedby')).toBe('neighbor-help neighbor-more');
     expect(el.querySelector('#association')?.hasAttribute('aria-describedby')).toBe(false);
   });
 });

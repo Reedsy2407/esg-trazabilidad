@@ -1,8 +1,6 @@
-/* Design tokens from frontend-demo/design/DESIGN-BRIEF.md, direction A "Ticket de balanza":
-   the thermal ticket a recycling collection centre's scale prints. Concrete-floor ground,
-   ticket-white paper, one ink, cobalt only for "where you are", links and focus.
-   Contrast pairs were checked with the WCAG formula (see tasks/LEARNINGS.md "Frontend"). */
-
+/* Tokens de frontend-demo/design/DESIGN-BRIEF.md, dirección «Visor y regla» (2026-10-18): el azul petróleo del logo,
+   concreto de fondo, papel térmico y una sola tinta; el verde queda para «vigente». Los contrastes están en el
+   brief y junto a cada token. */
 /* Fonts: self-hosted woff2, latin subset only (@fontsource 5.3.0, OFL, see public/fonts). */
 @font-face {
   font-family: 'Archivo';
@@ -57,32 +55,50 @@
   descent-override: 17.1%;
   line-gap-override: 0%;
 }
-
 :root {
-  --ink: #1b2422; /* the ticket's one ink: 15.6:1 on paper, 11.3:1 on ground */
-  --ink-soft: #4f5b58; /* 6.9:1 on paper, 5.05:1 on ground */
-  --ground: #d6dbd9; /* concrete floor of the collection centre: the page */
+  /* Identidad (logo): el azul petróleo es el color dominante; ver DESIGN-BRIEF.md. */
+  --brand: #1a576c; /* visor y acción primaria: blanco 8.0:1; sobre paper 7.9:1; sobre ground 5.7:1 */
+  --brand-deep: #123f4f; /* barra superior, pulsado y pista de la regla: paper 11.1:1 */
+  --brand-soft: #c4dde6; /* texto secundario sobre brand 5.65:1, sobre brand-deep 8.0:1 */
+  --leaf: #46a972; /* la hoja del logo: solo dentro del logo (2.7:1 sobre brand: marca, exenta de contraste de texto) */
+  --brand-light: #9cd5e6; /* subrayado, foco y aguja sobre brand 5.0:1, sobre brand-deep 7.1:1 */
+  --ink: #1b2422; /* texto: 15.6:1 sobre paper, 11.3:1 sobre ground */
+  --ink-soft: #46524f; /* 8.0:1 sobre paper, 5.8:1 sobre ground */
+  --ground: #d6dbd9; /* el piso de concreto del acopio: la página */
   --ground-deep: #c3c9c6;
-  --paper: #fcfdfd; /* thermal paper: tickets, tables, forms */
-  --accent: #2347c5; /* cobalt: current place, links, focus. 7.4:1 on paper, 5.4:1 on ground */
-  --accent-on-ink: #8ea3f0; /* cobalt lifted for the dark bar: 6.5:1 on ink */
-  --ink-soft-on-ink: #b8c2bf; /* secondary text on the dark bar: 8.7:1 */
-  --action: #1b2422; /* the primary action is printed in ink */
-  --action-hover: #33403d;
+  --paper: #fcfdfd; /* papel térmico: tickets, tablas y formularios */
+  --paper-fold: #e3ebed; /* el reverso del pliegue del logo */
+  /* Alias de la identidad anterior: el acento ahora es el azul petróleo. */
+  --accent: var(--brand);
+  --accent-on-ink: var(--brand-light);
+  --ink-soft-on-ink: var(--brand-soft);
+  --action: var(--brand);
+  --action-hover: var(--brand-deep);
   --disabled-bg: #e4e8e6;
-  --disabled-ink: #5d6866; /* 4.67:1 on disabled-bg */
-  /* Reserved for association certification states only (brief): never errors or UI chrome. */
+  --disabled-ink: #5d6866; /* 4.67:1 sobre disabled-bg */
+  /* Solo estados de certificación de asociaciones y el «cumplido»: nunca errores ni interfaz. */
   --vigente: #1a7a48;
   --por-vencer: #9a5b00;
   --vencido: #b3261e;
-  --line: #b9c1be; /* decorative rules on paper */
-  --line-input: #6f7a77; /* form-field borders: 4.4:1 on paper, 3.2:1 on ground */
-  --rule-dots: #a9b2af; /* the ticket's dotted leaders */
-  --row-hover: #f0f3f2;
-  --selection: #c9d3f5; /* ink on it: 10.7:1 */
+  --line: #aab3b0; /* filetes sobre papel */
+  --line-input: #46524f; /* bordes de campos: 8.0:1 sobre paper */
+  --rule-dots: #7f8b87; /* guías punteadas del ticket */
+  --row-hover: #e3ecee; /* tinta 13.2:1; brand 6.7:1 */
+  --selection: #c3dbe4; /* tinta sobre ella: 11.0:1 */
 
   --font-sans: 'Archivo', 'Archivo Fallback', sans-serif;
   --font-mono: 'Martian Mono', 'Martian Mono Fallback', monospace;
+
+  /* Escala (brief): cuerpo 18; los saltos entre cuerpo y título son de 3x o más. */
+  --t-0: 18px; /* cuerpo, menú, enlaces */
+  --t-1: 20px; /* subtítulos, nombres en filas */
+  --t-2: 26px; /* títulos de bloque */
+  --t-3: 40px;
+  --t-note: 15px; /* piso: notas y ejes */
+  --t-page: clamp(44px, 4.6vw, 88px); /* título de página */
+  --t-visor: clamp(46px, 8.1vw, 168px); /* kilos del visor */
+  --t-tally: clamp(88px, 11vw, 220px); /* recuento del visor */
+  --t-mid: clamp(36px, 4vw, 76px); /* segunda cifra del visor */
 
   --space-1: 4px;
   --space-2: 8px;
@@ -91,14 +107,20 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
+  --space-10: 40px;
   --space-12: 48px;
+  --gutter: clamp(16px, 3.4vw, 64px); /* margen fluido de la página */
+  --control: 56px; /* alto de controles y botones */
+  --touch: 44px; /* área táctil mínima */
 
-  /* The ticket's world has square corners: paper is cut or torn, never rounded. */
+  /* El mundo del ticket tiene esquinas rectas: el papel se corta o se rasga. */
   --radius-data: 0;
   --radius-control: 0;
   --radius-frame: 0;
 
-  --tear: 7px; /* radius of the serrated edge's bites */
+  --tear: 9px; /* radio de los mordiscos del borde dentado */
+  --fold: 26px; /* esquina doblada del logo: pliegue del ticket, del visor y del certificado */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 *,
@@ -116,9 +138,9 @@ body {
   background: var(--ground);
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.5;
-  /* Figures line up in columns everywhere: kilos, dates, RUC, counts. */
+  font-size: var(--t-0);
+  line-height: 1.55;
+  /* Las cifras se alinean en columnas en toda la app: kilos, fechas, RUC, conteos. */
   font-variant-numeric: tabular-nums lining-nums;
 }
 
@@ -131,13 +153,17 @@ h3 {
 }
 h1 {
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
   text-wrap: balance;
+}
+h2 {
+  font-size: var(--t-2);
+  letter-spacing: -0.02em;
 }
 
 a {
   color: var(--accent);
-  text-underline-offset: 3px;
+  text-underline-offset: 4px;
 }
 
 button,
@@ -148,11 +174,10 @@ select {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
 }
 
-/* Browser surfaces carry the palette too. */
 ::selection {
   background: var(--selection);
   color: var(--ink);
@@ -164,11 +189,19 @@ html {
   scrollbar-color: var(--line-input) var(--ground);
 }
 
-/* The ticket: thermal paper with a serrated top and bottom edge. Used only where the
-   metaphor is literal (login, each company stub, the period summary, the certificate);
-   tables and forms stay flat paper. */
+/* View Transitions entre rutas (Angular `withViewTransitions`): un fundido corto del contenido. Con
+   reduced-motion no hay transición (regla de más abajo). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.22s;
+}
+
+/* ---- Papel térmico: ticket con borde dentado arriba y abajo. Solo donde la metáfora es literal
+   (login, el rollo de empresas, el resumen, el certificado, la vista previa del recojo). ---- */
 .ticket {
-  background: var(--paper);
+  background-color: var(--paper);
+  /* cabezal de impresión: bandas de 1 px cada 4 px a 4 %. Es la única textura. */
+  background-image: repeating-linear-gradient(0deg, rgb(27 36 34 / 4%) 0 1px, transparent 1px 4px);
   --tear-mask:
     radial-gradient(circle at 50% 0, transparent calc(var(--tear) - 0.5px), #000 var(--tear)) 0 0 /
       calc(var(--tear) * 2) 51% repeat-x,
@@ -179,22 +212,74 @@ html {
   padding-top: calc(var(--tear) + var(--space-6));
   padding-bottom: calc(var(--tear) + var(--space-6));
 }
-/* Flat paper: tables, forms, panels. */
+/* Papel plano: tablas, formularios, paneles. */
 .sheet-flat {
   background: var(--paper);
 }
-/* A dotted rule, as thermal printers print them. */
+/* Guía punteada, como las imprimen las térmicas. */
 .dots {
   margin: var(--space-4) 0;
   border: 0;
-  border-top: 2px dotted var(--rule-dots);
+  border-top: 3px dotted var(--rule-dots);
 }
 
-/* One error block everywhere: ink on paper, a heavier rule and a drawn mark. No red:
-   red, amber and green belong to certification states. */
+/* ---- Firma: el pliegue de la «T» del logo. Una esquina cortada y doblada hacia adentro, en el visor, el
+   rollo y el certificado; en hover, lo que se abre se pliega un poco más. Nunca en todo a la vez. ---- */
+@property --fold-size {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 26px;
+}
+.fold {
+  --fold-size: var(--fold);
+  position: relative;
+  clip-path: polygon(0 0, calc(100% - var(--fold-size)) 0, 100% var(--fold-size), 100% 100%, 0 100%);
+}
+.fold::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 56px;
+  height: 56px;
+  background: var(--paper-fold);
+  pointer-events: none;
+  /* El reverso del papel: triángulo bajo la línea de corte. */
+  clip-path: polygon(
+    calc(100% - var(--fold-size)) 0,
+    100% var(--fold-size),
+    calc(100% - var(--fold-size)) var(--fold-size)
+  );
+}
+/* Entrada de un elemento con pliegue: el papel sale impreso, por pasos, sin perder el corte de la esquina. */
+@keyframes feed-fold {
+  from {
+    clip-path: polygon(0 0, calc(100% - var(--fold-size)) 0, 100% 0, 100% 0, 0 0);
+  }
+  to {
+    clip-path: polygon(0 0, calc(100% - var(--fold-size)) 0, 100% var(--fold-size), 100% 100%, 0 100%);
+  }
+}
+.fold-dark::after {
+  background: var(--brand-deep);
+}
+a.fold:hover,
+a.fold:focus-visible,
+.fold.fold-hover:hover {
+  --fold-size: 38px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fold,
+  .fold::after {
+    transition: --fold-size 0.3s var(--ease);
+  }
+}
+
+/* Un solo bloque de error en todas partes: tinta sobre papel, filete más grueso y un signo dibujado. Sin rojo:
+   rojo, ámbar y verde son de los estados de certificación. */
 .problem {
   position: relative;
-  padding: var(--space-4) var(--space-4) var(--space-4) calc(var(--space-4) + 28px);
+  padding: var(--space-4) var(--space-4) var(--space-4) calc(var(--space-4) + 32px);
   background: var(--paper);
   border: 2px solid var(--ink);
   color: var(--ink);
@@ -203,11 +288,11 @@ html {
   content: '';
   position: absolute;
   left: var(--space-4);
-  top: calc(var(--space-4) + 2px);
-  width: 18px;
-  height: 18px;
+  top: calc(var(--space-4) + 4px);
+  width: 20px;
+  height: 20px;
   background: var(--ink);
-  /* An exclamation mark cut out of an ink square. */
+  /* Un signo de exclamación recortado en un cuadrado de tinta. */
   -webkit-mask: var(--mark-alert) center / contain no-repeat;
   mask: var(--mark-alert) center / contain no-repeat;
 }
@@ -220,21 +305,21 @@ p.problem {
 .problem p:last-child {
   margin-bottom: 0;
 }
-/* Field-level error line: ink, weighted, with the same drawn mark. */
+/* Error de campo: tinta, con peso y el mismo signo dibujado. */
 .field-error {
   display: flex;
   gap: var(--space-2);
   align-items: baseline;
   margin: var(--space-2) 0 0;
   color: var(--ink);
-  font-size: 14px;
+  font-size: var(--t-0);
   font-weight: 600;
 }
 .field-error::before {
   content: '';
   flex: none;
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   transform: translateY(1px);
   background: var(--ink);
   -webkit-mask: var(--mark-alert) center / contain no-repeat;
@@ -247,7 +332,7 @@ p.problem {
 .mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .visually-hidden {
@@ -262,13 +347,13 @@ p.problem {
   border: 0;
 }
 
-/* Form controls: square, ink-bordered, 46px. One vocabulary for input, select and date. */
+/* Controles: cuadrados, de 56 px. Un solo vocabulario para campo, lista y fecha. */
 .control {
   display: block;
   width: 100%;
-  height: 46px;
-  padding: 0 var(--space-3);
-  border: 1.5px solid var(--line-input);
+  height: var(--control);
+  padding: 0 var(--space-4);
+  border: 2px solid var(--line-input);
   border-radius: 0;
   background-color: var(--paper);
   color: var(--ink);
@@ -277,36 +362,35 @@ p.problem {
   border-color: var(--ink);
 }
 .control[aria-invalid='true'] {
-  border: 2px solid var(--ink);
-  box-shadow: inset 0 -3px 0 var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: inset 0 -4px 0 var(--ink);
 }
 select.control {
   appearance: none;
-  padding-right: 40px;
-  /* An ink chevron drawn in the palette, not the browser's arrow. */
+  padding-right: 48px;
+  /* Un chevron de tinta dibujado en la paleta, no la flecha del navegador. */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%231b2422' stroke-width='2'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 14px center;
+  background-position: right 18px center;
   background-size: 14px 9px;
   cursor: pointer;
 }
-/* Chromium draws the calendar icon above and keeps its own picker reachable underneath;
-   Firefox and Safari keep their native button (the pseudo-element doesn't exist there). */
+/* Chromium dibuja el ícono de calendario encima y deja su selector accesible debajo;
+   Firefox y Safari conservan su botón nativo. */
 @supports selector(::-webkit-calendar-picker-indicator) {
   input.control[type='date'] {
     position: relative;
-    padding-right: 44px;
+    padding-right: 52px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cg fill='none' stroke='%231b2422' stroke-width='1.8'%3E%3Crect x='1.5' y='3' width='15' height='13.5'/%3E%3Cpath d='M1.5 7.5h15M5.5 1v4M12.5 1v4'/%3E%3C/g%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 13px center;
-    background-size: 18px 18px;
+    background-position: right 16px center;
+    background-size: 20px 20px;
   }
-  /* The native picker stays reachable (click and keyboard), drawn by the icon above. */
   input.control[type='date']::-webkit-calendar-picker-indicator {
     position: absolute;
     right: 0;
     top: 0;
-    width: 44px;
+    width: 52px;
     height: 100%;
     margin: 0;
     opacity: 0;
@@ -323,14 +407,14 @@ select.control:disabled {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%235d6866' stroke-width='2'/%3E%3C/svg%3E");
 }
 
-/* Buttons: one primary per screen, printed in ink; everything else outlined. */
+/* Botones: una acción primaria por pantalla, en el azul del logo; lo demás, con filete de tinta. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  min-height: 46px;
-  padding: 0 var(--space-5);
+  min-height: var(--control);
+  padding: 0 var(--space-6);
   border: 2px solid var(--ink);
   border-radius: 0;
   background: var(--paper);
@@ -350,7 +434,7 @@ select.control:disabled {
   border-color: var(--action-hover);
   background: var(--action-hover);
 }
-/* Disabled looks disabled: no ink fill, a muted outline and text. */
+/* Deshabilitado se ve deshabilitado: sin relleno de color, filete y texto apagados. */
 .btn:disabled,
 .btn-primary:disabled {
   cursor: not-allowed;
@@ -359,13 +443,13 @@ select.control:disabled {
   color: var(--disabled-ink);
 }
 .btn-link {
-  min-height: auto;
+  min-height: var(--touch);
   padding: 0;
   border: 0;
   background: none;
   color: var(--accent);
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 4px;
   font-weight: 400;
 }
 .btn-link:hover:not(:disabled) {
@@ -377,11 +461,17 @@ select.control:disabled {
   text-decoration: none;
   cursor: progress;
 }
+/* Enlaces de texto con área táctil de 44 px (sin cambiar cómo se ven). */
+.touch-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+}
 
-/* Reduced motion. Transitions get 0s, not 0.01ms: transition-property defaults to `all`, so a
-   non-zero duration here would CREATE a transition on every property change of every element,
-   and a state's new colour would wait for the next frame (a waking mark read as hollow after it
-   turned ready). The app declares no transitions; with 0s none is ever created. */
+/* Reduced motion. Las transiciones llevan 0s, no 0.01ms: `transition-property` es `all` por defecto, así que
+   una duración distinta de cero CREARÍA una transición en cada cambio de propiedad de cada elemento, y el
+   color nuevo de un estado esperaría al siguiente cuadro (una marca «despertando» se leía hueca ya lista).
+   La app solo declara transiciones dentro de `no-preference`; con 0s no se crea ninguna. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -391,16 +481,47 @@ select.control:disabled {
     transition-duration: 0s !important;
     transition-delay: 0s !important;
   }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
 }
 
-/* ---- Frontend v2 shared blocks: page head, ledger tables, stacked cards, pager, skeleton (.skel;
-   the older pages keep their own page-local .bone) ---- */
+/* ---- Estructura de página: columna principal + panel lateral con las cifras desde 1100 px ---- */
+.cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: start;
+}
+.side {
+  min-width: 0;
+}
+/* En las listas, la cifra del visor va primero en pantallas angostas (el dato clave en la primera pantalla). */
+@media (max-width: 1099.98px) {
+  .cols > .side-first {
+    order: -1;
+  }
+}
+@media (min-width: 1100px) {
+  .cols {
+    grid-template-columns: minmax(0, 1fr) clamp(380px, 29vw, 600px);
+    gap: clamp(32px, 3vw, 56px);
+  }
+  .side.sticky {
+    position: sticky;
+    top: var(--space-6);
+  }
+}
+
+/* ---- Bloques compartidos: encabezado de página, tablas, entradas apiladas, pie de lista, esqueleto ---- */
 .page-head {
-  margin-bottom: var(--space-6);
+  margin-bottom: clamp(var(--space-6), 2.6vw, var(--space-12));
 }
 .page-head h1 {
-  font-size: 44px;
-  line-height: 1.02;
+  font-size: var(--t-page);
+  line-height: 0.98;
 }
 .page-head.with-action {
   display: flex;
@@ -413,30 +534,35 @@ a.btn {
   text-decoration: none;
 }
 .page-head .sub {
-  margin: var(--space-2) 0 0;
+  margin: var(--space-3) 0 0;
+  max-width: 46ch;
   color: var(--ink-soft);
+  font-size: var(--t-1);
 }
 .back-link {
-  display: inline-block;
-  margin-bottom: var(--space-5);
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+  margin-bottom: var(--space-2);
 }
-/* State filter: three printed tabs on the concrete; the current one is underlined in cobalt,
-   the same "where you are" mark as the top bar. */
+/* Filtro de estado: tres pestañas impresas sobre el concreto; la actual lleva el subrayado azul del logo. */
 .state-filter {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-5);
+  gap: var(--space-2) var(--space-6);
   margin-bottom: var(--space-4);
-  font-size: 14px;
+  font-size: var(--t-0);
 }
 .state-filter a {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
+  justify-content: center;
+  min-height: var(--touch);
+  min-width: var(--touch);
   padding-top: 3px;
   color: var(--ink-soft);
   text-decoration: none;
-  border-bottom: 3px solid transparent;
+  border-bottom: 4px solid transparent;
 }
 .state-filter a:hover {
   color: var(--ink);
@@ -446,24 +572,24 @@ a.btn {
   font-weight: 600;
   border-bottom-color: var(--accent);
 }
-/* A ledger: flat paper, ink rule under the head, thin rules between rows. Table from 640 px,
-   stacked entries below (no sideways scrolling). */
+/* Un libro mayor: papel plano, filete de tinta bajo la cabecera, filetes finos entre filas. Tabla desde 640 px,
+   entradas apiladas por debajo (sin scroll lateral). */
 .ledger {
   width: 100%;
   border-collapse: collapse;
   background: var(--paper);
 }
 .ledger th {
-  height: 44px;
+  height: 52px;
   padding: 0 var(--space-4);
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
   font-weight: 600;
   text-align: left;
 }
 .ledger td {
-  height: 48px;
+  height: 60px;
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--line);
 }
@@ -476,7 +602,7 @@ a.btn {
 .ledger .nowrap {
   white-space: nowrap;
 }
-/* A row whose first link opens it: the link stretches over the whole row. */
+/* Una fila cuyo primer enlace la abre: el enlace se estira sobre toda la fila. */
 .ledger tbody tr:has(.row-link) {
   position: relative;
 }
@@ -497,8 +623,8 @@ a.btn {
   outline: none;
 }
 .ledger tbody tr:has(.row-link:focus-visible) {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
 }
 .entries {
   display: none;
@@ -511,13 +637,13 @@ a.btn {
 }
 .entry {
   display: block;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   background: var(--paper);
   color: var(--ink);
   text-decoration: none;
 }
 a.entry {
-  min-height: 44px;
+  min-height: 64px;
 }
 a.entry:hover {
   background: var(--row-hover);
@@ -525,6 +651,7 @@ a.entry:hover {
 .entry-title {
   display: block;
   margin-bottom: var(--space-2);
+  font-size: var(--t-1);
   font-weight: 600;
   overflow-wrap: anywhere;
 }
@@ -540,7 +667,6 @@ a.entry:hover {
 }
 .entry dt {
   color: var(--ink-soft);
-  font-size: 14px;
 }
 .entry dd {
   margin: 0;
@@ -548,9 +674,10 @@ a.entry:hover {
 }
 .empty-note {
   margin: 0;
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-8) var(--space-6);
   background: var(--paper);
   color: var(--ink-soft);
+  font-size: var(--t-1);
 }
 .list-foot {
   display: flex;
@@ -564,7 +691,6 @@ a.entry:hover {
 .list-foot .where {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 14px;
 }
 .list-foot .pages {
   display: flex;
@@ -575,16 +701,16 @@ a.entry:hover {
   display: block;
   width: 160px;
   max-width: 100%;
-  height: 12px;
+  height: 14px;
   margin-top: var(--space-3);
   background: var(--line);
   animation: skel-pulse 1.2s ease-in-out infinite alternate;
 }
 .skel.wide {
   width: 100%;
-  height: 40px;
+  height: 48px;
 }
-/* The confirmation box above a list or a form ("Vecino eliminado", "Cuenta desactivada"): one rule for every page. */
+/* La caja de confirmación sobre una lista o un formulario ("Vecino eliminado", "Cuenta desactivada"). */
 .done {
   margin: 0 0 var(--space-5);
   padding: var(--space-3) var(--space-4);
@@ -594,12 +720,12 @@ a.entry:hover {
 }
 .skel.title {
   width: 320px;
-  height: 22px;
+  height: 24px;
   margin-top: 0;
 }
 .skel.chart {
   width: 100%;
-  height: 200px;
+  height: 220px;
 }
 @keyframes skel-pulse {
   from {
@@ -611,7 +737,7 @@ a.entry:hover {
 }
 @media (max-width: 639.98px) {
   .page-head h1 {
-    font-size: 32px;
+    font-size: 40px;
   }
   .ledger-wide {
     display: none;
@@ -621,25 +747,24 @@ a.entry:hover {
   }
 }
 
-/* Flat paper form (v2 screens), the same vocabulary as Registrar recojo. */
+/* Papel plano de formulario, el mismo vocabulario que Registrar recojo. */
 .form-sheet {
-  max-width: 760px;
+  max-width: 840px;
   padding: var(--space-8);
   background: var(--paper);
 }
 .form-sheet .field {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
   min-width: 0;
 }
 .form-sheet .pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 var(--space-5);
+  gap: 0 var(--space-6);
 }
 .form-sheet label {
   display: block;
   margin-bottom: var(--space-2);
-  font-size: 14px;
   font-weight: 600;
 }
 .form-sheet .optional {
@@ -649,7 +774,7 @@ a.entry:hover {
 .form-sheet .hint {
   margin: var(--space-2) 0 0;
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--t-note);
 }
 .form-sheet .form-problem {
   margin: 0 0 var(--space-4);
@@ -674,7 +799,7 @@ a.entry:hover {
 .form-sheet legend {
   margin-bottom: var(--space-3);
   padding: 0;
-  font-size: 15px;
+  font-size: var(--t-1);
   font-weight: 600;
 }
 .form-sheet fieldset .field {
@@ -682,4 +807,241 @@ a.entry:hover {
 }
 .form-sheet fieldset .pair {
   row-gap: var(--space-4);
+}
+
+/* ---- El visor: el kilo trazado como lo muestra una balanza. Panel del azul del logo, cifras mono que
+   cuentan hacia arriba, y una regla 0–100 con aguja para el cumplimiento declarado. ---- */
+.visor {
+  background: var(--brand);
+  color: var(--paper);
+  padding: clamp(var(--space-5), 2.4vw, 44px);
+  container-type: inline-size;
+}
+.visor .lab {
+  margin: 0;
+  color: var(--brand-soft);
+  font-size: var(--t-0);
+}
+.visor .big {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 15.4cqw;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  white-space: nowrap;
+}
+.visor .big small,
+.visor .mid small {
+  margin-left: 0.25em;
+  font-size: 0.34em;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--brand-soft);
+}
+.visor .mid {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--t-mid);
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+.visor .pair {
+  display: grid;
+  gap: var(--space-6) var(--space-12);
+  margin-top: var(--space-8);
+}
+@media (min-width: 700px) {
+  .visor .pair {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: end;
+  }
+}
+.visor .row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 2px dotted var(--brand-soft);
+  font-size: var(--t-1);
+}
+.visor .row b {
+  font: 600 28px var(--font-mono);
+  letter-spacing: -0.04em;
+}
+
+/* Contadores: cuentan hacia arriba con CSS puro (`@property` + contadores). El valor real va aparte, en
+   `.visually-hidden`, y la cifra animada es `aria-hidden`; sin animación (reduced-motion) se ve el valor final. */
+@property --t {
+  syntax: '<integer>';
+  inherits: false;
+  initial-value: 0;
+}
+@property --r {
+  syntax: '<integer>';
+  inherits: false;
+  initial-value: 0;
+}
+@property --n {
+  syntax: '<integer>';
+  inherits: false;
+  initial-value: 0;
+}
+@counter-style pad3 {
+  system: numeric;
+  symbols: '0' '1' '2' '3' '4' '5' '6' '7' '8' '9';
+  pad: 3 '0';
+}
+@counter-style pad2 {
+  system: numeric;
+  symbols: '0' '1' '2' '3' '4' '5' '6' '7' '8' '9';
+  pad: 2 '0';
+}
+.kcount {
+  counter-reset: t var(--t) r var(--r);
+  animation: count-kilos 1.3s var(--ease) 0.45s both;
+}
+.kcount::before {
+  content: counter(t) ',' counter(r, pad3) '.' attr(data-d);
+}
+/* Sin miles: kilos por debajo de 1,000 (p. ej. 8.25). */
+.kcount.small::before {
+  content: counter(r) '.' attr(data-d);
+}
+.countup {
+  counter-reset: n var(--n);
+  animation: count-one 1.1s var(--ease) 0.45s both;
+}
+.countup::before {
+  content: counter(n, pad2);
+}
+@keyframes count-kilos {
+  from {
+    --t: 0;
+    --r: 0;
+  }
+}
+@keyframes count-one {
+  from {
+    --n: 0;
+  }
+}
+
+/* Regla de balanza: 0–100 % con la aguja en el cumplimiento declarado. La aguja barre con `transform`. */
+.ruler {
+  container-type: inline-size;
+  position: relative;
+  height: 68px;
+  color: var(--paper);
+}
+.ruler .nums {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  font: 400 var(--t-note) var(--font-mono);
+  color: var(--brand-soft);
+}
+.ruler .ticks {
+  position: absolute;
+  inset: 24px 0 0;
+  background:
+    repeating-linear-gradient(90deg, currentcolor 0 2px, transparent 2px 5cqw) left bottom / 100% 16px no-repeat,
+    repeating-linear-gradient(90deg, currentcolor 0 3px, transparent 3px 25cqw) left bottom / 100% 30px no-repeat;
+}
+.ruler .ticks::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 3px;
+  height: 30px;
+  background: currentcolor;
+}
+.ruler .needle {
+  position: absolute;
+  left: 0;
+  top: 22px;
+  bottom: 0;
+  width: 4px;
+  background: var(--brand-light);
+  transform: translateX(calc(var(--v) * 1cqw - 2px));
+  animation: sweep 1.3s var(--ease) 0.6s both;
+}
+.ruler .needle::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -7px;
+  border: 9px solid transparent;
+  border-top-color: var(--brand-light);
+  border-bottom: 0;
+}
+@keyframes sweep {
+  from {
+    transform: translateX(-2px);
+  }
+}
+
+/* ---- El rollo: una lista de papel térmico continua, con filas separadas por guías punteadas ---- */
+.roll {
+  margin: 0;
+  padding: calc(var(--tear) + var(--space-2)) 0;
+  list-style: none;
+}
+.roll > li + li {
+  border-top: 3px dotted var(--rule-dots);
+}
+
+/* ---- Movimiento de entrada: el papel sale impreso, por pasos y escalonado (una vez por pantalla) ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .in {
+    animation: feed 0.9s steps(14, end) both;
+    animation-delay: calc(var(--i, 0) * 110ms);
+  }
+  @keyframes feed {
+    from {
+      clip-path: inset(0 0 100% 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+  /* Elementos con pliegue: su clip-path propio no se toca; solo se escalona la opacidad. */
+  .fade-in {
+    animation: fade-in 0.7s var(--ease) both;
+    animation-delay: calc(var(--i, 0) * 110ms + 150ms);
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+}
+/* Progreso de scroll: una línea del azul claro en el borde de la barra (solo donde existe `animation-timeline`). */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .scroll-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      z-index: 5;
+      background: var(--brand-light);
+      transform: scaleX(0);
+      transform-origin: left;
+      animation: scroll-progress linear forwards;
+      animation-timeline: scroll(root);
+      pointer-events: none;
+    }
+    @keyframes scroll-progress {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+  }
 }

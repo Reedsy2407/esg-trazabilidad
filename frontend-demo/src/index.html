@@ -9,7 +9,13 @@
   <link rel="preload" href="fonts/Archivo-400-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/Archivo-600-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/Archivo-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- theme-color cannot read CSS tokens: it is --brand in src/styles.css -->
+  <meta name="theme-color" content="#1a576c">
+  <link rel="icon" type="image/svg+xml" href="brand/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png">
+  <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="32x32">
+  <link rel="apple-touch-icon" sizes="180x180" href="brand/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
 </head>
 <body>
   <app-root></app-root>

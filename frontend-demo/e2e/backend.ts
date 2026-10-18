@@ -156,6 +156,8 @@ export interface BackendOptions {
    * 'full' (COMPANIES) or 'fail' (503); after the list runs out, 'full'.
    */
   companyLists?: ('empty' | 'full' | 'fail')[];
+  /** How many companies GET /tracked-companies lists (default COMPANIES; more are generated with plausible names, for long lists). */
+  companyCount?: number;
   /** Delay before answering GET /tracked-companies, to observe the loading state. */
   companyListDelayMs?: number;
   /** How many neighbours GET /neighbors knows (default NEIGHBORS; more are generated, for paging). */
@@ -1045,6 +1047,24 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
 
   // Tracked companies with state: one registered by a test is listed and opens afterwards.
   const companies: { id: string; name: string; ruc: string; associationId: string; status: string }[] = COMPANIES.map((c) => ({ ...c }));
+  const extraNames = ['Plásticos Andinos S.A.C.', 'Distribuidora Rímac Verde S.A.', 'Vidrios del Callao S.R.L.', 'Papelera San Juan S.A.', 'Cartones del Norte S.A.C.', 'Aluminios Ate S.A.C.', 'Textiles Gamarra Reciclados S.A.', 'Envases Lurín S.R.L.', 'Metálica Villa El Salvador S.A.', 'Recuperadora Chorrillos S.A.C.', 'Embalajes Surco S.A.', 'Industrias Callao Verde S.A.C.'];
+  for (let i = 0; i < Math.max(0, (options.companyCount ?? COMPANIES.length) - COMPANIES.length); i++) {
+    companies.push({
+      id: `0192f3a8-3000-7000-8000-${String(i + 1).padStart(12, '0')}`,
+      name: extraNames[i % extraNames.length] + (i >= extraNames.length ? ` ${Math.floor(i / extraNames.length) + 1}` : ''),
+      ruc: `206${String(40000000 + i * 7919).padStart(8, '0')}`,
+      associationId: COMPANIES[i % 2].associationId,
+      status: i % 5 === 3 ? 'INACTIVE' : 'ACTIVE',
+      verification: 'VERIFIED',
+      sunatEstado: 'ACTIVO',
+      sunatCondicion: 'HABIDO',
+      sunatCheckedAt: '2026-10-01T15:00:00Z',
+      contactName: null,
+      contactEmail: null,
+      contactPhone: null,
+      warning: null,
+    } as (typeof companies)[number]);
+  }
   const sunatNameFor = (ruc: string) => SUNAT_NAMES[ruc] ?? `EMPRESA SUNAT ${ruc}`;
 
   await page.route('**/svc/reporting/tracked-companies**', async (route) => {

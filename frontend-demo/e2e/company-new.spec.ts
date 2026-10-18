@@ -138,7 +138,7 @@ test('no answer: the outcome is unknown and the form keeps what was typed', asyn
 
 test('the empty list invites to register the first company', async ({ page }) => {
   const unmocked = await signedIn(page, '/empresas', { companyLists: ['empty'] });
-  await page.getByRole('link', { name: 'Registra la primera' }).click();
+  await page.getByRole('link', { name: 'Registrar la primera empresa' }).click();
   await expect(page).toHaveURL(/\/empresas\/nueva$/);
   expect(unmocked).toEqual([]);
 });

@@ -6,7 +6,6 @@
   color: var(--ink-soft);
 }
 h2 {
-  font-size: 15px;
   margin-bottom: var(--space-3);
 }
 .sec {
@@ -25,7 +24,7 @@ h2 {
 }
 .details dt {
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
 }
 .details dd {
   margin: var(--space-1) 0 0;
@@ -49,7 +48,7 @@ h2 {
 }
 .note {
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
   white-space: nowrap;
 }
 /* An expired certification blocks collections: its row carries a heavier ink rule at the left,
@@ -64,7 +63,7 @@ h2 {
   max-width: 72ch;
   margin: var(--space-3) 0 0;
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--t-note);
 }
 
 .status-actions {
@@ -88,11 +87,6 @@ h2 {
   margin-top: var(--space-3);
 }
 
-.skel.title {
-  width: 320px;
-  height: 22px;
-  margin-top: 0;
-}
 
 @media (max-width: 639.98px) {
   .details {

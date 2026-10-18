@@ -2,8 +2,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-4) var(--space-8);
+  justify-content: flex-start;
+  gap: var(--space-4) var(--space-12);
   margin-bottom: var(--space-4);
 }
 .filters .state-filter {
@@ -15,13 +15,13 @@
 .district label {
   display: block;
   margin-bottom: var(--space-2);
-  font-size: 14px;
+  font-size: var(--t-note);
   font-weight: 600;
 }
 .hint {
   margin: var(--space-2) 0 0;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
 }
 .inactive {
   color: var(--ink-soft);
@@ -29,7 +29,7 @@
 .note {
   margin: 0 0 var(--space-4);
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--t-note);
 }
 .action {
   text-align: right;

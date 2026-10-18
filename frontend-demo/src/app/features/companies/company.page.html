@@ -1,4 +1,4 @@
-<a class="back" routerLink="/empresas" [queryParams]="backParams">Volver a empresas</a>
+<a class="back-link" routerLink="/empresas" [queryParams]="backParams">Volver a empresas</a>
 
 <!-- Always in the DOM (a live region inserted together with its text isn't reliably announced). -->
 <p class="done" role="status" [class.visually-hidden]="!(registered && company.hasValue())">{{ registered && company.hasValue() ? 'Empresa registrada.' : '' }}</p>
@@ -7,7 +7,7 @@
 <div aria-live="polite" [attr.aria-busy]="company.isLoading()">
   @if (company.hasValue()) {
     @let c = company.value();
-    <header class="head page-head with-action">
+    <header class="head page-head with-action in" style="--i: 0">
       <div>
         <h1>{{ c.name }}</h1>
         <p class="meta">
@@ -28,7 +28,7 @@
     <div class="problem" role="alert">
       @if (companyNotFound(error)) {
         <p>Esta empresa no existe o ya no está registrada.</p>
-        <a routerLink="/empresas">Ver todas las empresas</a>
+        <a class="touch-link" routerLink="/empresas">Ver todas las empresas</a>
       } @else {
         <p>{{ errorText(error, 'los datos de la empresa') }}</p>
         <button type="button" class="btn" (click)="company.reload()">Volver a intentar</button>
@@ -43,242 +43,269 @@
   }
 </div>
 
-@if (company.hasValue()) {
-  @let c = company.value();
-  <section class="panel sunat" aria-labelledby="sunat-title">
-    <h2 id="sunat-title">SUNAT y contacto</h2>
-    @if (c.verification === 'UNVERIFIED') {
-      <p class="warning" role="note">
-        El nombre de esta empresa lo escribió una persona y no se ha comprobado en SUNAT. No se le pueden emitir
-        certificados hasta que la verifiques.
-      </p>
-    }
-    @if (verifyError(); as message) {
-      <p class="problem" role="alert">{{ message }}</p>
-    }
-    <p class="done" role="status" [class.visually-hidden]="notice() === ''">{{ notice() }}</p>
-    @if (c.warning) {
-      <p class="warning" role="note">{{ c.warning }}.</p>
-    }
-    <dl class="lines">
-      <div><dt>Estado en SUNAT</dt><dd>{{ c.sunatEstado ?? 'Sin consultar' }}</dd></div>
-      <div><dt>Condición</dt><dd>{{ c.sunatCondicion ?? 'Sin consultar' }}</dd></div>
-      <div><dt>Consultado</dt><dd class="mono">{{ c.sunatCheckedAt ? formatDate(c.sunatCheckedAt) : '—' }}</dd></div>
-      <div><dt>Contacto</dt><dd>{{ c.contactName ?? '—' }}</dd></div>
-      <div><dt>Correo</dt><dd>{{ c.contactEmail ?? '—' }}</dd></div>
-      <div><dt>Teléfono</dt><dd class="mono">{{ c.contactPhone ?? '—' }}</dd></div>
-    </dl>
-
-    @if (editing()) {
-      <form class="edit-contact" [formGroup]="contactForm" (ngSubmit)="saveContact()" novalidate>
-        <div class="field">
-          <label for="contactName">Persona de contacto</label>
-          <input id="contactName" class="control" formControlName="contactName" autocomplete="off" maxlength="255" />
-        </div>
-        <div class="field">
-          <label for="contactEmail">Correo de contacto</label>
-          <input
-            id="contactEmail"
-            class="control"
-            type="email"
-            formControlName="contactEmail"
-            autocomplete="off"
-            maxlength="255"
-            [attr.aria-invalid]="contactForm.controls.contactEmail.invalid && contactForm.controls.contactEmail.touched"
-            [attr.aria-describedby]="contactForm.controls.contactEmail.invalid && contactForm.controls.contactEmail.touched ? 'contactEmail-error' : null"
-          />
-          @if (contactForm.controls.contactEmail.invalid && contactForm.controls.contactEmail.touched) {
-            <p class="field-error" id="contactEmail-error">El correo no es válido.</p>
-          }
-        </div>
-        <div class="field">
-          <label for="contactPhone">Teléfono de contacto</label>
-          <input id="contactPhone" class="control" formControlName="contactPhone" inputmode="tel" autocomplete="off" maxlength="30" />
-        </div>
-        @if (editError(); as message) {
-          <p class="problem" role="alert">{{ message }}</p>
-        }
-        <div class="buttons">
-          <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar contacto' }}</button>
-          <button type="button" class="btn" [disabled]="saving()" (click)="cancelEdit()">Cancelar</button>
-        </div>
-      </form>
-    }
-  </section>
-
-  <section class="panel actions" aria-labelledby="actions-title" #actions tabindex="-1">
-    <h2 id="actions-title">Acciones de la empresa</h2>
-    <div class="buttons">
-      <button type="button" class="btn" #editButton data-panel="edit" (click)="startEdit()" [disabled]="editing()">Editar contacto</button>
-      @if (c.status === 'ACTIVE') {
-        <button type="button" class="btn" data-panel="deactivate" (click)="openPanel('deactivate')">Desactivar empresa</button>
-      } @else {
-        <button type="button" class="btn" data-panel="activate" (click)="openPanel('activate')">Reactivar empresa</button>
-      }
-      @if (!hasCertificates()) {
-        <button type="button" class="btn" data-panel="delete" (click)="openPanel('delete')">Eliminar empresa</button>
-      }
-    </div>
-    @if (hasCertificates()) {
-      <p class="hint locked">
-        Esta empresa tiene certificados (aunque estén anulados), así que no se puede eliminar. Si ya no debe recibir certificados, desactívala.
-      </p>
-    }
-    @switch (panel()) {
-      @case ('deactivate') {
-        <app-reason-confirm
-          idPrefix="deactivate"
-          title="Desactivar empresa"
-          explanation="Mientras esté inactiva no se le podrán emitir certificados; los que ya tiene siguen visibles. Se puede reactivar después."
-          confirmLabel="Entiendo que no se le podrán emitir certificados"
-          [actionText]="'Desactivar ' + c.name"
-          busyText="Desactivando…"
-          [busy]="panelBusy()"
-          [error]="panelError()"
-          (confirm)="changeStatus('deactivate', $event)"
-          (cancelled)="closePanel()"
-        />
-      }
-      @case ('activate') {
-        <app-reason-confirm
-          idPrefix="activate"
-          title="Reactivar empresa"
-          explanation="Volverá a poder recibir certificados."
-          confirmLabel="Revisé que la empresa vuelve a estar activa"
-          [actionText]="'Reactivar ' + c.name"
-          busyText="Reactivando…"
-          [busy]="panelBusy()"
-          [error]="panelError()"
-          (confirm)="changeStatus('activate', $event)"
-          (cancelled)="closePanel()"
-        />
-      }
-      @case ('delete') {
-        <app-reason-confirm
-          idPrefix="delete"
-          title="Eliminar empresa"
-          explanation="Solo si no tiene ningún certificado, ni siquiera anulado. Deja de aparecer en la lista y su RUC queda libre; el registro y el motivo se conservan. No se puede deshacer desde esta aplicación."
-          confirmLabel="Entiendo que la eliminación no se puede deshacer"
-          [actionText]="'Eliminar ' + c.name"
-          busyText="Eliminando…"
-          [busy]="panelBusy()"
-          [error]="panelError()"
-          (confirm)="deleteCompany($event)"
-          (cancelled)="closePanel()"
-        />
-      }
-    }
-  </section>
-}
-
 @if (!company.error()) {
-  <div class="grid">
-    <!-- The period summary is the month's ticket: serrated, printed in one ink. -->
-    <section class="panel ticket summary" aria-labelledby="summary-title">
-      <h2 id="summary-title">Resumen del período</h2>
-      @if (summaryLines(); as s) {
-        <dl class="lines">
-          <div class="period"><dt>Último período certificado</dt><dd>{{ s.period }}</dd></div>
-          <div class="figure"><dt>Kilos trazados</dt><dd class="mono">{{ s.kilos }}</dd></div>
-          <div class="figure"><dt>{{ complianceLabel }}</dt><dd class="mono">{{ s.compliance }}</dd></div>
-        </dl>
-        @if (!s.missingSigersol) {
-          <p class="source">El cumplimiento de jerarquía es un dato declarado por el operador de la asociación; no es una cifra oficial de SIGERSOL ni la verifica esta plataforma.</p>
-        }
-        <p class="source" data-testid="coverage">{{ s.coverage }}</p>
-      } @else if (summary.error(); as error) {
-        <div class="problem" role="alert">
-          <p>{{ errorText(error, 'el resumen del período') }}</p>
-          <button type="button" class="btn" (click)="summary.reload()">Volver a intentar</button>
-        </div>
-      } @else if (certificates.hasValue() && latest() === null) {
-        <p class="empty">Aún no hay certificados.</p>
-      } @else if (certificates.error()) {
-        <p class="problem">El resumen no está disponible porque no se pudieron cargar los certificados.</p>
-      } @else {
-        <div aria-hidden="true">
-          <span class="skel"></span><span class="skel"></span><span class="skel"></span>
-        </div>
-      }
-    </section>
-    <section class="panel" aria-labelledby="chart-title">
-      <h2 id="chart-title">Kilos trazados por período</h2>
-      @if (chart(); as model) {
-        @if (model.bars.length > 0) {
-          <app-kilos-chart [model]="model" />
-        } @else {
-          <p class="empty">Aún no hay certificados emitidos, así que no hay períodos que graficar.</p>
-        }
-      } @else if (certificates.error()) {
-        <p class="problem">La gráfica no está disponible porque no se pudieron cargar los certificados.</p>
-      } @else {
-        <div class="skel chart" aria-hidden="true"></div>
-      }
-    </section>
-  </div>
-
-  <section aria-labelledby="certs-title">
-    <h2 id="certs-title" class="sec">Certificados</h2>
-    @if (rows(); as r) {
-      @if (r.items.length === 0) {
-        <p class="empty boxed">Esta empresa todavía no tiene certificados emitidos.</p>
-      } @else {
-        <div class="table-wide">
-          <table>
-            <caption class="visually-hidden">Certificados, los más recientes primero; los anulados no cuentan en el resumen ni en la gráfica</caption>
-            <thead>
-              <tr>
-                <th scope="col">Período</th>
-                <th scope="col" class="num">Kilos trazados</th>
-                <th scope="col" class="num">{{ complianceLabel }}</th>
-                <th scope="col" class="num">Emitido</th>
-                <th scope="col" class="chev"><span class="visually-hidden">Abrir</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of r.items; track row.id) {
-                <tr>
-                  <td>
-                    <a class="row-link" [routerLink]="['/empresas', id(), 'certificados', row.id]">{{ row.period }}</a>
-                    @if (row.annulled) { <span class="annulled-tag">Anulado</span> }
-                  </td>
-                  <td class="num mono">{{ row.kilos }}</td>
-                  <td class="num mono">{{ row.compliance }}</td>
-                  <td class="num mono">{{ row.issued }}</td>
-                  <td class="chev"><app-chevron-icon /></td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-        <ul class="cards" aria-label="Certificados emitidos">
-          @for (row of r.items; track row.id) {
-            <li>
-              <!-- Named by its period alone, not by the whole card's text -->
-              <a class="card" [routerLink]="['/empresas', id(), 'certificados', row.id]" [attr.aria-labelledby]="'card-' + row.id">
-                <span class="card-title" [id]="'card-' + row.id">{{ row.period }}</span>
-                @if (row.annulled) { <span class="annulled-tag">Anulado</span> }
-                <dl>
-                  <div><dt>Kilos trazados</dt><dd class="mono">{{ row.kilos }}</dd></div>
-                  <div><dt>Cumplimiento (declarado)</dt><dd class="mono">{{ row.compliance }}</dd></div>
-                  <div><dt>Emitido</dt><dd class="mono">{{ row.issued }}</dd></div>
-                </dl>
-              </a>
-            </li>
+  <div class="cols">
+    <div class="main-col">
+      <!-- The period summary is the scale's display: the kilos in big mono figures that count up, the declared
+           compliance on a 0–100 ruler. The first thing on the page below the title. -->
+      <div class="in" style="--i: 2">
+        <section class="visor fold fold-dark summary" aria-labelledby="summary-title">
+          <h2 id="summary-title" class="visually-hidden">Resumen del período</h2>
+          @if (summaryLines(); as s) {
+            <dl class="lines">
+              <div class="period"><dt>Último período certificado</dt><dd>{{ s.period }}</dd></div>
+              <div class="figure"><dt>Kilos trazados</dt>
+                <dd class="mono big">
+                  <span aria-hidden="true"><span class="kcount" [class.small]="s.kiloParts.small" [style.--t]="s.kiloParts.t" [style.--r]="s.kiloParts.r" [attr.data-d]="s.kiloParts.d"></span><small>kg</small></span>
+                  <span class="visually-hidden">{{ s.kilos }}</span>
+                </dd>
+              </div>
+              <div class="figure"><dt>{{ complianceLabel }}</dt>
+                <dd class="mono mid">{{ s.compliance }}</dd>
+              </div>
+            </dl>
+            @if (s.complianceValue !== null) {
+              <div class="ruler" [style.--v]="s.complianceValue" aria-hidden="true">
+                <div class="nums"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+                <div class="ticks"></div>
+                <div class="needle"></div>
+              </div>
+            }
+            @if (!s.missingSigersol) {
+              <p class="source">El cumplimiento de jerarquía es un dato declarado por el operador de la asociación; no es una cifra oficial de SIGERSOL ni la verifica esta plataforma.</p>
+            }
+            <p class="source" data-testid="coverage">{{ s.coverage }}</p>
+          } @else if (summary.error(); as error) {
+            <div class="problem" role="alert">
+              <p>{{ errorText(error, 'el resumen del período') }}</p>
+              <button type="button" class="btn" (click)="summary.reload()">Volver a intentar</button>
+            </div>
+          } @else if (certificates.hasValue() && latest() === null) {
+            <p class="empty">Aún no hay certificados.</p>
+          } @else if (certificates.error()) {
+            <p class="problem">El resumen no está disponible porque no se pudieron cargar los certificados.</p>
+          } @else {
+            <div aria-hidden="true">
+              <span class="skel"></span><span class="skel"></span><span class="skel"></span>
+            </div>
           }
-        </ul>
-        <p class="foot">Mostrando {{ r.items.length }} de {{ r.total }} {{ r.total === 1 ? 'certificado' : 'certificados' }}</p>
-      }
-    } @else if (certificates.error(); as error) {
-      <div class="problem" role="alert">
-        <p>{{ errorText(error, 'los certificados') }}</p>
-        <button type="button" class="btn" (click)="certificates.reload()">Volver a intentar</button>
+        </section>
       </div>
-    } @else {
-      <div aria-hidden="true">
-        <span class="skel wide"></span><span class="skel wide"></span><span class="skel wide"></span>
-      </div>
-      <p class="visually-hidden">Cargando certificados</p>
+
+      <section class="panel chart-panel in" style="--i: 4" aria-labelledby="chart-title">
+        <h2 id="chart-title">Kilos trazados por período</h2>
+        @if (chart(); as model) {
+          @if (model.bars.length > 0) {
+            <app-kilos-chart [model]="model" />
+          } @else {
+            <p class="empty">Aún no hay certificados emitidos, así que no hay períodos que graficar.</p>
+          }
+        } @else if (certificates.error()) {
+          <p class="problem">La gráfica no está disponible porque no se pudieron cargar los certificados.</p>
+        } @else {
+          <div class="skel chart" aria-hidden="true"></div>
+        }
+      </section>
+
+      <section class="certs in" style="--i: 5" aria-labelledby="certs-title">
+        <h2 id="certs-title" class="sec">Certificados</h2>
+        @if (rows(); as r) {
+          @if (r.items.length === 0) {
+            <p class="empty boxed">Esta empresa todavía no tiene certificados emitidos.</p>
+          } @else {
+            <div class="table-wide">
+              <table class="ledger">
+                <caption class="visually-hidden">Certificados, los más recientes primero; los anulados no cuentan en el resumen ni en la gráfica</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Período</th>
+                    <th scope="col" class="num">Kilos trazados</th>
+                    <th scope="col" class="num">{{ complianceLabel }}</th>
+                    <th scope="col" class="num">Emitido</th>
+                    <th scope="col" class="chev"><span class="visually-hidden">Abrir</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of r.items; track row.id) {
+                    <tr>
+                      <td>
+                        <a class="row-link" [routerLink]="['/empresas', id(), 'certificados', row.id]">{{ row.period }}</a>
+                        @if (row.annulled) { <span class="annulled-tag">Anulado</span> }
+                      </td>
+                      <td class="num mono">{{ row.kilos }}</td>
+                      <td class="num mono">{{ row.compliance }}</td>
+                      <td class="num mono">{{ row.issued }}</td>
+                      <td class="chev"><app-chevron-icon /></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <ul class="cards" aria-label="Certificados emitidos">
+              @for (row of r.items; track row.id) {
+                <li>
+                  <!-- Named by its period alone, not by the whole card's text -->
+                  <a class="card" [routerLink]="['/empresas', id(), 'certificados', row.id]" [attr.aria-labelledby]="'card-' + row.id">
+                    <span class="card-title" [id]="'card-' + row.id">{{ row.period }}</span>
+                    @if (row.annulled) { <span class="annulled-tag">Anulado</span> }
+                    <dl>
+                      <div><dt>Kilos trazados</dt><dd class="mono">{{ row.kilos }}</dd></div>
+                      <div><dt>Cumplimiento (declarado)</dt><dd class="mono">{{ row.compliance }}</dd></div>
+                      <div><dt>Emitido</dt><dd class="mono">{{ row.issued }}</dd></div>
+                    </dl>
+                  </a>
+                </li>
+              }
+            </ul>
+            <p class="foot">Mostrando {{ r.items.length }} de {{ r.total }} {{ r.total === 1 ? 'certificado' : 'certificados' }}</p>
+          }
+        } @else if (certificates.error(); as error) {
+          <div class="problem" role="alert">
+            <p>{{ errorText(error, 'los certificados') }}</p>
+            <button type="button" class="btn" (click)="certificates.reload()">Volver a intentar</button>
+          </div>
+        } @else {
+          <div aria-hidden="true">
+            <span class="skel wide"></span><span class="skel wide"></span><span class="skel wide"></span>
+          </div>
+          <p class="visually-hidden">Cargando certificados</p>
+        }
+      </section>
+    </div>
+
+    <!-- What is rarely needed comes after what is used every day: SUNAT data and the company's actions. -->
+    @if (company.hasValue()) {
+      @let c = company.value();
+      <aside class="side side-col">
+        <section class="panel sunat" aria-labelledby="sunat-title">
+          <h2 id="sunat-title">SUNAT y contacto</h2>
+          @if (c.verification === 'UNVERIFIED') {
+            <p class="warning" role="note">
+              El nombre de esta empresa lo escribió una persona y no se ha comprobado en SUNAT. No se le pueden emitir
+              certificados hasta que la verifiques.
+            </p>
+          }
+          @if (verifyError(); as message) {
+            <p class="problem" role="alert">{{ message }}</p>
+          }
+          <p class="done" role="status" [class.visually-hidden]="notice() === ''">{{ notice() }}</p>
+          @if (c.warning) {
+            <p class="warning" role="note">{{ c.warning }}.</p>
+          }
+          <dl class="lines">
+            <div><dt>Estado en SUNAT</dt><dd>{{ c.sunatEstado ?? 'Sin consultar' }}</dd></div>
+            <div><dt>Condición</dt><dd>{{ c.sunatCondicion ?? 'Sin consultar' }}</dd></div>
+            <div><dt>Consultado</dt><dd class="mono">{{ c.sunatCheckedAt ? formatDate(c.sunatCheckedAt) : '—' }}</dd></div>
+            @if (c.contactName || c.contactEmail || c.contactPhone) {
+              <div><dt>Contacto</dt><dd>{{ c.contactName ?? '—' }}</dd></div>
+              <div><dt>Correo</dt><dd>{{ c.contactEmail ?? '—' }}</dd></div>
+              <div><dt>Teléfono</dt><dd class="mono">{{ c.contactPhone ?? '—' }}</dd></div>
+            } @else {
+              <div><dt>Contacto</dt><dd>Sin contacto registrado</dd></div>
+            }
+          </dl>
+
+          @if (editing()) {
+            <form class="edit-contact" [formGroup]="contactForm" (ngSubmit)="saveContact()" novalidate>
+              <div class="field">
+                <label for="contactName">Persona de contacto</label>
+                <input id="contactName" class="control" formControlName="contactName" autocomplete="off" maxlength="255" />
+              </div>
+              <div class="field">
+                <label for="contactEmail">Correo de contacto</label>
+                <input
+                  id="contactEmail"
+                  class="control"
+                  type="email"
+                  formControlName="contactEmail"
+                  autocomplete="off"
+                  maxlength="255"
+                  [attr.aria-invalid]="contactForm.controls.contactEmail.invalid && contactForm.controls.contactEmail.touched"
+                  [attr.aria-describedby]="contactForm.controls.contactEmail.invalid && contactForm.controls.contactEmail.touched ? 'contactEmail-error' : null"
+                />
+                @if (contactForm.controls.contactEmail.invalid && contactForm.controls.contactEmail.touched) {
+                  <p class="field-error" id="contactEmail-error">El correo no es válido.</p>
+                }
+              </div>
+              <div class="field">
+                <label for="contactPhone">Teléfono de contacto</label>
+                <input id="contactPhone" class="control" formControlName="contactPhone" inputmode="tel" autocomplete="off" maxlength="30" />
+              </div>
+              @if (editError(); as message) {
+                <p class="problem" role="alert">{{ message }}</p>
+              }
+              <div class="buttons">
+                <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar contacto' }}</button>
+                <button type="button" class="btn" [disabled]="saving()" (click)="cancelEdit()">Cancelar</button>
+              </div>
+            </form>
+          }
+        </section>
+
+        <section class="actions" aria-labelledby="actions-title" #actions tabindex="-1">
+          <h2 id="actions-title" class="visually-hidden">Acciones de la empresa</h2>
+          <div class="buttons">
+            <button type="button" class="btn-link" #editButton data-panel="edit" (click)="startEdit()" [disabled]="editing()">Editar contacto</button>
+            @if (c.status === 'ACTIVE') {
+              <button type="button" class="btn-link" data-panel="deactivate" (click)="openPanel('deactivate')">Desactivar empresa</button>
+            } @else {
+              <button type="button" class="btn-link" data-panel="activate" (click)="openPanel('activate')">Reactivar empresa</button>
+            }
+            @if (!hasCertificates()) {
+              <button type="button" class="btn-link" data-panel="delete" (click)="openPanel('delete')">Eliminar empresa</button>
+            }
+          </div>
+          @if (hasCertificates()) {
+            <p class="hint locked">
+              Esta empresa tiene certificados (aunque estén anulados), así que no se puede eliminar. Si ya no debe recibir certificados, desactívala.
+            </p>
+          }
+          @switch (panel()) {
+            @case ('deactivate') {
+              <app-reason-confirm
+                idPrefix="deactivate"
+                title="Desactivar empresa"
+                explanation="Mientras esté inactiva no se le podrán emitir certificados; los que ya tiene siguen visibles. Se puede reactivar después."
+                confirmLabel="Entiendo que no se le podrán emitir certificados"
+                [actionText]="'Desactivar ' + c.name"
+                busyText="Desactivando…"
+                [busy]="panelBusy()"
+                [error]="panelError()"
+                (confirm)="changeStatus('deactivate', $event)"
+                (cancelled)="closePanel()"
+              />
+            }
+            @case ('activate') {
+              <app-reason-confirm
+                idPrefix="activate"
+                title="Reactivar empresa"
+                explanation="Volverá a poder recibir certificados."
+                confirmLabel="Revisé que la empresa vuelve a estar activa"
+                [actionText]="'Reactivar ' + c.name"
+                busyText="Reactivando…"
+                [busy]="panelBusy()"
+                [error]="panelError()"
+                (confirm)="changeStatus('activate', $event)"
+                (cancelled)="closePanel()"
+              />
+            }
+            @case ('delete') {
+              <app-reason-confirm
+                idPrefix="delete"
+                title="Eliminar empresa"
+                explanation="Solo si no tiene ningún certificado, ni siquiera anulado. Deja de aparecer en la lista y su RUC queda libre; el registro y el motivo se conservan. No se puede deshacer desde esta aplicación."
+                confirmLabel="Entiendo que la eliminación no se puede deshacer"
+                [actionText]="'Eliminar ' + c.name"
+                busyText="Eliminando…"
+                [busy]="panelBusy()"
+                [error]="panelError()"
+                (confirm)="deleteCompany($event)"
+                (cancelled)="closePanel()"
+              />
+            }
+          }
+        </section>
+      </aside>
     }
-  </section>
+  </div>
 }

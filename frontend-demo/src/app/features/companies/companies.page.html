@@ -1,4 +1,4 @@
-<header class="head page-head with-action">
+<header class="head page-head with-action in" style="--i: 0">
   <div>
     <h1>Empresas</h1>
     <p class="sub">Abre una empresa para ver sus kilos trazados y sus certificados.</p>
@@ -9,59 +9,77 @@
 <!-- Always in the DOM (a live region that appears with its text isn't reliably announced). -->
 <p class="visually-hidden" role="status" aria-live="polite">{{ refreshMessage() }}</p>
 
-@if (loadError(); as message) {
-  <div class="problem" role="alert">
-    <p>{{ message }}</p>
-    <button type="button" class="btn" #retryButton (click)="retry()">Volver a intentar</button>
-  </div>
-} @else {
-  <!-- Each company is a stub torn from the scale's roll: one link per company, at every width. -->
-  <ul class="stubs" #list tabindex="-1" [attr.aria-busy]="companies.isLoading()" aria-label="Empresas, página {{ pagina() }}">
-    @if (companies.isLoading() && page() === null) {
-      @for (row of [1, 2, 3, 4]; track row) {
-        <li class="card ticket skeleton" aria-hidden="true">
-          <span class="bone wide"></span>
-          <span class="bone"></span>
-        </li>
-      }
+<div class="cols">
+  <div class="main-col">
+    @if (loadError(); as message) {
+      <div class="problem" role="alert">
+        <p>{{ message }}</p>
+        <button type="button" class="btn" #retryButton (click)="retry()">Volver a intentar</button>
+      </div>
     } @else {
-      @for (company of page()?.content ?? []; track company.id) {
-        <li>
-          <a class="card ticket" [routerLink]="['/empresas', company.id]" [state]="{ pagina: pagina() }">
-            <span class="card-name">{{ company.name }}</span>
-            <span class="card-ruc">RUC <span class="mono">{{ company.ruc }}</span></span>
-            <app-status-label class="card-status" [status]="company.status" />
-            <app-chevron-icon class="card-chev" />
-          </a>
-        </li>
-      } @empty {
-        <li class="empty sheet-flat">
-          Todavía no hay empresas registradas para trazabilidad. <a routerLink="/empresas/nueva">Registra la primera</a>.
-          <!-- aria-disabled, not disabled: a disabled button would drop the focus and its new
-               label might go unread; refresh() ignores clicks while it runs. -->
-          <button type="button" class="btn-link" [attr.aria-disabled]="refreshing()" (click)="refresh()">
-            {{ refreshing() ? 'Actualizando…' : 'Actualizar la lista' }}
-          </button>
-        </li>
+      <!-- The list is one continuous roll of thermal paper: serrated at the top and bottom of the roll, rows
+           separated by dotted guides. One link per company, at every width. -->
+      <div class="in" style="--i: 2">
+        <ul class="roll ticket fold stubs" #list tabindex="-1" [attr.aria-busy]="companies.isLoading()" aria-label="Empresas, página {{ pagina() }}">
+          @if (companies.isLoading() && page() === null) {
+            @for (row of [1, 2, 3, 4]; track row) {
+              <li class="stub-skel" aria-hidden="true">
+                <span class="bone wide"></span>
+                <span class="bone"></span>
+              </li>
+            }
+          } @else {
+            @for (company of page()?.content ?? []; track company.id) {
+              <li>
+                <a class="card" [routerLink]="['/empresas', company.id]" [state]="{ pagina: pagina() }">
+                  <span class="card-name">{{ company.name }}</span>
+                  <span class="card-ruc">RUC <span class="mono">{{ company.ruc }}</span></span>
+                  <app-status-label class="card-status" [status]="company.status" />
+                  <app-chevron-icon class="card-chev" />
+                </a>
+              </li>
+            } @empty {
+              <li class="empty">
+                <p>Todavía no hay empresas registradas para trazabilidad.</p>
+                <p class="empty-actions">
+                  <a class="btn btn-primary" routerLink="/empresas/nueva">Registrar la primera empresa</a>
+                  <!-- aria-disabled, not disabled: a disabled button would drop the focus and its new
+                       label might go unread; refresh() ignores clicks while it runs. -->
+                  <button type="button" class="btn-link" [attr.aria-disabled]="refreshing()" (click)="refresh()">
+                    {{ refreshing() ? 'Actualizando…' : 'Actualizar la lista' }}
+                  </button>
+                </p>
+              </li>
+            }
+          }
+        </ul>
+      </div>
+
+      @if (page(); as current) {
+        <nav class="pager" aria-label="Paginación de empresas">
+          <p class="count">
+            @if (range(); as r) {
+              Mostrando {{ r.first | number }}–{{ r.last | number }} de {{ r.total | number }}
+              {{ r.total === 1 ? 'empresa' : 'empresas' }}
+            }
+          </p>
+          @if (current.totalPages > 1) {
+            <div class="pages">
+              <button type="button" class="btn" [disabled]="pagina() <= 1" (click)="goTo(pagina() - 1)">Anterior</button>
+              <span class="where">Página {{ pagina() }} de {{ current.totalPages }}</span>
+              <button type="button" class="btn" [disabled]="pagina() >= current.totalPages" (click)="goTo(pagina() + 1)">Siguiente</button>
+            </div>
+          }
+        </nav>
       }
     }
-  </ul>
+  </div>
 
   @if (page(); as current) {
-    <nav class="pager" aria-label="Paginación de empresas">
-      <p class="count">
-        @if (range(); as r) {
-          Mostrando {{ r.first | number }}–{{ r.last | number }} de {{ r.total | number }}
-          {{ r.total === 1 ? 'empresa' : 'empresas' }}
-        }
-      </p>
-      @if (current.totalPages > 1) {
-        <div class="pages">
-          <button type="button" class="btn" [disabled]="pagina() <= 1" (click)="goTo(pagina() - 1)">Anterior</button>
-          <span class="where">Página {{ pagina() }} de {{ current.totalPages }}</span>
-          <button type="button" class="btn" [disabled]="pagina() >= current.totalPages" (click)="goTo(pagina() + 1)">Siguiente</button>
-        </div>
-      }
-    </nav>
+    @if (current.totalElements > 0) {
+      <aside class="side side-first sticky" aria-label="Resumen de la lista">
+        <app-tally label="Empresas registradas" [total]="current.totalElements" [rows]="tallyRows()" />
+      </aside>
+    }
   }
-}
+</div>

@@ -56,7 +56,7 @@
   padding: var(--space-2) var(--space-3);
   background: var(--ground);
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--t-note);
   font-weight: 700;
   border-bottom: 2px dotted var(--rule-dots);
 }

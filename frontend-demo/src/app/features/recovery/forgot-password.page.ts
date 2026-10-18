@@ -7,6 +7,7 @@ import { finalize } from 'rxjs';
 import { BackendApi } from '../../core/api/backend.api';
 import { ApiError } from '../../core/http/api-error';
 import { REQUEST_UNCERTAIN, isRateLimited, readRecoveryState, waitText } from './recovery';
+import { Logo } from '../../shared/logo';
 
 /**
  * Paso 1 de «¿Olvidaste tu contraseña?»: the email, and the service sends a code to it if the account
@@ -15,7 +16,7 @@ import { REQUEST_UNCERTAIN, isRateLimited, readRecoveryState, waitText } from '.
  */
 @Component({
   selector: 'app-forgot-password-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, Logo],
   templateUrl: './forgot-password.page.html',
   styleUrl: './recovery.css',
 })

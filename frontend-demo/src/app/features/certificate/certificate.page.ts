@@ -9,7 +9,8 @@ import { ApiError } from '../../core/http/api-error';
 import { DistrictContext } from '../../shared/district-context';
 import { DownloadKind } from '../../shared/download-filename';
 import { loadErrorMessage, writeErrorText } from '../../shared/error-message';
-import { formatInstantDate, formatKg, formatLocalDate, formatPercent } from '../../shared/format';
+import { formatInstantDate, formatKg, formatLocalDate, formatPercent, kiloParts } from '../../shared/format';
+import { Logo } from '../../shared/logo';
 import { COMPLIANCE_LABEL, hierarchyNote } from '../sigersol/origin-label';
 import { ReasonConfirm } from '../../shared/reason-confirm';
 
@@ -38,7 +39,7 @@ export const ANNUL_UNCERTAIN =
 
 @Component({
   selector: 'app-certificate-page',
-  imports: [RouterLink, ReasonConfirm, DistrictContext],
+  imports: [RouterLink, ReasonConfirm, DistrictContext, Logo],
   templateUrl: './certificate.page.html',
   styleUrl: './certificate.page.css',
 })
@@ -72,6 +73,7 @@ export class CertificatePage {
       company: c.companyName,
       ruc: c.companyRuc,
       kilos: formatKg(c.kilosTrazados),
+      kiloParts: kiloParts(c.kilosTrazados),
       compliance: formatPercent(c.hierarchyCompliancePercent),
       complianceNote: hierarchyNote(c),
       period: `${formatLocalDate(c.periodStart)} – ${formatLocalDate(c.periodEnd)}`,

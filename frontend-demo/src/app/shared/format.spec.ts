@@ -5,6 +5,7 @@ import {
   formatPercent,
   formatPercentExact,
   isWholeMonth,
+  kiloParts,
   periodLabel,
   shortPeriodLabel,
 } from './format';
@@ -14,6 +15,13 @@ describe('es-PE formatters', () => {
     expect(formatKg(12480.5)).toBe('12,480.50 kg');
     expect(formatKg(0)).toBe('0.00 kg');
     expect(formatKg(1234567.891)).toBe('1,234,567.89 kg');
+  });
+
+  it('splits kilos into the parts the counter animation counts up: thousands, the rest, the two decimals', () => {
+    expect(kiloParts(12480.5)).toEqual({ t: 12, r: 480, d: '50', small: false });
+    expect(kiloParts(8.25)).toEqual({ t: 0, r: 8, d: '25', small: true });
+    expect(kiloParts(999.99)).toEqual({ t: 0, r: 999, d: '99', small: true });
+    expect(kiloParts(99999999.99)).toEqual({ t: 99999, r: 999, d: '99', small: false });
   });
 
   it('formats compliance with one decimal, and a missing SIGERSOL value as text, never 0 %', () => {

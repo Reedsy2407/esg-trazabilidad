@@ -1,5 +1,6 @@
 .accounts {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   margin: 0;
   padding: 0;
@@ -32,7 +33,7 @@
   margin-left: var(--space-2);
   padding: 0 var(--space-2);
   border: 1px solid var(--ink);
-  font-size: 12px;
+  font-size: var(--t-note);
   font-weight: 600;
 }
 .facts {
@@ -43,7 +44,7 @@
 }
 .facts dt {
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
 }
 .facts dd {
   margin: var(--space-1) 0 0;
@@ -56,7 +57,7 @@
 }
 .me-note {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--t-note);
 }
 .account app-reason-confirm {
   display: block;

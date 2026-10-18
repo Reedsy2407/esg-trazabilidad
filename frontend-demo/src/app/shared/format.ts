@@ -52,6 +52,13 @@ export function formatKg(value: number): string {
   return `${formatNumber(value, LOCALE, '1.2-2')} kg`;
 }
 
+/** 12480.5 -> { t: 12, r: 480, d: '50', small: false }: the parts the counter animation counts up (see .kilos in styles.css). */
+export function kiloParts(value: number): { t: number; r: number; d: string; small: boolean } {
+  const [integer, decimals] = value.toFixed(2).split('.');
+  const whole = Number(integer);
+  return { t: Math.floor(whole / 1000), r: whole % 1000, d: decimals, small: whole < 1000 };
+}
+
 /** 87.5 -> "87.5 %"; null (no SIGERSOL sync covers the period) is a missing value, never 0 %. */
 export function formatPercent(value: number | null): string {
   return value === null ? 'Sin registro SIGERSOL' : `${formatNumber(value, LOCALE, '1.1-1')} %`;

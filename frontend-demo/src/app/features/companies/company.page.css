@@ -1,186 +1,147 @@
-.back {
-  display: inline-block;
-  margin-bottom: var(--space-5);
-}
 .head {
   margin-bottom: var(--space-6);
-}
-h1 {
-  font-size: 44px;
-  line-height: 1.02;
 }
 .meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4);
-  margin: var(--space-2) 0 0;
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
+  margin: var(--space-3) 0 0;
   color: var(--ink-soft);
+  font-size: var(--t-1);
 }
-h2 {
-  font-size: 15px;
+.meta .mono {
+  color: var(--ink);
+}
+.panel h2 {
   margin-bottom: var(--space-3);
 }
 .sec {
   margin-top: var(--space-8);
 }
-
-/* The period's ticket on the left, the chart on flat paper beside it; stacked when narrow. */
-.grid {
+.main-col {
   display: grid;
-  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
-  align-items: start;
-  gap: var(--space-5);
-}
-@media (max-width: 819.98px) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  gap: clamp(var(--space-6), 3vw, var(--space-12));
+  min-width: 0;
 }
 .panel {
   min-width: 0;
   padding: var(--space-5) var(--space-6);
   background: var(--paper);
 }
-.sunat {
-  margin-bottom: var(--space-5);
-}
-.sunat .lines {
+.side-col {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: var(--space-3) var(--space-5);
+  gap: var(--space-5);
+}
+@media (min-width: 1100px) {
+  .side-col {
+    position: sticky;
+    top: var(--space-6);
+  }
+}
+
+/* El visor del período: las cifras en grande, en mono, sobre el azul del logo. */
+.summary .lines {
+  display: grid;
+  gap: var(--space-5) var(--space-12);
+  margin: var(--space-3) 0 0;
+}
+.summary .lines dd {
+  margin: 0;
+}
+.summary dt {
+  color: var(--brand-soft);
+}
+.summary .period dd {
+  margin-top: var(--space-1);
+  font-size: var(--t-2);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.summary .figure dd.big {
+  margin-top: var(--space-1);
+  font-size: 15.4cqw;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  white-space: nowrap;
+}
+.summary .figure dd.big small {
+  margin-left: 0.25em;
+  font-size: 0.34em;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--brand-soft);
+}
+.summary .figure dd.mid {
+  margin-top: var(--space-1);
+  font-size: var(--t-mid);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  overflow-wrap: anywhere;
+}
+.summary .ruler {
+  margin-top: var(--space-5);
+}
+.summary .source {
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-3);
+  border-top: 2px dotted var(--brand-soft);
+  color: var(--brand-soft);
+  font-size: var(--t-note);
+}
+.summary .empty,
+.summary .skel {
+  color: var(--brand-soft);
+}
+.summary .skel {
+  background: var(--brand-soft);
+  opacity: 0.5;
+}
+
+/* Datos de SUNAT y contacto: una lista compacta con guías punteadas, no una cuadrícula de celdas. */
+.sunat .lines {
+  margin: 0;
+}
+.sunat .lines > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 2px dotted var(--rule-dots);
 }
 .sunat dt {
   color: var(--ink-soft);
-  font-size: 14px;
 }
-.sunat .warning {
-  margin: 0 0 var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-left: 4px solid var(--ink);
-  font-weight: 600;
-}
-.panel.ticket {
-  padding-top: calc(var(--tear) + var(--space-5));
-  padding-bottom: calc(var(--tear) + var(--space-5));
-}
-
-/* Resumen del período: three lines, label above value, separated by dotted rules as a
-   ticket prints them; the two figures large. (A dotted leader beside the period didn't fit:
-   its label wraps on a 340 px ticket.) */
-.lines {
+.sunat dd {
   margin: 0;
-}
-.lines dd {
-  margin: 0;
-}
-.period dt {
-  color: var(--ink-soft);
-  font-size: 14px;
-}
-.period dd {
-  margin-top: var(--space-1);
-  font-size: 22px;
   font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.figure {
-  margin-top: var(--space-4);
-  padding-top: var(--space-4);
-  border-top: 2px dotted var(--rule-dots);
-}
-.figure dt {
-  color: var(--ink-soft);
-  font-size: 14px;
-}
-.figure dd {
-  margin-top: var(--space-1);
-  font-size: 34px;
-  font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: -0.04em;
   overflow-wrap: anywhere;
 }
-
-/* Certificates: a table from 640 px, stacked cards below (no sideways scrolling). */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--paper);
-}
-th {
-  height: 44px;
-  padding: 0 var(--space-4);
-  background: var(--paper);
-  border-bottom: 2px solid var(--ink);
-  color: var(--ink-soft);
-  font-size: 13px;
+/* Aviso de una empresa sin verificar: marco completo, no un filete lateral. */
+.sunat .warning {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border: 2px solid var(--ink);
   font-weight: 600;
-  text-align: left;
 }
-td {
-  height: 48px;
-  padding: 0 var(--space-4);
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
-tbody tr:last-child td {
-  border-bottom: 0;
-}
-.num {
-  text-align: right;
-}
+
+/* Certificados: tabla desde 640 px, entradas apiladas por debajo (sin scroll lateral). */
 .table-wide {
   position: relative;
   overflow-x: auto;
 }
-.cards {
-  display: none;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.ledger td {
+  white-space: nowrap;
+  font-size: var(--t-1);
 }
-.card {
-  padding: var(--space-3) var(--space-4);
-  background: var(--paper);
+.ledger td:first-child {
+  font-size: var(--t-1);
 }
-li + li {
-  margin-top: var(--space-2);
-}
-a.card {
-  display: block;
-  min-height: 44px;
-  color: var(--ink);
-  text-decoration: none;
-}
-a.card:hover {
-  background: var(--row-hover);
-}
-a.card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-/* Table rows: the period's link stretches over the whole row. */
-tbody tr {
-  position: relative;
-}
-tbody tr:has(.row-link):hover {
-  background: var(--row-hover);
-}
-.row-link {
-  color: var(--ink);
-  text-decoration: none;
-}
-.row-link::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-.row-link:focus-visible {
-  outline: none;
-}
-tbody tr:has(.row-link:focus-visible) {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
+.ledger .num {
+  text-align: right;
 }
 .chev {
   width: 48px;
@@ -192,10 +153,37 @@ tbody tr:has(.row-link:focus-visible) {
   display: inline-flex;
   vertical-align: middle;
 }
+.cards {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.card {
+  padding: var(--space-4);
+  background: var(--paper);
+}
+li + li {
+  margin-top: var(--space-2);
+}
+a.card {
+  display: block;
+  min-height: 64px;
+  color: var(--ink);
+  text-decoration: none;
+}
+a.card:hover {
+  background: var(--row-hover);
+}
+a.card:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
 .card-title {
   display: block;
-  font-weight: 600;
   margin-bottom: var(--space-2);
+  font-size: var(--t-1);
+  font-weight: 600;
 }
 .card dl {
   margin: 0;
@@ -209,21 +197,14 @@ tbody tr:has(.row-link:focus-visible) {
 }
 .card dt {
   color: var(--ink-soft);
-  font-size: 14px;
 }
 .card dd {
   margin: 0;
 }
 @media (max-width: 639.98px) {
-  h1 {
-    font-size: 32px;
-  }
   .panel {
     padding-left: var(--space-4);
     padding-right: var(--space-4);
-  }
-  .figure dd {
-    font-size: 30px;
   }
   .table-wide {
     display: none;
@@ -235,7 +216,6 @@ tbody tr:has(.row-link:focus-visible) {
 .foot {
   margin: var(--space-3) 0 0;
   color: var(--ink-soft);
-  font-size: 14px;
 }
 
 .empty {
@@ -245,25 +225,18 @@ tbody tr:has(.row-link:focus-visible) {
 .empty.boxed {
   padding: var(--space-6) var(--space-4);
   background: var(--paper);
+  font-size: var(--t-1);
 }
 
-/* Where the compliance figure comes from: typed in from SIGERSOL (brief: always "ingreso manual"). */
-.source {
-  margin: var(--space-4) 0 0;
-  padding-top: var(--space-3);
-  border-top: 2px dotted var(--rule-dots);
-  color: var(--ink-soft);
-  font-size: 13px;
-}
-
-/* An annulled certificate stays in the list, marked: the word carries it, the heavy rule only reinforces it. */
-.actions {
-  margin-bottom: var(--space-5);
-}
+/* Acciones de la empresa: enlaces de texto al final, no una fila de botones que compita con lo que se usa. */
 .actions:focus {
   outline: none;
 }
-.actions .buttons,
+.actions .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-6);
+}
 .edit-contact .buttons {
   display: flex;
   flex-wrap: wrap;
@@ -272,7 +245,6 @@ tbody tr:has(.row-link:focus-visible) {
 }
 .edit-contact {
   margin-top: var(--space-4);
-  max-width: 520px;
 }
 .unverified-tag,
 .annulled-tag {
@@ -280,15 +252,14 @@ tbody tr:has(.row-link:focus-visible) {
   margin-left: var(--space-2);
   padding: 0 var(--space-2);
   border: 2px solid var(--ink);
-  font-size: 12px;
+  font-size: var(--t-note);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-/* Deleting is closed to a company with certificates: the reason sits where the button was. */
+/* Eliminar está cerrado para una empresa con certificados: el motivo ocupa el lugar del botón. */
 .locked {
   margin: var(--space-3) 0 0;
   color: var(--ink-soft);
-  font-size: 14px;
 }

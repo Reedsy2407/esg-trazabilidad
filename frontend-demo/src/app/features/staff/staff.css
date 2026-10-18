@@ -5,7 +5,6 @@
 }
 .panel h2 {
   margin-bottom: var(--space-3);
-  font-size: 15px;
 }
 .panel > p {
   max-width: 64ch;
@@ -19,7 +18,7 @@
 }
 .facts dt {
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
 }
 .facts dd {
   margin: var(--space-1) 0 0;

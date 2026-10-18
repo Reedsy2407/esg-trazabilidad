@@ -3,7 +3,9 @@
     <div class="printout">
       <!-- The ticket feeds out of the printer's head once, when the page opens. -->
       <div class="printer" aria-hidden="true"></div>
-      <section class="ticket card" aria-labelledby="login-title">
+      <section class="ticket fold card" aria-labelledby="login-title">
+        <!-- The name is the h1 below, so the logo is decorative here. -->
+        <app-logo class="brand-mark" [size]="96" />
         <h1 id="login-title">Trazabilidad ESG</h1>
         <p class="lead">Inicia sesión con tu correo y contraseña.</p>
         <hr class="dots" />

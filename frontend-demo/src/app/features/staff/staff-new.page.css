@@ -2,7 +2,7 @@ h2:focus {
   outline: none;
 }
 .handover {
-  border-left: 4px solid var(--ink);
+  border: 2px solid var(--ink);
 }
 .warning {
   font-weight: 600;

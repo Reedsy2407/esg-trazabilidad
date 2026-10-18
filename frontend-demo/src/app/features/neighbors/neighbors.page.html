@@ -40,6 +40,8 @@
     <button type="button" class="btn" (click)="neighbors.reload()">Volver a intentar</button>
   </div>
 } @else if (page(); as current) {
+  <div class="cols">
+  <div class="main-col">
   @if (current.content.length === 0 && current.totalElements > 0) {
     <p class="empty-note">
       Esta página ya no tiene vecinos. <a [routerLink]="[]" [queryParams]="{ pagina: null }" queryParamsHandling="merge">Ir a la primera página</a>
@@ -111,6 +113,13 @@
       </div>
     }
   </nav>
+  </div>
+  @if (current.totalElements > 0) {
+    <aside class="side side-first sticky">
+      <app-tally label="Vecinos registrados" [total]="current.totalElements" [rows]="tallyRows()" />
+    </aside>
+  }
+  </div>
 } @else {
   <div aria-hidden="true">
     <span class="skel wide"></span><span class="skel wide"></span><span class="skel wide"></span>

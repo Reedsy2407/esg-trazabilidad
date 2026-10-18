@@ -6,11 +6,10 @@
   color: var(--ink-soft);
 }
 h2 {
-  font-size: 15px;
   margin-bottom: var(--space-3);
 }
 h3 {
-  font-size: 14px;
+  font-size: var(--t-note);
   margin-bottom: var(--space-3);
 }
 .sec {
@@ -28,7 +27,7 @@ h3 {
 }
 .details dt {
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
 }
 .details dd {
   margin: var(--space-1) 0 0;
@@ -61,12 +60,11 @@ h3 {
 }
 .when {
   min-width: 130px;
-  font-size: 16px;
   font-weight: 600;
 }
 .state {
   min-width: 90px;
-  font-size: 14px;
+  font-size: var(--t-note);
 }
 li[data-status='PAUSED'] .state,
 li[data-status='CANCELLED'] .state,
@@ -118,13 +116,13 @@ li[data-status='CANCELLED'] .when {
 label {
   display: block;
   margin-bottom: var(--space-2);
-  font-size: 14px;
+  font-size: var(--t-note);
   font-weight: 600;
 }
 .hint {
   margin: var(--space-2) 0 0;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
 }
 .add .problem {
   margin-top: var(--space-3);
@@ -137,15 +135,10 @@ label {
 }
 .code {
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--t-note);
   overflow-wrap: anywhere;
 }
 
-.skel.title {
-  width: 320px;
-  height: 22px;
-  margin-top: 0;
-}
 
 @media (max-width: 639.98px) {
   .details {
@@ -203,7 +196,7 @@ label {
 .inactive-note {
   margin: 0 0 var(--space-4);
   padding: var(--space-3) var(--space-4);
-  border-left: 4px solid var(--ink);
+  border: 2px solid var(--ink);
   background: var(--paper);
 }
 .state-box {

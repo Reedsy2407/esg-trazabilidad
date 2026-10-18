@@ -51,7 +51,7 @@ export const REASON_MAX = 500;
     }
     h3 {
       margin: 0 0 var(--space-2);
-      font-size: 15px;
+      font-size: var(--t-1);
     }
     .explain {
       margin: 0 0 var(--space-4);
@@ -59,7 +59,7 @@ export const REASON_MAX = 500;
     label {
       display: block;
       margin-bottom: var(--space-2);
-      font-size: 14px;
+      font-size: var(--t-note);
       font-weight: 600;
     }
     textarea.control {
@@ -70,7 +70,7 @@ export const REASON_MAX = 500;
     .counter {
       margin: var(--space-1) 0 0;
       color: var(--ink-soft);
-      font-size: 13px;
+      font-size: var(--t-note);
     }
     .check {
       display: inline-flex;

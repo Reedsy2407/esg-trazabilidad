@@ -1,10 +1,10 @@
-<header class="head">
+<header class="head page-head in" style="--i: 0">
   <h1>Registrar recojo</h1>
-  <p class="lead">Un registro por cada recojo en casa de un vecino.</p>
+  <p class="sub">Un registro por cada recojo en casa de un vecino.</p>
 </header>
 
-<div class="record-layout">
-  <section class="sheet" aria-labelledby="form-title">
+<div class="cols record-layout">
+  <section class="sheet in" style="--i: 2" aria-labelledby="form-title">
     <h2 id="form-title" class="visually-hidden">Datos del recojo</h2>
 
     <!-- Always in the DOM: a live region that appears together with its text isn't reliably announced. -->
@@ -29,7 +29,7 @@
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate #formElement>
         <div class="pair">
           <div class="field">
-            <label for="neighbor">Vecino <span class="optional">(escribe un nombre o distrito, o elige de la lista)</span></label>
+            <label for="neighbor">Vecino</label>
             @if (neighbors.error(); as e) {
               <div class="problem load-problem" role="alert">
                 <p>{{ loadError(e, 'los vecinos') }}</p>
@@ -50,7 +50,7 @@
                 [attr.aria-expanded]="neighborOpen()"
                 [attr.aria-activedescendant]="neighborOpen() && neighborActive() >= 0 && neighborActive() < filteredNeighborOptions().length ? 'neighbor-opt-' + neighborActive() : null"
                 [attr.aria-invalid]="fieldInvalid('neighborId')"
-                [attr.aria-describedby]="describedBy(fieldInvalid('neighborId') ? 'neighbor-error' : null, neighborsTruncated() ? 'neighbor-more' : null)"
+                [attr.aria-describedby]="describedBy('neighbor-help', fieldInvalid('neighborId') ? 'neighbor-error' : null, neighborsTruncated() ? 'neighbor-more' : null)"
                 [attr.aria-busy]="neighbors.isLoading()"
                 [placeholder]="neighbors.isLoading() ? 'Cargando vecinos…' : 'Elige un vecino'"
                 [value]="neighborShown()"
@@ -80,6 +80,7 @@
                 }
               </ul>
             </div>
+            <p class="hint" id="neighbor-help">Escribe un nombre o distrito, o elige de la lista.</p>
             <p class="visually-hidden" role="status">{{ neighborMatches() }}</p>
             @if (neighborsTruncated()) {
               <p class="hint" id="neighbor-more">Se muestran los primeros {{ neighborOptions().length }} vecinos por nombre.</p>
@@ -197,17 +198,19 @@
   @if (!saved()) {
     <!-- The ticket this record will print, from the form's own fields as they are typed.
          Presentational: the form already says all of it, so screen readers skip it. -->
-    <aside class="preview ticket" aria-hidden="true">
-      <p class="preview-title">Así quedará el registro</p>
-      <hr class="dots" />
-      <dl>
-        <div><dt>Vecino</dt><dd>{{ preview().neighbor ?? '—' }}</dd></div>
-        <div><dt>Asociación</dt><dd>{{ preview().association ?? '—' }}</dd></div>
-        <div><dt>Fecha</dt><dd class="mono">{{ preview().date ?? '—' }}</dd></div>
-        <div><dt>Cronograma</dt><dd>{{ preview().schedule ?? '—' }}</dd></div>
-      </dl>
-      <hr class="dots" />
-      <p class="preview-kilos mono">{{ preview().kilos ?? '— kg' }}</p>
+    <aside class="side sticky" aria-hidden="true">
+      <div class="in" style="--i: 4">
+        <div class="visor fold fold-dark preview">
+          <p class="lab">Así quedará el registro</p>
+          <p class="big mono" [class.empty]="preview().kilos === null" [style.font-size]="previewSize()">{{ previewFigure() }}<small>kg</small></p>
+          <dl>
+            <div class="row"><dt>Vecino</dt><dd>{{ preview().neighbor ?? '—' }}</dd></div>
+            <div class="row"><dt>Asociación</dt><dd>{{ preview().association ?? '—' }}</dd></div>
+            <div class="row"><dt>Fecha</dt><dd class="mono">{{ preview().date ?? '—' }}</dd></div>
+            <div class="row"><dt>Cronograma</dt><dd>{{ preview().schedule ?? '—' }}</dd></div>
+          </dl>
+        </div>
+      </div>
     </aside>
   }
 </div>

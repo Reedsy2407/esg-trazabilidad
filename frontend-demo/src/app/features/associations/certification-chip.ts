@@ -24,7 +24,7 @@ const LABELS: Record<CertificationState, string> = {
       gap: 7px;
       padding: 2px 8px 2px 7px;
       border: 1.5px solid currentColor;
-      font-size: 13px;
+      font-size: var(--t-note);
       font-weight: 600;
       white-space: nowrap;
     }

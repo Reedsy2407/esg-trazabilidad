@@ -189,21 +189,21 @@ test('the largest weight the column allows (99999999.99) fits in the field at ev
     await page.getByLabel('Peso recolectado (kg)').fill('99999999.99');
     const fit = await page.getByLabel('Peso recolectado (kg)').evaluate((el) => ({ client: el.clientWidth, scroll: el.scrollWidth }));
     expect(fit.scroll, `${width} px`).toBeLessThanOrEqual(fit.client);
-    // The preview prints it on one line too, unit included, inside the ticket.
-    const line = await page.locator('aside.preview .preview-kilos').evaluate((el) => ({
+    // The preview display shows it on one line too, unit included, inside the panel.
+    const line = await page.locator('aside[aria-hidden] .preview .big').evaluate((el) => ({
       text: el.textContent!.trim(),
       fits: el.scrollWidth <= el.clientWidth,
     }));
-    expect(line.text, `${width} px`).toBe('99,999,999.99 kg');
+    expect(line.text, `${width} px`).toBe('99,999,999.99kg');
     expect(line.fits, `${width} px: preview kilos fit`).toBe(true);
   }
 });
 
 for (const width of [360, 768, 1280]) {
-  test(`the preview ticket at ${width} px: follows the typing, ${width >= 1001 ? 'beside' : 'below'} the form, presentational`, async ({ page }) => {
+  test(`the preview display at ${width} px: follows the typing, ${width >= 1001 ? 'beside' : 'below'} the form, presentational`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await openForm(page);
-    const preview = page.locator('aside.preview');
+    const preview = page.locator('aside[aria-hidden]');
     await expect(preview).toHaveAttribute('aria-hidden', 'true');
 
     await chooseNeighbor(page, `${ROSA.fullName} · ${ROSA.district}`);
@@ -211,7 +211,7 @@ for (const width of [360, 768, 1280]) {
     await page.getByLabel('Peso recolectado (kg)').fill('8.25');
     await expect(preview).toContainText(ROSA.fullName);
     await expect(preview).toContainText(ASSOCIATIONS[0].name);
-    await expect(preview).toContainText('8.25 kg');
+    await expect(preview).toContainText('8.25kg');
 
     const [form, ticket] = await Promise.all([page.locator('section.sheet').boundingBox(), preview.boundingBox()]);
     if (width >= 1001) {

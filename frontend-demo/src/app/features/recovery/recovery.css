@@ -15,7 +15,7 @@
 .printer {
   height: 22px;
   margin: 0 -10px;
-  background: var(--ink);
+  background: var(--brand-deep);
 }
 .card {
   padding-left: var(--space-8);
@@ -23,7 +23,7 @@
 }
 h1 {
   color: var(--ink);
-  font-size: 24px;
+  font-size: var(--t-3);
   text-align: center;
 }
 h1:focus {
@@ -37,14 +37,13 @@ h1:focus {
 .fixed-email {
   margin: var(--space-2) 0 0;
   font-weight: 600;
-  font-size: 15px;
   text-align: center;
   overflow-wrap: anywhere;
 }
 .change-email {
   margin: 0;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--t-note);
 }
 .change-email a {
   display: inline-block;
@@ -61,13 +60,13 @@ h1:focus {
 label {
   display: block;
   margin-bottom: var(--space-2);
-  font-size: 14px;
+  font-size: var(--t-note);
   font-weight: 600;
 }
 .hint {
   margin: var(--space-2) 0 0;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--t-note);
 }
 .code {
   font-family: var(--font-mono, ui-monospace, monospace);
@@ -108,12 +107,12 @@ label {
 .wait {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--t-note);
 }
 .links {
   margin: var(--space-5) 0 0;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--t-note);
 }
 .links a {
   display: inline-block;
@@ -127,4 +126,10 @@ label {
   .printer {
     margin: 0 -6px;
   }
+}
+
+.brand-mark {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-3);
 }

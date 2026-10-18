@@ -1,0 +1,28 @@
+{
+  "name": "Trazabilidad ESG",
+  "short_name": "Trazabilidad",
+  "description": "Trazabilidad ESG para recicladores formalizados en Lima Metropolitana",
+  "lang": "es-PE",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#d6dbd9",
+  "theme_color": "#1a576c",
+  "icons": [
+    {
+      "src": "brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "brand/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

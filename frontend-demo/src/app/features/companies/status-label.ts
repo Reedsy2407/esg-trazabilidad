@@ -17,10 +17,10 @@ const LABELS: Record<Status, string> = { ACTIVE: 'Activa', INACTIVE: 'Inactiva',
   template: `<span class="mark" [class.off]="status() !== 'ACTIVE'" aria-hidden="true"></span>{{ label() }}`,
   host: { '[class.inactive]': "status() !== 'ACTIVE'" },
   styles: `
-    :host { display: inline-flex; align-items: center; gap: var(--space-2); }
+    :host { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 600; }
     :host(.inactive) { color: var(--ink-soft); }
-    .mark { width: 8px; height: 8px; background: var(--ink); }
-    .mark.off { background: transparent; border: 1px solid var(--ink-soft); }
+    .mark { width: 14px; height: 14px; background: var(--ink); }
+    .mark.off { background: transparent; border: 2px solid var(--ink-soft); }
   `,
 })
 export class StatusLabel {

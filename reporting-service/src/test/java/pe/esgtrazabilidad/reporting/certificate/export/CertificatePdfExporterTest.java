@@ -4,11 +4,17 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.contentstream.operator.Operator;
+import org.apache.pdfbox.cos.COSNumber;
+import org.apache.pdfbox.pdfparser.PDFStreamParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 import org.junit.jupiter.api.Test;
@@ -21,6 +27,7 @@ import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificateStatus;
 import pe.esgtrazabilidad.reporting.trackedcompany.domain.TrackedCompany;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 class CertificatePdfExporterTest {
 
@@ -53,6 +60,124 @@ class CertificatePdfExporterTest {
         assertThat(extractedText).contains("85.00");
         assertThat(extractedText).contains("Proyecto académico, sin validez legal");
         assertThat(extractedText).contains("VIGENTE").doesNotContain("ANULADO");
+    }
+
+    // ---- the brand header: the logo's blue and the logo mark -----------------------------------
+
+    @Test
+    void theHeaderBandIsTheLogosBlueWithTheLogoAndTheTwoTitleLines() throws IOException {
+        byte[] pdf = exporter.export(issued());
+
+        try (PDDocument document = Loader.loadPDF(pdf)) {
+            List<Object> tokens = tokensOf(document.getPage(0));
+            // #1A576C (--brand in the frontend's design tokens), the exact value, as the band's fill.
+            assertThat(fillColors(tokens)).anySatisfy(c -> assertThat(c).containsExactly(new float[] {26 / 255f, 87 / 255f, 108 / 255f}, within(0.001f)));
+            // The logo is the mark drawn as vector paths: the leaf alone takes bezier curves (halo, fill, vein).
+            assertThat(operatorCount(tokens, "c")).isGreaterThanOrEqualTo(7);
+            // White on the band: the mark and the title.
+            assertThat(fillColors(tokens)).anySatisfy(c -> assertThat(c).containsExactly(new float[] {1f, 1f, 1f}, within(0.001f)));
+        }
+        String text = normalized(textOf(pdf));
+        assertThat(text).contains("Certificado de trazabilidad ESG");
+        assertThat(text).contains("Plataforma de trazabilidad ESG · Lima Metropolitana");
+    }
+
+    @Test
+    void everyPageOfALongCertificateRepeatsTheBandWithTheLogo() throws IOException {
+        List<DistrictLine> districts = IntStream.range(0, 40)
+                .mapToObj(i -> new DistrictLine(
+                        String.format("1501%02d", i), "Distrito " + i, BigDecimal.ONE, DistrictLine.Status.AVAILABLE, 2024, 1, 2))
+                .toList();
+
+        try (PDDocument document = Loader.loadPDF(exporter.export(issued(), districts))) {
+            assertThat(document.getNumberOfPages()).isGreaterThan(1);
+            for (PDPage page : document.getPages()) {
+                List<Object> tokens = tokensOf(page);
+                assertThat(operatorCount(tokens, "c")).as("the logo's curves on every page").isGreaterThanOrEqualTo(7);
+                assertThat(fillColors(tokens)).anySatisfy(c -> assertThat(c).containsExactly(new float[] {26 / 255f, 87 / 255f, 108 / 255f}, within(0.001f)));
+            }
+        }
+    }
+
+    @Test
+    void theBandsTextMeetsAaContrast() {
+        // White on the brand blue is 8.0:1 (AAA); the band's soft text, --brand-soft, 5.65:1 (AA for small text).
+        assertThat(contrast(CertificatePdfExporter.WHITE, CertificatePdfExporter.BAND)).isGreaterThanOrEqualTo(7.9);
+        assertThat(contrast(CertificatePdfExporter.BAND_SOFT, CertificatePdfExporter.BAND)).isGreaterThanOrEqualTo(4.5);
+    }
+
+    @Test
+    void theLogoKeepsItsProportionsAndItsClearSpaceInsideTheBand() {
+        float height = CertificatePdfExporter.LOGO_H;
+        float width = CertificateLogo.widthFor(height);
+        // About 14 mm tall (40 pt) and a little narrower than tall, never stretched.
+        assertThat(height / 2.835f).isBetween(13f, 15f);
+        assertThat(width / height).isBetween(0.90f, 1.0f);
+        // The leaf is about 0.39 of the mark's width: the clear space above and below must be at least that.
+        float clearSpace = (CertificatePdfExporter.BAND_H - height) / 2f;
+        assertThat(clearSpace).isGreaterThanOrEqualTo(0.39f * width);
+    }
+
+    @Test
+    void theContinuationHeaderKeepsALongCapitalsNameInsideTheRightMargin() throws IOException {
+        String name = "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM";
+        List<DistrictLine> districts = IntStream.range(0, 40)
+                .mapToObj(i -> new DistrictLine(
+                        String.format("1501%02d", i), "Distrito " + i, BigDecimal.ONE, DistrictLine.Status.AVAILABLE, 2024, 1, 2))
+                .toList();
+        EsgCertificate certificate = EsgCertificate.issue(
+                TrackedCompany.create(name, "20123456789", UUID.randomUUID()),
+                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), new BigDecimal("120.50"), new BigDecimal("85.00"));
+
+        try (PDDocument document = Loader.loadPDF(exporter.export(certificate, districts))) {
+            PDFTextStripper stripper = new PDFTextStripper() {
+                @Override
+                protected void writeString(String text, List<TextPosition> positions) throws IOException {
+                    for (TextPosition position : positions) {
+                        assertThat(position.getEndX()).as("text ends inside the right margin").isLessThanOrEqualTo(595.3f - 50f + 0.5f);
+                    }
+                    super.writeString(text, positions);
+                }
+            };
+            stripper.setStartPage(2);
+            stripper.setEndPage(2);
+            assertThat(stripper.getText(document)).contains("MMMM").contains("...");
+        }
+    }
+
+    private static List<Object> tokensOf(PDPage page) throws IOException {
+        return new PDFStreamParser(page).parse();
+    }
+
+    private static long operatorCount(List<Object> tokens, String name) {
+        return tokens.stream().filter(t -> t instanceof Operator op && op.getName().equals(name)).count();
+    }
+
+    /** The RGB operands of every non-stroking colour operation (the rg operator) in the stream. */
+    private static List<float[]> fillColors(List<Object> tokens) {
+        List<float[]> colors = new ArrayList<>();
+        for (int i = 3; i < tokens.size(); i++) {
+            if (tokens.get(i) instanceof Operator op && op.getName().equals("rg")
+                    && tokens.get(i - 1) instanceof COSNumber b && tokens.get(i - 2) instanceof COSNumber g
+                    && tokens.get(i - 3) instanceof COSNumber r) {
+                colors.add(new float[] {r.floatValue(), g.floatValue(), b.floatValue()});
+            }
+        }
+        return colors;
+    }
+
+    private static double contrast(float[] a, float[] b) {
+        double la = luminance(a);
+        double lb = luminance(b);
+        return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+    }
+
+    private static double luminance(float[] rgb) {
+        double[] c = new double[3];
+        for (int i = 0; i < 3; i++) {
+            c[i] = rgb[i] <= 0.03928 ? rgb[i] / 12.92 : Math.pow((rgb[i] + 0.055) / 1.055, 2.4);
+        }
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     }
 
     private EsgCertificate issued() {
@@ -122,7 +247,7 @@ class CertificatePdfExporterTest {
 
     @Test
     void manyDistrictsContinueOnFurtherPagesAndEveryPageKeepsTheFooter() throws IOException {
-        List<DistrictLine> districts = java.util.stream.IntStream.range(0, 40)
+        List<DistrictLine> districts = IntStream.range(0, 40)
                 .mapToObj(i -> new DistrictLine(
                         String.format("1501%02d", i), "Distrito " + i, BigDecimal.ONE, DistrictLine.Status.AVAILABLE, 2024, 1, 2))
                 .toList();

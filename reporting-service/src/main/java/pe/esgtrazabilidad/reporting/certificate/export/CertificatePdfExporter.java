@@ -31,7 +31,8 @@ import pe.esgtrazabilidad.reporting.certificate.domain.EsgCertificate;
  * Pure function: in-memory EsgCertificate (plus the district context frozen at issue) -> PDF
  * bytes. No Postgres/RabbitMQ dependency, same discipline as CertificateCsvExporter.
  *
- * Laid out like the ticket on screen: a title band, a VIGENTE / ANULADO stamp, the company, the
+ * Laid out like the ticket on screen: a title band in the logo's blue (the logo mark at its left, drawn as
+ * vector paths: see CertificateLogo), a VIGENTE / ANULADO stamp, the company, the
  * kilos as the one big figure and the rest as a striped table. Dates read dd/MM/yyyy and times are
  * Lima time. An annulled certificate says so three ways (stamp, boxed when/who/why, a pale diagonal
  * mark on every page) and still shows its frozen numbers. The district section lists SIGERSOL
@@ -55,7 +56,7 @@ public class CertificatePdfExporter {
     private static final float PAGE_H = PDRectangle.A4.getHeight();
     private static final float MARGIN = 50f;
     private static final float CONTENT_W = PAGE_W - 2 * MARGIN;
-    private static final float BAND_H = 78f;
+    static final float BAND_H = 78f;
     /** Below this height a new page starts, leaving room above the footer. */
     private static final float BOTTOM_LIMIT = 80f;
     private static final float VALUE_X = 235f;
@@ -63,7 +64,14 @@ public class CertificatePdfExporter {
 
     private static final float[] INK = {0.10f, 0.10f, 0.10f};
     private static final float[] SOFT = {0.42f, 0.42f, 0.40f};
-    private static final float[] BAND = {0.09f, 0.20f, 0.16f};
+    /** The brand blue #1A576C (--brand in frontend-demo/src/styles.css): white on it is 8.0:1, the band's soft text 5.65:1. */
+    static final float[] BAND = {26 / 255f, 87 / 255f, 108 / 255f};
+    static final float[] WHITE = {1f, 1f, 1f};
+    /** --brand-soft #C4DDE6: the band's secondary text, 5.65:1 on the brand blue. */
+    static final float[] BAND_SOFT = {196 / 255f, 221 / 255f, 230 / 255f};
+    /** The logo mark is about 14 mm tall (40 pt), with the leaf's width of clear space around it inside the 78 pt band. */
+    static final float LOGO_H = 40f;
+    private static final float LOGO_GAP = 16f;
     private static final float[] VALID = {0.09f, 0.45f, 0.25f};
     private static final float[] VOID = {0.70f, 0.10f, 0.10f};
     private static final float[] VOID_TINT = {1.00f, 0.93f, 0.93f};
@@ -334,15 +342,18 @@ public class CertificatePdfExporter {
                 content.restoreGraphicsState();
             }
             fillRect(0, PAGE_H - BAND_H, PAGE_W, BAND_H, BAND);
+            float logoTop = PAGE_H - (BAND_H - LOGO_H) / 2;
+            CertificateLogo.draw(content, MARGIN, logoTop, LOGO_H, WHITE, BAND);
+            float textX = MARGIN + CertificateLogo.widthFor(LOGO_H) + LOGO_GAP;
             if (first) {
-                text(bold, 20, new float[] {1, 1, 1}, MARGIN, PAGE_H - 40, "Certificado de trazabilidad ESG");
-                text(regular, 9, new float[] {0.80f, 0.86f, 0.83f}, MARGIN, PAGE_H - 60, "Plataforma de trazabilidad ESG · Lima Metropolitana");
+                text(bold, 20, WHITE, textX, PAGE_H - 41, "Certificado de trazabilidad ESG");
+                text(regular, 9, BAND_SOFT, textX, PAGE_H - 58, "Plataforma de trazabilidad ESG · Lima Metropolitana");
                 first = false;
                 y = PAGE_H - BAND_H - 30;
             } else {
-                text(bold, 12, new float[] {1, 1, 1}, MARGIN, PAGE_H - 36, "Certificado de trazabilidad ESG (continuación)");
+                text(bold, 12, WHITE, textX, PAGE_H - 38, "Certificado de trazabilidad ESG (continuación)");
                 String name = printable(regular, company);
-                text(regular, 9, new float[] {0.80f, 0.86f, 0.83f}, MARGIN, PAGE_H - 56, name.length() > 90 ? name.substring(0, 90) + "…" : name);
+                text(regular, 9, BAND_SOFT, textX, PAGE_H - 56, fitted(regular, 9, name, PAGE_W - MARGIN - textX));
                 y = PAGE_H - BAND_H - 30;
             }
         }
@@ -417,6 +428,19 @@ public class CertificatePdfExporter {
             }
         });
         return out.toString();
+    }
+
+    /** The text cut, with an ellipsis, to the width it has: by real width, not by character count (capitals are wider). */
+    static String fitted(PDFont font, float fontSize, String text, float maxWidth) throws IOException {
+        String printable = printable(font, text);
+        if (width(font, fontSize, printable) <= maxWidth) {
+            return printable;
+        }
+        int end = printable.length();
+        while (end > 1 && width(font, fontSize, printable.substring(0, end) + "...") > maxWidth) {
+            end--;
+        }
+        return printable.substring(0, end).stripTrailing() + "...";
     }
 
     private static List<String> wrap(PDFont font, float fontSize, String text, float maxWidth) throws IOException {

@@ -12,6 +12,7 @@ import { SessionService } from '../../core/auth/session.service';
 import { ApiError } from '../../core/http/api-error';
 import { isUnavailable, unavailableText } from '../../shared/error-message';
 import { Logo } from '../../shared/logo';
+import { DEMO_ACCOUNT } from './demo-account';
 
 /** Used when a 429 arrives without a readable Retry-After (the limiter refills one attempt every 12 s). */
 const FALLBACK_LOCK_SECONDS = 60;
@@ -45,6 +46,8 @@ export class LoginPage {
   private readonly passwordInput = viewChild<ElementRef<HTMLInputElement>>('passwordInput');
 
   protected readonly submitting = signal(false);
+  /** True while a sign-in started by the demonstration button is in flight (it names the account in the live region). */
+  protected readonly demoSubmitting = signal(false);
   protected readonly submitted = signal(false);
   /** Form-level error, announced by role="alert" when it appears. */
   protected readonly error = signal<string | null>(null);
@@ -105,6 +108,16 @@ export class LoginPage {
     return control.invalid && (control.touched || this.submitted());
   }
 
+  /** Fills the form with the public demonstration account and sends it, exactly as if it had been typed. */
+  protected useDemoAccount(): void {
+    if (this.submitting() || this.locked()) {
+      return;
+    }
+    this.form.setValue({ email: DEMO_ACCOUNT.email, password: DEMO_ACCOUNT.password });
+    this.demoSubmitting.set(true);
+    this.submit();
+  }
+
   protected submit(): void {
     this.submitted.set(true);
     if (this.form.invalid || this.locked() || this.submitting()) {
@@ -120,6 +133,7 @@ export class LoginPage {
       },
       error: (error: unknown) => {
         this.submitting.set(false);
+        this.demoSubmitting.set(false);
         this.handleError(error);
       },
     });

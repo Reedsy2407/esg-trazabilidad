@@ -15,6 +15,7 @@
             <toc-element topic="sigersol-declarado.md"/>
             <toc-element topic="certificados-pdf-csv.md"/>
             <toc-element topic="consola-del-personal.md"/>
+            <toc-element topic="recorrido-de-demostracion.md"/>
             <toc-element topic="roles-y-cuentas.md"/>
             <toc-element topic="politica-contrasenas.md"/>
             <toc-element topic="sesion-jwt.md"/>

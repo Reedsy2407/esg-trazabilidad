@@ -1,5 +1,6 @@
 import { Page, Route } from '@playwright/test';
 
+import { DEMO_ACCOUNT } from '../src/app/features/login/demo-account';
 import { districtByUbigeo } from '../src/app/shared/districts';
 import { isValidRuc } from '../src/app/shared/ruc';
 
@@ -378,10 +379,15 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     }
     const body: unknown = route.request().postDataJSON();
     const { email, password } = body as { email: string; password: string };
-    if (password !== PASSWORD) {
+    // The public demonstration account (a STAFF user) signs in like any other; its credentials live in one constant.
+    const isDemo = email === DEMO_ACCOUNT.email && password === DEMO_ACCOUNT.password;
+    if (password !== PASSWORD && !isDemo) {
       return problem(route, 401, 'AUTH-001', 'Credenciales inválidas');
     }
-    const accessToken = jwtFor(email, options.tokenLifetimeSeconds, { role: options.role, pwdChange: options.pwdChange });
+    const accessToken = jwtFor(email, options.tokenLifetimeSeconds, {
+      role: isDemo ? 'STAFF' : options.role,
+      pwdChange: isDemo ? false : options.pwdChange,
+    });
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ accessToken }) });
   });
 

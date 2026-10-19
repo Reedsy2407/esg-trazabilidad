@@ -5,6 +5,23 @@ Plataforma web que lleva la cuenta de cada kilo de residuo que recogen los recic
 - **Sitio:** <https://esg-frontend-egcf.onrender.com> (los servicios están en el plan gratuito de Render: la primera visita puede tardar hasta 2 minutos mientras despiertan; la pantalla «Preparando el sistema» lo explica).
 - **Portal de documentación:** <https://reedsy2407.github.io/esg-trazabilidad/> (cada endpoint en lenguaje de negocio, glosario de estados, catálogo de errores, decisiones de diseño y diagramas).
 
+## Probar el sistema
+
+Se puede probar el sistema real en menos de un minuto, sin registrarse:
+
+1. Abre <https://esg-frontend-egcf.onrender.com>.
+2. En la pantalla de inicio de sesión pulsa **«Entrar con la cuenta de demostración»** (entra en un clic).
+3. Recorre una empresa, registra un recojo y abre un certificado: los pasos están en el capítulo [Recorrido de demostración](https://reedsy2407.github.io/esg-trazabilidad/recorrido-de-demostracion.html) del portal.
+
+Si prefieres escribirla a mano:
+
+- **Correo:** `demo@esg-trazabilidad.example`
+- **Contraseña:** `bev2Yp2RyZuDqwJnuB7N`
+
+> Es una cuenta de **demostración con datos ficticios** (o entidades públicas usadas como ejemplo): tiene el rol de personal, sin administración de cuentas, y todo lo que se registre lo verá quien use la cuenta. La contraseña es pública a propósito y no protege nada más que esos datos.
+>
+> La primera carga puede tardar hasta **un minuto** (a veces dos): los servicios están en el plan gratuito de Render y se duermen; la pantalla «Preparando el sistema» lo explica.
+
 ## El problema y para quién es
 
 Una empresa que quiere decir «reciclamos» necesita poder probarlo con datos: cuántos kilos, de qué asociación de recicladores y en qué período. Los recicladores trabajan casa por casa y casi nunca dejan un rastro que se pueda auditar.

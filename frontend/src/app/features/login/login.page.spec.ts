@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 import { SessionService } from '../../core/auth/session.service';
 import { errorInterceptor, jwtInterceptor } from '../../core/http/interceptors';
 import { inOneHour, testJwt } from '../../testing/jwt';
+import { DEMO_ACCOUNT } from './demo-account';
 import { LoginPage, WAKE_NOTICE_AFTER_MS } from './login.page';
 
 const LOGIN_URL = `${environment.services.auth}/auth/login`;
@@ -83,6 +84,41 @@ describe('LoginPage', () => {
 
     expect(TestBed.inject(SessionService).email()).toBe('ana.paredes@asociacion.pe');
     expect(router.navigate).toHaveBeenCalledWith(['/empresas']);
+  });
+
+  it('the demonstration button is a real, labelled button that signs in with the public demo account in one click', () => {
+    expect(page.querySelector('#demo-title')?.textContent).toContain('Cuenta de demostración · datos ficticios');
+    const button = page.querySelector<HTMLButtonElement>('button.demo-button');
+    expect(button?.type).toBe('button');
+    expect(button?.textContent?.trim()).toBe('Entrar con la cuenta de demostración');
+
+    button?.click();
+    fixture.detectChanges();
+
+    // The form was filled like a typed one, and the live region says what is happening.
+    expect(page.querySelector<HTMLInputElement>('#email')?.value).toBe(DEMO_ACCOUNT.email);
+    expect(page.querySelector<HTMLInputElement>('#password')?.value).toBe(DEMO_ACCOUNT.password);
+    expect(page.querySelector<HTMLInputElement>('#password')?.type).toBe('password');
+    expect(text()).toContain('Entrando con la cuenta de demostración…');
+    expect(button?.disabled).toBe(true);
+
+    const request = backend.expectOne(LOGIN_URL);
+    expect(request.request.body).toEqual({ email: DEMO_ACCOUNT.email, password: DEMO_ACCOUNT.password });
+    request.flush({ accessToken: testJwt({ email: DEMO_ACCOUNT.email, exp: inOneHour() }) });
+
+    expect(TestBed.inject(SessionService).email()).toBe(DEMO_ACCOUNT.email);
+    expect(router.navigate).toHaveBeenCalledWith(['/empresas']);
+  });
+
+  it('a failed demonstration sign-in says so in the form and gives the button back', () => {
+    const button = page.querySelector<HTMLButtonElement>('button.demo-button');
+    button?.click();
+    backend.expectOne(LOGIN_URL).flush({ status: 401, code: 'AUTH-001', detail: 'x' }, { status: 401, statusText: 'Unauthorized' });
+    fixture.detectChanges();
+
+    expect(page.querySelector('[role=alert]')?.textContent).toContain('El correo o la contraseña no son correctos.');
+    expect(button?.disabled).toBe(false);
+    expect(text()).not.toContain('Entrando con la cuenta de demostración…');
   });
 
   it('on AUTH-001, shows the credentials message in the form and stays on the login', () => {

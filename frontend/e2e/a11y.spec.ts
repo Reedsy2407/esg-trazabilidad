@@ -157,7 +157,7 @@ for (const width of [360, 768, 1280]) {
 
     const layout = await page.evaluate(() => {
       const set = document.querySelector('.set')!.getBoundingClientRect();
-      return { scroll: document.documentElement.scrollWidth, inner: innerWidth, top: set.top, bottom: innerHeight - set.bottom, tall: set.height > innerHeight };
+      return { scroll: document.documentElement.scrollWidth, inner: innerWidth, top: set.top, bottom: innerHeight - set.bottom, tall: document.documentElement.scrollHeight > innerHeight };
     });
     expect(layout.scroll).toBeLessThanOrEqual(layout.inner);
     // AXE judges the printed ticket, not a half-revealed one.

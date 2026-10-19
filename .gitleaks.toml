@@ -71,3 +71,20 @@ paths = [
 ]
 regexTarget = "line"
 regexes = ['''^\s*private static final String SECRET = "un-secreto-compartido-de-prueba-de-32-caracteres";\s*$''']
+
+# The public demonstration account (v3/cuenta-demo): a STAFF user with fictitious data whose password is published on
+# purpose (login button and README) so a visitor can try the system in one click. It protects only fictitious data and
+# can be rotated at any time. Each file is allowed alone, only for the exact line it appears on, never by rule.
+[[allowlists]]
+description = "demonstration account password in the login constant (public by design)"
+condition = "AND"
+paths = ['''^frontend/src/app/features/login/demo-account\.ts$''']
+regexTarget = "line"
+regexes = ['''^\s*password: '[A-Za-z0-9]{20}',\s*$''']
+
+[[allowlists]]
+description = "demonstration account password in the README (public by design)"
+condition = "AND"
+paths = ['''^README\.md$''']
+regexTarget = "line"
+regexes = ['''^- \*\*Contraseña:\*\* `[A-Za-z0-9]{20}`\s*$''']

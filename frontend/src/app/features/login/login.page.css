@@ -101,6 +101,19 @@ label {
   min-height: var(--touch);
   padding: 0 var(--space-2);
 }
+/* La cuenta de demostración, bajo una línea de puntos como el resto del ticket: un botón secundario (con filete de tinta),
+   para que la acción primaria siga siendo «Iniciar sesión». */
+.demo {
+  margin-top: var(--space-4);
+  text-align: center;
+}
+.demo-title {
+  margin: 0 0 var(--space-3);
+  color: var(--ink-soft);
+}
+.demo-button {
+  width: 100%;
+}
 /* Celulares: primero el ticket (iniciar sesión es la tarea), la frase después y más chica. */
 @media (max-width: 900px) {
   .page {

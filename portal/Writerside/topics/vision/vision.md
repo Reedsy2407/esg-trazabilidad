@@ -11,6 +11,7 @@ Esta sección explica qué hace la plataforma y las reglas de negocio que la sos
 - [Cumplimiento de jerarquía declarado (SIGERSOL)](sigersol-declarado.md): una cifra declarada y obligatoria, sin integración real.
 - [Certificados en PDF y CSV](certificados-pdf-csv.md): qué trae cada archivo.
 - [La consola del personal](consola-del-personal.md): qué pantalla usa cada endpoint, las reglas que viven solo en la consola y sus límites.
+- [Recorrido de demostración](recorrido-de-demostracion.md): cómo probar el sistema real en unos minutos.
 - [Roles y cuentas](roles-y-cuentas.md): ADMIN y STAFF.
 - [Política de contraseñas](politica-contrasenas.md): NIST 800-63B.
 - [La sesión: un token de 1 hora](sesion-jwt.md): sin estado y sin revocación.

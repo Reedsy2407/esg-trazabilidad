@@ -73,6 +73,16 @@
           </button>
         </form>
         <p class="forgot"><a routerLink="/olvide-contrasena">¿Olvidaste tu contraseña?</a></p>
+
+        <hr class="dots" />
+        <section class="demo" aria-labelledby="demo-title">
+          <p id="demo-title" class="demo-title">Cuenta de demostración · datos ficticios</p>
+          <!-- Always in the DOM, like the other live regions. -->
+          <p class="visually-hidden" role="status">{{ demoSubmitting() ? 'Entrando con la cuenta de demostración…' : '' }}</p>
+          <button class="btn demo-button" type="button" (click)="useDemoAccount()" [disabled]="submitting() || locked()">
+            Entrar con la cuenta de demostración
+          </button>
+        </section>
       </section>
     </div>
     <p class="claim">Del kilo pesado <span>al certificado de la empresa.</span></p>

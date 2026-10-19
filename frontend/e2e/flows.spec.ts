@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { DEMO_ACCOUNT } from '../src/app/features/login/demo-account';
 import { COMPANIES, EMAIL, PASSWORD, fakeBackend } from './backend';
 
 test('warm services, wrong password, then sign in and open a company', async ({ page }) => {
@@ -198,4 +199,27 @@ test('"Actualizar la lista" that fails: the error block says why (role=alert), t
   await expect(page.getByRole('alert')).toContainText('No se pudo cargar la lista de empresas.');
   await expect(page.getByRole('button', { name: 'Volver a intentar' })).toBeFocused();
   await expect(page.getByRole('status').filter({ hasText: 'Lista actualizada.' })).toHaveCount(0);
+});
+
+test('the demonstration button signs in with the public demo account (a STAFF user) in one click, by keyboard too', async ({ page }) => {
+  const unmocked: string[] = [];
+  await fakeBackend(page, { unmocked });
+  await page.goto('/login');
+
+  await expect(page.getByText('Cuenta de demostración · datos ficticios')).toBeVisible();
+  const demo = page.getByRole('button', { name: 'Entrar con la cuenta de demostración' });
+  // Reachable with Tab and visibly focused, with no keyboard trap.
+  await page.getByRole('link', { name: '¿Olvidaste tu contraseña?' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(demo).toBeFocused();
+  await expect(demo).toHaveCSS('outline-style', 'solid');
+
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/empresas$/);
+  await expect(page.getByRole('heading', { name: 'Empresas', level: 1 })).toBeVisible();
+
+  // It is a STAFF session: no account administration.
+  await page.getByRole('link', { name: `Mi sesión: ${DEMO_ACCOUNT.email}` }).click();
+  await expect(page.getByRole('link', { name: 'Cuentas del personal' })).toHaveCount(0);
+  expect(unmocked).toEqual([]);
 });

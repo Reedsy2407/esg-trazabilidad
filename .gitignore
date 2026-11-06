@@ -38,3 +38,18 @@ scripts/smoke-cred.ps1
 scripts/smoke-prod.sh
 scripts/verify-deploy.sh
 docs/
+
+# agent-kit (herramientas locales, no son parte del producto)
+/kit/
+/ops/
+/scripts/salud.mjs
+/scripts/sondeo-acceso.mjs
+/design/
+/tests/front/
+/CLAUDE.md
+/HANDOFF.md
+/tasks/
+/.claude/
+/design/refs/
+/node_modules/
+/tests/front/datos-privados.json

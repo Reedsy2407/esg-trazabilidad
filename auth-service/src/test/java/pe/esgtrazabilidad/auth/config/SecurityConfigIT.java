@@ -195,10 +195,62 @@ class SecurityConfigIT {
                 .header("Access-Control-Expose-Headers", containsString("Retry-After"));
     }
 
+    @Test
+    void aRecyclerTokenOnAStaffRouteReturns403WithAuth000() throws Exception {
+        // CA-1: the role decides, not only the signature.
+        given().header("Authorization", "Bearer " + recyclerToken(60_000))
+                .when()
+                .get("/test/ping")
+                .then()
+                .statusCode(403)
+                .body("code", equalTo("AUTH-000"))
+                .body("detail", equalTo("No tienes permiso para esta acción"));
+    }
+
+    @Test
+    void aRecyclerTokenWithoutAuthorityOnARealStaffRouteReturns403() throws Exception {
+        given().header("Authorization", "Bearer " + recyclerToken(60_000))
+                .when()
+                .get("/auth/me")
+                .then()
+                .statusCode(403)
+                .body("code", equalTo("AUTH-000"));
+    }
+
+    @Test
+    void anExpiredRecyclerTokenReturns401WithAJsonBody() throws Exception {
+        // CA-17: the bearer filter's own entry point must write the body, not an empty 401.
+        given().header("Authorization", "Bearer " + recyclerToken(-120_000))
+                .when()
+                .get("/test/ping")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("AUTH-000"))
+                .body("detail", equalTo("Token faltante o inválido"));
+    }
+
+    private String recyclerToken(long validMillis) throws Exception {
+        MACSigner signer = new MACSigner(SECRET.getBytes(StandardCharsets.UTF_8));
+        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                .subject("01a0d8cb-f219-72a2-b006-5150f0e0d601")
+                .claim("role", "RECYCLER")
+                .claim("rid", "01a0d8cb-f219-72a2-b006-5150f0e0d602")
+                .claim("aid", "01a0d8cb-f219-72a2-b006-5150f0e0d603")
+                .claim("did", "01a0d8cb-f219-72a2-b006-5150f0e0d604")
+                .claim("cv", 1)
+                .claim("lc", true)
+                .expirationTime(new Date(System.currentTimeMillis() + validMillis))
+                .build();
+        SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
+        signedJwt.sign(signer);
+        return signedJwt.serialize();
+    }
+
     private String signToken(String secret, String subject) throws Exception {
         MACSigner signer = new MACSigner(secret.getBytes(StandardCharsets.UTF_8));
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .subject(subject)
+                .claim("role", "STAFF")
                 .expirationTime(new Date(System.currentTimeMillis() + 60_000))
                 .build();
         SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);

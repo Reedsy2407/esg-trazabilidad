@@ -79,7 +79,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/actuator/info")
                         .permitAll()
                         .anyRequest()
-                        .authenticated())
+                        .hasAnyRole("STAFF", "ADMIN"))
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         .accessDeniedHandler(jwtAccessDeniedHandler))

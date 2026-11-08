@@ -49,7 +49,39 @@ public final class TestJwtTokens {
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
                     .subject(subject)
                     .claim("email", email)
+                    .claim("role", "STAFF")
                     .expirationTime(new Date(System.currentTimeMillis() + 60_000))
+                    .build();
+            SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
+            signedJwt.sign(signer);
+            return signedJwt.serialize();
+        } catch (JOSEException exception) {
+            throw new IllegalStateException("No se pudo firmar el token JWT de prueba", exception);
+        }
+    }
+
+    /** A RECYCLER token as auth-service will issue it (A.1), consent and location accepted. */
+    public static String recyclerToken() {
+        return recyclerToken(60_000);
+    }
+
+    /** The same RECYCLER token, already expired beyond the decoder's clock skew. */
+    public static String expiredRecyclerToken() {
+        return recyclerToken(-120_000);
+    }
+
+    private static String recyclerToken(long validMillis) {
+        try {
+            MACSigner signer = new MACSigner(TEST_SECRET.getBytes(StandardCharsets.UTF_8));
+            JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                    .subject("01a0d8cb-f219-72a2-b006-5150f0e0d601")
+                    .claim("role", "RECYCLER")
+                    .claim("rid", "01a0d8cb-f219-72a2-b006-5150f0e0d602")
+                    .claim("aid", "01a0d8cb-f219-72a2-b006-5150f0e0d603")
+                    .claim("did", "01a0d8cb-f219-72a2-b006-5150f0e0d604")
+                    .claim("cv", 1)
+                    .claim("lc", true)
+                    .expirationTime(new Date(System.currentTimeMillis() + validMillis))
                     .build();
             SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
             signedJwt.sign(signer);

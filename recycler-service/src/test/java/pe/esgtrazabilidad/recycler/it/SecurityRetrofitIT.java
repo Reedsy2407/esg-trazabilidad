@@ -82,6 +82,30 @@ class SecurityRetrofitIT {
     }
 
     @Test
+    void aRecyclerTokenOnAStaffRouteReturns403WithAuth000() {
+        // CA-1: the role decides, not only the signature.
+        given().header("Authorization", "Bearer " + TestJwtTokens.recyclerToken())
+                .when()
+                .get("/associations")
+                .then()
+                .statusCode(403)
+                .body("code", equalTo("AUTH-000"))
+                .body("detail", equalTo("No tienes permiso para esta acción"));
+    }
+
+    @Test
+    void anExpiredRecyclerTokenReturns401WithAJsonBody() {
+        // CA-17: the bearer filter's own entry point must write the body, not an empty 401.
+        given().header("Authorization", "Bearer " + TestJwtTokens.expiredRecyclerToken())
+                .when()
+                .get("/associations")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("AUTH-000"))
+                .body("detail", equalTo("Token faltante o inválido"));
+    }
+
+    @Test
     void swaggerUiRemainsReachableWithoutAToken() {
         given().redirects().follow(false).when().get("/swagger-ui/index.html").then().statusCode(200);
     }

@@ -55,6 +55,11 @@ class RecyclerRepositoryAdapter implements RecyclerRepository {
                 .map(this::toDomain);
     }
 
+    @Override
+    public Page<Recycler> findAll(Pageable pageable) {
+        return jpaRepository.findAll(pageable).map(this::toDomain);
+    }
+
     private RecyclerEntity toEntity(Recycler recycler) {
         return new RecyclerEntity(
                 recycler.getId(),

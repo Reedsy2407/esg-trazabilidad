@@ -2,8 +2,7 @@ package pe.esgtrazabilidad.kernel.security;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.List;
 
 import javax.crypto.spec.SecretKeySpec;
 
@@ -14,10 +13,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
@@ -69,6 +70,24 @@ public class JwtSecurityConfig {
         return NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
     }
 
+    /**
+     * Role from the {@code role} claim as authority {@code ROLE_<role>} (A.1).
+     * Replaces Spring's default scope mapping: a token without {@code role}
+     * has no authority, so any role rule answers 403 AUTH-000. Picked up by
+     * each service's {@code oauth2.jwt(withDefaults())}.
+     */
+    @Bean
+    JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            String role = jwt.getClaimAsString("role");
+            return role == null || role.isBlank()
+                    ? List.<GrantedAuthority>of()
+                    : List.<GrantedAuthority>of(new SimpleGrantedAuthority("ROLE_" + role));
+        });
+        return converter;
+    }
+
     @Bean
     AuthenticationEntryPoint jwtAuthenticationEntryPoint(ObjectMapper objectMapper) {
         return (request, response, exception) ->
@@ -84,16 +103,6 @@ public class JwtSecurityConfig {
     private static void writeSecurityError(
             HttpServletResponse response, ObjectMapper objectMapper, HttpStatus status, String code, String detail)
             throws IOException {
-        response.setStatus(status.value());
-        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("type", "about:blank");
-        body.put("title", status.getReasonPhrase());
-        body.put("status", status.value());
-        body.put("detail", detail);
-        body.put("code", code);
-        objectMapper.writeValue(response.getWriter(), body);
+        SecurityErrorResponses.write(response, objectMapper, status, code, detail);
     }
 }

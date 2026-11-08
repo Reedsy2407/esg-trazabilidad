@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.2.1-create-recycler-status-copy-table
+      author: esg-trazabilidad
+      comment: >
+        Local copy of each recycler's status, fed only by RecyclerStatusChanged
+        (recycler-service). Additive: a new table, nothing existing changes.
+        PK on recycler_id: one row per recycler; the consumer applies an event
+        only when its occurred_at is newer than last_occurred_at, so old and
+        repeated events change nothing. timestamptz so the instant is stored
+        exactly, with no zone reinterpretation. A recycler with no row is
+        treated as not active (fails closed).
+      changes:
+        - createTable:
+            tableName: recycler_status_copy
+            columns:
+              - column:
+                  name: recycler_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_occurred_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false

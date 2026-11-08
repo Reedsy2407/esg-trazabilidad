@@ -20,4 +20,7 @@ public interface RecyclerRepository {
     Optional<Recycler> findByDni(String dni);
 
     Page<Recycler> findAll(UUID associationId, RecyclerStatus status, Pageable pageable);
+
+    /** Every recycler of every association (status republish backfill). */
+    Page<Recycler> findAll(Pageable pageable);
 }

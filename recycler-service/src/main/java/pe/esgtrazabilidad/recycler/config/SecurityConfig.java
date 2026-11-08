@@ -56,8 +56,12 @@ public class SecurityConfig {
                         // GET only, like liveness: the rest of /actuator/** stays behind a token.
                         .requestMatchers(HttpMethod.GET, "/actuator/info")
                         .permitAll()
+                        // Initial backfill of the status copies in auth and collection (A.4):
+                        // ADMIN only; STAFF gets 403 AUTH-000.
+                        .requestMatchers(HttpMethod.POST, "/recyclers/status-events/republish")
+                        .hasRole("ADMIN")
                         .anyRequest()
-                        .authenticated())
+                        .hasAnyRole("STAFF", "ADMIN"))
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         .accessDeniedHandler(jwtAccessDeniedHandler))

@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -15,7 +16,9 @@ import org.springframework.data.domain.Pageable;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.recycler.association.domain.Association;
 import pe.esgtrazabilidad.recycler.association.port.out.AssociationRepository;
+import pe.esgtrazabilidad.recycler.events.publish.RecyclerStatusChangedEventPublisher;
 import pe.esgtrazabilidad.recycler.recycler.domain.Recycler;
+import pe.esgtrazabilidad.recycler.recycler.events.RecyclerStatusChangedEvent;
 import pe.esgtrazabilidad.recycler.recycler.domain.RecyclerStatus;
 import pe.esgtrazabilidad.recycler.recycler.exception.RecyclerErrors;
 import pe.esgtrazabilidad.recycler.recycler.port.in.CreateRecyclerCommand;
@@ -37,13 +40,22 @@ class RecyclerServiceTest {
     @Mock
     private AssociationRepository associationRepository;
 
+    @Mock
+    private RecyclerStatusChangedEventPublisher eventPublisher;
+
     private RecyclerService service;
 
     private final UUID associationId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        service = new RecyclerService(recyclerRepository, associationRepository);
+        service = new RecyclerService(recyclerRepository, associationRepository, eventPublisher);
+    }
+
+    private RecyclerStatusChangedEvent publishedEvent() {
+        ArgumentCaptor<RecyclerStatusChangedEvent> captor = ArgumentCaptor.forClass(RecyclerStatusChangedEvent.class);
+        verify(eventPublisher).publish(captor.capture());
+        return captor.getValue();
     }
 
     private Association existingAssociation() {
@@ -65,6 +77,10 @@ class RecyclerServiceTest {
         assertThat(result.getDni()).isEqualTo("12345678");
         assertThat(result.getStatus()).isEqualTo(RecyclerStatus.ACTIVE);
         verify(recyclerRepository).save(any(Recycler.class));
+        RecyclerStatusChangedEvent event = publishedEvent();
+        assertThat(event.recyclerId()).isEqualTo(result.getId());
+        assertThat(event.associationId()).isEqualTo(associationId);
+        assertThat(event.status()).isEqualTo(RecyclerStatus.ACTIVE);
     }
 
     @Test
@@ -135,6 +151,7 @@ class RecyclerServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(RecyclerStatus.INACTIVE);
         verify(recyclerRepository).update(recycler);
+        assertThat(publishedEvent().status()).isEqualTo(RecyclerStatus.INACTIVE);
     }
 
     @Test
@@ -174,6 +191,18 @@ class RecyclerServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(RecyclerStatus.ACTIVE);
         verify(recyclerRepository).update(recycler);
+        assertThat(publishedEvent().status()).isEqualTo(RecyclerStatus.ACTIVE);
+    }
+
+    @Test
+    void aRejectedTransitionPublishesNothing() {
+        Recycler recycler = Recycler.create("Juan Pérez", "12345678", "999999999", associationId);
+        when(recyclerRepository.findById(recycler.getId())).thenReturn(Optional.of(recycler));
+
+        assertThatThrownBy(() -> service.activate(associationId, recycler.getId()))
+                .isInstanceOf(ApplicationException.class);
+
+        verify(eventPublisher, never()).publish(any());
     }
 
     @Test

@@ -5,10 +5,13 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
 import pe.esgtrazabilidad.recycler.association.port.out.AssociationRepository;
+import pe.esgtrazabilidad.recycler.events.publish.RecyclerStatusChangedEventPublisher;
 import pe.esgtrazabilidad.recycler.recycler.domain.Recycler;
+import pe.esgtrazabilidad.recycler.recycler.events.RecyclerStatusChangedEvent;
 import pe.esgtrazabilidad.recycler.recycler.domain.RecyclerStatus;
 import pe.esgtrazabilidad.recycler.recycler.exception.RecyclerErrors;
 import pe.esgtrazabilidad.recycler.recycler.port.in.ActivateRecyclerUseCase;
@@ -30,12 +33,20 @@ class RecyclerService
     private final RecyclerRepository recyclerRepository;
     private final AssociationRepository associationRepository;
 
-    RecyclerService(RecyclerRepository recyclerRepository, AssociationRepository associationRepository) {
+    private final RecyclerStatusChangedEventPublisher eventPublisher;
+
+    RecyclerService(
+            RecyclerRepository recyclerRepository,
+            AssociationRepository associationRepository,
+            RecyclerStatusChangedEventPublisher eventPublisher) {
         this.recyclerRepository = recyclerRepository;
         this.associationRepository = associationRepository;
+        this.eventPublisher = eventPublisher;
     }
 
+    // The outbox write must land in the same transaction as the recycler write.
     @Override
+    @Transactional
     public Recycler create(CreateRecyclerCommand command) {
         if (associationRepository.findById(command.associationId()).isEmpty()) {
             throw new ApplicationException(RecyclerErrors.ASSOCIATION_NOT_FOUND);
@@ -45,7 +56,9 @@ class RecyclerService
         });
         Recycler recycler = Recycler.create(
                 command.fullName(), command.dni(), command.phone(), command.associationId());
-        return recyclerRepository.save(recycler);
+        Recycler saved = recyclerRepository.save(recycler);
+        eventPublisher.publish(RecyclerStatusChangedEvent.from(saved));
+        return saved;
     }
 
     @Override
@@ -59,6 +72,7 @@ class RecyclerService
     }
 
     @Override
+    @Transactional
     public Recycler activate(UUID associationId, UUID id) {
         Recycler recycler = findScoped(associationId, id);
         try {
@@ -66,10 +80,13 @@ class RecyclerService
         } catch (IllegalStateException e) {
             throw new ApplicationException(RecyclerErrors.INVALID_STATUS_TRANSITION);
         }
-        return recyclerRepository.update(recycler);
+        Recycler updated = recyclerRepository.update(recycler);
+        eventPublisher.publish(RecyclerStatusChangedEvent.from(updated));
+        return updated;
     }
 
     @Override
+    @Transactional
     public Recycler deactivate(UUID associationId, UUID id) {
         Recycler recycler = findScoped(associationId, id);
         try {
@@ -77,7 +94,9 @@ class RecyclerService
         } catch (IllegalStateException e) {
             throw new ApplicationException(RecyclerErrors.INVALID_STATUS_TRANSITION);
         }
-        return recyclerRepository.update(recycler);
+        Recycler updated = recyclerRepository.update(recycler);
+        eventPublisher.publish(RecyclerStatusChangedEvent.from(updated));
+        return updated;
     }
 
     private Recycler findScoped(UUID associationId, UUID id) {

@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.5.3-create-recycler-activation-attempt-table
+      author: esg-trazabilidad
+      comment: >
+        The attempts the activation limits count, kept in the database (not in memory) so they survive
+        a restart and a sleeping service. Additive: a new table. kind IP is one row per attempt let
+        through from a client address; kind CODE_FAIL is one row per failed attempt with a code. The
+        key is an HMAC (of the address, or of the typed code): neither the address nor the code is
+        ever stored. Old rows are deleted as new ones arrive.
+      changes:
+        - createTable:
+            tableName: recycler_activation_attempt
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: kind
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: key_hmac
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: attempted_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              ALTER TABLE recycler_activation_attempt
+              ADD CONSTRAINT ck_recycler_activation_attempt_kind CHECK (kind IN ('IP', 'CODE_FAIL'));
+              CREATE INDEX ix_recycler_activation_attempt_key
+              ON recycler_activation_attempt (kind, key_hmac, attempted_at);
+              CREATE INDEX ix_recycler_activation_attempt_at
+              ON recycler_activation_attempt (attempted_at);
+            rollback: >
+              DROP INDEX ix_recycler_activation_attempt_at;
+              DROP INDEX ix_recycler_activation_attempt_key;
+              ALTER TABLE recycler_activation_attempt DROP CONSTRAINT ck_recycler_activation_attempt_kind;

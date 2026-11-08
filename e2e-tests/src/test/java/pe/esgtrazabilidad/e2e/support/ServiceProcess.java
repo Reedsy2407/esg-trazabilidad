@@ -38,7 +38,7 @@ public final class ServiceProcess {
             "RABBITMQ_HOST", "RABBITMQ_PORT", "RABBITMQ_USER", "RABBITMQ_PASSWORD",
             "JWT_SECRET", "ADMIN_BOOTSTRAP_EMAIL", "SERVER_PORT",
             "EMAIL_PROVIDER", "EMAIL_WEBHOOK_URL", "EMAIL_WEBHOOK_SECRET",
-            "PASSWORD_RESET_PEPPER", "PASSWORD_RESET_EMAIL_ENABLED");
+            "PASSWORD_RESET_PEPPER", "PASSWORD_RESET_EMAIL_ENABLED", "RECYCLER_CODE_HMAC_SECRET");
 
     private final String name;
     private final int port;

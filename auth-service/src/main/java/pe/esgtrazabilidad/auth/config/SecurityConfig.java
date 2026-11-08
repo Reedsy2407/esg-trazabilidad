@@ -78,6 +78,16 @@ public class SecurityConfig {
                         // GET only, like liveness: the rest of /actuator/** stays behind a token.
                         .requestMatchers(HttpMethod.GET, "/actuator/info")
                         .permitAll()
+                        // The recycler has no session yet: the code is the credential. Limited by client
+                        // address and by code in the database (RecyclerActivationService).
+                        .requestMatchers(HttpMethod.POST, "/auth/recycler/activate")
+                        .permitAll()
+                        // The refresh token is the credential (opaque, 256 bits, rotated on every use).
+                        .requestMatchers(HttpMethod.POST, "/auth/recycler/refresh")
+                        .permitAll()
+                        // The recycler's own routes: a RECYCLER token, never staff.
+                        .requestMatchers("/auth/recycler/**")
+                        .hasRole("RECYCLER")
                         .anyRequest()
                         .hasAnyRole("STAFF", "ADMIN"))
                 .exceptionHandling(handling -> handling

@@ -1,0 +1,55 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.5.1-create-retention-config-table
+      author: esg-trazabilidad
+      comment: >
+        Retention periods shown in the recycler's consent, and the consent version. A single row
+        (id = 1, enforced by a check), seeded with the decided defaults: GPS 90 days, photos 12
+        months, consent version 1. Only an ADMIN changes it, and changing a period raises the
+        consent version so everybody is asked again.
+      changes:
+        - createTable:
+            tableName: retention_config
+            columns:
+              - column:
+                  name: id
+                  type: smallint
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: gps_days
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: photo_months
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: consent_version
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              ALTER TABLE retention_config ADD CONSTRAINT ck_retention_config_single_row CHECK (id = 1);
+              ALTER TABLE retention_config ADD CONSTRAINT ck_retention_config_positive
+              CHECK (gps_days > 0 AND photo_months > 0 AND consent_version > 0);
+            rollback: >
+              ALTER TABLE retention_config DROP CONSTRAINT ck_retention_config_positive;
+              ALTER TABLE retention_config DROP CONSTRAINT ck_retention_config_single_row;
+        - insert:
+            tableName: retention_config
+            columns:
+              - column: {name: id, valueNumeric: 1}
+              - column: {name: gps_days, valueNumeric: 90}
+              - column: {name: photo_months, valueNumeric: 12}
+              - column: {name: consent_version, valueNumeric: 1}
+              - column: {name: updated_at, valueComputed: now()}

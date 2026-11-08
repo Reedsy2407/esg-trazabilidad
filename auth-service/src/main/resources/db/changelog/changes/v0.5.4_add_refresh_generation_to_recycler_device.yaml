@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.5.4-add-refresh-generation-to-recycler-device
+      author: esg-trazabilidad
+      comment: >
+        Additive: one new column. A device's refresh token is derived as an HMAC of (device id,
+        generation) under a server key and stored only as its hash. The generation counts rotations,
+        so a repeat of the previous token inside the 10 minute window can be answered with the same
+        current token without the service ever keeping a token in clear.
+      changes:
+        - addColumn:
+            tableName: recycler_device
+            columns:
+              - column:
+                  name: refresh_generation
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

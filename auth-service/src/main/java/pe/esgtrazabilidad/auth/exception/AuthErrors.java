@@ -42,7 +42,23 @@ public enum AuthErrors implements ApplicationError {
     // never-issued code and for an unknown or inactive account: the caller learns nothing about accounts.
     INVALID_RESET_CODE("AUTH-011", "El código no es válido o venció. Pide uno nuevo.", HttpStatus.BAD_REQUEST),
     // A limit about the caller (their address), never about an account. Carries Retry-After.
-    TOO_MANY_RESET_ATTEMPTS("AUTH-012", "Demasiados intentos, prueba de nuevo más tarde", HttpStatus.TOO_MANY_REQUESTS);
+    TOO_MANY_RESET_ATTEMPTS("AUTH-012", "Demasiados intentos, prueba de nuevo más tarde", HttpStatus.TOO_MANY_REQUESTS),
+    // AUTH-013 is retired and never reused. AUTH-019 (consent) is emitted by shared-kernel's RecyclerClaims.
+    // One answer for a wrong, expired, replaced, used or malformed code: the caller learns nothing about which.
+    INVALID_ACTIVATION_CODE("AUTH-014", "El código no es válido o venció. Pide uno nuevo al personal.", HttpStatus.BAD_REQUEST),
+    // Refresh token unknown, or the device went 30 days unused or past its 90 day limit. 401: the app asks for a new code.
+    REFRESH_INVALID("AUTH-016", "La sesión no es válida. Pide un código nuevo al personal.", HttpStatus.UNAUTHORIZED),
+    // The device was revoked (by staff, by logout, or because an old token was reused outside its window).
+    DEVICE_REVOKED("AUTH-017", "Este dispositivo fue revocado. Pide un código nuevo al personal.", HttpStatus.UNAUTHORIZED),
+    // A limit on the caller's address or on the typed code. Carries Retry-After.
+    TOO_MANY_ACTIVATION_ATTEMPTS("AUTH-015", "Demasiados intentos, prueba de nuevo más tarde", HttpStatus.TOO_MANY_REQUESTS),
+    // The account or the recycler behind it is not active (recycler-service turned it off).
+    RECYCLER_INACTIVE("AUTH-018", "La cuenta o el reciclador no está activo", HttpStatus.FORBIDDEN),
+    // The status copy has no row yet: the recycler's event has not arrived. Retryable, never a made-up state.
+    RECYCLER_NOT_SYNCED(
+            "AUTH-020",
+            "El reciclador aún no está sincronizado en el sistema de acceso. Inténtalo de nuevo en unos minutos",
+            HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

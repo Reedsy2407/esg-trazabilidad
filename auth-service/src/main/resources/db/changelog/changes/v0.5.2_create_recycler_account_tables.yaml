@@ -1,0 +1,174 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.5.2-create-recycler-account-tables
+      author: esg-trazabilidad
+      comment: >
+        The recycler's account, its one-time activation codes and its devices. Additive: new tables
+        only. The recycler account has no password. A code is stored only as an HMAC (never in
+        clear) and a device's refresh credential only as a hash. A recycler has one account; an
+        account has at most one live code (neither used nor replaced).
+      changes:
+        - createTable:
+            tableName: recycler_account
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: recycler_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_recycler_account_recycler
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(24)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: activated_at
+                  type: timestamp with time zone
+              - column:
+                  name: consent_version
+                  type: integer
+              - column:
+                  name: consent_accepted_at
+                  type: timestamp with time zone
+              - column:
+                  name: location_consent
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              ALTER TABLE recycler_account
+              ADD CONSTRAINT ck_recycler_account_status CHECK (status IN ('PENDING_ACTIVATION', 'ACTIVE', 'INACTIVE'));
+              CREATE INDEX ix_recycler_account_association ON recycler_account (association_id);
+            rollback: >
+              DROP INDEX ix_recycler_account_association;
+              ALTER TABLE recycler_account DROP CONSTRAINT ck_recycler_account_status;
+        - createTable:
+            tableName: activation_code
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: account_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_activation_code_account
+                    references: recycler_account(id)
+              - column:
+                  name: hmac
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_activation_code_hmac
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: used_at
+                  type: timestamp with time zone
+              - column:
+                  name: replaced_at
+                  type: timestamp with time zone
+        - sql:
+            sql: >
+              CREATE UNIQUE INDEX uq_activation_code_live
+              ON activation_code (account_id)
+              WHERE used_at IS NULL AND replaced_at IS NULL;
+            rollback: DROP INDEX uq_activation_code_live;
+        - createTable:
+            tableName: recycler_device
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: account_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_recycler_device_account
+                    references: recycler_account(id)
+              - column:
+                  name: label
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: install_id
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: refresh_hash
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_recycler_device_refresh_hash
+              - column:
+                  name: previous_hash
+                  type: varchar(64)
+              - column:
+                  name: previous_valid_until
+                  type: timestamp with time zone
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_seen_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: absolute_expires_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: revoked_at
+                  type: timestamp with time zone
+        - sql:
+            sql: >
+              CREATE INDEX ix_recycler_device_account ON recycler_device (account_id);
+              CREATE INDEX ix_recycler_device_previous_hash ON recycler_device (previous_hash)
+              WHERE previous_hash IS NOT NULL;
+            rollback: >
+              DROP INDEX ix_recycler_device_previous_hash;
+              DROP INDEX ix_recycler_device_account;

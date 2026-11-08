@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.5.0-create-recycler-status-copy-table
+      author: esg-trazabilidad
+      comment: >
+        Local copy of each recycler's association and status, fed only by RecyclerStatusChanged
+        (recycler-service). Additive: a new table, nothing existing changes. One row per recycler;
+        the consumer applies an event only when its occurred_at is newer than last_occurred_at, so
+        old and repeated events change nothing. timestamptz keeps the instant exactly. A recycler
+        with no row is treated as not active (fails closed).
+      changes:
+        - createTable:
+            tableName: recycler_status_copy
+            columns:
+              - column:
+                  name: recycler_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_occurred_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              ALTER TABLE recycler_status_copy
+              ADD CONSTRAINT ck_recycler_status_copy_status CHECK (status IN ('ACTIVE', 'INACTIVE'));
+            rollback: ALTER TABLE recycler_status_copy DROP CONSTRAINT ck_recycler_status_copy_status;

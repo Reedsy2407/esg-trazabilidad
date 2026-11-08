@@ -126,6 +126,11 @@ services:
         sync: false
       - key: PASSWORD_RESET_PEPPER
         sync: false
+      # Recycler access (module 1). Keys the HMAC of the activation codes and of the client
+      # addresses the activation limits count. No default in code: without it the service does
+      # not start. Typed once in the dashboard, at least 32 bytes.
+      - key: RECYCLER_CODE_HMAC_SECRET
+        sync: false
 
   # The Angular demo (frontend/), a static site: no server, no secrets.
   # It calls the four services above straight from the browser, so each needs

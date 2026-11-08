@@ -73,10 +73,9 @@ class SecurityConfigIT {
     @Test
     void actuatorHealthIsUpWithoutATokenAndWithoutAnyBroker() {
         // Security must let it through, and the aggregate must be exactly UP:
-        // auth-service uses no AMQP, so its application.yml excludes the Rabbit
-        // auto-configuration that shared-kernel's spring-boot-starter-amqp would
-        // otherwise switch on. No Rabbit health indicator exists here, so a
-        // missing broker (this IT has none) cannot turn the aggregate into 503.
+        // auth-service consumes one event type, but its application.yml turns the
+        // Rabbit health indicator off (management.health.rabbit.enabled=false), so
+        // a missing broker (this IT has none) cannot turn the aggregate into 503.
         given().when()
                 .get("/actuator/health")
                 .then()

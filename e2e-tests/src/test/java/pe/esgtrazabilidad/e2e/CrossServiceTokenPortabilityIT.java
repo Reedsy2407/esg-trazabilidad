@@ -72,7 +72,8 @@ class CrossServiceTokenPortabilityIT {
                         "ADMIN_BOOTSTRAP_EMAIL", BOOTSTRAP_EMAIL,
                         "EMAIL_PROVIDER", "fake",
                         "PASSWORD_RESET_EMAIL_ENABLED", "false",
-                        "PASSWORD_RESET_PEPPER", "e2e-test-only-pepper-of-at-least-32-bytes"));
+                        "PASSWORD_RESET_PEPPER", "e2e-test-only-pepper-of-at-least-32-bytes",
+                        "RECYCLER_CODE_HMAC_SECRET", "e2e-test-only-recycler-code-key-of-32-bytes"));
         recycler = launch("recycler-service", Map.of());
         collection = launch("collection-service", Map.of());
         reporting = launch(

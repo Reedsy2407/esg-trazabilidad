@@ -106,9 +106,13 @@
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- No org.testcontainers:rabbitmq here, unlike every other service:
-             auth-service never publishes or consumes an event, so none of its
-             IT tests will ever need a RabbitMQ container. -->
+        <!-- Only the broker-flow IT of RecyclerStatusChanged needs a real
+             RabbitMQ; every other IT calls the listener directly. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>rabbitmq</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <!-- Pinned to the 5.x line: 6.0.1 references a Jackson 3 support
                  class not present with Spring Boot 3.3.5's Jackson 2.x. -->
@@ -145,6 +149,16 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>3.2.5</version>
+                <configuration>
+                    <!-- auth-service now has one @RabbitListener (RecyclerStatusChanged,
+                         etapa 2 del modulo 1). auto-startup=false keeps every @SpringBootTest
+                         context from connecting to localhost:5672 and retrying without end;
+                         the ITs call the listener directly and the broker-flow IT opts back
+                         in with its own @TestPropertySource. -->
+                    <systemPropertyVariables>
+                        <spring.rabbitmq.listener.simple.auto-startup>false</spring.rabbitmq.listener.simple.auto-startup>
+                    </systemPropertyVariables>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

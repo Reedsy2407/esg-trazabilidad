@@ -29,6 +29,23 @@ Cuentas del personal, roles (ADMIN y STAFF), inicio de sesión, emisión del tok
 | [Reactivar una cuenta](auth-reactivar-cuenta.md) | `PATCH /auth/staff-users/{id}/reactivate` | Solo ADMIN | Reciente |
 | [Restablecer la contraseña de una cuenta](auth-restablecer-contrasena-cuenta.md) | `POST /auth/staff-users/{id}/password` | Solo ADMIN | Reciente |
 
+### Cuentas y sesión del reciclador
+
+Acceso de la app del reciclador: el personal genera un código de 10 caracteres (72 horas, un solo uso, se muestra una sola vez), el reciclador lo canjea por una sesión y la mantiene con un refresco rotativo. El token de acceso dura 15 minutos y el refresco rota en cada uso (el anterior sigue valiendo 10 minutos; usado después, se revoca el dispositivo). Reciente: puede ajustarse.
+
+| Operación | Método y ruta | Quién |
+|---|---|---|
+| Crear la cuenta y su código | `POST /auth/recycler-accounts` | Personal (STAFF o ADMIN) |
+| Ver las cuentas | `GET /auth/recycler-accounts?associationId=` | Personal |
+| Reemitir el código | `POST /auth/recycler-accounts/{id}/activation-code` | Personal |
+| Ver los dispositivos de una cuenta | `GET /auth/recycler-accounts/{id}/devices` | Personal |
+| Revocar un dispositivo | `DELETE /auth/recycler-accounts/{id}/devices/{deviceId}` | Personal |
+| Activar con el código | `POST /auth/recycler/activate` | Público (limitado por dirección y por código) |
+| Renovar la sesión | `POST /auth/recycler/refresh` | Público (token de refresco) |
+| Leer el consentimiento | `GET /auth/recycler/consent` | Reciclador |
+| Aceptar o rechazar el consentimiento | `POST /auth/recycler/consent` | Reciclador |
+| Cerrar sesión | `POST /auth/recycler/logout` | Reciclador |
+
 ## Etiquetas de estabilidad
 
 **Estable:** en uso por la consola, cubierto por pruebas de integración y sin cambios previstos. **Reciente:** añadido o cambiado entre M7 y M10 (cuentas y roles, recuperación de contraseña); puede ajustarse. **Interno:** existe pero la consola no lo usa.

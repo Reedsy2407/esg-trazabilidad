@@ -3,23 +3,19 @@ spring:
     name: auth-service
   config:
     import: "optional:file:../.env.local[.properties]"
-  autoconfigure:
-    # auth-service publishes and consumes nothing. shared-kernel's
-    # spring-boot-starter-amqp would still switch on Spring's Rabbit
-    # auto-configuration (plus a Rabbit health indicator that fails the
-    # aggregate /actuator/health without a broker) and shared-kernel's
-    # topology/listener AMQP config, so all three are excluded here.
-    # shared-kernel's OutboxDispatcher needs no exclusion: it only exists
-    # with an OutboxRepository bean, and auth-service has none. That is also
-    # why this file has no spring.rabbitmq block.
-    exclude:
-      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
-      - pe.esgtrazabilidad.kernel.amqp.RabbitTopologyConfig
-      - pe.esgtrazabilidad.kernel.amqp.RabbitListenerConfig
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5433/esg_trazabilidad}
     username: ${DB_USERNAME:esg}
     password: ${DB_PASSWORD}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:esg}
+    password: ${RABBITMQ_PASSWORD}
+    # CloudAMQP: vhost = the instance's user, amqps on 5671. Local compose: "/" and plaintext 5672.
+    virtual-host: ${RABBITMQ_VHOST:/}
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED:false}
   jpa:
     open-in-view: false
     hibernate:
@@ -32,6 +28,12 @@ spring:
         max-page-size: 100
 
 management:
+  health:
+    rabbit:
+      # auth-service only consumes one event type, and a broker outage is not fixed by a
+      # restart: it must not turn the aggregate /actuator/health into 503 (it was
+      # broker-independent before the consumer existed, and stays so).
+      enabled: false
   endpoint:
     health:
       probes:

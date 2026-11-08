@@ -1,6 +1,53 @@
 {
   "components" : {
     "schemas" : {
+      "ActivateRequest" : {
+        "properties" : {
+          "code" : {
+            "maxLength" : 64,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "deviceInstallId" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "deviceLabel" : {
+            "maxLength" : 80,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "code",
+          "deviceInstallId",
+          "deviceLabel"
+        ],
+        "type" : "object"
+      },
+      "ActivationResponse" : {
+        "properties" : {
+          "accessToken" : {
+            "type" : "string"
+          },
+          "consentRequired" : {
+            "type" : "boolean"
+          },
+          "consentVersion" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "expiresIn" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ChangePasswordRequest" : {
         "properties" : {
           "currentPassword" : {
@@ -39,6 +86,56 @@
         ],
         "type" : "object"
       },
+      "ConsentRequest" : {
+        "properties" : {
+          "accepted" : {
+            "type" : "boolean"
+          },
+          "locationAccepted" : {
+            "type" : "boolean"
+          },
+          "version" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "accepted",
+          "locationAccepted",
+          "version"
+        ],
+        "type" : "object"
+      },
+      "ConsentResponse" : {
+        "properties" : {
+          "locationText" : {
+            "type" : "string"
+          },
+          "retention" : {
+            "$ref" : "#/components/schemas/Retention"
+          },
+          "text" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "CreateRecyclerAccountRequest" : {
+        "properties" : {
+          "recyclerId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "recyclerId"
+        ],
+        "type" : "object"
+      },
       "CreateStaffUserRequest" : {
         "properties" : {
           "email" : {
@@ -71,6 +168,46 @@
         ],
         "type" : "object"
       },
+      "DeviceResponse" : {
+        "properties" : {
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "deviceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "lastSeenAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "revokedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "IssuedCodeResponse" : {
+        "properties" : {
+          "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "activationCode" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "LoginRequest" : {
         "properties" : {
           "email" : {
@@ -89,6 +226,63 @@
       "LoginResponse" : {
         "properties" : {
           "accessToken" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "RecyclerAccountResponse" : {
+        "properties" : {
+          "accountId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "activatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "devices" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "recyclerId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [
+              "PENDING_ACTIVATION",
+              "ACTIVE",
+              "INACTIVE"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "RefreshRequest" : {
+        "properties" : {
+          "refreshToken" : {
+            "maxLength" : 128,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "refreshToken"
+        ],
+        "type" : "object"
+      },
+      "RefreshResponse" : {
+        "properties" : {
+          "accessToken" : {
+            "type" : "string"
+          },
+          "expiresIn" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "refreshToken" : {
             "type" : "string"
           }
         },
@@ -118,6 +312,19 @@
         "required" : [
           "newPassword"
         ],
+        "type" : "object"
+      },
+      "Retention" : {
+        "properties" : {
+          "gpsDays" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "photoMonths" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "StaffUserResponse" : {
@@ -360,6 +567,290 @@
         },
         "tags" : [
           "password-reset-controller"
+        ]
+      }
+    },
+    "/auth/recycler-accounts" : {
+      "get" : {
+        "operationId" : "list_1",
+        "parameters" : [
+          {
+            "in" : "query",
+            "name" : "associationId",
+            "required" : false,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/RecyclerAccountResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "recycler-account-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateRecyclerAccountRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssuedCodeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "recycler-account-controller"
+        ]
+      }
+    },
+    "/auth/recycler-accounts/{accountId}/activation-code" : {
+      "post" : {
+        "operationId" : "reissue",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "accountId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssuedCodeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "recycler-account-controller"
+        ]
+      }
+    },
+    "/auth/recycler-accounts/{accountId}/devices" : {
+      "get" : {
+        "operationId" : "devices",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "accountId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/DeviceResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "recycler-account-controller"
+        ]
+      }
+    },
+    "/auth/recycler-accounts/{accountId}/devices/{deviceId}" : {
+      "delete" : {
+        "operationId" : "revokeDevice",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "accountId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "deviceId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "recycler-account-controller"
+        ]
+      }
+    },
+    "/auth/recycler/activate" : {
+      "post" : {
+        "operationId" : "activate",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ActivateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ActivationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "recycler-session-controller"
+        ]
+      }
+    },
+    "/auth/recycler/consent" : {
+      "get" : {
+        "operationId" : "consent",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConsentResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "recycler-session-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "answerConsent",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConsentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "recycler-session-controller"
+        ]
+      }
+    },
+    "/auth/recycler/logout" : {
+      "post" : {
+        "operationId" : "logout",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "recycler-session-controller"
+        ]
+      }
+    },
+    "/auth/recycler/refresh" : {
+      "post" : {
+        "operationId" : "refresh",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RefreshResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "recycler-session-controller"
         ]
       }
     },

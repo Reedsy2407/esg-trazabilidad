@@ -5,7 +5,7 @@
 # --- Build stage --------------------------------------------------------------
 # The repo has no Maven wrapper and eclipse-temurin:21-jdk ships no mvn, so the
 # build stage uses the official Maven image on the same Temurin 21 JDK.
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9-eclipse-temurin-26 AS build
 WORKDIR /build
 
 # The reactor needs every module's pom.xml to resolve, even the ones -pl skips;

@@ -183,7 +183,7 @@ class RecyclerAccountCodeIT extends RecyclerApiIT {
         as(token).post("/auth/recycler-accounts/{id}/activation-code", accountId).then().statusCode(403).body("code", equalTo("AUTH-018"));
 
         // An account whose recycler has no copy at all (never happens in practice) fails closed too.
-        jdbc.update("delete from recycler_status_copy where recycler_id = ?", recyclerId);
+        jdbc.update("delete from recycler_status_copy_auth where recycler_id = ?", recyclerId);
         as(token).post("/auth/recycler-accounts/{id}/activation-code", accountId).then().statusCode(409).body("code", equalTo("AUTH-020"));
     }
 

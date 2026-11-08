@@ -78,18 +78,18 @@ class RecyclerStatusEventListenerIT {
     }
 
     private String statusOf(UUID recyclerId) {
-        return jdbc.queryForObject("select status from recycler_status_copy where recycler_id = ?", String.class, recyclerId);
+        return jdbc.queryForObject("select status from recycler_status_copy_auth where recycler_id = ?", String.class, recyclerId);
     }
 
     private Instant lastOccurredAtOf(UUID recyclerId) {
         return jdbc.queryForObject(
-                "select last_occurred_at from recycler_status_copy where recycler_id = ?",
+                "select last_occurred_at from recycler_status_copy_auth where recycler_id = ?",
                 (rs, n) -> rs.getObject(1, OffsetDateTime.class).toInstant(),
                 recyclerId);
     }
 
     private int rowsFor(UUID recyclerId) {
-        return jdbc.queryForObject("select count(*) from recycler_status_copy where recycler_id = ?", Integer.class, recyclerId);
+        return jdbc.queryForObject("select count(*) from recycler_status_copy_auth where recycler_id = ?", Integer.class, recyclerId);
     }
 
     @Test
@@ -201,12 +201,12 @@ class RecyclerStatusEventListenerIT {
 
     @Test
     void anUnreadableOrIncompleteMessageIsDroppedWithoutFailingOrWritingAnything() {
-        int before = jdbc.queryForObject("select count(*) from recycler_status_copy", Integer.class);
+        int before = jdbc.queryForObject("select count(*) from recycler_status_copy_auth", Integer.class);
 
         listener.handle(MessageBuilder.withBody("no es json".getBytes(StandardCharsets.UTF_8)).build());
         listener.handle(MessageBuilder.withBody("{\"status\":\"BORRADO\"}".getBytes(StandardCharsets.UTF_8)).build());
         listener.handle(MessageBuilder.withBody("{}".getBytes(StandardCharsets.UTF_8)).build());
 
-        assertThat(jdbc.queryForObject("select count(*) from recycler_status_copy", Integer.class)).isEqualTo(before);
+        assertThat(jdbc.queryForObject("select count(*) from recycler_status_copy_auth", Integer.class)).isEqualTo(before);
     }
 }

@@ -177,7 +177,7 @@ class RecyclerRefreshIT extends RecyclerApiIT {
     @Test
     void aRecyclerWithNoStatusCopyFailsClosed() {
         Session session = activateSession();
-        jdbc.update("delete from recycler_status_copy where recycler_id = ?", session.recyclerId());
+        jdbc.update("delete from recycler_status_copy_auth where recycler_id = ?", session.recyclerId());
 
         refresh(session.refreshToken()).then().statusCode(403).body("code", equalTo("AUTH-018"));
     }

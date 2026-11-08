@@ -10,7 +10,7 @@ databaseChangeLog:
         with no row is treated as not active (fails closed).
       changes:
         - createTable:
-            tableName: recycler_status_copy
+            tableName: recycler_status_copy_auth
             columns:
               - column:
                   name: recycler_id
@@ -35,6 +35,6 @@ databaseChangeLog:
                     nullable: false
         - sql:
             sql: >
-              ALTER TABLE recycler_status_copy
-              ADD CONSTRAINT ck_recycler_status_copy_status CHECK (status IN ('ACTIVE', 'INACTIVE'));
-            rollback: ALTER TABLE recycler_status_copy DROP CONSTRAINT ck_recycler_status_copy_status;
+              ALTER TABLE recycler_status_copy_auth
+              ADD CONSTRAINT ck_recycler_status_copy_auth_status CHECK (status IN ('ACTIVE', 'INACTIVE'));
+            rollback: ALTER TABLE recycler_status_copy_auth DROP CONSTRAINT ck_recycler_status_copy_auth_status;

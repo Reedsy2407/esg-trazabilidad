@@ -34,13 +34,13 @@ class JdbcRecyclerStatusCopyRepository implements RecyclerStatusCopyRepository {
         Instant at = occurredAt.truncatedTo(ChronoUnit.MICROS);
         int changed = jdbc.update(
                 """
-                INSERT INTO recycler_status_copy (recycler_id, association_id, status, last_occurred_at)
+                INSERT INTO recycler_status_copy_auth (recycler_id, association_id, status, last_occurred_at)
                 VALUES (?, ?, ?, ?)
                 ON CONFLICT (recycler_id) DO UPDATE
                 SET association_id = EXCLUDED.association_id,
                     status = EXCLUDED.status,
                     last_occurred_at = EXCLUDED.last_occurred_at
-                WHERE recycler_status_copy.last_occurred_at < EXCLUDED.last_occurred_at
+                WHERE recycler_status_copy_auth.last_occurred_at < EXCLUDED.last_occurred_at
                 """,
                 recyclerId,
                 associationId,
@@ -54,7 +54,7 @@ class JdbcRecyclerStatusCopyRepository implements RecyclerStatusCopyRepository {
         return jdbc
                 .query(
                         "SELECT recycler_id, association_id, status, last_occurred_at"
-                                + " FROM recycler_status_copy WHERE recycler_id = ?",
+                                + " FROM recycler_status_copy_auth WHERE recycler_id = ?",
                         (rs, row) -> new RecyclerStatusCopy(
                                 rs.getObject(1, UUID.class),
                                 rs.getObject(2, UUID.class),

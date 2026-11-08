@@ -158,7 +158,7 @@ class JdbcRecyclerAccountStore implements RecyclerAccountStore {
                        a.activated_at,
                        (SELECT count(*) FROM recycler_device d WHERE d.account_id = a.id AND d.revoked_at IS NULL) AS devices
                 FROM recycler_account a
-                LEFT JOIN recycler_status_copy c ON c.recycler_id = a.recycler_id
+                LEFT JOIN recycler_status_copy_auth c ON c.recycler_id = a.recycler_id
                 """
                 + (associationId == null ? "" : "WHERE a.association_id = ?\n")
                 + "ORDER BY a.created_at, a.id";

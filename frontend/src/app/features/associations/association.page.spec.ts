@@ -210,6 +210,54 @@ describe('AssociationPage', () => {
     });
   });
 
+  describe('recyclers (app access)', () => {
+    const recyclersPage = (names: string[], pageNumber: number, totalPages: number) => ({
+      content: names.map((n, i) => ({ id: `r-${pageNumber}-${i}`, fullName: n, associationId: 'a-1', status: i === 1 ? 'INACTIVE' : 'ACTIVE' })),
+      page: pageNumber,
+      size: 20,
+      totalElements: totalPages * 20,
+      totalPages,
+    });
+
+    it('lists the recyclers with their state and a link to each one\'s access screen, without DNI or phone', async () => {
+      await flush(`${base}/recyclers`, recyclersPage(['Rosa Quispe Huamán', 'Julio Ccori Mamani'], 0, 1));
+      const items = [...page.querySelectorAll('ul[aria-label="Recicladores"] .entry')];
+      expect(items.map((i) => i.querySelector('.entry-title')?.textContent)).toEqual(['Rosa Quispe Huamán', 'Julio Ccori Mamani']);
+      expect(items.map((i) => i.querySelector('dd')?.textContent)).toEqual(['Activo', 'Inactivo']);
+      expect(items[0].querySelector('a')?.getAttribute('href')).toBe('/asociaciones/a-1/recicladores/r-0-0');
+      expect(items[0].querySelector('a')?.getAttribute('aria-label')).toBe('Acceso a la app de Rosa Quispe Huamán');
+      expect(page.querySelector('ul[aria-label="Recicladores"]')?.textContent).not.toMatch(/dni|\d{8}/i);
+    });
+
+    it('says so when the association has no recyclers', async () => {
+      await flush(`${base}/recyclers`, { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
+      expect(page.textContent).toContain('todavía no tiene recicladores registrados');
+    });
+
+    it('a failed load says so and offers to retry, without hiding the rest of the page', async () => {
+      backend.expectOne((r) => r.url === `${base}/recyclers`).flush({}, { status: 503, statusText: 'Unavailable' });
+      await Promise.resolve();
+      TestBed.tick();
+      expect(page.querySelector('#recyclers-title')?.parentElement?.querySelector('[role="alert"]')?.textContent).toContain(
+        'los recicladores',
+      );
+      expect(page.querySelector('#certs-title')).not.toBeNull();
+    });
+
+    it('with more than one page, Siguiente asks for the next page', async () => {
+      await flush(`${base}/recyclers`, recyclersPage(['Rosa Quispe Huamán', 'Julio Ccori Mamani'], 0, 2));
+      expect(page.querySelector('.foot')?.textContent).toContain('Página 1 de 2');
+      const next = [...page.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Siguiente') as HTMLButtonElement;
+      next.click();
+      TestBed.tick();
+      const request = backend.expectOne((r) => r.url === `${base}/recyclers` && r.params.get('page') === '1');
+      request.flush(recyclersPage(['Ana Torres'], 1, 2));
+      await Promise.resolve();
+      TestBed.tick();
+      expect(page.querySelector('ul[aria-label="Recicladores"] .entry-title')?.textContent).toBe('Ana Torres');
+    });
+  });
+
   it('an unknown association says so, and its certifications are not shown', async () => {
     backend
       .expectOne(base)

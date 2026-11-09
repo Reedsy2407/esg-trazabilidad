@@ -201,8 +201,8 @@ class RecyclerConsentIT extends RecyclerApiIT {
     void periodsOutOfRangeAreRefused() {
         UUID admin = newAdmin(StaffRole.ADMIN);
 
-        assertThatThrownBy(() -> retentionService.update(admin, 0, 12)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> retentionService.update(admin, 90, 0)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> retentionService.update(admin, RetentionService.MIN_GPS_DAYS - 1, 12)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> retentionService.update(admin, 90, RetentionService.MIN_PHOTO_MONTHS - 1)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> retentionService.update(admin, RetentionService.MAX_GPS_DAYS + 1, 12))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> retentionService.update(admin, 90, RetentionService.MAX_PHOTO_MONTHS + 1))

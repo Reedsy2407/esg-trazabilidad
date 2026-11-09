@@ -1,0 +1,173 @@
+<a class="back-link" [routerLink]="['/asociaciones', associationId()]">Volver a la asociación</a>
+
+<!-- Always in the DOM: results are announced here. -->
+<p class="visually-hidden" role="status">{{ status() }}</p>
+
+<div [attr.aria-busy]="recycler.isLoading()">
+  @if (recycler.hasValue()) {
+    @let r = recycler.value();
+    <header class="page-head">
+      <h1>{{ r.fullName }}</h1>
+      <p class="meta">
+        <span>Reciclador {{ r.status === 'ACTIVE' ? 'activo' : 'inactivo' }}</span>
+        <span>Acceso a la app: <strong>{{ accountText() }}</strong></span>
+      </p>
+    </header>
+  } @else if (recycler.error(); as error) {
+    <div class="problem" role="alert">
+      <p>{{ loadError(error, 'los datos del reciclador') }}</p>
+      <button type="button" class="btn" (click)="recycler.reload()">Volver a intentar</button>
+    </div>
+  } @else {
+    <div class="page-head" aria-hidden="true"><span class="skel title"></span></div>
+    <p class="visually-hidden">Cargando reciclador</p>
+  }
+</div>
+
+@if (!recycler.error()) {
+  <section class="sheet-flat panel" aria-labelledby="account-title">
+    <h2 id="account-title">Cuenta y código de activación</h2>
+
+    @if (accounts.error(); as error) {
+      <div class="problem" role="alert">
+        <p>{{ loadError(error, 'la cuenta de acceso') }}</p>
+        <button type="button" class="btn" (click)="accounts.reload()">Volver a intentar</button>
+      </div>
+    } @else if (account() === undefined) {
+      <p>Cargando la cuenta…</p>
+    } @else {
+      @let a = account() ?? null;
+      <dl class="facts">
+        <div>
+          <dt>Estado de la cuenta</dt>
+          <dd>{{ accountText() }}</dd>
+        </div>
+        <div>
+          <dt>Activada</dt>
+          <dd>{{ a?.activatedAt ? date(a!.activatedAt!) : 'Todavía no' }}</dd>
+        </div>
+        <div>
+          <dt>Dispositivos</dt>
+          <dd>{{ a?.devices ?? 0 }}</dd>
+        </div>
+      </dl>
+
+      @if (issued(); as code) {
+        <div class="handover" role="group" aria-labelledby="code-title">
+          <h3 id="code-title" tabindex="-1" #codeTitle>Código de activación</h3>
+          <p class="warning">
+            Este código se muestra <strong>una sola vez</strong>: no se podrá volver a ver. Entrégalo en persona; vale hasta el
+            {{ date(code.expiresAt) }} y solo sirve una vez. Si se pierde, genera uno nuevo.
+          </p>
+          <div class="secret">
+            <code class="mono"><span class="visually-hidden">Código de activación: </span>{{ code.activationCode }}</code>
+            <button type="button" class="btn" (click)="copyCode()">Copiar</button>
+          </div>
+          <p class="visually-hidden" role="status">{{ copyStatus() }}</p>
+          @if (copyStatus()) {
+            <p class="hint" aria-hidden="true">{{ copyStatus() }}</p>
+          }
+          <button type="button" class="btn btn-primary" (click)="dismissCode()">Ya lo entregué</button>
+        </div>
+      } @else {
+        <p class="explain">
+          @if (a === null) {
+            Este reciclador todavía no tiene cuenta. Al crearla se genera un código de 10 caracteres para que active la app en su
+            teléfono.
+          } @else if (a.status === 'PENDING_ACTIVATION') {
+            Un código nuevo reemplaza al anterior, que dejará de servir.
+          } @else {
+            Genera un código nuevo cuando el reciclador cambia de teléfono. Si ya tiene un teléfono en uso, revócalo antes.
+          }
+        </p>
+        <button type="button" class="btn btn-primary" data-generate [disabled]="codeBusy()" (click)="generateCode()">
+          {{ codeBusy() ? 'Generando…' : codeActionText() }}
+        </button>
+      }
+      @if (codeError(); as message) {
+        <div class="problem" role="alert"><p>{{ message }}</p></div>
+      }
+    }
+  </section>
+
+  @if (account()) {
+    <section aria-labelledby="devices-title">
+      <h2 id="devices-title" class="sec" tabindex="-1">Dispositivos</h2>
+      @if (revokeError(); as message) {
+        <div class="problem" role="alert"><p>{{ message }}</p></div>
+      }
+      @if (devices.error(); as error) {
+        <div class="problem" role="alert">
+          <p>{{ loadError(error, 'los dispositivos') }}</p>
+          <button type="button" class="btn" (click)="devices.reload()">Volver a intentar</button>
+        </div>
+      } @else if (devices.hasValue()) {
+        @if (devices.value().length === 0) {
+          <p class="empty-note">Ningún teléfono ha activado esta cuenta todavía.</p>
+        } @else {
+          <div class="ledger-wide">
+            <table class="ledger devices-table">
+              <caption class="visually-hidden">Dispositivos del reciclador</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Dispositivo</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Activado</th>
+                  <th scope="col">Última conexión</th>
+                  <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of devices.value(); track d.deviceId) {
+                  <tr [attr.data-revoked]="d.revokedAt !== null">
+                    <td class="type">{{ d.label }}</td>
+                    <td>{{ deviceState(d) }}</td>
+                    <td class="mono nowrap">{{ date(d.createdAt) }}</td>
+                    <td class="nowrap" [class.mono]="d.lastSeenAt">{{ d.lastSeenAt ? date(d.lastSeenAt) : 'Sin conexión' }}</td>
+                    <td>
+                      @if (d.revokedAt === null) {
+                        <button type="button" class="btn" [attr.data-revoke]="d.deviceId" [disabled]="confirming() !== null" (click)="askRevoke(d)" [attr.aria-label]="'Revocar ' + d.label">Revocar</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <ul class="entries devices" aria-label="Dispositivos del reciclador">
+            @for (d of devices.value(); track d.deviceId) {
+              <li class="entry" [attr.data-revoked]="d.revokedAt !== null">
+                <span class="entry-title">{{ d.label }}</span>
+                <dl>
+                  <div><dt>Estado</dt><dd>{{ deviceState(d) }}</dd></div>
+                  <div><dt>Activado</dt><dd class="mono">{{ date(d.createdAt) }}</dd></div>
+                  <div><dt>Última conexión</dt><dd [class.mono]="d.lastSeenAt">{{ d.lastSeenAt ? date(d.lastSeenAt) : 'Sin conexión' }}</dd></div>
+                </dl>
+                @if (d.revokedAt === null) {
+                  <button type="button" class="btn" [attr.data-revoke]="d.deviceId" [disabled]="confirming() !== null" (click)="askRevoke(d)" [attr.aria-label]="'Revocar ' + d.label">Revocar</button>
+                }
+              </li>
+            }
+          </ul>
+          <!-- One confirmation for both layouts, outside the rows: revoking cannot be undone. -->
+          @if (confirming(); as d) {
+            <div class="confirm" data-confirm tabindex="-1" role="group" [attr.aria-label]="'Confirmar revocación de ' + d.label">
+              <p>
+                Vas a revocar «{{ d.label }}». El teléfono pierde el acceso en su próxima conexión y el reciclador tendrá que pedir un
+                código nuevo. No se puede deshacer.
+              </p>
+              <div class="buttons">
+                <button type="button" class="btn btn-primary" [disabled]="revokeBusy()" (click)="revoke(d)">
+                  {{ revokeBusy() ? 'Revocando…' : 'Sí, revocar' }}
+                </button>
+                <button type="button" class="btn" [disabled]="revokeBusy()" (click)="cancelRevoke()">No, volver</button>
+              </div>
+            </div>
+          }
+        }
+      } @else {
+        <p>Cargando dispositivos…</p>
+      }
+    </section>
+  }
+}

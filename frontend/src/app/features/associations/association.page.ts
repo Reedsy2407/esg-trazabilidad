@@ -52,6 +52,13 @@ export class AssociationPage {
     stream: ({ params: id }) => this.api.certifications(id),
   });
 
+  /** 20 recyclers per page, by name; each links to its app-access screen (S11). */
+  protected readonly recyclersPage = signal(0);
+  protected readonly recyclers = rxResource({
+    params: () => ({ id: this.id(), page: this.recyclersPage() }),
+    stream: ({ params }) => this.api.recyclers(params.id, params.page),
+  });
+
   /** The optional fields, in the request's order; a missing one says so instead of vanishing. */
   protected readonly details = computed(() => {
     if (!this.association.hasValue()) {

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The official symbol (frontend/public/brand/symbol.svg: a white "T" with the top-right corner folded and a green
+  leaf), on the brand square that the adaptive icon supplies as its background. Android vectors have no masks, so
+  the gap the web mask cuts around the leaf is drawn as a brand-coloured stroke under the leaf.
+  The symbol's 304-unit box is scaled to 0.2 and centred inside the 108 dp canvas, within the safe zone.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="0"
+        android:pivotY="0"
+        android:scaleX="0.2"
+        android:scaleY="0.2"
+        android:translateX="2.8"
+        android:translateY="2.8">
+        <path
+            android:fillColor="#FCFDFD"
+            android:pathData="M118.3,111.9H329.8L297.6,186.4V399.7H216.2V191.1H118.3Z" />
+        <path
+            android:fillColor="#E3EBED"
+            android:pathData="M331.6,111.9L392.5,178.2H331.6Z" />
+        <path
+            android:fillColor="#E3EBED"
+            android:pathData="M338.4,190.4L392.5,180V189.3Z" />
+        <path
+            android:fillColor="#1A576C"
+            android:pathData="M285,396C272,345 320,300 391,294C392,345 370,395 300,400C295,400 289,398 285,396Z"
+            android:strokeColor="#1A576C"
+            android:strokeLineJoin="round"
+            android:strokeWidth="16" />
+        <path
+            android:fillColor="#46A972"
+            android:pathData="M285,396C272,345 320,300 391,294C392,345 370,395 300,400C295,400 289,398 285,396Z" />
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M349.5,335.2C330,358 312,372 297.5,385.4"
+            android:strokeColor="#FCFDFD"
+            android:strokeWidth="5" />
+    </group>
+</vector>

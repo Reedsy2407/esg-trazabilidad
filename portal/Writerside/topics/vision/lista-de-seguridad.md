@@ -48,6 +48,21 @@ La consola guarda el token en `sessionStorage`: vive solo en esa pestaña y desa
 - ningún punto de inyección de HTML en el código (comprobado en esta revisión);
 - tokens que vencen a la hora y nunca se renuevan.
 
+### La app del reciclador: qué se guarda en el teléfono
+
+La app de Android guarda lo mínimo y lo guarda cifrado:
+
+- **Token de acceso (15 minutos):** solo en la memoria de la app; nunca en disco ni en registros.
+- **Token de refresco:** solo cifrado con AES-GCM, con una clave del Android Keystore creada como no exportable (en StrongBox si el teléfono lo tiene). Si la clave se pierde o el almacenamiento se restaura sin ella, la app no falla: pide un código nuevo. Un fallo pasajero del Keystore no borra nada.
+- **Copias de seguridad:** `allowBackup=false` y reglas de extracción que excluyen todo el almacenamiento de la app.
+- **Registros pendientes de subir:** cifrados con **otra clave**, que cerrar sesión o una revocación no tocan. Guardan fecha, hora, peso, tipo de residuo y un identificador opaco del vecino; ningún nombre, dirección, distrito ni teléfono. Solo se borran del teléfono cuando el servidor confirmó que los tiene, o cuando la persona los descarta con una segunda confirmación que repite la cantidad y dice que no se puede deshacer. La caducidad de 7 días sin sincronizar borra solo la ruta guardada (los datos de los vecinos), nunca los registros pendientes.
+- **Al cerrar sesión o ser revocada:** se borran las credenciales, la clave de sesión, la ruta y los archivos de la app; los pendientes se conservan y el aviso dice cuántos son.
+
+Límites que se aceptan y se dicen:
+
+- **Un teléfono sin conexión no se entera de una revocación** hasta que se conecta: mientras tanto conserva sus datos locales y su sesión.
+- **Si el teléfono se pierde, sus registros pendientes se pierden con él.** Van cifrados con el Keystore del equipo, pero nadie puede recuperarlos.
+
 ### Sin seguridad por fila
 
 La seguridad por fila importa cuando el navegador habla directo con la base de datos, como con las bibliotecas cliente de Supabase. Aquí el navegador solo habla con los servicios, cada servicio llega a la base con sus propias credenciales y toda regla de acceso se aplica en el servicio. Hay un solo inquilino, así que no hay filas que ocultar de un usuario a otro.

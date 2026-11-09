@@ -76,6 +76,65 @@
 </div>
 
 @if (!association.error()) {
+  <section aria-labelledby="recyclers-title">
+    <h2 id="recyclers-title" class="sec">Recicladores y acceso a la app</h2>
+    @if (recyclers.error(); as error) {
+      <div class="problem" role="alert">
+        <p>{{ errorText(error, 'los recicladores') }}</p>
+        <button type="button" class="btn" (click)="recyclers.reload()">Volver a intentar</button>
+      </div>
+    } @else if (recyclers.hasValue()) {
+      @let page = recyclers.value();
+      @if (page.content.length === 0) {
+        <p class="empty-note">Esta asociación todavía no tiene recicladores registrados.</p>
+      } @else {
+        <div class="ledger-wide">
+          <table class="ledger">
+            <caption class="visually-hidden">Recicladores de la asociación, por nombre</caption>
+            <thead>
+              <tr>
+                <th scope="col">Reciclador</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="visually-hidden">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of page.content; track r.id) {
+                <tr>
+                  <td class="type">{{ r.fullName }}</td>
+                  <td>{{ r.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</td>
+                  <td>
+                    <a class="btn" [routerLink]="['/asociaciones', id(), 'recicladores', r.id]" [attr.aria-label]="'Acceso a la app de ' + r.fullName">Acceso a la app</a>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <ul class="entries" aria-label="Recicladores">
+          @for (r of page.content; track r.id) {
+            <li class="entry">
+              <span class="entry-title">{{ r.fullName }}</span>
+              <dl>
+                <div><dt>Estado</dt><dd>{{ r.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}</dd></div>
+              </dl>
+              <a class="btn" [routerLink]="['/asociaciones', id(), 'recicladores', r.id]" [attr.aria-label]="'Acceso a la app de ' + r.fullName">Acceso a la app</a>
+            </li>
+          }
+        </ul>
+        @if (page.totalPages > 1) {
+          <p class="foot">Página {{ page.page + 1 }} de {{ page.totalPages }} ({{ page.totalElements }} recicladores, por nombre).</p>
+          <div class="buttons">
+            <button type="button" class="btn" [disabled]="page.page === 0" (click)="recyclersPage.set(page.page - 1)">Anterior</button>
+            <button type="button" class="btn" [disabled]="page.page + 1 >= page.totalPages" (click)="recyclersPage.set(page.page + 1)">Siguiente</button>
+          </div>
+        }
+      }
+    } @else {
+      <p>Cargando recicladores…</p>
+    }
+  </section>
+
   <section aria-labelledby="certs-title">
     <h2 id="certs-title" class="sec">Certificaciones</h2>
     @if (!certFormOpen()) {

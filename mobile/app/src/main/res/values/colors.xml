@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same values as the frontend tokens (frontend/src/styles.css): ground, brand, paper. -->
+    <color name="ground">#D6DBD9</color>
+    <color name="brand">#1A576C</color>
+    <color name="paper">#FCFDFD</color>
+</resources>

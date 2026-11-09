@@ -427,3 +427,41 @@ export interface Page<T> {
   readonly totalElements: number;
   readonly totalPages: number;
 }
+
+/** recycler-service RecyclerResponse (the phone and DNI are not used by the console screens). */
+export type RecyclerStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface Recycler {
+  readonly id: string;
+  readonly fullName: string;
+  readonly associationId: string;
+  readonly status: RecyclerStatus;
+}
+
+/** auth-service RecyclerAccountResponse (GET /auth/recycler-accounts). It never carries a code. */
+export type RecyclerAccountStatus = 'PENDING_ACTIVATION' | 'ACTIVE' | 'INACTIVE';
+
+export interface RecyclerAccount {
+  readonly accountId: string;
+  readonly recyclerId: string;
+  readonly status: RecyclerAccountStatus;
+  /** An Instant, null until the recycler activates the app. */
+  readonly activatedAt: string | null;
+  readonly devices: number;
+}
+
+/** auth-service IssuedCodeResponse: the code exists in clear only in this answer. */
+export interface IssuedActivationCode {
+  readonly accountId: string;
+  readonly activationCode: string;
+  readonly expiresAt: string;
+}
+
+/** auth-service DeviceResponse; revokedAt is null while the device is in use. */
+export interface RecyclerDevice {
+  readonly deviceId: string;
+  readonly label: string;
+  readonly createdAt: string;
+  readonly lastSeenAt: string | null;
+  readonly revokedAt: string | null;
+}

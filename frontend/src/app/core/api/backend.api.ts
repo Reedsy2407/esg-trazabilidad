@@ -31,6 +31,10 @@ import {
   NeighborStatusChange,
   NeighborTransition,
   Page,
+  IssuedActivationCode,
+  Recycler,
+  RecyclerAccount,
+  RecyclerDevice,
   RegisterSigersolSyncRequest,
   EditTrackedCompanyRequest,
   RegisterTrackedCompanyRequest,
@@ -386,6 +390,54 @@ export class BackendApi {
     return this.http.post<CollectionRecord>(
       `${collection}/neighbors/${encodeURIComponent(neighborId)}/collection-records`,
       request,
+    );
+  }
+
+  /** An association's recyclers by name, 20 per page (recycler-service). */
+  recyclers(associationId: string, page: number): Observable<Page<Recycler>> {
+    const params = new HttpParams().set('page', page).set('size', 20);
+    return this.http.get<Page<Recycler>>(`${recycler}/associations/${encodeURIComponent(associationId)}/recyclers`, {
+      params,
+    });
+  }
+
+  /** REC-001 (404) when it doesn't exist or isn't this association's. */
+  recycler(associationId: string, id: string): Observable<Recycler> {
+    return this.http.get<Recycler>(
+      `${recycler}/associations/${encodeURIComponent(associationId)}/recyclers/${encodeURIComponent(id)}`,
+    );
+  }
+
+  /** The association's app accounts (auth-service); a recycler with no account is simply not in the list. */
+  recyclerAccounts(associationId: string): Observable<RecyclerAccount[]> {
+    const params = new HttpParams().set('associationId', associationId);
+    return this.http.get<RecyclerAccount[]>(`${auth}/auth/recycler-accounts`, { params });
+  }
+
+  /**
+   * 201 with the account and its activation code, shown once. AUTH-020 (not synced yet, retry), AUTH-018
+   * (inactive recycler), DATA_CONFLICT (already active). Replaces an unused code. Not idempotent.
+   */
+  createRecyclerAccount(recyclerId: string): Observable<IssuedActivationCode> {
+    return this.http.post<IssuedActivationCode>(`${auth}/auth/recycler-accounts`, { recyclerId });
+  }
+
+  /** 201 with a new code, shown once; DATA_CONFLICT while a device is still in use. Not idempotent. */
+  reissueActivationCode(accountId: string): Observable<IssuedActivationCode> {
+    return this.http.post<IssuedActivationCode>(
+      `${auth}/auth/recycler-accounts/${encodeURIComponent(accountId)}/activation-code`,
+      null,
+    );
+  }
+
+  recyclerDevices(accountId: string): Observable<RecyclerDevice[]> {
+    return this.http.get<RecyclerDevice[]>(`${auth}/auth/recycler-accounts/${encodeURIComponent(accountId)}/devices`);
+  }
+
+  /** 204. The device's refresh stops working (its phone gets AUTH-017 on the next call). */
+  revokeRecyclerDevice(accountId: string, deviceId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${auth}/auth/recycler-accounts/${encodeURIComponent(accountId)}/devices/${encodeURIComponent(deviceId)}`,
     );
   }
 

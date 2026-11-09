@@ -4,7 +4,7 @@
 
 Cada error llega como `application/problem+json` con su `code`. La tabla dice qué lo provoca y qué hacer.
 
-Los códigos de `AUTH-001` a `AUTH-012`, y `AUTH-014` a `AUTH-020` (cuentas y sesión del reciclador; `AUTH-013` está retirado y no se reutiliza). `AUTH-019` (consentimiento requerido, 409) lo responden los servicios de negocio cuando el token del reciclador no trae el consentimiento vigente. `AUTH-000` (token faltante o inválido) lo responde cualquier servicio y está en los [errores comunes](errores.md). `AUTH-005` y `AUTH-007` llevan, además, la política de [contraseñas](politica-contrasenas.md).
+Los códigos de `AUTH-001` a `AUTH-012`, y `AUTH-014` a `AUTH-020` (cuentas y sesión del reciclador; `AUTH-013` está retirado y no se reutiliza). `AUTH-019` (consentimiento requerido, 409) lo responden los servicios de negocio cuando el token del reciclador no trae el consentimiento vigente. `AUTH-000` (token faltante o inválido) lo responde cualquier servicio y está en los [errores comunes](errores.md). `GET` y `PUT /auth/retention-config` (plazos de retención, solo ADMIN) no tienen código `AUTH` propio: un STAFF o un reciclador recibe 403 `AUTH-000` y un plazo fuera de rango (GPS de 30 a 365 días, fotos de 3 a 36 meses) recibe 400 `VALIDATION_ERROR`, ambos descritos en los [errores comunes](errores.md). `AUTH-005` y `AUTH-007` llevan, además, la política de [contraseñas](politica-contrasenas.md).
 
 | Código | HTTP | Respuesta | Causa | Qué hacer | Dónde aparece |
 |---|---|---|---|---|---|

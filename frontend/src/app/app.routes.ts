@@ -71,6 +71,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/associations/association.page').then((m) => m.AssociationPage),
       },
       {
+        path: 'asociaciones/:associationId/recicladores/:recyclerId',
+        title: 'Acceso del reciclador · Trazabilidad ESG',
+        loadComponent: () => import('./features/recyclers/recycler-access.page').then((m) => m.RecyclerAccessPage),
+      },
+      {
         path: 'vecinos',
         title: 'Vecinos · Trazabilidad ESG',
         loadComponent: () => import('./features/neighbors/neighbors.page').then((m) => m.NeighborsPage),

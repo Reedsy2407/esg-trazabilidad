@@ -85,6 +85,9 @@ public class SecurityConfig {
                         // The refresh token is the credential (opaque, 256 bits, rotated on every use).
                         .requestMatchers(HttpMethod.POST, "/auth/recycler/refresh")
                         .permitAll()
+                        // The retention periods: ADMIN only (STAFF and RECYCLER get 403 AUTH-000).
+                        .requestMatchers("/auth/retention-config")
+                        .hasRole("ADMIN")
                         // The recycler's own routes: a RECYCLER token, never staff.
                         .requestMatchers("/auth/recycler/**")
                         .hasRole("RECYCLER")

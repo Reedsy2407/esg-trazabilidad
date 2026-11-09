@@ -327,6 +327,44 @@
         },
         "type" : "object"
       },
+      "RetentionConfigRequest" : {
+        "properties" : {
+          "gpsDays" : {
+            "format" : "int32",
+            "maximum" : 365,
+            "minimum" : 30,
+            "type" : "integer"
+          },
+          "photoMonths" : {
+            "format" : "int32",
+            "maximum" : 36,
+            "minimum" : 3,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "gpsDays",
+          "photoMonths"
+        ],
+        "type" : "object"
+      },
+      "RetentionConfigResponse" : {
+        "properties" : {
+          "consentVersion" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "gpsDays" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "photoMonths" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "StaffUserResponse" : {
         "properties" : {
           "active" : {
@@ -851,6 +889,54 @@
         },
         "tags" : [
           "recycler-session-controller"
+        ]
+      }
+    },
+    "/auth/retention-config" : {
+      "get" : {
+        "operationId" : "get",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RetentionConfigResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "retention-config-controller"
+        ]
+      },
+      "put" : {
+        "operationId" : "update",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RetentionConfigRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RetentionConfigResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "retention-config-controller"
         ]
       }
     },

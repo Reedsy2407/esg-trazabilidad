@@ -45,6 +45,10 @@ Acceso de la app del reciclador: el personal genera un código de 10 caracteres 
 | Leer el consentimiento | `GET /auth/recycler/consent` | Reciclador |
 | Aceptar o rechazar el consentimiento | `POST /auth/recycler/consent` | Reciclador |
 | Cerrar sesión | `POST /auth/recycler/logout` | Reciclador |
+| Leer los plazos de retención | `GET /auth/retention-config` | Solo ADMIN |
+| Cambiar los plazos de retención | `PUT /auth/retention-config` | Solo ADMIN |
+
+Los plazos de retención son lo que el consentimiento del reciclador muestra: `gpsDays` (de 30 a 365 días, por defecto 90) y `photoMonths` (de 3 a 36 meses, por defecto 12). `PUT` recibe `{gpsDays, photoMonths}` y responde con lo guardado y `consentVersion`; un plazo fuera de rango da 400 `VALIDATION_ERROR`, y un STAFF o un reciclador recibe 403 `AUTH-000`. Cambiar un plazo sube la versión del consentimiento: el siguiente refresco de cada reciclador omite el consentimiento hasta que acepte el texto nuevo. Guardar los mismos valores no sube la versión. Reciente: puede ajustarse.
 
 ## Etiquetas de estabilidad
 

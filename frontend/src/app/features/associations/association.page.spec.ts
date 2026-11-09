@@ -238,10 +238,20 @@ describe('AssociationPage', () => {
       backend.expectOne((r) => r.url === `${base}/recyclers`).flush({}, { status: 503, statusText: 'Unavailable' });
       await Promise.resolve();
       TestBed.tick();
-      expect(page.querySelector('#recyclers-title')?.parentElement?.querySelector('[role="alert"]')?.textContent).toContain(
-        'los recicladores',
+      const alert = page.querySelector('#recyclers-title')?.parentElement?.querySelector('[role="alert"]');
+      expect(alert?.querySelector('p')?.textContent).toBe(
+        'No se pudieron cargar los recicladores: el servicio de recicladores no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.',
       );
+      expect(alert?.textContent).not.toContain('No se encontraron');
       expect(page.querySelector('#certs-title')).not.toBeNull();
+    });
+
+    it('a network failure names the service, and "no se encontraron" never shows for a load that merely failed', async () => {
+      backend.expectOne((r) => r.url === `${base}/recyclers`).error(new ProgressEvent('error'));
+      await Promise.resolve();
+      TestBed.tick();
+      const text = page.querySelector('#recyclers-title')?.parentElement?.querySelector('[role="alert"] p')?.textContent;
+      expect(text).toBe('No se pudo conectar con el servicio de recicladores para cargar los recicladores. Comprueba tu conexión.');
     });
 
     it('with more than one page, Siguiente asks for the next page', async () => {

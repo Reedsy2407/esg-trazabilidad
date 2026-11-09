@@ -95,8 +95,21 @@ test('detail: no certifications, and an unknown association or id', async ({ pag
 test('detail: failing certifications keep the header and offer a retry', async ({ page }) => {
   const unmocked = await signedIn(page, `/asociaciones/${RIMAC.id}`, { certificationsStatus: 503 });
   await expect(page.getByRole('heading', { name: RIMAC.name, level: 1 })).toBeVisible();
-  await expect(page.getByRole('alert')).toContainText('No se pudieron cargar las certificaciones: el servicio de recicladores no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.');
-  await expect(page.getByRole('button', { name: 'Volver a intentar' })).toBeVisible();
+  const certifications = page.getByRole('region', { name: 'Certificaciones' });
+  await expect(certifications.getByRole('alert')).toContainText('No se pudieron cargar las certificaciones: el servicio de recicladores no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.');
+  await expect(certifications.getByRole('button', { name: 'Volver a intentar' })).toBeVisible();
+  // The recyclers block loads on its own: it is not failing here, so it raises no alert.
+  await expect(page.getByRole('alert')).toHaveCount(1);
+  expect(unmocked).toEqual([]);
+});
+
+test('detail: failing recyclers say the service is unavailable, apart from the certifications', async ({ page }) => {
+  const unmocked = await signedIn(page, `/asociaciones/${RIMAC.id}`, { recyclersStatus: 503 });
+  const recyclers = page.getByRole('region', { name: 'Recicladores y acceso a la app' });
+  await expect(recyclers.getByRole('alert')).toContainText('No se pudieron cargar los recicladores: el servicio de recicladores no está disponible en este momento. Suele volver en menos de un minuto: vuelve a intentarlo.');
+  await expect(recyclers.getByRole('alert')).not.toContainText('No se encontraron');
+  await expect(recyclers.getByRole('button', { name: 'Volver a intentar' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Certificaciones' }).getByRole('alert')).toHaveCount(0);
   expect(unmocked).toEqual([]);
 });
 

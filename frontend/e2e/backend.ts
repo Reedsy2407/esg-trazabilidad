@@ -148,6 +148,8 @@ export interface BackendOptions {
   associationsStatus?: number;
   /** GET /associations/{id}/certifications fails with this status. */
   certificationsStatus?: number;
+  /** GET /associations/{id}/recyclers fails with this status. */
+  recyclersStatus?: number;
   /** How many associations GET /associations lists (default ASSOCIATIONS; more are generated, for paging). */
   associationCount?: number;
   /** Every request that reached the catch-all (no fake route): the test asserts it stays empty. */
@@ -676,6 +678,13 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     }
     if (sub === undefined) {
       return json(200, association);
+    }
+    if (sub === 'recyclers' && method === 'GET') {
+      // The association's recyclers list (S11): none registered, unless a test makes the service fail.
+      if (options.recyclersStatus !== undefined) {
+        return gatewayError(route, options.recyclersStatus);
+      }
+      return json(200, pageOf([]));
     }
     if (method === 'PATCH' && (sub === 'suspend' || sub === 'activate')) {
       const target = sub === 'suspend' ? 'SUSPENDED' : 'ACTIVE';

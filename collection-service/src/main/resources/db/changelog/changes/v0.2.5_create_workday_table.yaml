@@ -1,0 +1,63 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.2.5-create-workday-table
+      author: esg-trazabilidad
+      comment: >
+        A recycler's working day (spec B2, Datos y estados). status is OPEN or CLOSED; closing is
+        a self-transition (closing a closed day answers the same). The unique pair
+        (recycler_id, client_id) is the final net for duplicates: two concurrent syncs of the same
+        clientId leave one row. received_at is the server clock; started_at and ended_at come from
+        the phone's clock and are not trusted for ordering. Every instant is timestamptz (UTC).
+        Additive: a new table.
+      changes:
+        - createTable:
+            tableName: workday
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: recycler_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: client_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: started_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ended_at
+                  type: timestamp with time zone
+              - column:
+                  name: received_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: with_gps
+                  type: boolean
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: workday
+            columnNames: recycler_id, client_id
+            constraintName: uq_workday_recycler_client

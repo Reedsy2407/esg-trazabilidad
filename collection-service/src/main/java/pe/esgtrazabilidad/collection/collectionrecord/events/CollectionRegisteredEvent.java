@@ -28,7 +28,9 @@ public record CollectionRegisteredEvent(
         UUID associationId,
         LocalDate collectionDate,
         BigDecimal weightKg,
-        String districtUbigeo)
+        String districtUbigeo,
+        UUID recyclerId,
+        String wasteType)
         implements DomainEvent {
 
     /** Without a district: what a consumer sees for events published before v3 (D3). */
@@ -39,6 +41,9 @@ public record CollectionRegisteredEvent(
     /**
      * {@code districtUbigeo} is the neighbour's ubigeo at the moment of the record (6 digits,
      * nullable). It stays fixed: a later change of the neighbour's district doesn't rewrite it.
+     * {@code recyclerId} and {@code wasteType} are additive (module 2): null for a record staff
+     * created from the web, and for every event published before; consumers ignore what they
+     * don't know.
      */
     public static CollectionRegisteredEvent from(CollectionRecord record, String districtUbigeo) {
         return new CollectionRegisteredEvent(
@@ -49,7 +54,9 @@ public record CollectionRegisteredEvent(
                 record.getAssociationId(),
                 record.getCollectionDate(),
                 record.getWeightKg(),
-                districtUbigeo);
+                districtUbigeo,
+                record.getRecyclerId(),
+                record.getWasteType());
     }
 
     @Override

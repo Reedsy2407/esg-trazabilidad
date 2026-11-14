@@ -56,9 +56,14 @@
             <artifactId>liquibase-core</artifactId>
         </dependency>
 
-        <!-- No shedlock-provider-jdbc-template here, same reasoning as
-             reporting-service: this module runs no @Scheduled job and never
-             publishes, so it needs no ShedLock table of its own. -->
+        <!-- auth-service now publishes one event (RetentionConfigChanged), so it has an outbox and
+             the shared dispatcher, which needs a LockProvider: shedlock_auth, never a table
+             literally named "shedlock" (the four services share one schema). shedlock-spring
+             (the @SchedulerLock annotation) comes transitively via shared-kernel. -->
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-provider-jdbc-template</artifactId>
+        </dependency>
 
         <!-- Just the crypto module (BCryptPasswordEncoder), not the full
              spring-boot-starter-security starter: that starter would trigger

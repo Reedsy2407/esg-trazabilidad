@@ -24,7 +24,17 @@ public enum CollectionErrors implements ApplicationError {
             "COL-011", "El vecino tiene recojos registrados: solo se puede desactivar", HttpStatus.CONFLICT),
     NEIGHBOR_STATUS_UNCHANGED("COL-012", "El vecino ya se encuentra en el estado solicitado", HttpStatus.CONFLICT),
     NEIGHBOR_INACTIVE(
-            "COL-013", "El vecino está inactivo: no puede recibir recojos ni cronogramas activos", HttpStatus.CONFLICT);
+            "COL-013", "El vecino está inactivo: no puede recibir recojos ni cronogramas activos", HttpStatus.CONFLICT),
+    INVALID_WASTE_TYPE("COL-014", "El tipo de residuo no es válido", HttpStatus.BAD_REQUEST),
+    SCHEDULE_NOT_ASSIGNED(
+            "COL-015", "El cronograma no está asignado a este reciclador", HttpStatus.FORBIDDEN),
+    WORKDAY_NOT_FOUND("COL-016", "Jornada no encontrada", HttpStatus.NOT_FOUND),
+    WORKDAY_CLOSED("COL-017", "La jornada está cerrada", HttpStatus.CONFLICT),
+    INVALID_EVIDENCE(
+            "COL-018", "La evidencia no es válida o todavía no está disponible: vuelve a intentarlo", HttpStatus.CONFLICT),
+    RECYCLER_NOT_ACTIVE("COL-019", "El reciclador no está activo", HttpStatus.FORBIDDEN),
+    CLIENT_ID_REUSED(
+            "COL-020", "El identificador ya se usó con otro contenido", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

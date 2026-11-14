@@ -4,14 +4,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import org.springframework.data.domain.Persistable;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
-
-import org.springframework.data.domain.Persistable;
 
 @Entity
 @Table(name = "collection_record")
@@ -35,6 +35,12 @@ class CollectionRecordEntity implements Persistable<UUID> {
     @Column(name = "weight_kg", nullable = false)
     private BigDecimal weightKg;
 
+    @Column(name = "recycler_id")
+    private UUID recyclerId;
+
+    @Column(name = "waste_type", length = 32)
+    private String wasteType;
+
     @Transient
     private boolean isNew = false;
 
@@ -47,13 +53,17 @@ class CollectionRecordEntity implements Persistable<UUID> {
             UUID scheduleId,
             UUID associationId,
             LocalDate collectionDate,
-            BigDecimal weightKg) {
+            BigDecimal weightKg,
+            UUID recyclerId,
+            String wasteType) {
         this.id = id;
         this.neighborId = neighborId;
         this.scheduleId = scheduleId;
         this.associationId = associationId;
         this.collectionDate = collectionDate;
         this.weightKg = weightKg;
+        this.recyclerId = recyclerId;
+        this.wasteType = wasteType;
         this.isNew = true;
     }
 
@@ -90,5 +100,13 @@ class CollectionRecordEntity implements Persistable<UUID> {
 
     BigDecimal getWeightKg() {
         return weightKg;
+    }
+
+    UUID getRecyclerId() {
+        return recyclerId;
+    }
+
+    String getWasteType() {
+        return wasteType;
     }
 }

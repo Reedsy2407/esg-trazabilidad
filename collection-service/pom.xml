@@ -16,6 +16,24 @@
     <name>collection-service</name>
     <description>Registro de recolecciones y trazabilidad de material: vecinos, empresas, programación y registros de recojo</description>
 
+    <properties>
+        <!-- AWS SDK for Java v2 (Apache License 2.0). Pinned to a release more than three weeks old
+             (2.57.0, 2026-10-19); used only through the S3-compatible API of Backblaze B2. -->
+        <awssdk.version>2.57.0</awssdk.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${awssdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>pe.esgtrazabilidad</groupId>
@@ -55,6 +73,24 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <!-- Object storage for field evidence (photos) through B2's S3-compatible API. Synchronous
+             client only: the Apache HTTP client stays (it gives the three timeouts), the async Netty
+             client is excluded so it does not drag a second Netty into the service. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>software.amazon.awssdk</groupId>
+                    <artifactId>netty-nio-client</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
         </dependency>
 
         <dependency>

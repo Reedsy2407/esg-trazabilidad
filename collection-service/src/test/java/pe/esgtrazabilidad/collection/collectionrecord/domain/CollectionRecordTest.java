@@ -66,5 +66,22 @@ class CollectionRecordTest {
                 id, neighborId, null, associationId, LocalDate.now(), new BigDecimal("7"));
 
         assertThat(record.getId()).isEqualTo(id);
+        assertThat(record.getRecyclerId()).isNull();
+        assertThat(record.getWasteType()).isNull();
+    }
+
+    @Test
+    void aFieldRecordKeepsItsRecyclerAndWasteType() {
+        UUID recyclerId = UUID.randomUUID();
+
+        CollectionRecord created = CollectionRecord.create(
+                neighborId, null, associationId, LocalDate.now(), new BigDecimal("2.5"), recyclerId, "VIDRIO");
+        CollectionRecord rebuilt = CollectionRecord.reconstruct(
+                created.getId(), neighborId, null, associationId, LocalDate.now(), new BigDecimal("2.5"), recyclerId, "VIDRIO");
+
+        assertThat(created.getRecyclerId()).isEqualTo(recyclerId);
+        assertThat(created.getWasteType()).isEqualTo("VIDRIO");
+        assertThat(rebuilt.getRecyclerId()).isEqualTo(recyclerId);
+        assertThat(rebuilt.getWasteType()).isEqualTo("VIDRIO");
     }
 }

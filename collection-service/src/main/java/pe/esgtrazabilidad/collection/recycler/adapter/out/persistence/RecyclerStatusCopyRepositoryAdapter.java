@@ -2,6 +2,7 @@ package pe.esgtrazabilidad.collection.recycler.adapter.out.persistence;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -31,5 +32,10 @@ class RecyclerStatusCopyRepositoryAdapter implements RecyclerStatusCopyRepositor
     @Override
     public boolean isActive(UUID recyclerId) {
         return jpaRepository.isActive(recyclerId);
+    }
+
+    @Override
+    public Optional<UUID> findActiveAssociationId(UUID recyclerId) {
+        return jpaRepository.findActiveAssociationId(recyclerId);
     }
 }

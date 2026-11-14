@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.5.5-create-outbox-event-auth-table
+      author: esg-trazabilidad
+      comment: >
+        auth-service's outbox, for the first event it publishes (RetentionConfigChanged). Named
+        outbox_event_auth: the four services share one database and one schema, so every
+        service's outbox table carries its own suffix (same rule as outbox_event_collection and
+        outbox_event_recycler). Additive: a new table.
+      changes:
+        - createTable:
+            tableName: outbox_event_auth
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: routing_key
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload_json
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: outbox_event_auth
+            indexName: ix_outbox_event_auth_status_created_at
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: created_at

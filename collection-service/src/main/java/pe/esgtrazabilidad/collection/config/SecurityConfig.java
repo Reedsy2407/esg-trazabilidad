@@ -2,6 +2,8 @@ package pe.esgtrazabilidad.collection.config;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -12,8 +14,13 @@ import org.springframework.security.config.annotation.web.configurers.CsrfConfig
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
+import pe.esgtrazabilidad.kernel.security.FieldAccessFilter;
 import pe.esgtrazabilidad.kernel.security.JwtSecurityConfig;
 
 /**
@@ -26,15 +33,33 @@ import pe.esgtrazabilidad.kernel.security.JwtSecurityConfig;
 @Import(JwtSecurityConfig.class)
 public class SecurityConfig {
 
+    /** Every route the recycler's device uses. */
+    private static final RequestMatcher FIELD_ROUTES = new OrRequestMatcher(
+            new AntPathRequestMatcher("/me/**"),
+            new AntPathRequestMatcher("/workdays/**"),
+            new AntPathRequestMatcher("/evidence/**"));
+
+    /** The routes that are GPS by nature: they also need `lc=true`. */
+    private static final RequestMatcher LOCATION_ROUTES = new AntPathRequestMatcher("/workdays/*/points");
+
     @Bean
     SecurityFilterChain filterChain(
-            HttpSecurity http, AuthenticationEntryPoint jwtAuthenticationEntryPoint, AccessDeniedHandler jwtAccessDeniedHandler)
+            HttpSecurity http,
+            AuthenticationEntryPoint jwtAuthenticationEntryPoint,
+            AccessDeniedHandler jwtAccessDeniedHandler,
+            ObjectMapper objectMapper)
             throws Exception {
         return http.csrf(CsrfConfigurer::disable) // stateless JWT API, no cookies/session -- CSRF doesn't apply
                 // shared-kernel's CorsConfig: runs before authentication, so preflights
                 // never get a 401 and error responses still carry the CORS headers.
                 .cors(withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Consent gate of the field routes (A.1): a RECYCLER without `cv` gets 409 AUTH-019;
+                // on the GPS-points route also without `lc=true`. A check-in that carries
+                // coordinates checks the location consent itself (the body decides).
+                .addFilterAfter(
+                        new FieldAccessFilter(objectMapper, FIELD_ROUTES, LOCATION_ROUTES),
+                        BearerTokenAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth.requestMatchers(
                                 // springdoc's documented entry point; it 302s into /swagger-ui/index.html.
                                 "/swagger-ui.html",
@@ -56,6 +81,15 @@ public class SecurityConfig {
                         // GET only, like liveness: the rest of /actuator/** stays behind a token.
                         .requestMatchers(HttpMethod.GET, "/actuator/info")
                         .permitAll()
+                        // The catalogue is read by staff and by the field app (check-in form).
+                        .requestMatchers(HttpMethod.GET, "/waste-types")
+                        .hasAnyRole("STAFF", "ADMIN", "RECYCLER")
+                        // The retention run deletes data: ADMIN only (STAFF and RECYCLER get 403 AUTH-000).
+                        .requestMatchers(HttpMethod.POST, "/retention/run")
+                        .hasRole("ADMIN")
+                        // Field routes: only the recycler's device. Staff and admin get 403 AUTH-000.
+                        .requestMatchers("/me/**", "/workdays/**", "/evidence/**")
+                        .hasRole("RECYCLER")
                         .anyRequest()
                         .hasAnyRole("STAFF", "ADMIN"))
                 .exceptionHandling(handling -> handling

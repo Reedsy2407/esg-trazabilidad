@@ -61,6 +61,20 @@ services:
         - .dockerignore
     envVars:
       - fromGroup: esg-shared
+      # Field evidence (photos) in a private Backblaze B2 bucket, through its S3-compatible API.
+      # The endpoint and the region are not secrets and are fixed here; the service does not start
+      # without the bucket name and the application key, whose values are typed once in the
+      # dashboard, never here. Only this service reads them.
+      - key: B2_ENDPOINT
+        value: https://s3.us-east-005.backblazeb2.com
+      - key: B2_REGION
+        value: us-east-005
+      - key: B2_BUCKET
+        sync: false
+      - key: B2_KEY_ID
+        sync: false
+      - key: B2_APPLICATION_KEY
+        sync: false
 
   - type: web
     name: esg-reporting-service

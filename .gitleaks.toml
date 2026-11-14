@@ -88,3 +88,13 @@ condition = "AND"
 paths = ['''^README\.md$''']
 regexTarget = "line"
 regexes = ['''^- \*\*Contraseña:\*\* `[A-Za-z0-9]{20}`\s*$''']
+
+# The NAME of an environment variable, not a value: Render's blueprint lists the variable with
+# `sync: false` and the value is typed in the dashboard. Allowed only for that exact line in render.yaml,
+# without pinning a commit (a squash merge changes the hash, and pinning would need an extra commit).
+[[allowlists]]
+description = "render.yaml lists the name of the Backblaze application key variable (no value)"
+condition = "AND"
+paths = ['''^render\.yaml$''']
+regexTarget = "line"
+regexes = ['''^\s*- key: B2_APPLICATION_KEY\s*$''']

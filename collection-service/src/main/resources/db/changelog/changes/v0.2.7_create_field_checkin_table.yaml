@@ -1,0 +1,113 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.2.7-create-field-checkin-table
+      author: esg-trazabilidad
+      comment: >
+        A recycler's check-in at a neighbour (spec B2). Each one points to the official
+        collection_record created in the same transaction (record_id, unique). The unique pair
+        (recycler_id, client_id) is the final net for duplicates; content_hash (SHA-256 of the
+        request's fields) tells a harmless repeat from a client_id reused with other content
+        (COL-020). device_seq is the phone's counter; recorded_at is the phone's clock (not
+        trusted); received_at is the server's. lat, lng and accuracy_m are all present or all
+        absent. photo_key and photo_deleted_at serve the photo and its retention. Every instant is
+        timestamptz (UTC). Additive: a new table.
+      changes:
+        - createTable:
+            tableName: field_checkin
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: client_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: recycler_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: workday_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_field_checkin_workday
+                    references: workday(id)
+              - column:
+                  name: device_seq
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: record_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_field_checkin_record
+                    foreignKeyName: fk_field_checkin_record
+                    references: collection_record(id)
+              - column:
+                  name: neighbor_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: schedule_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: recorded_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: received_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lat
+                  type: double precision
+              - column:
+                  name: lng
+                  type: double precision
+              - column:
+                  name: accuracy_m
+                  type: double precision
+              - column:
+                  name: waste_type
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: photo_key
+                  type: varchar(200)
+              - column:
+                  name: photo_deleted_at
+                  type: timestamp with time zone
+              - column:
+                  name: content_hash
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: field_checkin
+            columnNames: recycler_id, client_id
+            constraintName: uq_field_checkin_recycler_client
+        - createIndex:
+            tableName: field_checkin
+            indexName: idx_field_checkin_workday_order
+            columns:
+              - column:
+                  name: workday_id
+              - column:
+                  name: device_seq
+              - column:
+                  name: recorded_at

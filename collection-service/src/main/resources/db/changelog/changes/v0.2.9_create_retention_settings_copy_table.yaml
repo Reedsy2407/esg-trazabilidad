@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.2.9-create-retention-settings-copy-table
+      author: esg-trazabilidad
+      comment: >
+        The retention periods auth-service announces (RetentionConfigChanged), kept as a single row
+        (id is always 1). The consumer applies an event only when its occurred_at is newer than
+        last_occurred_at, so an old or repeated event changes nothing. No row means the decided
+        defaults (90 days of exact GPS, 12 months of photos), which the code supplies. timestamptz
+        so the instant is stored exactly. Additive: a new table.
+      changes:
+        - createTable:
+            tableName: retention_settings_copy
+            columns:
+              - column:
+                  name: id
+                  type: smallint
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: gps_days
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: photo_months
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: consent_version
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_occurred_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE retention_settings_copy ADD CONSTRAINT ck_retention_settings_copy_single_row CHECK (id = 1)
+        - sql:
+            comment: The decided ranges are GPS 30 to 365 days and photos 3 to 36 months, so a period outside them can never be stored.
+            sql: >
+              ALTER TABLE retention_settings_copy ADD CONSTRAINT ck_retention_settings_copy_ranges
+              CHECK (gps_days BETWEEN 30 AND 365 AND photo_months BETWEEN 3 AND 36)

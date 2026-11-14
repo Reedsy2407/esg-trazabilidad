@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.2.3-alter-collection-record-add-recycler-and-waste-type
+      author: esg-trazabilidad
+      comment: >
+        Additive and nullable (spec B2, correction 3): the records created by staff before the
+        field app have neither a recycler nor a waste type, and stay that way. No backfill.
+      changes:
+        - addColumn:
+            tableName: collection_record
+            columns:
+              - column:
+                  name: recycler_id
+                  type: uuid
+              - column:
+                  name: waste_type
+                  type: varchar(32)

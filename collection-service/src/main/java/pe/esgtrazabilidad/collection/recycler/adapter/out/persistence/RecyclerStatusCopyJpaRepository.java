@@ -1,6 +1,7 @@
 package pe.esgtrazabilidad.collection.recycler.adapter.out.persistence;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -35,4 +36,7 @@ interface RecyclerStatusCopyJpaRepository extends JpaRepository<RecyclerStatusCo
 
     @Query("select count(c) > 0 from RecyclerStatusCopyEntity c where c.recyclerId = :recyclerId and c.status = 'ACTIVE'")
     boolean isActive(@Param("recyclerId") UUID recyclerId);
+
+    @Query("select c.associationId from RecyclerStatusCopyEntity c where c.recyclerId = :recyclerId and c.status = 'ACTIVE'")
+    Optional<UUID> findActiveAssociationId(@Param("recyclerId") UUID recyclerId);
 }

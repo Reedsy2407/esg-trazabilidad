@@ -31,6 +31,29 @@ class CollectionRegisteredEventTest {
     }
 
     @Test
+    void fromCarriesTheRecyclerAndTheWasteTypeOfAFieldRecord() {
+        UUID recyclerId = UUID.randomUUID();
+        CollectionRecord record = CollectionRecord.create(
+                UUID.randomUUID(), null, UUID.randomUUID(), LocalDate.now(), new BigDecimal("3.25"), recyclerId, "PET");
+
+        CollectionRegisteredEvent event = CollectionRegisteredEvent.from(record, "150114");
+
+        assertThat(event.recyclerId()).isEqualTo(recyclerId);
+        assertThat(event.wasteType()).isEqualTo("PET");
+    }
+
+    @Test
+    void aRecordFromTheWebCarriesNeitherRecyclerNorWasteType() {
+        CollectionRecord record = CollectionRecord.create(
+                UUID.randomUUID(), null, UUID.randomUUID(), LocalDate.now(), new BigDecimal("12.5"));
+
+        CollectionRegisteredEvent event = CollectionRegisteredEvent.from(record);
+
+        assertThat(event.recyclerId()).isNull();
+        assertThat(event.wasteType()).isNull();
+    }
+
+    @Test
     void fromCarriesTheNeighboursUbigeoWhenGiven() {
         CollectionRecord record = CollectionRecord.create(
                 UUID.randomUUID(), null, UUID.randomUUID(), LocalDate.now(), new BigDecimal("12.5"));

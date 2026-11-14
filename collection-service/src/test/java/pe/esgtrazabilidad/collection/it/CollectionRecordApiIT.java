@@ -190,9 +190,11 @@ class CollectionRecordApiIT {
         assertThat(payloadFields.keySet())
                 .containsExactlyInAnyOrder(
                         "eventId", "occurredAt", "recordId", "neighborId", "associationId", "collectionDate",
-                        "weightKg", "districtUbigeo");
+                        "weightKg", "districtUbigeo", "recyclerId", "wasteType");
         // D3: the neighbour's ubigeo at the moment of the record travels in the event.
         assertThat(payloadFields).containsEntry("districtUbigeo", "150140");
+        // CA-29: a record staff creates from the web has neither a recycler nor a waste type.
+        assertThat(payloadFields).containsEntry("recyclerId", null).containsEntry("wasteType", null);
     }
 
     @Test

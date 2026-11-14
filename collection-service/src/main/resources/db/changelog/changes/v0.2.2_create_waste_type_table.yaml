@@ -1,0 +1,77 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.2.2-create-waste-type-table
+      author: esg-trazabilidad
+      comment: >
+        Catalogue of recyclable waste types (spec A.5b, derived from RM 138-2021-MINAM; the
+        norm has no codes, so these are the project's own). Additive: a new table. Adding or
+        retiring a type is a data change (the active flag), not a code change.
+      changes:
+        - createTable:
+            tableName: waste_type
+            columns:
+              - column:
+                  name: code
+                  type: varchar(32)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+        - insert:
+            tableName: waste_type
+            columns:
+              - column: {name: code, value: PAPEL}
+              - column: {name: name, value: Papel}
+              - column: {name: active, valueBoolean: true}
+        - insert:
+            tableName: waste_type
+            columns:
+              - column: {name: code, value: CARTON}
+              - column: {name: name, value: Cartón}
+              - column: {name: active, valueBoolean: true}
+        - insert:
+            tableName: waste_type
+            columns:
+              - column: {name: code, value: PET}
+              - column: {name: name, value: Plástico PET}
+              - column: {name: active, valueBoolean: true}
+        - insert:
+            tableName: waste_type
+            columns:
+              - column: {name: code, value: PLAST_OTRO}
+              - column: {name: name, value: Otros plásticos}
+              - column: {name: active, valueBoolean: true}
+        - insert:
+            tableName: waste_type
+            columns:
+              - column: {name: code, value: VIDRIO}
+              - column: {name: name, value: Vidrio}
+              - column: {name: active, valueBoolean: true}
+        - insert:
+            tableName: waste_type
+            columns:
+              - column: {name: code, value: METAL}
+              - column: {name: name, value: Metales}
+              - column: {name: active, valueBoolean: true}
+        - insert:
+            tableName: waste_type
+            columns:
+              - column: {name: code, value: TETRABRIK}
+              - column: {name: name, value: Tetrabrik y envases compuestos}
+              - column: {name: active, valueBoolean: true}
+        - insert:
+            tableName: waste_type
+            columns:
+              - column: {name: code, value: TEXTIL}
+              - column: {name: name, value: "Textiles, caucho y cuero"}
+              - column: {name: active, valueBoolean: true}

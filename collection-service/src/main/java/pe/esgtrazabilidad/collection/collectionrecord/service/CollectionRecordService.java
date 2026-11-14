@@ -88,7 +88,9 @@ class CollectionRecordService
                 command.scheduleId(),
                 command.associationId(),
                 command.collectionDate(),
-                command.weightKg());
+                command.weightKg(),
+                command.recyclerId(),
+                command.wasteType());
         CollectionRecord saved = repository.save(record);
         eventPublisher.publish(CollectionRegisteredEvent.from(saved, neighbor.getDistrictUbigeo()));
         return saved;

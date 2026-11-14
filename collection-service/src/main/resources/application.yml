@@ -49,3 +49,37 @@ management:
 server:
   # Render injects PORT; locally the fixed default applies. e2e-tests' SERVER_PORT still wins.
   port: ${PORT:8082}
+
+esg:
+  field:
+    # A closed workday still takes GPS points and check-ins recorded up to this many minutes after its end.
+    close-tolerance-minutes: 5
+  retention:
+    # The route summary keeps a polyline of at most this many points, simplified within this tolerance.
+    polyline-tolerance-meters: 25
+    polyline-max-points: 200
+    # Photos handled per run (the rest wait for the next one); a run on demand can be repeated.
+    photo-batch-size: 500
+    job:
+      # Daily, at a quiet hour in Lima (zone fixed in the job). The run is idempotent; POST /retention/run does the same.
+      enabled: true
+      cron: "0 30 3 * * *"
+  evidence:
+    # Backblaze B2 through its S3-compatible API. The bucket and the application key are NOT
+    # defaulted: without them the service does not start (no secret ever has a default).
+    endpoint: ${B2_ENDPOINT:https://s3.us-east-005.backblazeb2.com}
+    region: ${B2_REGION:us-east-005}
+    bucket: ${B2_BUCKET}
+    key-id: ${B2_KEY_ID}
+    application-key: ${B2_APPLICATION_KEY}
+    # Largest photo accepted (bytes): 2 MB.
+    max-bytes: 2097152
+    # Validity of the signed upload URL and of the signed read URL.
+    upload-url-minutes: 10
+    read-url-minutes: 5
+    # The three timeouts of every outgoing call (dependency sheet): connect, read and wait for a pooled connection.
+    connect-timeout-seconds: 3
+    read-timeout-seconds: 10
+    pool-wait-timeout-seconds: 3
+    # Whole-call ceilings, retries included.
+    call-timeout-seconds: 15

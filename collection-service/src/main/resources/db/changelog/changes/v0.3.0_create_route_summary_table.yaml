@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.3.0-create-route-summary-table
+      author: esg-trazabilidad
+      comment: >
+        What remains of a workday's GPS points after gpsDays (spec B2, CA-39): how many points there
+        were, the distance over legs between points of 100 m accuracy or better, the first and last
+        instant, and a simplified polyline (at most 200 points, as a JSON array of [lat, lng]). One row
+        per workday; the retention job creates it in the same transaction that deletes the exact points.
+        Additive: a new table.
+      changes:
+        - createTable:
+            tableName: route_summary
+            columns:
+              - column:
+                  name: workday_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    foreignKeyName: fk_route_summary_workday
+                    references: workday(id)
+              - column:
+                  name: point_count
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: distance_m
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: first_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: polyline
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: summarized_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false

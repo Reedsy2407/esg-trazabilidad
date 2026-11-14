@@ -75,7 +75,11 @@ class CrossServiceTokenPortabilityIT {
                         "PASSWORD_RESET_PEPPER", "e2e-test-only-pepper-of-at-least-32-bytes",
                         "RECYCLER_CODE_HMAC_SECRET", "e2e-test-only-recycler-code-key-of-32-bytes"));
         recycler = launch("recycler-service", Map.of());
-        collection = launch("collection-service", Map.of());
+        // The evidence bucket has no defaults for its name or credentials; these are inert placeholders
+        // (nothing here ever reaches a bucket).
+        collection = launch(
+                "collection-service",
+                Map.of("B2_BUCKET", "e2e-bucket", "B2_KEY_ID", "e2e-id", "B2_APPLICATION_KEY", "e2e-secret"));
         reporting = launch(
                 "reporting-service", Map.of("RUC_LOOKUP_PROVIDER", "none", "SIGERSOL_MUNICIPAL_PROVIDER", "none"));
 

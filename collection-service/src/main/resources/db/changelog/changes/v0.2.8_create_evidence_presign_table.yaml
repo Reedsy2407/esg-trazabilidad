@@ -1,0 +1,62 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.2.8-create-evidence-presign-table
+      author: esg-trazabilidad
+      comment: >
+        What the server agreed to receive for one check-in's photo (spec B2, CA-37): the object key,
+        the announced size and the SHA-256, for the recycler who asked. A check-in that names a
+        photo is accepted only if the bucket holds that key with that size. The primary key is
+        (recycler_id, checkin_client_id): asking again for the same check-in reuses the key and
+        refreshes size, hash and expiry. Additive: a new table.
+      changes:
+        - createTable:
+            tableName: evidence_presign
+            columns:
+              - column:
+                  name: recycler_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: checkin_client_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: object_key
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: size_bytes
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sha256
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: presigned_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: evidence_presign
+            columnNames: recycler_id, checkin_client_id
+            constraintName: pk_evidence_presign
+        - addUniqueConstraint:
+            tableName: evidence_presign
+            columnNames: object_key
+            constraintName: uq_evidence_presign_key

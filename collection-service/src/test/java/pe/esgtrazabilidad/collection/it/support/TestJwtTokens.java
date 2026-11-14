@@ -37,13 +37,22 @@ public final class TestJwtTokens {
         return signToken(TEST_SECRET, SUBJECT);
     }
 
+    /** An ADMIN token (the same shape as the staff one, with the other role). */
+    public static String adminToken() {
+        return signToken(TEST_SECRET, SUBJECT, "ADMIN");
+    }
+
     public static String signToken(String secret, String subject) {
+        return signToken(secret, subject, "STAFF");
+    }
+
+    private static String signToken(String secret, String subject, String role) {
         try {
             MACSigner signer = new MACSigner(secret.getBytes(StandardCharsets.UTF_8));
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
                     .subject(subject)
                     .claim("email", TEST_EMAIL)
-                    .claim("role", "STAFF")
+                    .claim("role", role)
                     .expirationTime(new Date(System.currentTimeMillis() + 60_000))
                     .build();
             SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
@@ -62,6 +71,37 @@ public final class TestJwtTokens {
     /** The same RECYCLER token, already expired beyond the decoder's clock skew. */
     public static String expiredRecyclerToken() {
         return recyclerToken(-120_000);
+    }
+
+    /**
+     * A RECYCLER token of a specific recycler (A.1): {@code rid}, {@code aid}, consent version
+     * {@code cv} (null: no consent yet) and whether the location was accepted ({@code lc}).
+     */
+    public static String recyclerToken(String recyclerId, String associationId, Integer consentVersion, boolean locationConsent) {
+        try {
+            MACSigner signer = new MACSigner(TEST_SECRET.getBytes(StandardCharsets.UTF_8));
+            JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
+                    .subject("01a0d8cb-f219-72a2-b006-5150f0e0d601")
+                    .claim("role", "RECYCLER")
+                    .claim("rid", recyclerId)
+                    .claim("aid", associationId)
+                    .claim("did", "01a0d8cb-f219-72a2-b006-5150f0e0d604")
+                    .claim("lc", locationConsent)
+                    .expirationTime(new Date(System.currentTimeMillis() + 60_000));
+            if (consentVersion != null) {
+                claims.claim("cv", consentVersion);
+            }
+            SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims.build());
+            signedJwt.sign(signer);
+            return signedJwt.serialize();
+        } catch (JOSEException exception) {
+            throw new IllegalStateException("No se pudo firmar el token JWT de prueba", exception);
+        }
+    }
+
+    /** A RECYCLER token with consent and location accepted for the given recycler and association. */
+    public static String recyclerToken(String recyclerId, String associationId) {
+        return recyclerToken(recyclerId, associationId, 1, true);
     }
 
     private static String recyclerToken(long validMillis) {

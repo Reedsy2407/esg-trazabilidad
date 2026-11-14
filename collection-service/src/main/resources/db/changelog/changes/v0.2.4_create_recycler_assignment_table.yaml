@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.2.4-create-recycler-assignment-table
+      author: esg-trazabilidad
+      comment: >
+        Which recycler collects each schedule (spec B2, correction 2): a schedule has at most
+        one recycler, so schedule_id is the primary key. association_id is the recycler's, read
+        from RecyclerStatusCopy at assignment time. Additive: a new table. The index serves
+        "everything assigned to this recycler" (route, GET assignment, PUT replacement).
+      changes:
+        - createTable:
+            tableName: recycler_assignment
+            columns:
+              - column:
+                  name: schedule_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    foreignKeyName: fk_recycler_assignment_schedule
+                    references: collection_schedule(id)
+              - column:
+                  name: recycler_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: association_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: assigned_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: recycler_assignment
+            indexName: idx_recycler_assignment_recycler
+            columns:
+              - column:
+                  name: recycler_id

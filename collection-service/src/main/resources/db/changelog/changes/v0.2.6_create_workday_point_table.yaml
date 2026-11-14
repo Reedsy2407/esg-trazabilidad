@@ -1,0 +1,66 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.2.6-create-workday-point-table
+      author: esg-trazabilidad
+      comment: >
+        GPS points of a workday. The primary key (workday_id, recorded_at) is the idempotency net:
+        a repeated point is ignored. device_seq is the phone's increasing counter per workday;
+        reads order by device_seq and then recorded_at, never by arrival, so a phone whose clock
+        changed does not scramble the route. recorded_at is the phone's clock (not trusted);
+        received_at is the server's. Points are deleted by the retention job after gpsDays.
+        Additive: a new table.
+      changes:
+        - createTable:
+            tableName: workday_point
+            columns:
+              - column:
+                  name: workday_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_workday_point_workday
+                    references: workday(id)
+              - column:
+                  name: recorded_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: device_seq
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lat
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lng
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: accuracy_m
+                  type: double precision
+                  constraints:
+                    nullable: false
+              - column:
+                  name: received_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: workday_point
+            columnNames: workday_id, recorded_at
+            constraintName: pk_workday_point
+        - createIndex:
+            tableName: workday_point
+            indexName: idx_workday_point_order
+            columns:
+              - column:
+                  name: workday_id
+              - column:
+                  name: device_seq
+              - column:
+                  name: recorded_at

@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.5.6-create-shedlock-auth-table
+      author: esg-trazabilidad
+      comment: >
+        ShedLock's standard schema for the outbox dispatcher, named shedlock_auth (never
+        shedlock): the four services share one database and one schema, so each owns a
+        distinctly named lock table. Additive: a new table.
+      changes:
+        - createTable:
+            tableName: shedlock_auth
+            columns:
+              - column:
+                  name: name
+                  type: varchar(64)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: lock_until
+                  type: timestamp(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: locked_at
+                  type: timestamp(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: locked_by
+                  type: varchar(255)
+                  constraints:
+                    nullable: false

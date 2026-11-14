@@ -53,7 +53,9 @@ class CollectionRecordRepositoryAdapter implements CollectionRecordRepository {
                 record.getScheduleId(),
                 record.getAssociationId(),
                 record.getCollectionDate(),
-                record.getWeightKg());
+                record.getWeightKg(),
+                record.getRecyclerId(),
+                record.getWasteType());
     }
 
     private CollectionRecord toDomain(CollectionRecordEntity entity) {
@@ -63,6 +65,8 @@ class CollectionRecordRepositoryAdapter implements CollectionRecordRepository {
                 entity.getScheduleId(),
                 entity.getAssociationId(),
                 entity.getCollectionDate(),
-                entity.getWeightKg());
+                entity.getWeightKg(),
+                entity.getRecyclerId(),
+                entity.getWasteType());
     }
 }

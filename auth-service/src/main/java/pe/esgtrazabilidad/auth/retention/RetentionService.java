@@ -1,6 +1,7 @@
 package pe.esgtrazabilidad.auth.retention;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -8,10 +9,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import pe.esgtrazabilidad.auth.events.publish.RetentionConfigChangedEvent;
+import pe.esgtrazabilidad.auth.events.publish.RetentionConfigChangedPublisher;
 import pe.esgtrazabilidad.auth.exception.AuthErrors;
 import pe.esgtrazabilidad.auth.staffuser.domain.StaffUser;
 import pe.esgtrazabilidad.auth.staffuser.port.out.StaffUserRepository;
 import pe.esgtrazabilidad.kernel.error.ApplicationException;
+import pe.esgtrazabilidad.kernel.id.IdGenerator;
 
 /**
  * Changing how long GPS and photos are kept. Only an ADMIN may, decided from the database like every other
@@ -38,10 +42,17 @@ public class RetentionService {
     private final StaffUserRepository staffUsers;
     private final Clock clock;
 
-    RetentionService(RetentionConfigRepository repository, StaffUserRepository staffUsers, Clock clock) {
+    private final RetentionConfigChangedPublisher publisher;
+
+    RetentionService(
+            RetentionConfigRepository repository,
+            StaffUserRepository staffUsers,
+            Clock clock,
+            RetentionConfigChangedPublisher publisher) {
         this.repository = repository;
         this.staffUsers = staffUsers;
         this.clock = clock;
+        this.publisher = publisher;
     }
 
     public RetentionConfig current() {
@@ -61,7 +72,12 @@ public class RetentionService {
                 || photoMonths > MAX_PHOTO_MONTHS) {
             throw new IllegalArgumentException("Retention period out of range");
         }
-        RetentionConfig after = repository.update(gpsDays, photoMonths, clock.instant());
+        Instant now = clock.instant();
+        RetentionConfig after = repository.update(gpsDays, photoMonths, now);
+        // Same transaction as the save: the announcement exists if and only if the periods were saved.
+        // Sent on every save, a real change or not, so collection can receive the values the first time.
+        publisher.publish(new RetentionConfigChangedEvent(
+                IdGenerator.generate(), now, after.gpsDays(), after.photoMonths(), after.consentVersion()));
         log.info(
                 "event=retention_changed actor={} gpsDays={} photoMonths={} consentVersion={}",
                 actorId,

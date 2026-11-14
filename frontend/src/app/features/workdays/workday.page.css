@@ -1,0 +1,110 @@
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-2) 0 0;
+  color: var(--ink-soft);
+}
+.sec {
+  margin-top: var(--space-8);
+  margin-bottom: var(--space-3);
+}
+.note {
+  max-width: 72ch;
+  margin: var(--space-3) 0 0;
+  color: var(--ink-soft);
+  font-size: var(--t-note);
+}
+p.problem {
+  margin: var(--space-3) 0;
+}
+
+/* El visor de cifras de la jornada: papel con el pliegue de la «T». */
+.summary {
+  margin-top: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  background: var(--paper);
+}
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-10);
+  margin: 0;
+}
+.figures dt {
+  color: var(--ink-soft);
+  font-size: var(--t-note);
+}
+.figures dd {
+  margin: var(--space-1) 0 0;
+  font-size: var(--t-2);
+  font-weight: 600;
+  line-height: 1.1;
+}
+.figures dd.big {
+  font-size: var(--t-3);
+}
+
+.checkins-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.n {
+  display: inline-block;
+  min-width: 1.8em;
+  margin-right: var(--space-1);
+  padding: 0 var(--space-1);
+  border: 2px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--t-note);
+  font-weight: 600;
+  text-align: center;
+}
+.photo-state {
+  color: var(--ink-soft);
+}
+.thumb {
+  display: block;
+  min-width: var(--touch);
+  min-height: var(--touch);
+  padding: 0;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  cursor: zoom-in;
+}
+.thumb:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.thumb img {
+  display: block;
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+}
+.thumb.big {
+  cursor: zoom-out;
+}
+.thumb.big img {
+  width: min(480px, 100%);
+  height: auto;
+  max-width: 100%;
+  aspect-ratio: 4 / 3;
+}
+.entry .thumb {
+  margin-top: var(--space-2);
+}
+@media (max-width: 639.98px) {
+  .summary {
+    padding: var(--space-4);
+  }
+  .thumb.big {
+    width: 100%;
+  }
+  .checkins-head .btn {
+    width: 100%;
+  }
+}

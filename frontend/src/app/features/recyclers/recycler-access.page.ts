@@ -87,9 +87,6 @@ export class RecyclerAccessPage {
     return formatInstantDate(instant);
   }
 
-  protected deviceState(device: RecyclerDevice): string {
-    return device.revokedAt === null ? 'En uso' : `Revocado el ${formatInstantDate(device.revokedAt)}`;
-  }
 
   // --- activation code ---------------------------------------------------------------------
 

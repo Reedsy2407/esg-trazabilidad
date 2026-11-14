@@ -42,6 +42,26 @@ export function formatInstantDate(value: string): string {
   return formatDate(value, 'dd/MM/yyyy', LOCALE, LIMA_OFFSET);
 }
 
+/** A backend Instant shown as Lima clock time: HH:mm. */
+export function formatInstantTime(value: string): string {
+  return formatDate(value, 'HH:mm', LOCALE, LIMA_OFFSET);
+}
+
+/** A backend Instant as the Lima date and time: dd/MM/yyyy HH:mm. */
+export function formatInstantDateTime(value: string): string {
+  return formatDate(value, 'dd/MM/yyyy HH:mm', LOCALE, LIMA_OFFSET);
+}
+
+/** The first instant (UTC) of a Lima calendar date "yyyy-MM-dd", for an API filter. */
+export function limaDayStart(localDate: string): string {
+  return new Date(`${localDate}T00:00:00-05:00`).toISOString();
+}
+
+/** The last millisecond (UTC) of a Lima calendar date "yyyy-MM-dd", for an API filter. */
+export function limaDayEnd(localDate: string): string {
+  return new Date(`${localDate}T23:59:59.999-05:00`).toISOString();
+}
+
 /** Today's calendar date in Lima, as a LocalDate ("yyyy-MM-dd"). */
 export function todayInLima(now: Date = new Date()): string {
   return formatDate(now, 'yyyy-MM-dd', LOCALE, LIMA_OFFSET);

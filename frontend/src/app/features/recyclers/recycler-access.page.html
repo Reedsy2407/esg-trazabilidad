@@ -25,6 +25,11 @@
 </div>
 
 @if (!recycler.error()) {
+  <nav class="field-links" aria-label="Trabajo de campo del reciclador">
+    <a class="btn" [routerLink]="['/asociaciones', associationId(), 'recicladores', recyclerId(), 'cronogramas']">Cronogramas asignados</a>
+    <a class="btn" [routerLink]="['/asociaciones', associationId(), 'recicladores', recyclerId(), 'jornadas']">Jornadas y recorridos</a>
+  </nav>
+
   <section class="sheet-flat panel" aria-labelledby="account-title">
     <h2 id="account-title">Cuenta y código de activación</h2>
 
@@ -121,7 +126,7 @@
                 @for (d of devices.value(); track d.deviceId) {
                   <tr [attr.data-revoked]="d.revokedAt !== null">
                     <td class="type">{{ d.label }}</td>
-                    <td>{{ deviceState(d) }}</td>
+                    <td>@if (d.revokedAt === null) { En uso } @else { Revocado el <span class="mono">{{ date(d.revokedAt) }}</span> }</td>
                     <td class="mono nowrap">{{ date(d.createdAt) }}</td>
                     <td class="nowrap" [class.mono]="d.lastSeenAt">{{ d.lastSeenAt ? date(d.lastSeenAt) : 'Sin conexión' }}</td>
                     <td>
@@ -139,7 +144,7 @@
               <li class="entry" [attr.data-revoked]="d.revokedAt !== null">
                 <span class="entry-title">{{ d.label }}</span>
                 <dl>
-                  <div><dt>Estado</dt><dd>{{ deviceState(d) }}</dd></div>
+                  <div><dt>Estado</dt><dd>@if (d.revokedAt === null) { En uso } @else { Revocado el <span class="mono">{{ date(d.revokedAt) }}</span> }</dd></div>
                   <div><dt>Activado</dt><dd class="mono">{{ date(d.createdAt) }}</dd></div>
                   <div><dt>Última conexión</dt><dd [class.mono]="d.lastSeenAt">{{ d.lastSeenAt ? date(d.lastSeenAt) : 'Sin conexión' }}</dd></div>
                 </dl>
@@ -157,10 +162,11 @@
                 código nuevo. No se puede deshacer.
               </p>
               <div class="buttons">
-                <button type="button" class="btn btn-primary" [disabled]="revokeBusy()" (click)="revoke(d)">
+                <!-- The safe way out carries the emphasis: revoking cannot be undone. -->
+                <button type="button" class="btn btn-primary" [disabled]="revokeBusy()" (click)="cancelRevoke()">No, volver</button>
+                <button type="button" class="btn" [disabled]="revokeBusy()" (click)="revoke(d)">
                   {{ revokeBusy() ? 'Revocando…' : 'Sí, revocar' }}
                 </button>
-                <button type="button" class="btn" [disabled]="revokeBusy()" (click)="cancelRevoke()">No, volver</button>
               </div>
             </div>
           }

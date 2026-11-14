@@ -92,6 +92,7 @@ public class InMemoryEvidenceStorage implements EvidenceStorage {
 
     @Override
     public String presignRead(String key, Duration validFor) {
+        record();
         lastReadValidity = validFor;
         return "https://bucket.invalid/" + key + "?signed-read";
     }

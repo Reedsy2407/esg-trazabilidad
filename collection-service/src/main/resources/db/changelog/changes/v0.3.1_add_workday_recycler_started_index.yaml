@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0.3.1-add-workday-recycler-started-index
+      author: esg-trazabilidad
+      comment: >
+        Serves the staff list of a recycler's workdays (spec B2, A.5c): the most recent first,
+        filtered by started_at. The unique (recycler_id, client_id) index cannot give that order.
+        Additive: a new index, no table or column changes.
+      changes:
+        - createIndex:
+            tableName: workday
+            indexName: idx_workday_recycler_started
+            columns:
+              - column:
+                  name: recycler_id
+              - column:
+                  name: started_at
+                  descending: true

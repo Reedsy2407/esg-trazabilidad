@@ -4,8 +4,15 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  AssignableSchedule,
+  AssignedSchedule,
   Association,
   AssociationStatus,
+  BulkAssignmentResult,
+  ReplaceAssignmentResult,
+  RetentionRunResult,
+  WorkdayDetail,
+  WorkdaySummary,
   ChangePasswordRequest,
   ConfirmPasswordResetRequest,
   VerifyPasswordResetRequest,
@@ -439,6 +446,56 @@ export class BackendApi {
     return this.http.delete<void>(
       `${auth}/auth/recycler-accounts/${encodeURIComponent(accountId)}/devices/${encodeURIComponent(deviceId)}`,
     );
+  }
+
+  // --- field work (collection-service, spec A.5 and A.5c) ------------------------------------
+
+  /** What the recycler has assigned (staff view; no phone). */
+  recyclerAssignment(recyclerId: string): Observable<{ recyclerId: string; schedules: AssignedSchedule[] }> {
+    return this.http.get<{ recyclerId: string; schedules: AssignedSchedule[] }>(
+      `${collection}/recyclers/${encodeURIComponent(recyclerId)}/assignment`,
+    );
+  }
+
+  /** ACTIVE schedules of ACTIVE neighbours of a district, 50 per page. COL-010 for a district outside Lima and Callao. */
+  assignableSchedules(districtUbigeo: string, page: number): Observable<Page<AssignableSchedule>> {
+    const params = new HttpParams().set('districtUbigeo', districtUbigeo).set('page', page).set('size', 50);
+    return this.http.get<Page<AssignableSchedule>>(`${collection}/schedules/assignable`, { params });
+  }
+
+  /** Replaces the recycler's list with exactly these schedules and MOVES the ones another recycler had (listed in `moved`). */
+  replaceAssignment(recyclerId: string, scheduleIds: readonly string[]): Observable<ReplaceAssignmentResult> {
+    return this.http.put<ReplaceAssignmentResult>(`${collection}/recyclers/${encodeURIComponent(recyclerId)}/assignment`, {
+      scheduleIds,
+    });
+  }
+
+  /** Assigns the district's free schedules; those of another recycler are skipped and counted. Idempotent. */
+  bulkAssign(recyclerId: string, districtUbigeo: string): Observable<BulkAssignmentResult> {
+    return this.http.post<BulkAssignmentResult>(`${collection}/assignments/bulk`, { recyclerId, districtUbigeo });
+  }
+
+  /** The recycler's workdays, newest first; `from` and `to` are UTC instants filtering `startedAt`. */
+  recyclerWorkdays(recyclerId: string, page: number, from: string | null, to: string | null): Observable<Page<WorkdaySummary>> {
+    let params = new HttpParams().set('page', page).set('size', 20);
+    if (from !== null) {
+      params = params.set('from', from);
+    }
+    if (to !== null) {
+      params = params.set('to', to);
+    }
+    return this.http.get<Page<WorkdaySummary>>(`${collection}/recyclers/${encodeURIComponent(recyclerId)}/workdays`, { params });
+  }
+
+  /** One workday. The photo URLs in the answer last 5 minutes: ask again to renew them. COL-016 when it does not exist. */
+  workday(workdayId: string, pointsOffset = 0): Observable<WorkdayDetail> {
+    const params = new HttpParams().set('pointsOffset', pointsOffset);
+    return this.http.get<WorkdayDetail>(`${collection}/workdays/${encodeURIComponent(workdayId)}`, { params });
+  }
+
+  /** ADMIN only. Applies the retention terms now; idempotent. */
+  runRetention(): Observable<RetentionRunResult> {
+    return this.http.post<RetentionRunResult>(`${collection}/retention/run`, null);
   }
 
   liveness(base: string): Observable<unknown> {

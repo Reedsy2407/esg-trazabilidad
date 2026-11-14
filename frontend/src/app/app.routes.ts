@@ -76,6 +76,21 @@ export const routes: Routes = [
         loadComponent: () => import('./features/recyclers/recycler-access.page').then((m) => m.RecyclerAccessPage),
       },
       {
+        path: 'asociaciones/:associationId/recicladores/:recyclerId/cronogramas',
+        title: 'Cronogramas del reciclador · Trazabilidad ESG',
+        loadComponent: () => import('./features/recyclers/recycler-schedules.page').then((m) => m.RecyclerSchedulesPage),
+      },
+      {
+        path: 'asociaciones/:associationId/recicladores/:recyclerId/jornadas',
+        title: 'Jornadas del reciclador · Trazabilidad ESG',
+        loadComponent: () => import('./features/workdays/recycler-workdays.page').then((m) => m.RecyclerWorkdaysPage),
+      },
+      {
+        path: 'asociaciones/:associationId/recicladores/:recyclerId/jornadas/:workdayId',
+        title: 'Jornada · Trazabilidad ESG',
+        loadComponent: () => import('./features/workdays/workday.page').then((m) => m.WorkdayPage),
+      },
+      {
         path: 'vecinos',
         title: 'Vecinos · Trazabilidad ESG',
         loadComponent: () => import('./features/neighbors/neighbors.page').then((m) => m.NeighborsPage),

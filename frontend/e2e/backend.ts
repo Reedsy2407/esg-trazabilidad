@@ -212,6 +212,16 @@ export interface BackendOptions {
   staffFailures?: (number | 'applied' | 'pass')[];
   /** Every write (POST/PATCH) the fake services received, in order. */
   writes?: { method: string; path: string; body: unknown }[];
+  /** GET /schedules/assignable, /recyclers/{id}/assignment or /recyclers/{id}/workdays fail with this status (a bare 5xx). */
+  fieldStatus?: number;
+  /** PUT /recyclers/{id}/assignment and POST /assignments/bulk answer this problem instead of succeeding. */
+  assignmentFailure?: { status: number; code: string };
+  /** POST /retention/run answers this instead of 200 (code null: a bare gateway answer). */
+  retentionFailure?: { status: number; code: string | null };
+  /** Delay before answering GET /workdays/{id}, to observe the loading state. */
+  workdayDelayMs?: number;
+  /** Every GET /workdays/{id} answered: the test reads how many times the photos were asked for. */
+  workdayReads?: string[];
   /** Every POST body received by collection-records, for the test to inspect. */
   collectionPosts?: { neighborId: string; body: unknown }[];
 }
@@ -361,6 +371,76 @@ export const SIGERSOL_SYNCS: readonly SyncRow[] = [
   { id: '0192f3a8-f000-7000-8000-000000000001', associationId: ASSOCIATIONS[0].id, periodStart: '2024-12-01', periodEnd: '2024-12-31', hierarchyCompliancePercent: 87.5, officialKilosDeclared: 12500, declaredAt: '2025-01-03T14:00:00Z', sourceNote: 'Reporte anual SIGERSOL, copiado por A. Paredes', origin: 'REFERENCED_PROOF', registeredByEmail: 'a.paredes@example.com', reference: 'reporte-anual-2024.pdf' },
   { id: '0192f3a8-f000-7000-8000-000000000002', associationId: ASSOCIATIONS[0].id, periodStart: '2026-09-01', periodEnd: '2026-09-30', hierarchyCompliancePercent: 91.25, officialKilosDeclared: null, declaredAt: '2026-10-02T15:30:00Z', sourceNote: null, origin: null, registeredByEmail: null, reference: null },
 ];
+
+/** recycler-service RecyclerResponse: an active one and an inactive one of ASSOCIATIONS[0], and one of the suspended association. */
+export const FIELD_RECYCLERS = [
+  { id: '0192f3a8-c000-7000-8000-000000000001', fullName: 'Teodora Condori Apaza', associationId: ASSOCIATIONS[0].id, status: 'ACTIVE' },
+  { id: '0192f3a8-c000-7000-8000-000000000002', fullName: 'Julio Mendoza Pari', associationId: ASSOCIATIONS[0].id, status: 'INACTIVE' },
+  // Of the suspended association (ASSOCIATIONS[1]): the field screens do not depend on its state.
+  { id: '0192f3a8-c000-7000-8000-000000000003', fullName: 'Marcelino Flores Quispe', associationId: ASSOCIATIONS[1].id, status: 'ACTIVE' },
+] as const;
+const OTHER_RECYCLER_ID = '0192f3a8-c000-7000-8000-000000000009';
+
+interface FieldScheduleRow {
+  scheduleId: string;
+  dayOfWeek: string;
+  time: string;
+  ubigeo: string;
+  neighbor: { id: string; fullName: string; address: string; district: string };
+  assignedRecyclerId: string | null;
+}
+
+const fieldSchedule = (n: number, dayOfWeek: string, time: string, ubigeo: string, district: string, fullName: string, assignedRecyclerId: string | null): FieldScheduleRow => ({
+  scheduleId: `0192f3a8-e000-7000-8000-00000000000${n}`,
+  dayOfWeek,
+  time,
+  ubigeo,
+  neighbor: { id: `0192f3a8-e100-7000-8000-00000000000${n}`, fullName, address: `Jr. Huallaga ${100 + n * 10}`, district },
+  assignedRecyclerId,
+});
+
+/** The schedules of the field screens: free, another recycler's, and the active recycler's own. */
+export const FIELD_SCHEDULES = (): FieldScheduleRow[] => [
+  fieldSchedule(1, 'MONDAY', '08:00:00', '150101', 'Lima', 'Ana Flores Torres', null),
+  fieldSchedule(2, 'TUESDAY', '08:30:00', '150101', 'Lima', 'Beto Díaz Soto', OTHER_RECYCLER_ID),
+  fieldSchedule(3, 'WEDNESDAY', '09:00:00', '150101', 'Lima', 'Carmen Rojas Vera', FIELD_RECYCLERS[0].id),
+  fieldSchedule(4, 'THURSDAY', '10:00:00', '150101', 'Lima', 'Dina Huamán Cruz', null),
+  fieldSchedule(5, 'FRIDAY', '07:30:00', '150128', 'Rímac', 'Elsa Paredes Luna', FIELD_RECYCLERS[0].id),
+];
+
+const FIELD_START = Date.parse('2026-11-13T13:05:00Z');
+/** A loop of ~40 points around the centre of Lima, one every 30 s, numbered by the phone. */
+export const FIELD_POINTS = Array.from({ length: 40 }, (_, i) => ({
+  deviceSeq: i + 1,
+  recordedAt: new Date(FIELD_START + i * 30_000).toISOString(),
+  lat: -12.0464 + 0.0042 * Math.sin((2 * Math.PI * i) / 40),
+  lng: -77.0428 + 0.0042 * (Math.cos((2 * Math.PI * i) / 40) - 1),
+  accuracyM: 6 + (i % 5) * 4,
+}));
+
+export const WORKDAY_IDS = {
+  closed: '0192f3a8-d000-7000-8000-000000000001',
+  summarized: '0192f3a8-d000-7000-8000-000000000002',
+  open: '0192f3a8-d000-7000-8000-000000000003',
+};
+
+const photoImage = (version: number) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480"><!-- v${version} --><rect width="640" height="480" fill="#d6dbd9"/><rect x="120" y="140" width="400" height="260" fill="#1a576c"/><text x="320" y="110" font-size="40" text-anchor="middle" fill="#1b2422">Evidencia</text></svg>`)}`;
+
+const checkinRow = (n: number, pointIndex: number | null, name: string, kg: number, waste: string, photo: 'NONE' | 'AVAILABLE' | 'DELETED', photoVersion: number) => ({
+  checkinId: `0192f3a8-f100-7000-8000-00000000000${n}`,
+  recordId: `0192f3a8-f200-7000-8000-00000000000${n}`,
+  recordedAt: new Date(FIELD_START + (pointIndex ?? 33) * 30_000 + 5_000).toISOString(),
+  neighborId: `0192f3a8-e100-7000-8000-00000000000${n}`,
+  neighborName: name,
+  scheduleId: `0192f3a8-e000-7000-8000-00000000000${n}`,
+  weightKg: kg,
+  wasteType: waste,
+  lat: pointIndex === null ? null : FIELD_POINTS[pointIndex].lat,
+  lng: pointIndex === null ? null : FIELD_POINTS[pointIndex].lng,
+  accuracyM: pointIndex === null ? null : FIELD_POINTS[pointIndex].accuracyM,
+  photo: { state: photo, url: photo === 'AVAILABLE' ? photoImage(photoVersion) : null },
+});
 
 export async function fakeBackend(page: Page, options: BackendOptions = {}): Promise<void> {
   // Registered first, so it only answers what no route below handles. ng serve proxies /svc/* to
@@ -679,6 +759,11 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
     if (sub === undefined) {
       return json(200, association);
     }
+    if (sub === 'recyclers' && subId !== undefined && method === 'GET') {
+      // One recycler of the association (the field screens hang from it).
+      const found = FIELD_RECYCLERS.find((r) => r.id === subId && r.associationId === id);
+      return found === undefined ? problem(route, 404, 'REC-001', 'Reciclador no encontrado') : json(200, found);
+    }
     if (sub === 'recyclers' && method === 'GET') {
       // The association's recyclers list (S11): none registered, unless a test makes the service fail.
       if (options.recyclersStatus !== undefined) {
@@ -962,6 +1047,180 @@ export async function fakeBackend(page: Page, options: BackendOptions = {}): Pro
 
   // reporting-service SIGERSOL records, with state: one registered by a test is listed afterwards.
   const syncs: SyncRow[] = SIGERSOL_SYNCS.map((s) => ({ ...s }));
+
+  // ---- field work (module 2, stage 2): the recyclers' accounts, their assignment and their workdays ----
+  const fieldRows = FIELD_SCHEDULES();
+  let photoReads = 0;
+  const asJson = (route: Route, status: number, body: unknown) =>
+    route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+  const assignedOf = (recyclerId: string) =>
+    fieldRows
+      .filter((r) => r.assignedRecyclerId === recyclerId)
+      .map((r) => ({
+        scheduleId: r.scheduleId,
+        dayOfWeek: r.dayOfWeek,
+        time: r.time,
+        scheduleStatus: 'ACTIVE',
+        neighborId: r.neighbor.id,
+        neighborName: r.neighbor.fullName,
+        address: r.neighbor.address,
+        district: r.neighbor.district,
+        neighborStatus: 'ACTIVE',
+      }));
+  const FIELD_CHECKINS = (version: number) => [
+    checkinRow(1, 8, 'Ana Flores Torres', 5.2, 'PET', 'AVAILABLE', version),
+    checkinRow(2, 20, 'Beto Díaz Soto', 3.75, 'CARTON', 'AVAILABLE', version),
+    checkinRow(3, 31, 'Carmen Rojas Vera', 6, 'VIDRIO', 'DELETED', version),
+    checkinRow(4, null, 'Dina Huamán Cruz', 3.5, 'METAL', 'NONE', version),
+  ];
+  const WORKDAY_ROWS = [
+    { workdayId: WORKDAY_IDS.open, startedAt: '2026-11-14T12:50:00Z', endedAt: null, status: 'OPEN', withGps: false, checkinCount: 0, totalKg: 0, pointCount: 0 },
+    { workdayId: WORKDAY_IDS.closed, startedAt: new Date(FIELD_START).toISOString(), endedAt: '2026-11-13T17:30:00Z', status: 'CLOSED', withGps: true, checkinCount: 4, totalKg: 18.45, pointCount: 40 },
+    { workdayId: WORKDAY_IDS.summarized, startedAt: '2026-07-20T13:00:00Z', endedAt: '2026-07-20T15:10:00Z', status: 'CLOSED', withGps: true, checkinCount: 2, totalKg: 9.4, pointCount: 118 },
+  ];
+
+  await page.route('**/svc/auth/auth/recycler-accounts**', (route) => {
+    if (!authorized(route)) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    // No recycler has an app account in these tests.
+    return asJson(route, 200, []);
+  });
+
+  await page.route('**/svc/collection/recyclers/**', (route) => {
+    if (!authorized(route)) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    if (options.fieldStatus !== undefined) {
+      return gatewayError(route, options.fieldStatus);
+    }
+    const request = route.request();
+    const url = new URL(request.url());
+    const [, recyclerId, sub] = /\/recyclers\/([^/]+)\/([^/]+)$/.exec(url.pathname) ?? [];
+    if (sub === 'assignment' && request.method() === 'GET') {
+      return asJson(route, 200, { recyclerId, schedules: assignedOf(recyclerId) });
+    }
+    if (sub === 'assignment' && request.method() === 'PUT') {
+      const body = request.postDataJSON() as { scheduleIds: string[] };
+      options.writes?.push({ method: 'PUT', path: url.pathname, body });
+      if (options.assignmentFailure !== undefined) {
+        return problem(route, options.assignmentFailure.status, options.assignmentFailure.code, 'Rechazado');
+      }
+      const moved: { scheduleId: string; fromRecyclerId: string }[] = [];
+      for (const row of fieldRows) {
+        if (row.assignedRecyclerId === recyclerId && !body.scheduleIds.includes(row.scheduleId)) {
+          row.assignedRecyclerId = null;
+        }
+      }
+      for (const id of body.scheduleIds) {
+        const row = fieldRows.find((r) => r.scheduleId === id);
+        if (row === undefined) {
+          return problem(route, 404, 'COL-006', 'Programación de recojo no encontrada');
+        }
+        if (row.assignedRecyclerId !== null && row.assignedRecyclerId !== recyclerId) {
+          moved.push({ scheduleId: id, fromRecyclerId: row.assignedRecyclerId });
+        }
+        row.assignedRecyclerId = recyclerId;
+      }
+      return asJson(route, 200, { recyclerId, scheduleIds: body.scheduleIds, moved });
+    }
+    if (sub === 'workdays' && request.method() === 'GET') {
+      const from = url.searchParams.get('from');
+      const to = url.searchParams.get('to');
+      const mine = recyclerId === FIELD_RECYCLERS[0].id ? WORKDAY_ROWS : [];
+      const rows = mine.filter(
+        (w) => (from === null || Date.parse(w.startedAt) >= Date.parse(from)) && (to === null || Date.parse(w.startedAt) <= Date.parse(to)),
+      );
+      return asJson(route, 200, { content: rows, page: 0, size: 20, totalElements: rows.length, totalPages: rows.length === 0 ? 0 : 1 });
+    }
+    return problem(route, 404, 'NOT-FOUND', 'Ruta no simulada');
+  });
+
+  await page.route('**/svc/collection/schedules/assignable**', (route) => {
+    if (!authorized(route)) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    if (options.fieldStatus !== undefined) {
+      return gatewayError(route, options.fieldStatus);
+    }
+    const ubigeo = new URL(route.request().url()).searchParams.get('districtUbigeo');
+    const rows = fieldRows
+      .filter((r) => r.ubigeo === ubigeo)
+      .map((r) => ({ scheduleId: r.scheduleId, dayOfWeek: r.dayOfWeek, time: r.time, neighbor: r.neighbor, assignedRecyclerId: r.assignedRecyclerId }));
+    return asJson(route, 200, { content: rows, page: 0, size: 50, totalElements: rows.length, totalPages: rows.length === 0 ? 0 : 1 });
+  });
+
+  await page.route('**/svc/collection/assignments/bulk', (route) => {
+    if (!authorized(route)) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    const body = route.request().postDataJSON() as { recyclerId: string; districtUbigeo: string };
+    options.writes?.push({ method: 'POST', path: new URL(route.request().url()).pathname, body });
+    if (options.assignmentFailure !== undefined) {
+      return problem(route, options.assignmentFailure.status, options.assignmentFailure.code, 'Rechazado');
+    }
+    const inDistrict = fieldRows.filter((r) => r.ubigeo === body.districtUbigeo);
+    const free = inDistrict.filter((r) => r.assignedRecyclerId === null);
+    free.forEach((r) => (r.assignedRecyclerId = body.recyclerId));
+    return asJson(route, 200, {
+      assigned: free.length,
+      skippedOtherRecycler: inDistrict.filter((r) => r.assignedRecyclerId !== null && r.assignedRecyclerId !== body.recyclerId).length,
+      skippedInactive: body.districtUbigeo === '150101' ? 1 : 0,
+    });
+  });
+
+  await page.route('**/svc/collection/workdays/*', async (route) => {
+    if (!authorized(route)) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    if (options.workdayDelayMs !== undefined) {
+      await new Promise((resolve) => setTimeout(resolve, options.workdayDelayMs));
+    }
+    const id = new URL(route.request().url()).pathname.split('/').pop() ?? '';
+    options.workdayReads?.push(id);
+    photoReads += 1;
+    const base = { recyclerId: FIELD_RECYCLERS[0].id, associationId: ASSOCIATIONS[0].id };
+    if (id === WORKDAY_IDS.closed) {
+      return asJson(route, 200, {
+        workdayId: id, ...base, startedAt: new Date(FIELD_START).toISOString(), endedAt: '2026-11-13T17:30:00Z', withGps: true,
+        points: FIELD_POINTS, pointsTotal: FIELD_POINTS.length, pointsOffset: 0, routeSummary: null, checkins: FIELD_CHECKINS(photoReads),
+      });
+    }
+    if (id === WORKDAY_IDS.summarized) {
+      return asJson(route, 200, {
+        workdayId: id, ...base, startedAt: '2026-07-20T13:00:00Z', endedAt: '2026-07-20T15:10:00Z', withGps: true,
+        points: [], pointsTotal: 0, pointsOffset: 0,
+        routeSummary: {
+          pointCount: 118, distanceM: 3180.5, firstAt: '2026-07-20T13:01:00Z', lastAt: '2026-07-20T15:08:00Z',
+          polyline: FIELD_POINTS.filter((_, i) => i % 3 === 0).map((p) => [p.lat, p.lng]),
+        },
+        checkins: FIELD_CHECKINS(photoReads).slice(0, 2).map((c) => ({ ...c, photo: { state: 'DELETED', url: null } })),
+      });
+    }
+    if (id === WORKDAY_IDS.open) {
+      return asJson(route, 200, {
+        workdayId: id, ...base, startedAt: '2026-11-14T12:50:00Z', endedAt: null, withGps: false,
+        points: [], pointsTotal: 0, pointsOffset: 0, routeSummary: null, checkins: [],
+      });
+    }
+    return problem(route, 404, 'COL-016', 'Jornada no encontrada');
+  });
+
+  await page.route('**/svc/collection/retention/run', (route) => {
+    if (!authorized(route)) {
+      return problem(route, 401, 'AUTH-000', 'Token faltante o inválido');
+    }
+    options.writes?.push({ method: 'POST', path: new URL(route.request().url()).pathname, body: null });
+    if (options.role === 'STAFF') {
+      return problem(route, 403, 'AUTH-000', 'No tienes permiso para esta acción');
+    }
+    if (options.retentionFailure !== undefined) {
+      return options.retentionFailure.code === null
+        ? gatewayError(route, options.retentionFailure.status)
+        : problem(route, options.retentionFailure.status, options.retentionFailure.code, 'Rechazado');
+    }
+    return asJson(route, 200, { gpsDays: 90, photoMonths: 12, workdaysSummarized: 1, pointsDeleted: 40, photosDeleted: 2, photosFailed: 0 });
+  });
 
   await page.route('**/svc/reporting/sigersol-syncs**', (route) => {
     if (!authorized(route)) {

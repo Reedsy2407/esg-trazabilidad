@@ -1,0 +1,211 @@
+<a class="back-link" [routerLink]="['/asociaciones', associationId(), 'recicladores', recyclerId()]">Volver al reciclador</a>
+
+<!-- Always in the DOM: the result of each operation is announced here. -->
+<p class="visually-hidden" role="status">{{ status() }}</p>
+
+<div [attr.aria-busy]="recycler.isLoading()">
+  @if (recycler.hasValue()) {
+    @let r = recycler.value();
+    <header class="page-head">
+      <h1>Cronogramas de {{ r.fullName }}</h1>
+      <p class="meta">
+        <span>Reciclador {{ r.status === 'ACTIVE' ? 'activo' : 'inactivo' }}</span>
+        <span>
+          <strong class="mono">{{ assignment.hasValue() ? assigned().length : '…' }}</strong> asignados
+        </span>
+      </p>
+    </header>
+    @if (inactive()) {
+      <p class="problem" role="note">
+        Este reciclador está inactivo: se pueden revisar sus cronogramas, pero no asignarle más. Reactívalo primero.
+      </p>
+    }
+  } @else if (recycler.error(); as error) {
+    <div class="problem" role="alert">
+      <p>{{ loadError(error, 'los datos del reciclador') }}</p>
+      <button type="button" class="btn" (click)="recycler.reload()">Volver a intentar</button>
+    </div>
+  } @else {
+    <div class="page-head" aria-hidden="true"><span class="skel title"></span></div>
+    <p class="visually-hidden">Cargando reciclador</p>
+  }
+</div>
+
+@if (lastBulk(); as bulk) {
+  <section class="result fold" aria-labelledby="result-title">
+    <h2 id="result-title">Resultado en {{ bulk.district }}</h2>
+    <dl class="figures">
+      <div>
+        <dt>Asignados</dt>
+        <dd class="mono">{{ bulk.result.assigned }}</dd>
+      </div>
+      <div>
+        <dt>Omitidos: de otro reciclador</dt>
+        <dd class="mono">{{ bulk.result.skippedOtherRecycler }}</dd>
+      </div>
+      <div>
+        <dt>Omitidos: vecino o cronograma inactivo</dt>
+        <dd class="mono">{{ bulk.result.skippedInactive }}</dd>
+      </div>
+    </dl>
+    <p class="hint">Los cronogramas de otro reciclador no se mueven por distrito. Para moverlos, márcalos uno por uno.</p>
+  </section>
+} @else if (status()) {
+  <p class="result sheet-flat" aria-hidden="true">{{ status() }}</p>
+}
+
+@if (error(); as message) {
+  <div class="problem" role="alert"><p>{{ message }}</p></div>
+}
+
+<section aria-labelledby="assigned-title">
+  <h2 id="assigned-title" class="sec" tabindex="-1">Asignados</h2>
+  @if (assignment.error(); as error) {
+    <div class="problem" role="alert">
+      <p>{{ loadError(error, 'los cronogramas asignados') }}</p>
+      <button type="button" class="btn" (click)="assignment.reload()">Volver a intentar</button>
+    </div>
+  } @else if (!assignment.hasValue()) {
+    <p>Cargando cronogramas asignados…</p>
+  } @else if (assigned().length === 0) {
+    <p class="empty-note">Todavía no tiene cronogramas. Elige un distrito abajo para asignarle.</p>
+  } @else {
+    <div class="ledger-wide">
+      <table class="ledger">
+        <caption class="visually-hidden">Cronogramas asignados al reciclador</caption>
+        <thead>
+          <tr>
+            <th scope="col">Vecino</th>
+            <th scope="col">Día</th>
+            <th scope="col">Hora</th>
+            <th scope="col">Distrito</th>
+            <th scope="col">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of assigned(); track s.scheduleId) {
+            <tr>
+              <td class="type">{{ s.neighborName }}</td>
+              <td>{{ days[s.dayOfWeek] }}</td>
+              <td class="mono nowrap">{{ time(s.time) }}</td>
+              <td>{{ s.district }}</td>
+              <td>{{ s.scheduleStatus === 'ACTIVE' && s.neighborStatus === 'ACTIVE' ? 'En su ruta' : 'Fuera de su ruta' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <ul class="entries" aria-label="Cronogramas asignados al reciclador">
+      @for (s of assigned(); track s.scheduleId) {
+        <li class="entry">
+          <span class="entry-title">{{ s.neighborName }}</span>
+          <dl>
+            <div><dt>Día y hora</dt><dd class="mono">{{ days[s.dayOfWeek] }} {{ time(s.time) }}</dd></div>
+            <div><dt>Distrito</dt><dd>{{ s.district }}</dd></div>
+            <div><dt>Estado</dt><dd>{{ s.scheduleStatus === 'ACTIVE' && s.neighborStatus === 'ACTIVE' ? 'En su ruta' : 'Fuera de su ruta' }}</dd></div>
+          </dl>
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+<section class="sheet-flat panel" aria-labelledby="assign-title">
+  <h2 id="assign-title">Asignar por distrito</h2>
+  <p class="explain">
+    Elige un distrito de Lima o Callao. Puedes marcar cronogramas uno por uno, o asignar todos los libres del distrito de una vez.
+  </p>
+  <label class="field-label" for="district">Distrito</label>
+  <app-district-select inputId="district" [formControl]="districtControl" />
+
+  @if (district() !== null) {
+    <div [attr.aria-busy]="assignable.isLoading()">
+      @if (assignable.error(); as error) {
+        <div class="problem" role="alert">
+          <p>{{ loadError(error, 'los cronogramas del distrito') }}</p>
+          <button type="button" class="btn" (click)="assignable.reload()">Volver a intentar</button>
+        </div>
+      } @else if (!assignable.hasValue()) {
+        <p class="loading">Cargando cronogramas de {{ districtName() }}…</p>
+      } @else if (assignable.value().totalElements === 0) {
+        <p class="empty-note">{{ districtName() }} no tiene cronogramas activos de vecinos activos.</p>
+      } @else {
+        @let list = assignable.value();
+        <fieldset class="picker">
+          <legend>Cronogramas de {{ districtName() }} ({{ list.totalElements }})</legend>
+          <ul class="pick-list">
+            @for (row of list.content; track row.scheduleId) {
+              <li [attr.data-owner]="owner(row)">
+                <label class="pick">
+                  <input
+                    type="checkbox"
+                    [checked]="isChosen(row)"
+                    [disabled]="owner(row) === 'mine' || busy() || inactive()"
+                    (change)="toggle(row, $any($event.target).checked)"
+                  />
+                  <span class="who">{{ row.neighbor.fullName }}</span>
+                  <span class="when mono">{{ days[row.dayOfWeek] }} {{ time(row.time) }}</span>
+                  <span class="where">{{ row.neighbor.address }}</span>
+                  <span class="owner">{{ ownerText(row) }}</span>
+                </label>
+              </li>
+            }
+          </ul>
+        </fieldset>
+        <div class="list-foot">
+          <p class="count">Página {{ list.page + 1 }} de {{ list.totalPages }}. Lo que marcas se conserva al cambiar de página.</p>
+          <div class="pages">
+            <button type="button" class="btn" [disabled]="list.page === 0" (click)="previousPage()">Anterior</button>
+            <button type="button" class="btn" [disabled]="list.page + 1 >= list.totalPages" (click)="nextPage()">Siguiente</button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="actions">
+      <button
+        type="button"
+        class="btn btn-primary"
+        data-assign
+        [disabled]="busy() || inactive() || !assignment.hasValue() || chosenCount() === 0"
+        (click)="askAssignChosen()"
+      >
+        {{ busy() && confirming() === null ? 'Asignando…' : 'Asignar ' + chosenCount() + (chosenCount() === 1 ? ' marcado' : ' marcados') }}
+      </button>
+      <button type="button" class="btn" [disabled]="busy() || inactive()" (click)="askBulk()">
+        Asignar todo {{ districtName() }}
+      </button>
+    </div>
+
+    @if (confirming() === 'move') {
+      <div class="confirm" data-confirm tabindex="-1" role="group" aria-label="Confirmar el movimiento de cronogramas">
+        <p>
+          <strong class="mono">{{ chosenFromOthers() }}</strong>
+          {{ chosenFromOthers() === 1 ? 'de los cronogramas marcados es de otro reciclador' : 'de los cronogramas marcados son de otro reciclador' }}.
+          Si sigues, pasan a este reciclador y dejan de estar en la ruta del anterior. Los otros
+          {{ chosenCount() - chosenFromOthers() }} estaban libres.
+        </p>
+        <div class="buttons">
+          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="cancelConfirm()">No, volver</button>
+          <button type="button" class="btn" [disabled]="busy()" (click)="assignChosen()">
+            {{ busy() ? 'Moviendo…' : 'Sí, mover y asignar' }}
+          </button>
+        </div>
+      </div>
+    }
+    @if (confirming() === 'bulk') {
+      <div class="confirm" data-confirm tabindex="-1" role="group" aria-label="Confirmar la asignación del distrito">
+        <p>
+          Se asignarán a este reciclador todos los cronogramas libres de {{ districtName() }}. Los que ya tienen otro reciclador se
+          omiten (no se mueven) y los inactivos tampoco entran. Repetirlo no cambia nada.
+        </p>
+        <div class="buttons">
+          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="cancelConfirm()">No, volver</button>
+          <button type="button" class="btn" [disabled]="busy()" (click)="assignDistrict()">
+            {{ busy() ? 'Asignando…' : 'Sí, asignar el distrito' }}
+          </button>
+        </div>
+      </div>
+    }
+  }
+</section>

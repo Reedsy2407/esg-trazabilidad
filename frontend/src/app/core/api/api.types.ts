@@ -465,3 +465,116 @@ export interface RecyclerDevice {
   readonly lastSeenAt: string | null;
   readonly revokedAt: string | null;
 }
+
+/** collection-service AssignedSchedule (GET /recyclers/{id}/assignment): what a recycler already has. */
+export interface AssignedSchedule {
+  readonly scheduleId: string;
+  readonly dayOfWeek: DayOfWeek;
+  /** LocalTime "HH:mm:ss". */
+  readonly time: string;
+  readonly scheduleStatus: string;
+  readonly neighborId: string;
+  readonly neighborName: string;
+  readonly address: string;
+  readonly district: string;
+  readonly neighborStatus: string;
+}
+
+/** PUT /recyclers/{id}/assignment: the list as saved and the schedules taken from another recycler. */
+export interface ReplaceAssignmentResult {
+  readonly recyclerId: string;
+  readonly scheduleIds: readonly string[];
+  readonly moved: readonly { readonly scheduleId: string; readonly fromRecyclerId: string }[];
+}
+
+/** POST /assignments/bulk: the district's free schedules are assigned; the rest is counted, never moved. */
+export interface BulkAssignmentResult {
+  readonly assigned: number;
+  readonly skippedOtherRecycler: number;
+  readonly skippedInactive: number;
+}
+
+/** GET /schedules/assignable (A.5c): the console's one-by-one picker. */
+export interface AssignableSchedule {
+  readonly scheduleId: string;
+  readonly dayOfWeek: DayOfWeek;
+  readonly time: string;
+  readonly neighbor: { readonly id: string; readonly fullName: string; readonly address: string; readonly district: string };
+  /** Null while the schedule is free. */
+  readonly assignedRecyclerId: string | null;
+}
+
+/** GET /recyclers/{id}/workdays (A.5c). */
+export interface WorkdaySummary {
+  readonly workdayId: string;
+  readonly startedAt: string;
+  readonly endedAt: string | null;
+  readonly status: 'OPEN' | 'CLOSED';
+  readonly withGps: boolean;
+  readonly checkinCount: number;
+  readonly totalKg: number;
+  readonly pointCount: number;
+}
+
+export interface WorkdayPoint {
+  readonly deviceSeq: number;
+  readonly recordedAt: string;
+  readonly lat: number;
+  readonly lng: number;
+  readonly accuracyM: number;
+}
+
+export interface RouteSummary {
+  readonly pointCount: number;
+  readonly distanceM: number;
+  readonly firstAt: string;
+  readonly lastAt: string;
+  /** [lat, lng] pairs. */
+  readonly polyline: readonly (readonly number[])[];
+}
+
+/** NONE: no photo. AVAILABLE: a signed URL good for 5 minutes. DELETED: removed by the retention. */
+export interface CheckinPhoto {
+  readonly state: 'NONE' | 'AVAILABLE' | 'DELETED';
+  readonly url: string | null;
+}
+
+export interface WorkdayCheckin {
+  readonly checkinId: string;
+  readonly recordId: string;
+  readonly recordedAt: string;
+  readonly neighborId: string;
+  readonly neighborName: string;
+  readonly scheduleId: string;
+  readonly weightKg: number;
+  readonly wasteType: string;
+  readonly lat: number | null;
+  readonly lng: number | null;
+  readonly accuracyM: number | null;
+  readonly photo: CheckinPhoto;
+}
+
+/** GET /workdays/{id}: `points` is a window of `pointsTotal`; empty once the retention summarised them. */
+export interface WorkdayDetail {
+  readonly workdayId: string;
+  readonly recyclerId: string;
+  readonly associationId: string;
+  readonly startedAt: string;
+  readonly endedAt: string | null;
+  readonly withGps: boolean;
+  readonly points: readonly WorkdayPoint[];
+  readonly pointsTotal: number;
+  readonly pointsOffset: number;
+  readonly routeSummary: RouteSummary | null;
+  readonly checkins: readonly WorkdayCheckin[];
+}
+
+/** POST /retention/run (ADMIN). */
+export interface RetentionRunResult {
+  readonly gpsDays: number;
+  readonly photoMonths: number;
+  readonly workdaysSummarized: number;
+  readonly pointsDeleted: number;
+  readonly photosDeleted: number;
+  readonly photosFailed: number;
+}

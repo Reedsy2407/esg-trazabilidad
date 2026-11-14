@@ -87,6 +87,10 @@ public class SecurityConfig {
                         // The retention run deletes data: ADMIN only (STAFF and RECYCLER get 403 AUTH-000).
                         .requestMatchers(HttpMethod.POST, "/retention/run")
                         .hasRole("ADMIN")
+                        // The staff view of one workday (A.5c). Exactly one segment, GET only: the device's own
+                        // workday routes are POSTs, and a RECYCLER token gets 403 AUTH-000 here.
+                        .requestMatchers(HttpMethod.GET, "/workdays/*")
+                        .hasAnyRole("STAFF", "ADMIN")
                         // Field routes: only the recycler's device. Staff and admin get 403 AUTH-000.
                         .requestMatchers("/me/**", "/workdays/**", "/evidence/**")
                         .hasRole("RECYCLER")

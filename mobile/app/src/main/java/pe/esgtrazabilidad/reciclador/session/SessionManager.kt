@@ -110,6 +110,12 @@ class SessionManager(
     /** How many records are waiting to be uploaded. */
     suspend fun pendingCount(): Int = mutex.withLock { pending.count() }
 
+    /**
+     * The opaque recycler id (claim "rid") of the access token in memory, null when there is none. It identifies the
+     * account that recorded something; it is never shown or logged. Works offline (the claims were read at refresh).
+     */
+    fun currentRecyclerId(): String? = accessToken?.let { TokenClaims.parse(it).recyclerId }
+
     // ---- a valid access token, refreshed by itself ------------------------------------------
 
     /**
@@ -128,8 +134,23 @@ class SessionManager(
         try {
             return call(token)
         } catch (e: ApiException) {
-            if (e.isRevocation) mutex.withLock { revokeLocked(e.code) }
-            throw e
+            if (e.isRevocation) {
+                mutex.withLock { revokeLocked(e.code) }
+                throw e
+            }
+            // A 401 from a data service means it did not accept this access token: the refresh decides whether the
+            // session lives (as in module 1, where a refresh answered 401/403 ends it). One retry with a fresh token.
+            if (e.status != 401) throw e
+            val fresh = mutex.withLock {
+                accessExpiresAtMillis = 0L
+                validAccessToken()
+            }
+            try {
+                return call(fresh)
+            } catch (again: ApiException) {
+                if (again.isRevocation) mutex.withLock { revokeLocked(again.code) }
+                throw again
+            }
         }
     }
 

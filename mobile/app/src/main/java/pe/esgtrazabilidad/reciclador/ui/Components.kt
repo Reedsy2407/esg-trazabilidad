@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,7 +28,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -62,20 +70,71 @@ fun BrandBar() {
     }
 }
 
-/** The page: the brand bar, then ground background, scrollable, one gutter all around. */
+/**
+ * The page: the brand bar, then ground background, scrollable, one gutter all around. [footer] is pinned under the
+ * scrolling content (a long text never pushes its main action out of reach): paper, with a hard ink rule above.
+ */
 @Composable
-fun Screen(content: @Composable () -> Unit) {
+fun Screen(footer: (@Composable ColumnScope.() -> Unit)? = null, content: @Composable () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         BrandBar()
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(Tokens.Gutter),
             verticalArrangement = Arrangement.spacedBy(Tokens.Space4),
         ) {
             content()
         }
+        footer?.let {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Tokens.Paper)
+                    .drawBehind { drawLine(Tokens.Ink, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 2.dp.toPx()) }
+                    // With a large text size the pinned part scrolls instead of eating the screen.
+                    .heightIn(max = 300.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(Tokens.Gutter),
+                verticalArrangement = Arrangement.spacedBy(Tokens.Space3),
+            ) {
+                it()
+            }
+        }
+    }
+}
+
+/**
+ * The fold of the logo's "T": the top-right corner of a figures panel is cut and turned over. A signature for the
+ * panels that carry the day's figures only (brief: never on every element of a screen).
+ */
+fun Modifier.foldedCorner(size: Dp = 24.dp, flap: Color = Tokens.Line): Modifier = drawWithContent {
+    drawContent()
+    val s = size.toPx()
+    val w = this.size.width
+    drawPath(Path().apply { moveTo(w - s, 0f); lineTo(w, 0f); lineTo(w, s); close() }, Tokens.Ground)
+    drawPath(Path().apply { moveTo(w - s, 0f); lineTo(w, s); lineTo(w - s, s); close() }, flap)
+}
+
+/**
+ * The figures panel ("visor"): brand blue, a label, the figure in mono and an optional line. Text colours are the
+ * brief's: paper 8.0:1 and brand-soft 5.65:1 on brand.
+ */
+@Composable
+fun Visor(label: String, figure: String, line: String? = null, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Tokens.Brand)
+            .foldedCorner(flap = Tokens.BrandDeep)
+            .padding(Tokens.Space4),
+        verticalArrangement = Arrangement.spacedBy(Tokens.Space2),
+    ) {
+        Text(label.uppercase(), color = Tokens.BrandSoft, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+        Text(figure, color = Tokens.Paper, style = Figure)
+        line?.let { Text(it, color = Tokens.BrandSoft, style = MaterialTheme.typography.bodyLarge) }
     }
 }
 
@@ -125,14 +184,14 @@ fun Problem(text: String) {
 }
 
 @Composable
-fun PrimaryButton(text: String, enabled: Boolean = true, onClick: () -> Unit) {
+fun PrimaryButton(text: String, enabled: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         enabled = enabled,
         shape = RectangleShape,
         // Disabled looks disabled without relying on colour alone: a muted rule and muted text, like the web.
         border = BorderStroke(2.dp, if (enabled) Tokens.Brand else Tokens.Line),
-        modifier = Modifier.fillMaxWidth().heightIn(min = Tokens.Control),
+        modifier = modifier.fillMaxWidth().heightIn(min = Tokens.Control),
         colors = ButtonDefaults.buttonColors(
             containerColor = Tokens.Brand,
             contentColor = Tokens.Paper,
@@ -145,12 +204,12 @@ fun PrimaryButton(text: String, enabled: Boolean = true, onClick: () -> Unit) {
 }
 
 @Composable
-fun SecondaryButton(text: String, enabled: Boolean = true, onClick: () -> Unit) {
+fun SecondaryButton(text: String, enabled: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         shape = RectangleShape,
-        modifier = Modifier.fillMaxWidth().heightIn(min = Tokens.Control),
+        modifier = modifier.fillMaxWidth().heightIn(min = Tokens.Control),
         border = BorderStroke(2.dp, if (enabled) Tokens.Ink else Tokens.DisabledInk),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Tokens.Ink, disabledContentColor = Tokens.DisabledInk),
     ) {

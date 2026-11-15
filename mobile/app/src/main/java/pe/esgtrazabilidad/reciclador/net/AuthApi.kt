@@ -37,6 +37,9 @@ class ApiException(val status: Int, val code: String?, message: String? = null) 
         const val CODE_REFRESH_INVALID = "AUTH-016"
         const val CODE_DEVICE_REVOKED = "AUTH-017"
         const val CODE_ACCOUNT_INACTIVE = "AUTH-018"
+        const val CODE_CONSENT_REQUIRED = "AUTH-019"
+        const val CODE_WORKDAY_NOT_FOUND = "COL-016"
+        const val CODE_WORKDAY_CLOSED = "COL-017"
     }
 }
 

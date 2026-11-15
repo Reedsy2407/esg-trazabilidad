@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Reciclador ESG</string>
+    <string name="tracking_channel_name">Jornada de recojo</string>
+    <string name="tracking_channel_description">Aviso permanente mientras la app registra tu recorrido durante la jornada.</string>
+    <string name="tracking_notification_title">Jornada en curso</string>
+    <string name="tracking_notification_text">Registrando tu recorrido con el GPS. Toca para abrir la app.</string>
 </resources>

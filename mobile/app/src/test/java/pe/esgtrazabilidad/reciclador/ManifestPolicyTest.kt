@@ -51,6 +51,8 @@ class ManifestPolicyTest {
         val gradle = source("build.gradle.kts")
         assertTrue(gradle.contains("https://esg-auth-service.onrender.com"))
         assertTrue(gradle.contains("http://localhost:8084"))
+        assertTrue(gradle.contains("https://esg-collection-service.onrender.com"))
+        assertTrue(gradle.contains("http://localhost:8082"))
         assertFalse("no clear URL besides localhost", Regex("http://(?!localhost)").containsMatchIn(gradle))
     }
 }

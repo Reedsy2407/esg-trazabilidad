@@ -9,7 +9,7 @@ import org.json.JSONObject
  * signature (the services do that on every call); it only reads `cv` (consent version accepted, absent when
  * a new consent is pending) and `lc` (location accepted).
  */
-data class TokenClaims(val consentVersion: Int?, val locationAccepted: Boolean) {
+data class TokenClaims(val consentVersion: Int?, val locationAccepted: Boolean, val recyclerId: String? = null) {
     companion object {
         fun parse(accessToken: String): TokenClaims {
             return try {
@@ -18,6 +18,7 @@ data class TokenClaims(val consentVersion: Int?, val locationAccepted: Boolean) 
                 TokenClaims(
                     consentVersion = if (json.has("cv") && !json.isNull("cv")) json.getInt("cv") else null,
                     locationAccepted = json.optBoolean("lc", false),
+                    recyclerId = json.optString("rid").takeIf { it.isNotEmpty() },
                 )
             } catch (e: IllegalArgumentException) {
                 TokenClaims(null, false)

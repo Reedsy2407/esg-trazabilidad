@@ -5,7 +5,9 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -51,12 +53,12 @@ class ActivationScreensInstrumentedTest {
         var answer: Boolean? = null
         compose.setContent { RecicladorTheme { ConsentScreen(consent, busy = false, error = null, onAccept = { answer = it }, onCancel = {}) } }
 
-        compose.onNodeWithText("Ubicación exacta del recorrido: 60 días.").assertExists()
-        compose.onNodeWithText("Fotos de evidencia: 6 meses.").assertExists()
+        compose.onNodeWithContentDescription("Ubicación exacta del recorrido: 60 días.").assertExists()
+        compose.onNodeWithContentDescription("Fotos de evidencia: 6 meses.").assertExists()
         compose.onNodeWithText("Texto aparte de la ubicación").assertExists()
         compose.onNodeWithText("Aceptar y continuar").assertIsNotEnabled()
 
-        compose.onNodeWithText("He leído y acepto el tratamiento de mis datos").performClick()
+        compose.onNodeWithText("He leído y acepto el tratamiento de mis datos").performScrollTo().performClick()
         compose.onNodeWithText("Aceptar y continuar").assertIsEnabled().performClick()
 
         assertEquals("refusing the location is allowed", false, answer)
@@ -67,8 +69,8 @@ class ActivationScreensInstrumentedTest {
         var answer: Boolean? = null
         compose.setContent { RecicladorTheme { ConsentScreen(consent, busy = false, error = null, onAccept = { answer = it }, onCancel = {}) } }
 
-        compose.onNodeWithText("He leído y acepto el tratamiento de mis datos").performClick()
-        compose.onNodeWithText("Acepto que se use mi ubicación durante la jornada").performClick()
+        compose.onNodeWithText("He leído y acepto el tratamiento de mis datos").performScrollTo().performClick()
+        compose.onNodeWithText("Acepto que se use mi ubicación durante la jornada").performScrollTo().performClick()
         compose.onNodeWithText("Aceptar y continuar").performClick()
 
         assertEquals(true, answer)

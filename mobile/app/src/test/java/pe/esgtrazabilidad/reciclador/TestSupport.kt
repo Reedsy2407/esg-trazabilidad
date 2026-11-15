@@ -11,7 +11,13 @@ import pe.esgtrazabilidad.reciclador.crypto.Vault
 import pe.esgtrazabilidad.reciclador.crypto.VaultUnavailableException
 import pe.esgtrazabilidad.reciclador.net.ApiException
 import pe.esgtrazabilidad.reciclador.net.AuthApi
+import pe.esgtrazabilidad.reciclador.net.CollectionApi
 import pe.esgtrazabilidad.reciclador.net.Consent
+import pe.esgtrazabilidad.reciclador.net.GpsPointDto
+import pe.esgtrazabilidad.reciclador.net.OpenedWorkday
+import pe.esgtrazabilidad.reciclador.net.PointsAck
+import pe.esgtrazabilidad.reciclador.net.RouteNeighbor
+import pe.esgtrazabilidad.reciclador.net.RouteStop
 import pe.esgtrazabilidad.reciclador.net.Tokens
 
 /** A clock the test moves. */
@@ -70,8 +76,8 @@ class FlakyVault(private val inner: Vault) : Vault {
 }
 
 /** An unsigned token with the claims the app reads (`cv`, `lc`): the app does not verify signatures. */
-fun fakeAccessToken(consentVersion: Int?, location: Boolean, marker: String = "acc"): String {
-    val payload = JSONObject().put("sub", "account").put("role", "RECYCLER").put("mark", marker)
+fun fakeAccessToken(consentVersion: Int?, location: Boolean, marker: String = "acc", recyclerId: String = "rid-test"): String {
+    val payload = JSONObject().put("sub", "account").put("role", "RECYCLER").put("mark", marker).put("rid", recyclerId)
     if (consentVersion != null) payload.put("cv", consentVersion)
     if (location) payload.put("lc", true)
     val enc = Base64.getUrlEncoder().withoutPadding()
@@ -95,10 +101,14 @@ class FakeAuthApi : AuthApi {
     val tokenPrefix = "RT-SENTINEL-${System.nanoTime()}-"
     var expiresInSeconds = 900L
 
+    /** The recycler id the tokens carry (claim rid). */
+    var recyclerId = "rid-test"
+
     private fun accessToken() = fakeAccessToken(
         consentVersion = if (consentAccepted) consentVersionServerSide else null,
         location = consentAccepted && locationAccepted,
         marker = "acc${refreshCounter}",
+        recyclerId = recyclerId,
     )
 
     override suspend fun activate(code: String, deviceLabel: String, deviceInstallId: String): Tokens {
@@ -136,3 +146,65 @@ class FakeAuthApi : AuthApi {
 
 fun revoked(code: String = "AUTH-017") = ApiException(401, code)
 fun offline() = ApiException(0, null)
+
+/** collection-service, scripted by the test. */
+class FakeCollectionApi : CollectionApi {
+    var routeCalls = 0
+    var routeError: ApiException? = null
+
+    /** Errors thrown one by one before answering, e.g. a 401 and then success. */
+    val routeErrors = ArrayDeque<ApiException>()
+    var stops: List<RouteStop> = listOf(stop(1))
+    val tokensSeen = mutableListOf<String>()
+
+    // ---- workdays ----
+    /** Errors thrown one by one by any workday call, before answering. */
+    val workdayErrors = ArrayDeque<ApiException>()
+    var openCalls = 0
+    var closeCalls = 0
+    val opened = mutableMapOf<String, String>() // clientId -> workdayId
+    val receivedPoints = mutableListOf<GpsPointDto>()
+    val batchSizes = mutableListOf<Int>()
+    var closedAt: Long? = null
+
+    override suspend fun openWorkday(accessToken: String, startedAtMillis: Long, clientId: String): OpenedWorkday {
+        openCalls++
+        workdayErrors.removeFirstOrNull()?.let { throw it }
+        val existing = opened[clientId]
+        if (existing != null) return OpenedWorkday(existing, created = false)
+        return OpenedWorkday("jornada-${opened.size + 1}", created = true).also { opened[clientId] = it.workdayId }
+    }
+
+    override suspend fun sendPoints(accessToken: String, workdayId: String, points: List<GpsPointDto>): PointsAck {
+        workdayErrors.removeFirstOrNull()?.let { throw it }
+        require(points.size <= 500) { "batch too large" }
+        batchSizes += points.size
+        val known = receivedPoints.map { it.recordedAtMillis }.toSet()
+        val fresh = points.filter { it.recordedAtMillis !in known }
+        receivedPoints += fresh
+        return PointsAck(fresh.size, points.size - fresh.size)
+    }
+
+    override suspend fun closeWorkday(accessToken: String, workdayId: String, endedAtMillis: Long) {
+        closeCalls++
+        workdayErrors.removeFirstOrNull()?.let { throw it }
+        closedAt = endedAtMillis
+    }
+
+    override suspend fun route(accessToken: String): List<RouteStop> {
+        routeCalls++
+        tokensSeen += accessToken
+        routeErrors.removeFirstOrNull()?.let { throw it }
+        routeError?.let { throw it }
+        return stops
+    }
+
+    companion object {
+        fun stop(n: Int) = RouteStop(
+            scheduleId = "cronograma-$n",
+            dayOfWeek = "MONDAY",
+            time = "08:30",
+            neighbor = RouteNeighbor("vecino-$n", "VECINO-CENTINELA-$n", "CALLE-CENTINELA $n", "DISTRITO-CENTINELA"),
+        )
+    }
+}

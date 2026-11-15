@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -23,10 +24,13 @@ android {
             // Local backend only, reached from the phone with `adb reverse tcp:8084 tcp:8084`.
             // Clear traffic is allowed for localhost alone (src/debug/res/xml/network_security_config.xml).
             buildConfigField("String", "AUTH_BASE_URL", "\"http://localhost:8084\"")
+            // collection-service listens on 8082 by default: `adb reverse tcp:8082 tcp:8082`.
+            buildConfigField("String", "COLLECTION_BASE_URL", "\"http://localhost:8082\"")
         }
         release {
             // Public HTTPS, no clear traffic. Signing and publishing belong to module 3.
             buildConfigField("String", "AUTH_BASE_URL", "\"https://esg-auth-service.onrender.com\"")
+            buildConfigField("String", "COLLECTION_BASE_URL", "\"https://esg-collection-service.onrender.com\"")
             isMinifyEnabled = false
         }
     }
@@ -65,6 +69,11 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
     implementation(libs.kotlinx.coroutines.android)
+
+    // GPS points of the workday (spec decision of M0). AndroidX, Apache-2.0; no encryption library added.
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     // Android's own org.json is a stub in local unit tests.
     testImplementation(libs.org.json)

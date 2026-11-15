@@ -9,10 +9,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import pe.esgtrazabilidad.reciclador.R
 
 /**
  * The web tokens of the frontend (frontend/src/styles.css, brief in frontend/design/DESIGN-BRIEF.md) in Compose
@@ -24,6 +26,9 @@ import androidx.compose.ui.unit.sp
 object Tokens {
     val Brand = Color(0xFF1A576C)
     val BrandDeep = Color(0xFF123F4F)
+
+    /** Secondary text on brand: 5.65:1 on brand, 8.0:1 on brand-deep (brief). */
+    val BrandSoft = Color(0xFFC4DDE6)
     val Ink = Color(0xFF1B2422)
     val InkSoft = Color(0xFF46524F)
     val Ground = Color(0xFFD6DBD9)
@@ -58,9 +63,24 @@ private val Colors: ColorScheme = lightColorScheme(
     onError = Tokens.Paper,
 )
 
-// The web voice is Archivo (OFL), shipped there as WOFF2, which Android cannot load; until the TTF files are
-// added to res/font, the platform sans-serif stands in. Sizes follow the brief's scale.
-private val Voice = FontFamily.SansSerif
+// The web voice is Archivo and the measurements Martian Mono (both OFL; licences in assets/licenses). Only the weights
+// the brief uses are shipped: 400, 600 and 800 (Bold maps to the 800 file); mono has 400 and 600 (Bold maps to 600).
+private val Voice = FontFamily(
+    Font(R.font.archivo_regular, FontWeight.Normal),
+    Font(R.font.archivo_semibold, FontWeight.SemiBold),
+    Font(R.font.archivo_extrabold, FontWeight.Bold),
+    Font(R.font.archivo_extrabold, FontWeight.ExtraBold),
+)
+
+/** Figures, times and codes: measurement, not costume (brief). */
+val Mono: FontFamily = FontFamily(
+    Font(R.font.martianmono_regular, FontWeight.Normal),
+    Font(R.font.martianmono_semibold, FontWeight.SemiBold),
+    Font(R.font.martianmono_semibold, FontWeight.Bold),
+)
+
+/** The big figure of a panel: mono, bold, 48 sp (the web's 168 px visor scaled to a phone). */
+val Figure = TextStyle(fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 48.sp, lineHeight = 54.sp)
 
 private val Type = Typography(
     headlineMedium = TextStyle(fontFamily = Voice, fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 38.sp),

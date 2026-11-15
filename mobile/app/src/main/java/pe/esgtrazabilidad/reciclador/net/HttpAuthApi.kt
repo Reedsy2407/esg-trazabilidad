@@ -1,10 +1,5 @@
 package pe.esgtrazabilidad.reciclador.net
 
-import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -56,51 +51,12 @@ class HttpAuthApi(private val baseUrl: String) : AuthApi {
         call("POST", "/auth/recycler/logout", JSONObject().put("refreshToken", refreshToken), bearer = accessToken)
     }
 
-    private suspend fun call(method: String, path: String, body: JSONObject?, bearer: String?): JSONObject =
-        withContext(Dispatchers.IO) {
-            val connection = try {
-                (URL(baseUrl + path).openConnection() as HttpURLConnection)
-            } catch (e: IOException) {
-                throw ApiException(0, null, "no connection")
-            }
-            try {
-                connection.requestMethod = method
-                connection.connectTimeout = TIMEOUT_MS
-                // Render's free plan wakes a sleeping service in up to a minute.
-                connection.readTimeout = READ_TIMEOUT_MS
-                connection.setRequestProperty("Accept", "application/json")
-                bearer?.let { connection.setRequestProperty("Authorization", "Bearer $it") }
-                if (body != null) {
-                    connection.doOutput = true
-                    connection.setRequestProperty("Content-Type", "application/json")
-                    connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-                }
-                val status = connection.responseCode
-                val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-                val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-                if (status !in 200..299) {
-                    throw ApiException(status, errorCode(text))
-                }
-                if (text.isBlank()) JSONObject() else JSONObject(text)
-            } catch (e: ApiException) {
-                throw e
-            } catch (e: IOException) {
-                throw ApiException(0, null, "no connection")
-            } catch (e: JSONException) {
-                throw ApiException(502, null, "unreadable answer")
-            } finally {
-                connection.disconnect()
-            }
+    private suspend fun call(method: String, path: String, body: JSONObject?, bearer: String?): JSONObject {
+        val answer = HttpJson.request(baseUrl, method, path, body?.toString(), bearer)
+        return try {
+            if (answer.text.isBlank()) JSONObject() else JSONObject(answer.text)
+        } catch (e: JSONException) {
+            throw ApiException(502, null, "unreadable answer")
         }
-
-    private fun errorCode(body: String): String? = try {
-        JSONObject(body).optString("code").takeIf { it.isNotEmpty() }
-    } catch (e: JSONException) {
-        null
-    }
-
-    private companion object {
-        const val TIMEOUT_MS = 10_000
-        const val READ_TIMEOUT_MS = 60_000
     }
 }

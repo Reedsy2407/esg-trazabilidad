@@ -73,7 +73,7 @@ describe('RecyclerSchedulesPage', () => {
     await settle();
   };
 
-  async function create(status = 'ACTIVE') {
+  async function create(status = 'ACTIVE', assignmentFails = false) {
     TestBed.configureTestingModule({
       imports: [RecyclerSchedulesPage],
       providers: [provideRouter([]), provideHttpClient(withInterceptors([errorInterceptor])), provideHttpClientTesting()],
@@ -85,6 +85,11 @@ describe('RecyclerSchedulesPage', () => {
     page = fixture.nativeElement as HTMLElement;
     TestBed.tick();
     await flush(backend.expectOne(RECYCLER_URL), { ...RECYCLER, status });
+    if (assignmentFails) {
+      backend.expectOne(ASSIGNMENT_URL).flush({}, { status: 503, statusText: 'Service Unavailable' });
+      await settle();
+      return;
+    }
     await flush(backend.expectOne(ASSIGNMENT_URL), { recyclerId: 'r-1', schedules: [MINE, MONDAY] });
   }
 
@@ -96,6 +101,13 @@ describe('RecyclerSchedulesPage', () => {
     const names = [...page.querySelectorAll('table tbody td.type')].map((td) => td.textContent?.trim());
     expect(names).toEqual(['Zoila Vega', 'Carmen Rojas']);
     expect(page.textContent).toContain('2');
+    expect(page.querySelector('.meta')?.textContent).toContain('asignados');
+  });
+
+  it('shows no count of assigned schedules while the list failed to load, never a stuck placeholder', async () => {
+    await create('ACTIVE', true);
+    expect(page.querySelector('.meta')?.textContent).not.toContain('asignados');
+    expect(page.querySelector('.meta')?.textContent).not.toContain('…');
   });
 
   it('shows the district\'s schedules as free, of another recycler, or already this recycler\'s', async () => {
@@ -139,11 +151,23 @@ describe('RecyclerSchedulesPage', () => {
     const confirm = page.querySelector('[data-confirm]')!;
     expect(confirm.textContent).toContain('de otro reciclador');
     expect(confirm.textContent).toContain('dejan de estar en la ruta del anterior');
+    // Nothing free was marked: the sentence about free ones is left out, never "Los otros 0".
+    expect(confirm.textContent).not.toContain('libre');
 
     buttonByText('No, volver').click();
     TestBed.tick();
     backend.expectNone(ASSIGNMENT_URL);
     expect(page.querySelector('[data-confirm]')).toBeNull();
+  });
+
+  it('the move confirmation says how many of the marked ones were free, in the singular or the plural', async () => {
+    await create();
+    await chooseDistrict();
+    await tick('Beto Díaz');
+    await tick('Ana Flores');
+    buttonByText('Asignar 2 marcados').click();
+    TestBed.tick();
+    expect(page.querySelector('[data-confirm]')?.textContent).toContain('El otro estaba libre');
   });
 
   it('confirming the move sends the PUT and says how many were moved', async () => {

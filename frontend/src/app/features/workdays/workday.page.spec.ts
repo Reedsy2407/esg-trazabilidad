@@ -110,6 +110,24 @@ describe('WorkdayPage', () => {
     expect(page.textContent).toContain('Sin foto');
   });
 
+  it('on the narrow-screen list every check-in labels its photo field, with or without a photo', async () => {
+    await create();
+    const cards = Array.from(page.querySelectorAll('ul.entries > li'));
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      const labels = Array.from(card.querySelectorAll('dt')).map((dt) => dt.textContent?.trim());
+      expect(labels).toContain('Foto');
+    }
+    const states = cards.map((card) => card.querySelector('.photo-state')?.textContent?.trim()).filter(Boolean);
+    // The state text sits in the value of the "Foto" row, not loose under the list of facts.
+    for (const card of cards) {
+      const state = card.querySelector('.photo-state');
+      if (state) expect(state.closest('div')?.querySelector('dt')?.textContent?.trim()).toBe('Foto');
+    }
+    expect(states).toContain('Borrada por la retención');
+    expect(states).toContain('Sin foto');
+  });
+
   it('a photo can be enlarged and reduced from the keyboard-reachable button', async () => {
     await create();
     const thumb = page.querySelector<HTMLButtonElement>('button.thumb')!;
@@ -155,9 +173,9 @@ describe('WorkdayPage', () => {
         routeSummary: { pointCount: 118, distanceM: 3180.5, firstAt: '2026-07-20T13:01:00Z', lastAt: '2026-07-20T15:08:00Z', polyline: [[-12.04, -77.04], [-12.05, -77.03], [-12.06, -77.05]] },
       }),
     );
-    expect(page.querySelector('svg[role=img]')?.getAttribute('aria-label')).toContain('118 puntos, 3,18 km (resumen simplificado)');
+    expect(page.querySelector('svg[role=img]')?.getAttribute('aria-label')).toContain('118 puntos, 3.18 km (resumen simplificado)');
     expect(page.textContent).toContain('ya pasaron su plazo de retención');
-    expect(page.querySelector('.summary')?.textContent).toContain('3,18 km');
+    expect(page.querySelector('.summary')?.textContent).toContain('3.18 km');
   });
 
   it('a workday without location says there is no route, and one without check-ins says so', async () => {

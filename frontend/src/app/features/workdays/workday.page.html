@@ -21,6 +21,7 @@
       </p>
     </header>
 
+    <div class="layout">
     <section class="summary fold" aria-label="Resumen de la jornada">
       <dl class="figures">
         <div>
@@ -38,7 +39,7 @@
       </dl>
     </section>
 
-    <section aria-labelledby="route-title">
+    <section class="route" aria-labelledby="route-title">
       <h2 id="route-title" class="sec">Recorrido</h2>
       @if (routePoints().length > 0) {
         <app-route-trace [points]="routePoints()" [stops]="stops()" [description]="traceDescription()" />
@@ -60,7 +61,7 @@
       }
     </section>
 
-    <section aria-labelledby="checkins-title">
+    <section class="checkins" aria-labelledby="checkins-title">
       <div class="checkins-head">
         <h2 id="checkins-title" class="sec" tabindex="-1">Check-ins</h2>
         @if (d.checkins.some(c => c.photo.state === 'AVAILABLE')) {
@@ -117,13 +118,17 @@
                 <div><dt>Peso</dt><dd class="mono">{{ kg(c.weightKg) }}</dd></div>
                 <div><dt>Tipo</dt><dd>{{ waste(c.wasteType) }}</dd></div>
                 <div><dt>Ubicación</dt><dd>{{ c.lat === null ? 'No' : 'Sí, ' + accuracy(c.accuracyM) }}</dd></div>
+                <div>
+                  <dt>Foto</dt>
+                  <dd><ng-container *ngTemplateOutlet="photo; context: { c: c, i: i }" /></dd>
+                </div>
               </dl>
-              <ng-container *ngTemplateOutlet="photo; context: { c: c, i: i }" />
             </li>
           }
         </ul>
       }
     </section>
+    </div>
   } @else {
     <div class="page-head" aria-hidden="true"><span class="skel title"></span></div>
     <p>Cargando la jornada…</p>

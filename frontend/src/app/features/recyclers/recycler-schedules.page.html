@@ -10,9 +10,9 @@
       <h1>Cronogramas de {{ r.fullName }}</h1>
       <p class="meta">
         <span>Reciclador {{ r.status === 'ACTIVE' ? 'activo' : 'inactivo' }}</span>
-        <span>
-          <strong class="mono">{{ assignment.hasValue() ? assigned().length : '…' }}</strong> asignados
-        </span>
+        @if (assignment.hasValue()) {
+          <span><strong class="mono">{{ assigned().length }}</strong> asignados</span>
+        }
       </p>
     </header>
     @if (inactive()) {
@@ -182,8 +182,10 @@
         <p>
           <strong class="mono">{{ chosenFromOthers() }}</strong>
           {{ chosenFromOthers() === 1 ? 'de los cronogramas marcados es de otro reciclador' : 'de los cronogramas marcados son de otro reciclador' }}.
-          Si sigues, pasan a este reciclador y dejan de estar en la ruta del anterior. Los otros
-          {{ chosenCount() - chosenFromOthers() }} estaban libres.
+          Si sigues, pasan a este reciclador y dejan de estar en la ruta del anterior.
+          @if (chosenCount() - chosenFromOthers() > 0) {
+            {{ chosenCount() - chosenFromOthers() === 1 ? 'El otro estaba libre' : 'Los otros ' + (chosenCount() - chosenFromOthers()) + ' estaban libres' }}.
+          }
         </p>
         <div class="buttons">
           <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="cancelConfirm()">No, volver</button>

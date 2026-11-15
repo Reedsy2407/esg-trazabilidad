@@ -100,7 +100,7 @@ test('an expired photo is hidden and the screen says how to get it back', async 
 
 test('after the retention the route is the summary, and the photos are marked as deleted', async ({ page }) => {
   const { unmocked } = await open(page, detail(WORKDAY_IDS.summarized));
-  await expect(page.getByRole('img', { name: /118 puntos, 3,18 km \(resumen simplificado\)/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /118 puntos, 3\.18 km \(resumen simplificado\)/ })).toBeVisible();
   await expect(page.getByText('ya pasaron su plazo de retención')).toBeVisible();
   await expect(page.locator('table tbody tr')).toHaveCount(2);
   await expect(page.locator('table').getByText('Borrada por la retención')).toHaveCount(2);

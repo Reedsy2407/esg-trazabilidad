@@ -90,7 +90,7 @@ export function walkedMeters(points: readonly (LatLng & { readonly accuracyM: nu
   return total;
 }
 
-/** 3180.5 -> "3,18 km"; 640 -> "640 m". */
+/** 3180.5 -> "3.18 km"; 640 -> "640 m". Same decimal separator as the kilos (formatKg), so a summary never mixes both. */
 export function formatDistance(meters: number): string {
-  return meters >= 1000 ? `${(meters / 1000).toFixed(2).replace('.', ',')} km` : `${Math.round(meters)} m`;
+  return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${Math.round(meters)} m`;
 }

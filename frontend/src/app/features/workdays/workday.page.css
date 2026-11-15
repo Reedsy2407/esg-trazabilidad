@@ -94,8 +94,32 @@ p.problem {
   max-width: 100%;
   aspect-ratio: 4 / 3;
 }
-.entry .thumb {
-  margin-top: var(--space-2);
+/* From 1100 px (brief, "Ancho"): the route in the main column, the figures in the side panel. The check-ins table keeps the
+   whole width: with six columns it needs it to stay at one line per row. */
+@media (min-width: 1100px) {
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    column-gap: var(--space-8);
+    align-items: start;
+  }
+  .summary {
+    grid-column: 2;
+    grid-row: 1;
+    margin-top: var(--space-8);
+  }
+  .route {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .checkins {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .summary .figures {
+    flex-direction: column;
+    gap: var(--space-5);
+  }
 }
 @media (max-width: 639.98px) {
   .summary {

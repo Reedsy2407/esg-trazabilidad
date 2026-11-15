@@ -73,6 +73,6 @@ describe('route geometry', () => {
 
   it('says short distances in metres and long ones in kilometres', () => {
     expect(formatDistance(640.4)).toBe('640 m');
-    expect(formatDistance(3180.5)).toBe('3,18 km');
+    expect(formatDistance(3180.5)).toBe('3.18 km');
   });
 });

@@ -19,7 +19,7 @@
     <properties>
         <!-- AWS SDK for Java v2 (Apache License 2.0). Pinned to a release more than three weeks old
              (2.57.0, 2026-10-19); used only through the S3-compatible API of Backblaze B2. -->
-        <awssdk.version>2.57.0</awssdk.version>
+        <awssdk.version>2.58.0</awssdk.version>
     </properties>
 
     <dependencyManagement>
@@ -168,7 +168,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>3.6.1</version>
                 <configuration>
                     <!-- Every @SpringBootTest IT now boots a real OutboxDispatcher
                          (an OutboxRepository bean exists since Task 27), each on its

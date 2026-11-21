@@ -34,7 +34,7 @@
         <spring-boot.version>3.3.5</spring-boot.version>
         <!-- Not part of the Spring Boot BOM; pinned here so every module that
              wires Swagger UI later shares one version. -->
-        <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
+        <springdoc-openapi.version>3.1.1</springdoc-openapi.version>
         <!-- Not part of the Spring Boot BOM either; pinned here so shared-kernel
              (OutboxDispatcher) and both services (their own LockProvider beans)
              share one version. -->

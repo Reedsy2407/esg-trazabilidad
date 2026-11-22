@@ -38,7 +38,7 @@
         <!-- Not part of the Spring Boot BOM either; pinned here so shared-kernel
              (OutboxDispatcher) and both services (their own LockProvider beans)
              share one version. -->
-        <shedlock.version>7.10.1</shedlock.version>
+        <shedlock.version>7.11.0</shedlock.version>
         <!-- Overrides Spring Boot 3.3.5's managed Testcontainers version (1.19.8):
              its Windows npipe transport hardcodes an old Docker API version and
              ignores DOCKER_API_VERSION, breaking against recent Docker Engines.
@@ -47,7 +47,7 @@
         <testcontainers.version>2.0.5</testcontainers.version>
         <!-- auth-service's login rate limit (SPEC-deployment.md). Not in the
              Spring Boot BOM. -->
-        <bucket4j.version>8.20.0</bucket4j.version>
+        <bucket4j.version>8.22.0</bucket4j.version>
     </properties>
 
     <dependencyManagement>
@@ -126,7 +126,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.11.0</version>
                 <executions>
                     <execution>
                         <id>mockito-agent-path</id>
